@@ -1,0 +1,5 @@
+code,name,thickness,sheetLength,sheetWidth,grain,color
+PB18-GRY,Melamine PB 18 grey,18,2800,2070,no,#9ca3af
+PB18-WAL,Melamine PB 18 walnut,18,2800,2070,yes,#7c5a3c
+MDF16,Raw MDF 16,16,2440,1220,no,#c8a97e
+HDF3-WHT,HDF 3 white back,3,2800,2070,no,#f3f4f6

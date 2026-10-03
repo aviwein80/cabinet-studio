@@ -374,11 +374,11 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
             <div className="font-semibold">Sheet {p.sheet.index}</div>
             <div className="font-mono text-[11px] text-muted-foreground">{p.materialCode}</div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-muted">
-              <div className="h-full bg-amber-500" style={{ width: `${Math.round(p.sheet.utilization * 100)}%` }} />
+              <div className="h-full bg-amber-500" style={{ width: `${Math.round(p.sheet.utilization)}%` }} />
             </div>
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
               <span>{p.sheet.placements.length} parts</span>
-              <span>{Math.round(p.sheet.utilization * 100)}%</span>
+              <span>{Math.round(p.sheet.utilization)}%</span>
             </div>
           </button>
         ))}

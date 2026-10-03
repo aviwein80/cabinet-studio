@@ -1,0 +1,5 @@
+name,kind,width,height,depth,shelves,doors,material,backMaterial,joinery,bottomJoint,backType,description
+Base 300 single,base,300,870,560,1,1,PB18-WHT,HDF6-WHT,screw,dado,groove,Narrow base with one door
+Base 900 pair,base,900,870,560,1,2,PB18-WHT,HDF6-WHT,screw,dado,groove,Wide base with a pair of doors
+Wall 600 pair,wall,600,720,320,2,2,PB18-WHT,HDF6-WHT,dowel,butt,groove,Standard wall cabinet
+Tall 600 pantry,tall,600,2100,560,4,2,PB18-WHT,HDF6-WHT,confirmat,butt,groove,Pantry with four shelves

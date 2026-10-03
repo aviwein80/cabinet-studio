@@ -1,0 +1,10 @@
+WARNING PLACEHOLDER_TOOLS  Machine profile uses PLACEHOLDER tool data. Replace it with the real N-200 tool table before running any program.
+WARNING SMALL_PART         S2 #14 Part #14 (414 x 100) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
+WARNING SMALL_PART         S2 #5 Part #5 (100 x 564) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
+WARNING HORIZONTAL_SKIPPED S2 6 horizontal holes on parts #20 are not in the program (no horizontal drill unit). Drill them off-machine.
+WARNING SMALL_PART         S3 #13 Part #13 (99 x 414) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
+WARNING SMALL_PART         S3 #4 Part #4 (564 x 99) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
+WARNING SMALL_PART         S3 #21 Part #21 (99 x 764) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
+WARNING SMALL_PART         S3 #22 Part #22 (100 x 764) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
+WARNING HORIZONTAL_SKIPPED S3 8 horizontal holes on parts #21, #22 are not in the program (no horizontal drill unit). Drill them off-machine.
+INFO    SIMULATE           Generated programs are not machine-proven. Open every MPR in woodWOP and run the simulation before cutting.

@@ -1,0 +1,5 @@
+number,type,name,diameter,maxDepth
+101,router,EXAMPLE ONLY - compression cutter 12 mm,12,42
+104,router,EXAMPLE ONLY - spiral cutter 10 mm,10,35
+205,drill-vertical,EXAMPLE ONLY - drill 10 mm,10,30
+301,drill-horizontal,EXAMPLE ONLY - horizontal drill 8 mm,8,30

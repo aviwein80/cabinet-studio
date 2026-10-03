@@ -33,6 +33,7 @@ export interface NestedSheet {
   sheetWidth: number
   thickness: number
   placements: Placement[]
+  /** Percent of the full sheet area covered by parts (0-100). */
   utilization: number
 }
 

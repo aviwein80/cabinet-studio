@@ -1,0 +1,120 @@
+import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
+import { placeLabels, type LabelSpot } from './labels/placement'
+import { buildAllPrograms, nestJob, type JobNest, type SheetProgram } from './machining'
+import { writeSheetMpr } from './mpr/writer'
+import type { AppData, EdgeKey, Job } from './types'
+import { validateJob, type Issue } from './validator'
+
+export interface LabelRecord {
+  partId: string
+  no: number
+  uid: string
+  jobNumber: string
+  jobName: string
+  customer: string
+  cabinet: string
+  partName: string
+  finished: { l: number; w: number; t: number }
+  cut: { l: number; w: number }
+  materialCode: string
+  materialName: string
+  edges: Record<EdgeKey, string>
+  edgeDiagram: string
+  grainLocked: boolean
+  sheetIndex: number
+  sheetCount: number
+  /** Position of the part in the sheet's cut order (1 = cut first). */
+  cutOrder: number
+  program: string
+  rotated: boolean
+  spot: LabelSpot
+  notes: string[]
+}
+
+export interface JobOutput {
+  instances: PartInstance[]
+  nest: JobNest
+  programs: SheetProgram[]
+  issues: Issue[]
+  labels: LabelRecord[]
+  spots: Map<number, LabelSpot[]>
+  cutList: ReturnType<typeof cutList>
+  hardware: { code: string; name: string; qty: number }[]
+  edgebands: ReturnType<typeof edgebandUsage>
+  warnings: string[]
+}
+
+export function runJob(job: Job, data: AppData): JobOutput {
+  const { library: lib, machine, settings } = data
+  const expanded = expandJob(job, lib, settings)
+  const nest = nestJob(expanded.instances, lib, machine, settings)
+  const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine)
+  const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)
+  for (const w of expanded.warnings) issues.unshift({ severity: 'warning', code: 'CONSTRUCTION', message: w })
+
+  const byUid = new Map(expanded.instances.map((i) => [i.uid, i]))
+  const labels: LabelRecord[] = []
+  const spots = new Map<number, LabelSpot[]>()
+  for (const prog of programs) {
+    const sh = prog.sheet
+    const sheetSpots = placeLabels(sh, prog, byUid, settings.labels.size, settings.labels.edgeClearance)
+    spots.set(sh.index, sheetSpots)
+    sh.placements.forEach((pl, idx) => {
+      const inst = byUid.get(pl.uid)!
+      const mat = lib.materials.find((m) => m.id === inst.materialId)
+      const skipped = prog.skipped.filter((s) => s.partUid === pl.uid)
+      const notes: string[] = []
+      if (skipped.length) {
+        const byDia = new Map<number, number>()
+        for (const s of skipped) byDia.set(s.diameter, (byDia.get(s.diameter) ?? 0) + 1)
+        notes.push(`Edge drill: ${[...byDia.entries()].map(([d, n]) => `${n}x D${d}`).join(', ')}`)
+      }
+      const spot = sheetSpots.find((s) => s.uid === pl.uid)!
+      if (!spot.fits) notes.push('Label does not fit: apply to back face')
+      labels.push({
+        partId: inst.partId,
+        no: inst.no,
+        uid: inst.uid,
+        jobNumber: job.number,
+        jobName: job.name,
+        customer: job.customer,
+        cabinet: `${inst.cabinetNumber} ${inst.cabinetName}`,
+        partName: inst.part.name,
+        finished: { l: inst.part.length, w: inst.part.width, t: inst.thickness },
+        cut: { l: inst.cutLength, w: inst.cutWidth },
+        materialCode: mat?.code ?? inst.materialId,
+        materialName: mat?.name ?? inst.materialId,
+        edges: edgeCode(inst.part, lib),
+        edgeDiagram: edgeDiagram(inst.part),
+        grainLocked: !inst.canRotate,
+        sheetIndex: sh.index,
+        sheetCount: programs.length,
+        cutOrder: idx + 1,
+        program: prog.name,
+        rotated: pl.rotated,
+        spot,
+        notes,
+      })
+    })
+  }
+
+  return {
+    instances: expanded.instances,
+    nest,
+    programs,
+    issues,
+    labels,
+    spots,
+    cutList: cutList(expanded.instances, lib),
+    hardware: expanded.hardware,
+    edgebands: edgebandUsage(expanded.instances, lib),
+    warnings: expanded.warnings,
+  }
+}
+
+export function mprFiles(job: Job, data: AppData, out: JobOutput) {
+  return out.programs.map((p, i) => ({
+    name: `${p.name}.mpr`,
+    text: writeSheetMpr(p, { job, machine: data.machine, mprNumber: i + 1, mprCount: out.programs.length }),
+  }))
+}

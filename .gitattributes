@@ -1,0 +1,4 @@
+# woodWOP needs CRLF; never let git rewrite MPR line endings.
+*.mpr -text
+*.MPR -text
+*.zpl -text

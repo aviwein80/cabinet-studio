@@ -1,0 +1,115 @@
+[H
+VERSION="4.0 Alpha"
+OP="1"
+FM="1"
+MAT="HOMAG"
+INCH="0"
+VIEW="NOMIRROR"
+ANZ="1"
+MATERIAL="HDF6-WHT"
+CUSTOMER="Test"
+ORDER="G001"
+ARTICLE="Sheet 1 of 2"
+PARTID="G001_S01_HDF6-WHT"
+PARTTYPE="NEST"
+MPRCOUNT="2"
+MPRNUMBER="1"
+INFO1="Cabinet Studio 0.1.0"
+INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
+INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
+INFO4="Test job"
+INFO5=""
+_BSX=2800.000000
+_BSY=2070.000000
+_BSZ=6.000000
+_FNX=0.000000
+_FNY=0.000000
+_RNX=0.000000
+_RNY=0.000000
+_RNZ=0.000000
+_RX=2800.000000
+_RY=2070.000000
+
+[001
+L="2800"
+KM="Sheet length X"
+B="2070"
+KM="Sheet width Y"
+D="6"
+KM="Sheet thickness Z"
+
+]1
+$E0
+KP 
+X=589.0000
+Y=389.7500
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=589.0000
+Y=10.0000
+
+$E2
+KL 
+X=10.0000
+Y=10.0000
+
+$E3
+KL 
+X=10.0000
+Y=769.5000
+
+$E4
+KL 
+X=589.0000
+Y=769.5000
+
+$E5
+KL 
+X=589.0000
+Y=389.7500
+
+<100 \WerkStck\
+LA="L"
+BR="B"
+DI="D"
+FNX="0"
+FNY="0"
+AX="0"
+AY="0"
+
+<101 \Kommentar\
+KM="Cabinet Studio 0.1.0 - job G001 sheet 1/2 HDF6-WHT"
+KM="Generated program. Verify in woodWOP simulation before cutting."
+KM="P6 at X10 Y10 579x759.5"
+KAT="Kommentar"
+MNM="Kommentar"
+
+<105 \Konturfraesen\
+EA="1:0"
+MDA="SEN"
+RK="WRKL"
+EE="1:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P6 cut-out"
+
+<101 \Kommentar\
+KM="HOMAG_PRODUCTIONMANAGER_FEEDBACK={Version:1.00,PARTID:G001_S01_HDF6-WHT,MPRNUMBER:1,MPRCOUNT:2}"
+KAT="Kommentar"
+MNM="Kommentar"
+!

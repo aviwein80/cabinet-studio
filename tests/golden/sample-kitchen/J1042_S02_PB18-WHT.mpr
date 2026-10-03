@@ -1,0 +1,6990 @@
+[H
+VERSION="4.0 Alpha"
+OP="1"
+FM="1"
+MAT="HOMAG"
+INCH="0"
+VIEW="NOMIRROR"
+ANZ="1"
+MATERIAL="PB18-WHT"
+CUSTOMER="Cohen"
+ORDER="J1042"
+ARTICLE="Sheet 2 of 3"
+PARTID="J1042_S02_PB18-WHT"
+PARTTYPE="NEST"
+MPRCOUNT="3"
+MPRNUMBER="2"
+INFO1="Cabinet Studio 0.1.0"
+INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
+INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
+INFO4="Cohen kitchen - sample"
+INFO5=""
+_BSX=2800.000000
+_BSY=2070.000000
+_BSZ=18.000000
+_FNX=0.000000
+_FNY=0.000000
+_RNX=0.000000
+_RNY=0.000000
+_RNZ=0.000000
+_RX=2800.000000
+_RY=2070.000000
+
+[001
+L="2800"
+KM="Sheet length X"
+B="2070"
+KM="Sheet width Y"
+D="18"
+KM="Sheet thickness Z"
+
+]1
+$E0
+KP 
+X=1678.0000
+Y=2034.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=1885.0000
+Y=2034.0000
+
+$E2
+KL 
+X=1885.0000
+Y=1934.0000
+
+$E3
+KL 
+X=1471.0000
+Y=1934.0000
+
+$E4
+KL 
+X=1471.0000
+Y=2034.0000
+
+$E5
+KL 
+X=1678.0000
+Y=2034.0000
+
+]2
+$E0
+KP 
+X=2662.0000
+Y=1624.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2662.0000
+Y=1906.0000
+
+$E2
+KL 
+X=2762.0000
+Y=1906.0000
+
+$E3
+KL 
+X=2762.0000
+Y=1342.0000
+
+$E4
+KL 
+X=2662.0000
+Y=1342.0000
+
+$E5
+KL 
+X=2662.0000
+Y=1624.0000
+
+]3
+$E0
+KP 
+X=291.0000
+Y=2057.1000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=572.0000
+Y=2057.1000
+
+$E2
+KL 
+X=572.0000
+Y=1778.0000
+
+$E3
+KL 
+X=10.0000
+Y=1778.0000
+
+$E4
+KL 
+X=10.0000
+Y=2057.1000
+
+$E5
+KL 
+X=291.0000
+Y=2057.1000
+
+]4
+$E0
+KP 
+X=867.0000
+Y=2057.1000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=1148.0000
+Y=2057.1000
+
+$E2
+KL 
+X=1148.0000
+Y=1778.0000
+
+$E3
+KL 
+X=586.0000
+Y=1778.0000
+
+$E4
+KL 
+X=586.0000
+Y=2057.1000
+
+$E5
+KL 
+X=867.0000
+Y=2057.1000
+
+]5
+$E0
+KP 
+X=1162.0000
+Y=1699.5000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=1162.0000
+Y=2057.0000
+
+$E2
+KL 
+X=1457.0000
+Y=2057.0000
+
+$E3
+KL 
+X=1457.0000
+Y=1342.0000
+
+$E4
+KL 
+X=1162.0000
+Y=1342.0000
+
+$E5
+KL 
+X=1162.0000
+Y=1699.5000
+
+]6
+$E0
+KP 
+X=2044.0000
+Y=1699.5000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2044.0000
+Y=2057.0000
+
+$E2
+KL 
+X=2339.0000
+Y=2057.0000
+
+$E3
+KL 
+X=2339.0000
+Y=1342.0000
+
+$E4
+KL 
+X=2044.0000
+Y=1342.0000
+
+$E5
+KL 
+X=2044.0000
+Y=1699.5000
+
+]7
+$E0
+KP 
+X=2353.0000
+Y=1699.5000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2353.0000
+Y=2057.0000
+
+$E2
+KL 
+X=2648.0000
+Y=2057.0000
+
+$E3
+KL 
+X=2648.0000
+Y=1342.0000
+
+$E4
+KL 
+X=2353.0000
+Y=1342.0000
+
+$E5
+KL 
+X=2353.0000
+Y=1699.5000
+
+]8
+$E0
+KP 
+X=2406.0000
+Y=329.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2766.0000
+Y=329.0000
+
+$E2
+KL 
+X=2766.0000
+Y=10.0000
+
+$E3
+KL 
+X=2046.0000
+Y=10.0000
+
+$E4
+KL 
+X=2046.0000
+Y=329.0000
+
+$E5
+KL 
+X=2406.0000
+Y=329.0000
+
+]9
+$E0
+KP 
+X=2406.0000
+Y=662.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2766.0000
+Y=662.0000
+
+$E2
+KL 
+X=2766.0000
+Y=343.0000
+
+$E3
+KL 
+X=2046.0000
+Y=343.0000
+
+$E4
+KL 
+X=2046.0000
+Y=662.0000
+
+$E5
+KL 
+X=2406.0000
+Y=662.0000
+
+]10
+$E0
+KP 
+X=2406.0000
+Y=995.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2766.0000
+Y=995.0000
+
+$E2
+KL 
+X=2766.0000
+Y=676.0000
+
+$E3
+KL 
+X=2046.0000
+Y=676.0000
+
+$E4
+KL 
+X=2046.0000
+Y=995.0000
+
+$E5
+KL 
+X=2406.0000
+Y=995.0000
+
+]11
+$E0
+KP 
+X=2406.0000
+Y=1328.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2766.0000
+Y=1328.0000
+
+$E2
+KL 
+X=2766.0000
+Y=1009.0000
+
+$E3
+KL 
+X=2046.0000
+Y=1009.0000
+
+$E4
+KL 
+X=2046.0000
+Y=1328.0000
+
+$E5
+KL 
+X=2406.0000
+Y=1328.0000
+
+]12
+$E0
+KP 
+X=1471.0000
+Y=1538.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=1471.0000
+Y=1920.0000
+
+$E2
+KL 
+X=2030.0000
+Y=1920.0000
+
+$E3
+KL 
+X=2030.0000
+Y=1156.0000
+
+$E4
+KL 
+X=1471.0000
+Y=1156.0000
+
+$E5
+KL 
+X=1471.0000
+Y=1538.0000
+
+]13
+$E0
+KP 
+X=569.0000
+Y=445.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=569.0000
+Y=10.0000
+
+$E2
+KL 
+X=69.0000
+Y=10.0000
+
+$E3
+KL 
+X=69.0000
+Y=110.0000
+
+$E4
+KL 
+X=10.0000
+Y=110.0000
+
+$E5
+KL 
+X=10.0000
+Y=880.0000
+
+$E6
+KL 
+X=569.0000
+Y=880.0000
+
+$E7
+KL 
+X=569.0000
+Y=445.0000
+
+]14
+$E0
+KP 
+X=1142.0000
+Y=445.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=1142.0000
+Y=10.0000
+
+$E2
+KL 
+X=642.0000
+Y=10.0000
+
+$E3
+KL 
+X=642.0000
+Y=110.0000
+
+$E4
+KL 
+X=583.0000
+Y=110.0000
+
+$E5
+KL 
+X=583.0000
+Y=880.0000
+
+$E6
+KL 
+X=1142.0000
+Y=880.0000
+
+$E7
+KL 
+X=1142.0000
+Y=445.0000
+
+]15
+$E0
+KP 
+X=1597.0000
+Y=10.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=1162.0000
+Y=10.0000
+
+$E2
+KL 
+X=1162.0000
+Y=510.0000
+
+$E3
+KL 
+X=1262.0000
+Y=510.0000
+
+$E4
+KL 
+X=1262.0000
+Y=569.0000
+
+$E5
+KL 
+X=2032.0000
+Y=569.0000
+
+$E6
+KL 
+X=2032.0000
+Y=10.0000
+
+$E7
+KL 
+X=1597.0000
+Y=10.0000
+
+]16
+$E0
+KP 
+X=1597.0000
+Y=1142.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=2032.0000
+Y=1142.0000
+
+$E2
+KL 
+X=2032.0000
+Y=583.0000
+
+$E3
+KL 
+X=1262.0000
+Y=583.0000
+
+$E4
+KL 
+X=1262.0000
+Y=642.0000
+
+$E5
+KL 
+X=1162.0000
+Y=642.0000
+
+$E6
+KL 
+X=1162.0000
+Y=1142.0000
+
+$E7
+KL 
+X=1597.0000
+Y=1142.0000
+
+]17
+$E0
+KP 
+X=10.0000
+Y=1329.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=10.0000
+Y=1764.0000
+
+$E2
+KL 
+X=569.0000
+Y=1764.0000
+
+$E3
+KL 
+X=569.0000
+Y=994.0000
+
+$E4
+KL 
+X=510.0000
+Y=994.0000
+
+$E5
+KL 
+X=510.0000
+Y=894.0000
+
+$E6
+KL 
+X=10.0000
+Y=894.0000
+
+$E7
+KL 
+X=10.0000
+Y=1329.0000
+
+]18
+$E0
+KP 
+X=583.0000
+Y=1329.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=583.0000
+Y=1764.0000
+
+$E2
+KL 
+X=1142.0000
+Y=1764.0000
+
+$E3
+KL 
+X=1142.0000
+Y=994.0000
+
+$E4
+KL 
+X=1083.0000
+Y=994.0000
+
+$E5
+KL 
+X=1083.0000
+Y=894.0000
+
+$E6
+KL 
+X=583.0000
+Y=894.0000
+
+$E7
+KL 
+X=583.0000
+Y=1329.0000
+
+<100 \WerkStck\
+LA="L"
+BR="B"
+DI="D"
+FNX="0"
+FNY="0"
+AX="0"
+AY="0"
+
+<101 \Kommentar\
+KM="Cabinet Studio 0.1.0 - job J1042 sheet 2/3 PB18-WHT"
+KM="Generated program. Verify in woodWOP simulation before cutting."
+KM="P14 at X1471 Y1934 414x100"
+KM="P5 at X2662 Y1342 100x564 rotated"
+KM="P31 at X10 Y1778 562x279.1"
+KM="P32 at X586 Y1778 562x279.1"
+KM="P33 at X1162 Y1342 295x715 rotated"
+KM="P34 at X2044 Y1342 295x715 rotated"
+KM="P42 at X2353 Y1342 295x715 rotated"
+KM="P26 at X2046 Y10 720x319"
+KM="P27 at X2046 Y343 720x319"
+KM="P35 at X2046 Y676 720x319"
+KM="P36 at X2046 Y1009 720x319"
+KM="P20 at X1471 Y1156 559x764 rotated"
+KM="P1 at X10 Y10 559x870 rotated"
+KM="P10 at X583 Y10 559x870 rotated"
+KM="P18 at X1162 Y10 870x559"
+KM="P19 at X1162 Y583 870x559"
+KM="P2 at X10 Y894 559x870 rotated"
+KM="P11 at X583 Y894 559x870 rotated"
+KM="6 horizontal holes NOT in this program - drill off-machine"
+KAT="Kommentar"
+MNM="Kommentar"
+
+<102 \BohrVert\
+XA="2151"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="65.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2119"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2695"
+YA="293"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P26 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2119"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2695"
+YA="379"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="606.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P27 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="731.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2119"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2695"
+YA="959"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P35 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2119"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2695"
+YA="1045"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 mounting-plate D5"
+
+<102 \BohrVert\
+XA="2151"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2183"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2215"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2247"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2279"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2311"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2343"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2375"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2407"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2439"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2471"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2503"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2535"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2567"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2599"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2631"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="2663"
+YA="1272.5"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P36 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="183"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 mounting-plate D5"
+
+<102 \BohrVert\
+XA="46"
+YA="215"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="215"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="247"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="247"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="279"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="279"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="311"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="311"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="343"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="343"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="375"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="375"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="407"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="407"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="439"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="439"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="471"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="471"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="503"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="503"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="535"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="535"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="567"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="567"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="599"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="599"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="631"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="631"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="663"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="663"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="695"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="695"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="727"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="727"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="759"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="759"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="46"
+YA="791"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="513.5"
+YA="791"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 shelf-pin D5"
+
+<102 \BohrVert\
+XA="34"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 screw-pilot D5"
+
+<102 \BohrVert\
+XA="84"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 screw-pilot D5"
+
+<102 \BohrVert\
+XA="475.5"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 screw-pilot D5"
+
+<102 \BohrVert\
+XA="525.5"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 screw-pilot D5"
+
+<102 \BohrVert\
+XA="619"
+YA="215"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="215"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="247"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="247"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="279"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="279"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="311"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="311"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="343"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="343"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="375"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="375"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="407"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="407"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="439"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="439"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="471"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="471"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="503"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="503"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="535"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="535"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="567"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="567"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="599"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="599"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="631"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="631"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="663"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="663"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="695"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="695"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="727"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="727"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="759"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="759"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="619"
+YA="791"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1086.5"
+YA="791"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 shelf-pin D5"
+
+<102 \BohrVert\
+XA="607"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 screw-pilot D5"
+
+<102 \BohrVert\
+XA="657"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 screw-pilot D5"
+
+<102 \BohrVert\
+XA="1048.5"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 screw-pilot D5"
+
+<102 \BohrVert\
+XA="1098.5"
+YA="871"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P10 screw-pilot D5"
+
+<102 \BohrVert\
+XA="1335"
+YA="533"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1367"
+YA="533"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1911"
+YA="533"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1943"
+YA="533"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1335"
+YA="619"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1367"
+YA="619"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1911"
+YA="619"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 mounting-plate D5"
+
+<102 \BohrVert\
+XA="1943"
+YA="619"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 mounting-plate D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1067"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 mounting-plate D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1099"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1099"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1131"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1131"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1163"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1163"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1195"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1195"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1227"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1227"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1259"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1259"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1291"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1291"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1323"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1323"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1355"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1355"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1387"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1387"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1419"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1419"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1451"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1451"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1483"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1483"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1515"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1515"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1547"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1547"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1579"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1579"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1611"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1611"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1643"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1643"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="65.5"
+YA="1675"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="533"
+YA="1675"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 shelf-pin D5"
+
+<102 \BohrVert\
+XA="53.5"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 screw-pilot D5"
+
+<102 \BohrVert\
+XA="103.5"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 screw-pilot D5"
+
+<102 \BohrVert\
+XA="495"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 screw-pilot D5"
+
+<102 \BohrVert\
+XA="545"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P2 screw-pilot D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1067"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 mounting-plate D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1099"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1099"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1131"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1131"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1163"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1163"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1195"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1195"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1227"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1227"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1259"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1259"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1291"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1291"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1323"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1323"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1355"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1355"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1387"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1387"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1419"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1419"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1451"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1451"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1483"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1483"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1515"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1515"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1547"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1547"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1579"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1579"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1611"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1611"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1643"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1643"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="638.5"
+YA="1675"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="1106"
+YA="1675"
+BM="LS"
+TI="12"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 shelf-pin D5"
+
+<102 \BohrVert\
+XA="626.5"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 screw-pilot D5"
+
+<102 \BohrVert\
+XA="676.5"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 screw-pilot D5"
+
+<102 \BohrVert\
+XA="1068"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 screw-pilot D5"
+
+<102 \BohrVert\
+XA="1118"
+YA="1755"
+BM="LSL"
+TI="18.3"
+DU="5"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P11 screw-pilot D5"
+
+<102 \BohrVert\
+XA="2023"
+YA="53.5"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="1271"
+YA="60"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="103.5"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="1271"
+YA="290"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="495"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="1271"
+YA="520"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="545"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P18 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="607"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="1271"
+YA="632"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="657"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="1271"
+YA="862"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="1048.5"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="1271"
+YA="1092"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="2023"
+YA="1098.5"
+BM="LS"
+TI="12"
+DU="8"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P19 dowel D8"
+
+<102 \BohrVert\
+XA="1435.5"
+YA="1428.5"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P33 hinge-cup D35"
+
+<102 \BohrVert\
+XA="1435.5"
+YA="1972.5"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P33 hinge-cup D35"
+
+<102 \BohrVert\
+XA="2065.5"
+YA="1428.5"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P34 hinge-cup D35"
+
+<102 \BohrVert\
+XA="2065.5"
+YA="1972.5"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P34 hinge-cup D35"
+
+<102 \BohrVert\
+XA="2626.5"
+YA="1428.5"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P42 hinge-cup D35"
+
+<102 \BohrVert\
+XA="2626.5"
+YA="1972.5"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P42 hinge-cup D35"
+
+<112 \Tasche\
+XA="2051.5"
+YA="169.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P26 dado"
+
+<112 \Tasche\
+XA="2760.5"
+YA="169.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P26 dado"
+
+<112 \Tasche\
+XA="2406"
+YA="25.25"
+LA="728"
+BR="6.5"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P26 back-groove"
+
+<112 \Tasche\
+XA="2051.5"
+YA="502.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P27 dado"
+
+<112 \Tasche\
+XA="2760.5"
+YA="502.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P27 dado"
+
+<112 \Tasche\
+XA="2406"
+YA="646.75"
+LA="728"
+BR="6.5"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P27 back-groove"
+
+<112 \Tasche\
+XA="2051.5"
+YA="835.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P35 dado"
+
+<112 \Tasche\
+XA="2760.5"
+YA="835.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P35 dado"
+
+<112 \Tasche\
+XA="2406"
+YA="691.25"
+LA="728"
+BR="6.5"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P35 back-groove"
+
+<112 \Tasche\
+XA="2051.5"
+YA="1168.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P36 dado"
+
+<112 \Tasche\
+XA="2760.5"
+YA="1168.5"
+LA="25"
+BR="333"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P36 dado"
+
+<112 \Tasche\
+XA="2406"
+YA="1312.75"
+LA="728"
+BR="6.5"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P36 back-groove"
+
+<112 \Tasche\
+XA="1486.25"
+YA="1538"
+LA="6.5"
+BR="772"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P20 back-groove"
+
+<112 \Tasche\
+XA="289.5"
+YA="119"
+LA="573"
+BR="18"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P1 dado"
+
+<112 \Tasche\
+XA="553.75"
+YA="445"
+LA="6.5"
+BR="878"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P1 back-groove"
+
+<112 \Tasche\
+XA="862.5"
+YA="119"
+LA="573"
+BR="18"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P10 dado"
+
+<112 \Tasche\
+XA="1126.75"
+YA="445"
+LA="6.5"
+BR="878"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P10 back-groove"
+
+<112 \Tasche\
+XA="1597"
+YA="25.25"
+LA="878"
+BR="6.5"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P18 back-groove"
+
+<112 \Tasche\
+XA="1597"
+YA="1126.75"
+LA="878"
+BR="6.5"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P19 back-groove"
+
+<112 \Tasche\
+XA="289.5"
+YA="1003"
+LA="573"
+BR="18"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P2 dado"
+
+<112 \Tasche\
+XA="25.25"
+YA="1329"
+LA="6.5"
+BR="878"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P2 back-groove"
+
+<112 \Tasche\
+XA="862.5"
+YA="1003"
+LA="573"
+BR="18"
+RD="6"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P11 dado"
+
+<112 \Tasche\
+XA="598.25"
+YA="1329"
+LA="6.5"
+BR="878"
+RD="3"
+WI="0"
+TI="8"
+ZT="0"
+XY="80"
+DS="1"
+T_="103"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P11 back-groove"
+
+<105 \Konturfraesen\
+EA="1:0"
+MDA="SEN"
+RK="WRKL"
+EE="1:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P14 cut-out"
+
+<105 \Konturfraesen\
+EA="2:0"
+MDA="SEN"
+RK="WRKL"
+EE="2:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P5 cut-out"
+
+<105 \Konturfraesen\
+EA="3:0"
+MDA="SEN"
+RK="WRKL"
+EE="3:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P31 cut-out"
+
+<105 \Konturfraesen\
+EA="4:0"
+MDA="SEN"
+RK="WRKL"
+EE="4:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P32 cut-out"
+
+<105 \Konturfraesen\
+EA="5:0"
+MDA="SEN"
+RK="WRKL"
+EE="5:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P33 cut-out"
+
+<105 \Konturfraesen\
+EA="6:0"
+MDA="SEN"
+RK="WRKL"
+EE="6:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P34 cut-out"
+
+<105 \Konturfraesen\
+EA="7:0"
+MDA="SEN"
+RK="WRKL"
+EE="7:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P42 cut-out"
+
+<105 \Konturfraesen\
+EA="8:0"
+MDA="SEN"
+RK="WRKL"
+EE="8:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P26 cut-out"
+
+<105 \Konturfraesen\
+EA="9:0"
+MDA="SEN"
+RK="WRKL"
+EE="9:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P27 cut-out"
+
+<105 \Konturfraesen\
+EA="10:0"
+MDA="SEN"
+RK="WRKL"
+EE="10:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P35 cut-out"
+
+<105 \Konturfraesen\
+EA="11:0"
+MDA="SEN"
+RK="WRKL"
+EE="11:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P36 cut-out"
+
+<105 \Konturfraesen\
+EA="12:0"
+MDA="SEN"
+RK="WRKL"
+EE="12:5"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P20 cut-out"
+
+<105 \Konturfraesen\
+EA="13:0"
+MDA="SEN"
+RK="WRKL"
+EE="13:7"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P1 cut-out"
+
+<105 \Konturfraesen\
+EA="14:0"
+MDA="SEN"
+RK="WRKL"
+EE="14:7"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P10 cut-out"
+
+<105 \Konturfraesen\
+EA="15:0"
+MDA="SEN"
+RK="WRKL"
+EE="15:7"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P18 cut-out"
+
+<105 \Konturfraesen\
+EA="16:0"
+MDA="SEN"
+RK="WRKL"
+EE="16:7"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P19 cut-out"
+
+<105 \Konturfraesen\
+EA="17:0"
+MDA="SEN"
+RK="WRKL"
+EE="17:7"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P2 cut-out"
+
+<105 \Konturfraesen\
+EA="18:0"
+MDA="SEN"
+RK="WRKL"
+EE="18:7"
+MDE="SEN_AB"
+EM="1"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P11 cut-out"
+
+<101 \Kommentar\
+KM="HOMAG_PRODUCTIONMANAGER_FEEDBACK={Version:1.00,PARTID:J1042_S02_PB18-WHT,MPRNUMBER:2,MPRCOUNT:3}"
+KAT="Kommentar"
+MNM="Kommentar"
+!

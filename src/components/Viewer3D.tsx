@@ -169,7 +169,7 @@ export function Viewer3D({
       <directionalLight position={[-3, 2, -2]} intensity={0.5} />
       <gridHelper args={[4, 40, '#c9c2b4', '#e2ddd3']} position={[target[0], 0, target[2]]} />
       {parts
-        .filter((p) => !(hideDoors && isFront(p)))
+        .filter((p) => !(hideDoors && (isFront(p) || p.role === 'drawer')))
         .map((p) => {
           const mat = library.materials.find((m) => m.id === p.materialId)
           return (

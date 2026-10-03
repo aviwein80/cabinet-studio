@@ -323,7 +323,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
                 <Slider className="w-24" min={0} max={250} step={10} value={[explode]} onValueChange={([v]) => setExplode(v)} />
               </span>
               <Button size="xs" variant={hideDoors ? 'secondary' : 'ghost'} onClick={() => setHideDoors(!hideDoors)}>
-                {hideDoors ? <EyeOff /> : <Eye />} Doors
+                {hideDoors ? <EyeOff /> : <Eye />} Fronts
               </Button>
               <Button size="xs" variant={showOps ? 'secondary' : 'ghost'} onClick={() => setShowOps(!showOps)}>
                 Holes

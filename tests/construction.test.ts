@@ -82,7 +82,8 @@ describe('base carcass generator', () => {
       const near = sideHoles.filter((h) => Math.abs(toWorld(side.frame, h.x, h.y)[2] - z) <= 16.0001 && Math.abs(h.y - (560 - 37)) < 1e-6)
       expect(near.length).toBe(2)
     }
-    expect(cups.every((c) => c.y === 22.5)).toBe(true)
+    expect(cups.every((c) => c.y === 20.5)).toBe(true)
+    expect(cups.every((c) => c.diameter === 35 && c.depth === 13.5)).toBe(true)
   })
 
   it('creates horizontal holes for dowel joinery and counts hardware', () => {

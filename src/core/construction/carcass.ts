@@ -11,6 +11,7 @@ import {
   vecEq,
   type Box3,
 } from '../geometry'
+import { BLUM, SALICE, hingeHeights, selectTandem } from '../hardware/specs'
 import type {
   CabinetInstance,
   CarcassParams,
@@ -37,8 +38,8 @@ export interface GeneratedCabinet {
 
 export const HW = {
   shelfPin: 'PIN-5',
-  hinge: 'HINGE-110',
-  plate: 'PLATE-CLIP-0',
+  hinge: SALICE.hingeCode,
+  plate: SALICE.plateCode,
   dowel: 'DOWEL-8x30',
   confirmat: 'CONFIRMAT-7x50',
   screw: 'SCREW-4x50',
@@ -326,7 +327,8 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
   }
 
   const rowYs = [p.shelfPins.setbackFront, backFrontY - p.shelfPins.setbackBack]
-  if (p.shelves.count > 0 && p.shelfPins.enabled) {
+  const drawerCountEarly = Math.max(0, Math.round(p.drawers?.count ?? 0))
+  if (p.shelves.count > 0 && drawerCountEarly === 0 && p.shelfPins.enabled) {
     for (const { b, faceX } of sides) {
       for (const y of rowYs) for (const z of gridZ) b.drill([faceX, y, z], p.shelfPins.diameter, p.shelfPins.depth, 'shelf-pin')
     }
@@ -372,10 +374,13 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
   if (p.joinery === 'screw') addHw(HW.screw, connectorCount)
 
   // ---- shelves ----------------------------------------------------------------------------
+  const drawerCount = Math.max(0, Math.round(p.drawers?.count ?? 0))
+  if (drawerCount > 0 && p.shelves.count > 0) warnings.push('Shelves are left out while drawers are fitted.')
+  const shelfCount = drawerCount > 0 ? 0 : p.shelves.count
   const shelfDepth = r3(backFrontY - p.shelves.frontSetback - 2)
   const interiorLo = tk + T
   const interiorHi = H - T
-  for (let i = 0; i < p.shelves.count; i++) {
+  for (let i = 0; i < shelfCount; i++) {
     const z = interiorLo + ((interiorHi - interiorLo) * (i + 1)) / (p.shelves.count + 1)
     const c = p.shelves.sideClearance
     const sh = new PartBuilder(
@@ -391,48 +396,108 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
     sh.band(neg(Y), p.edgebands.shelfFront)
     parts.push(sh)
   }
-  if (p.shelfPins.enabled) addHw(HW.shelfPin, p.shelves.count * 4)
-  if (p.shelves.count > 0 && gridZ.length === 0) warnings.push('No room for shelf-pin holes between bottom and top.')
+  if (p.shelfPins.enabled && shelfCount > 0) addHw(HW.shelfPin, shelfCount * 4)
+  if (shelfCount > 0 && gridZ.length === 0) warnings.push('No room for shelf-pin holes between bottom and top.')
 
-  // ---- doors with hinge cups and mounting plates ------------------------------------------
-  if (p.doors.count > 0) {
-    const g = p.doors.gap
-    const dz0 = p.kind === 'base' ? tk : g / 2
-    const dz1 = p.kind === 'base' ? H - g : H - g / 2
-    const doorH = dz1 - dz0
-    const spans: { x0: number; x1: number; hinge: 'left' | 'right' }[] =
-      p.doors.count === 1
-        ? [{ x0: g / 2, x1: W - g / 2, hinge: p.doors.hingeSide }]
-        : [
-            { x0: g / 2, x1: W / 2 - g / 2, hinge: 'left' },
-            { x0: W / 2 + g / 2, x1: W - g / 2, hinge: 'right' },
-          ]
-    const nH = hingeCount(doorH)
-    const wanted: number[] = []
-    for (let i = 0; i < nH; i++) {
-      const a = dz0 + p.doors.hingeFromEnd
-      const bz = dz1 - p.doors.hingeFromEnd
-      wanted.push(a + ((bz - a) * i) / (nH - 1))
+  // ---- fronts: drawers from the bottom, doors above them ----------------------------------
+  const g = p.doors.gap
+  const frontZ0 = p.kind === 'base' ? tk : g / 2
+  const frontZ1 = p.kind === 'base' ? H - g : H - g / 2
+  const frontSpan = frontZ1 - frontZ0
+  let drawerTop = frontZ0
+  if (drawerCount > 0) {
+    const mixed = p.doors.count > 0
+    let frontH = mixed ? p.drawers.frontHeight : (frontSpan - (drawerCount - 1) * g) / drawerCount
+    if (mixed && drawerCount * frontH + drawerCount * g > frontSpan - 80) {
+      frontH = (frontSpan - 80 - drawerCount * g) / drawerCount
+      warnings.push('Drawer fronts were shortened so a door still fits above them.')
     }
-    const plateCentres = wanted.map((z) => r3(gridOrigin + Math.round((z - pitch / 2 - gridOrigin) / pitch) * pitch + pitch / 2))
+    if (frontH < 60) warnings.push('Drawer fronts are under 60 mm tall.')
+    const { slide, shallow } = selectTandem(D, p.drawers?.slide ?? 'auto')
+    if (shallow) warnings.push(`Cabinet depth ${D} mm is under Blum's ${slide.minCabinetDepth} mm minimum for a ${slide.inches} in TANDEM runner.`)
+    const sideT = T
+    if (T > BLUM.maxSideThickness)
+      warnings.push(`Blum TANDEM allows drawer sides up to ${BLUM.maxSideThickness} mm (5/8 in). These sides are the ${T} mm carcass board, so check the runner before building the box.`)
+    const openingW = W - 2 * T
+    const insideW = r3(openingW - BLUM.insideWidthDeduction)
+    const sideGap = r3((openingW - (insideW + 2 * sideT)) / 2)
+    const boxDepth = Math.min(slide.length, r3(backFrontY - BLUM.runnerSetback))
+    if (boxDepth < slide.length - 0.1) warnings.push(`Drawer box shortened to ${boxDepth} mm to clear the back.`)
+    const bottomT = Math.min(Tb, 16)
 
-    spans.forEach((sp, i) => {
-      const key = spans.length === 1 ? 'door' : i === 0 ? 'door-left' : 'door-right'
-      const name = spans.length === 1 ? 'Door' : i === 0 ? 'Left door' : 'Right door'
-      const d = new PartBuilder(key, name, 'door', p.doorMaterialId, box([sp.x0, -Td, dz0], [sp.x1, 0, dz1]), Z, Y, 'length')
-      d.bandAll(p.edgebands.door)
-      const cupX = sp.hinge === 'left' ? sp.x0 + p.doors.cupEdgeDistance : sp.x1 - p.doors.cupEdgeDistance
-      for (const zc of plateCentres) d.drill([cupX, 0, zc], p.doors.cupDiameter, p.doors.cupDepth, 'hinge-cup')
-      parts.push(d)
+    for (let i = 0; i < drawerCount; i++) {
+      const z0 = r3(frontZ0 + i * (frontH + g))
+      const z1 = r3(z0 + frontH)
+      drawerTop = z1
+      const n = i + 1
+      const front = new PartBuilder(`drawer-front-${n}`, `Drawer front ${n}`, 'drawer', p.doorMaterialId, box([g / 2, -Td, z0], [W - g / 2, 0, z1]), Z, Y, 'length')
+      front.bandAll(p.edgebands.door)
+      parts.push(front)
 
-      const side = sp.hinge === 'left' ? sides[0] : sides[1]
-      for (const zc of plateCentres) {
-        side.b.drill([side.faceX, p.shelfPins.setbackFront, zc - pitch / 2], 5, p.shelfPins.depth, 'mounting-plate')
-        side.b.drill([side.faceX, p.shelfPins.setbackFront, zc + pitch / 2], 5, p.shelfPins.depth, 'mounting-plate')
+      const boxZ0 = r3(z0 + BLUM.bottomClearance)
+      const sideH = r3(Math.max(50, frontH - BLUM.bottomClearance - BLUM.topClearance))
+      const xL = r3(T + sideGap)
+      const y1 = boxDepth
+      const left = new PartBuilder(`drawer-${n}-side-l`, `Drawer ${n} left side`, 'drawer', cm, box([xL, 0, boxZ0], [xL + sideT, y1, boxZ0 + sideH]), Y, X, 'length')
+      const right = new PartBuilder(`drawer-${n}-side-r`, `Drawer ${n} right side`, 'drawer', cm, box([xL + sideT + insideW, 0, boxZ0], [xL + 2 * sideT + insideW, y1, boxZ0 + sideH]), Y, neg(X), 'length')
+      const sub = new PartBuilder(`drawer-${n}-subfront`, `Drawer ${n} subfront`, 'drawer', cm, box([xL + sideT, 0, boxZ0], [xL + sideT + insideW, sideT, boxZ0 + sideH]), X, Y, 'length')
+      const back = new PartBuilder(`drawer-${n}-back`, `Drawer ${n} back`, 'drawer', cm, box([xL + sideT, y1 - sideT, boxZ0], [xL + sideT + insideW, y1, boxZ0 + sideH]), X, neg(Y), 'length')
+      const botZ = boxZ0 + BLUM.bottomRecess
+      const bottomPanel = new PartBuilder(
+        `drawer-${n}-bottom`,
+        `Drawer ${n} bottom`,
+        'drawer',
+        p.backMaterialId,
+        box([xL + sideT, sideT, botZ], [xL + sideT + insideW, y1 - sideT, botZ + bottomT]),
+        X,
+        Z,
+        'none',
+      )
+      // Rear hook bores, one at each end of the drawer back. Offsets are Blum's rear-view callouts.
+      back.drill([xL + sideT + BLUM.hookFromEnd, y1, boxZ0 + BLUM.hookFromBottom], BLUM.hookDiameter, BLUM.hookDepth, 'slide')
+      back.drill([xL + sideT + insideW - BLUM.hookFromEnd, y1, boxZ0 + BLUM.hookFromBottom], BLUM.hookDiameter, BLUM.hookDepth, 'slide')
+      parts.push(left, right, sub, back, bottomPanel)
+
+      const screwZ = r3(z0 + BLUM.line)
+      for (const { b, faceX } of sides) {
+        for (const y of slide.holesFromFront) b.drill([faceX, y, screwZ], BLUM.holeDiameter, BLUM.holeDepth, 'slide')
       }
-      addHw(HW.hinge, plateCentres.length)
-      addHw(HW.plate, plateCentres.length)
-    })
+    }
+    addHw(slide.part, drawerCount)
+  }
+
+  // ---- doors with Salice cups and 3 mm plates ---------------------------------------------
+  if (p.doors.count > 0) {
+    const dz0 = drawerCount > 0 ? drawerTop + g : frontZ0
+    const dz1 = frontZ1
+    const doorH = dz1 - dz0
+    if (doorH > 80) {
+      const spans: { x0: number; x1: number; hinge: 'left' | 'right' }[] =
+        p.doors.count === 1
+          ? [{ x0: g / 2, x1: W - g / 2, hinge: p.doors.hingeSide }]
+          : [
+              { x0: g / 2, x1: W / 2 - g / 2, hinge: 'left' },
+              { x0: W / 2 + g / 2, x1: W - g / 2, hinge: 'right' },
+            ]
+      const plateCentres = hingeHeights(dz0, dz1, p.doors.hingeFromEnd, hingeCount(doorH), gridOrigin, pitch)
+      spans.forEach((sp, i) => {
+        const key = spans.length === 1 ? 'door' : i === 0 ? 'door-left' : 'door-right'
+        const name = spans.length === 1 ? 'Door' : i === 0 ? 'Left door' : 'Right door'
+        const d = new PartBuilder(key, name, 'door', p.doorMaterialId, box([sp.x0, -Td, dz0], [sp.x1, 0, dz1]), Z, Y, 'length')
+        d.bandAll(p.edgebands.door)
+        const cupX = sp.hinge === 'left' ? sp.x0 + p.doors.cupEdgeDistance : sp.x1 - p.doors.cupEdgeDistance
+        for (const zc of plateCentres) d.drill([cupX, 0, zc], p.doors.cupDiameter, p.doors.cupDepth, 'hinge-cup')
+        parts.push(d)
+
+        const side = sp.hinge === 'left' ? sides[0] : sides[1]
+        for (const zc of plateCentres) {
+          side.b.drill([side.faceX, SALICE.plateSetback, zc - pitch / 2], SALICE.plateHoleDiameter, SALICE.plateHoleDepth, 'mounting-plate')
+          side.b.drill([side.faceX, SALICE.plateSetback, zc + pitch / 2], SALICE.plateHoleDiameter, SALICE.plateHoleDepth, 'mounting-plate')
+        }
+        addHw(HW.hinge, plateCentres.length)
+        addHw(HW.plate, plateCentres.length)
+      })
+    } else if (drawerCount > 0) warnings.push('No room left above the drawers for a door.')
   }
 
   return {

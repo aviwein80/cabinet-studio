@@ -1,8 +1,11 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useStore } from '@/app/store'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { formatLength, parseLength } from '@/core/units'
+import type { UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
 export function Field({ label, hint, children, className }: { label: string; hint?: string; children: ReactNode; className?: string }) {
@@ -36,14 +39,19 @@ export function NumField({
   hint?: string
   className?: string
 }) {
-  const [text, setText] = useState(String(value))
+  const units: UnitSystem = useStore((s) => (suffix === 'mm' ? (s.data?.settings.units ?? 'mm') : 'mm'))
+  const length = suffix === 'mm'
+  const shown = length ? formatLength(value, units) : String(value)
+  const [text, setText] = useState(shown)
   const id = useId()
-  useEffect(() => setText(String(value)), [value])
-  const parsed = Number(text.replace(',', '.'))
-  const invalid = text.trim() === '' || !Number.isFinite(parsed) || (min !== undefined && parsed < min) || (max !== undefined && parsed > max)
+  useEffect(() => setText(shown), [shown])
+  const parsed = length ? parseLength(text, units) : Number(text.replace(',', '.'))
+  const inUnit = parsed !== null && Number.isFinite(parsed) ? parsed : NaN
+  const invalid = text.trim() === '' || !Number.isFinite(inUnit) || (min !== undefined && inUnit < min) || (max !== undefined && inUnit > max)
   const commit = () => {
-    if (!invalid && parsed !== value) onChange(parsed)
-    else if (invalid) setText(String(value))
+    if (text.trim() === shown) return
+    if (!invalid && inUnit !== value) onChange(inUnit)
+    else if (invalid) setText(shown)
   }
   return (
     <Field label={label} hint={hint} className={className}>
@@ -59,15 +67,15 @@ export function NumField({
             if (e.key === 'Enter') commit()
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
               e.preventDefault()
-              const n = (Number.isFinite(parsed) ? parsed : value) + (e.key === 'ArrowUp' ? step : -step)
+              const n = (Number.isFinite(inUnit) ? inUnit : value) + (e.key === 'ArrowUp' ? (units === 'in' ? 25.4 / 16 : step) : units === 'in' ? -25.4 / 16 : -step)
               const c = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n))
-              setText(String(c))
+              setText(length ? formatLength(c, units) : String(c))
               onChange(c)
             }
           }}
           className={cn('h-8 pr-9 tabular-nums', suffix ? 'pr-9' : 'pr-2')}
         />
-        {suffix && <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-muted-foreground">{suffix}</span>}
+        {suffix && <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-muted-foreground">{length && units === 'in' ? 'in' : suffix}</span>}
       </div>
     </Field>
   )

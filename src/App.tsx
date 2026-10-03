@@ -18,7 +18,7 @@ const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page
 ]
 
 export default function App() {
-  const { data, route, go, init, saving, lastSaved, loadError } = useStore()
+  const { data, route, go, init, saving, lastSaved, loadError, updateSettings } = useStore()
   const [location, setLocation] = useState('')
 
   useEffect(() => {
@@ -45,6 +45,13 @@ export default function App() {
               <div className="text-sm font-semibold text-white">Cabinet Studio</div>
               <div className="text-[11px] text-stone-400">{data.settings.shopName}</div>
             </div>
+            <div className="ml-auto flex rounded bg-white/10 p-0.5 text-[11px] md:hidden">
+              {(['mm', 'in'] as const).map((u) => (
+                <button key={u} onClick={() => updateSettings((s) => (s.units = u))} className={cn('rounded px-2 py-1', data.settings.units === u ? 'bg-white font-medium text-stone-900' : 'text-stone-300')}>
+                  {u}
+                </button>
+              ))}
+            </div>
           </div>
           <nav className="flex flex-1 flex-row gap-1 md:flex-col">
             {NAV.map((n) => {
@@ -65,6 +72,17 @@ export default function App() {
             })}
           </nav>
           <div className="hidden flex-col gap-3 md:flex">
+            <div className="flex rounded-md bg-white/10 p-0.5 text-xs">
+              {(['mm', 'in'] as const).map((u) => (
+                <button
+                  key={u}
+                  onClick={() => updateSettings((s) => (s.units = u))}
+                  className={cn('flex-1 rounded px-2 py-1', data.settings.units === u ? 'bg-white font-medium text-stone-900' : 'text-stone-300')}
+                >
+                  {u === 'mm' ? 'Millimetres' : 'Inches'}
+                </button>
+              ))}
+            </div>
             {data.machine.placeholder && (
               <button onClick={() => go({ page: 'machine' })} className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-left text-[11px] leading-snug text-amber-200">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />

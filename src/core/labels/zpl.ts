@@ -2,7 +2,8 @@
  * ZPL II for Zebra label printers (GK420d, ZD421, ...), 203 dpi = 8 dots/mm.
  * Sending ZPL straight to the printer keeps barcodes crisp and avoids driver scaling.
  */
-import { fmt } from '../geometry'
+import { formatLength } from '../units'
+import type { UnitSystem } from '../types'
 import type { JobOutput, LabelRecord } from '../pipeline'
 import { labelDims } from './placement'
 
@@ -12,7 +13,7 @@ const d = (mm: number) => Math.round(mm * DPMM)
 /** ZPL field data: strip control characters and the ^ ~ command prefixes. */
 const zText = (s: string) => s.replace(/[\^~\r\n]/g, ' ').replace(/[^\x20-\x7e]/g, '?')
 
-function labelZpl(l: LabelRecord, W: number, H: number) {
+function labelZpl(l: LabelRecord, W: number, H: number, units: UnitSystem) {
   const z: string[] = []
   z.push('^XA', '^CI28', `^PW${d(W)}`, `^LL${d(H)}`, '^LH0,0')
   z.push(`^FO0,0^GB${d(W)},${d(11)},${d(11)}^FS`)
@@ -24,8 +25,8 @@ function labelZpl(l: LabelRecord, W: number, H: number) {
   z.push(`^FO${d(W - 22)},${d(6.5)}^A0N,${d(3)},${d(2.6)}^FR^FDcut ${l.cutOrder}^FS`)
   z.push(`^FO${d(4)},${d(13)}^A0N,${d(5)},${d(4.5)}^FD${zText(l.partName).slice(0, 26)}^FS`)
   z.push(`^FO${d(4)},${d(19)}^A0N,${d(3)},${d(2.6)}^FD${zText(l.cabinet).slice(0, 40)}^FS`)
-  z.push(`^FO${d(4)},${d(24)}^A0N,${d(5.5)},${d(5)}^FD${fmt(l.finished.l)} x ${fmt(l.finished.w)} x ${fmt(l.finished.t)}^FS`)
-  z.push(`^FO${d(4)},${d(31)}^A0N,${d(2.8)},${d(2.4)}^FDfinished  cut ${fmt(l.cut.l)} x ${fmt(l.cut.w)}^FS`)
+  z.push(`^FO${d(4)},${d(24)}^A0N,${d(5.5)},${d(5)}^FD${formatLength(l.finished.l, units)} x ${formatLength(l.finished.w, units)} x ${formatLength(l.finished.t, units)}^FS`)
+  z.push(`^FO${d(4)},${d(31)}^A0N,${d(2.8)},${d(2.4)}^FDfinished  cut ${formatLength(l.cut.l, units)} x ${formatLength(l.cut.w, units)}^FS`)
   z.push(`^FO${d(4)},${d(35.5)}^A0N,${d(3)},${d(2.6)}^FD${zText(`${l.materialCode} ${l.materialName}`).slice(0, 44)}^FS`)
   const edges = (['L1', 'L2', 'W1', 'W2'] as const).filter((k) => l.edges[k]).map((k) => `${k} ${l.edges[k]}`).join('  ')
   z.push(`^FO${d(4)},${d(40)}^A0N,${d(2.8)},${d(2.4)}^FD${zText(edges ? `Edges: ${edges}` : 'Edges: none')}^FS`)
@@ -50,7 +51,7 @@ function labelZpl(l: LabelRecord, W: number, H: number) {
   return z.join('\r\n')
 }
 
-export function labelsZpl(out: JobOutput, size: '100x70' | '100x80') {
+export function labelsZpl(out: JobOutput, size: '100x70' | '100x80', units: UnitSystem = 'mm') {
   const { w, h } = labelDims(size)
-  return out.labels.map((l) => labelZpl(l, w, h)).join('\r\n') + '\r\n'
+  return out.labels.map((l) => labelZpl(l, w, h, units)).join('\r\n') + '\r\n'
 }

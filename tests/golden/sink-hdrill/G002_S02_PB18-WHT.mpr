@@ -19,21 +19,21 @@ INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
 INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
 INFO4="Test job"
 INFO5=""
-_BSX=2800.000000
-_BSY=2070.000000
+_BSX=3658.000000
+_BSY=1524.000000
 _BSZ=18.000000
 _FNX=0.000000
 _FNY=0.000000
 _RNX=0.000000
 _RNY=0.000000
 _RNZ=0.000000
-_RX=2800.000000
-_RY=2070.000000
+_RX=3658.000000
+_RY=1524.000000
 
 [001
-L="2800"
+L="3658"
 KM="Sheet length X"
-B="2070"
+B="1524"
 KM="Sheet width Y"
 D="18"
 KM="Sheet thickness Z"
@@ -41,68 +41,68 @@ KM="Sheet thickness Z"
 ]1
 $E0
 KP 
-X=392.0000
-Y=1991.0000
+X=1515.0000
+Y=392.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=774.0000
-Y=1991.0000
+X=1515.0000
+Y=774.0000
 
 $E2
 KL 
-X=774.0000
-Y=1892.0000
+X=1614.0000
+Y=774.0000
 
 $E3
 KL 
-X=10.0000
-Y=1892.0000
+X=1614.0000
+Y=10.0000
 
 $E4
 KL 
-X=10.0000
-Y=1991.0000
+X=1515.0000
+Y=10.0000
 
 $E5
 KL 
-X=392.0000
-Y=1991.0000
+X=1515.0000
+Y=392.0000
 
 ]2
 $E0
 KP 
-X=392.0000
-Y=1878.0000
+X=1401.0000
+Y=392.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=774.0000
-Y=1878.0000
+X=1401.0000
+Y=774.0000
 
 $E2
 KL 
-X=774.0000
-Y=1778.0000
+X=1501.0000
+Y=774.0000
 
 $E3
 KL 
-X=10.0000
-Y=1778.0000
+X=1501.0000
+Y=10.0000
 
 $E4
 KL 
-X=10.0000
-Y=1878.0000
+X=1401.0000
+Y=10.0000
 
 $E5
 KL 
-X=392.0000
-Y=1878.0000
+X=1401.0000
+Y=392.0000
 
 ]3
 $E0
@@ -140,68 +140,68 @@ Y=392.5000
 ]4
 $E0
 KP 
-X=583.0000
-Y=1171.5000
+X=992.0000
+Y=392.5000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=583.0000
-Y=1554.0000
+X=992.0000
+Y=775.0000
 
 $E2
 KL 
-X=978.0000
-Y=1554.0000
+X=1387.0000
+Y=775.0000
 
 $E3
 KL 
-X=978.0000
-Y=789.0000
+X=1387.0000
+Y=10.0000
 
 $E4
 KL 
-X=583.0000
-Y=789.0000
+X=992.0000
+Y=10.0000
 
 $E5
 KL 
-X=583.0000
-Y=1171.5000
+X=992.0000
+Y=392.5000
 
 ]5
 $E0
 KP 
-X=1374.0000
-Y=569.0000
+X=1276.0000
+Y=1348.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=1756.0000
-Y=569.0000
+X=1658.0000
+Y=1348.0000
 
 $E2
 KL 
-X=1756.0000
-Y=10.0000
+X=1658.0000
+Y=789.0000
 
 $E3
 KL 
-X=992.0000
-Y=10.0000
+X=894.0000
+Y=789.0000
 
 $E4
 KL 
-X=992.0000
-Y=569.0000
+X=894.0000
+Y=1348.0000
 
 $E5
 KL 
-X=1374.0000
-Y=569.0000
+X=1276.0000
+Y=1348.0000
 
 ]6
 $E0
@@ -249,45 +249,45 @@ Y=445.0000
 ]7
 $E0
 KP 
-X=10.0000
-Y=1329.0000
+X=445.0000
+Y=1453.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=10.0000
-Y=1764.0000
+X=880.0000
+Y=1453.0000
 
 $E2
 KL 
-X=569.0000
-Y=1764.0000
+X=880.0000
+Y=894.0000
 
 $E3
 KL 
-X=569.0000
-Y=994.0000
+X=110.0000
+Y=894.0000
 
 $E4
 KL 
-X=510.0000
-Y=994.0000
+X=110.0000
+Y=953.0000
 
 $E5
 KL 
-X=510.0000
-Y=894.0000
+X=10.0000
+Y=953.0000
 
 $E6
 KL 
 X=10.0000
-Y=894.0000
+Y=1453.0000
 
 $E7
 KL 
-X=10.0000
-Y=1329.0000
+X=445.0000
+Y=1453.0000
 
 <100 \WerkStck\
 LA="L"
@@ -301,13 +301,13 @@ AY="0"
 <101 \Kommentar\
 KM="Cabinet Studio 0.1.0 - job G002 sheet 2/2 PB18-WHT"
 KM="Generated program. Verify in woodWOP simulation before cutting."
-KM="P4 at X10 Y1892 764x99"
-KM="P5 at X10 Y1778 764x100"
+KM="P4 at X1515 Y10 99x764 rotated"
+KM="P5 at X1401 Y10 100x764 rotated"
 KM="P7 at X583 Y10 395x765 rotated"
-KM="P8 at X583 Y789 395x765 rotated"
-KM="P3 at X992 Y10 764x559"
+KM="P8 at X992 Y10 395x765 rotated"
+KM="P3 at X894 Y789 764x559"
 KM="P1 at X10 Y10 559x870 rotated"
-KM="P2 at X10 Y894 559x870 rotated"
+KM="P2 at X10 Y894 870x559"
 KAT="Kommentar"
 MNM="Kommentar"
 
@@ -315,7 +315,7 @@ MNM="Kommentar"
 XA="46"
 YA="183"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -331,7 +331,7 @@ MNM="P1 mounting-plate D5"
 XA="46"
 YA="215"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -347,7 +347,7 @@ MNM="P1 mounting-plate D5"
 XA="46"
 YA="759"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -363,7 +363,7 @@ MNM="P1 mounting-plate D5"
 XA="46"
 YA="791"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -376,10 +376,10 @@ KAT="Bohren vertikal"
 MNM="P1 mounting-plate D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1067"
+XA="183"
+YA="930"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -392,10 +392,10 @@ KAT="Bohren vertikal"
 MNM="P2 mounting-plate D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1099"
+XA="215"
+YA="930"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -408,10 +408,10 @@ KAT="Bohren vertikal"
 MNM="P2 mounting-plate D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1643"
+XA="759"
+YA="930"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -424,10 +424,10 @@ KAT="Bohren vertikal"
 MNM="P2 mounting-plate D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1675"
+XA="791"
+YA="930"
 BM="LS"
-TI="12"
+TI="11"
 DU="5"
 AN="1"
 MI="0"
@@ -552,8 +552,8 @@ KAT="Bohren vertikal"
 MNM="P1 dowel D8"
 
 <102 \BohrVert\
-XA="60"
-YA="1003"
+XA="871"
+YA="918"
 BM="LS"
 TI="12"
 DU="8"
@@ -568,8 +568,8 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="290"
-YA="1003"
+XA="119"
+YA="943"
 BM="LS"
 TI="12"
 DU="8"
@@ -584,8 +584,8 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="520"
-YA="1003"
+XA="871"
+YA="968"
 BM="LS"
 TI="12"
 DU="8"
@@ -600,8 +600,8 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="53.5"
-YA="1755"
+XA="119"
+YA="1173"
 BM="LS"
 TI="12"
 DU="8"
@@ -616,8 +616,8 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="103.5"
-YA="1755"
+XA="871"
+YA="1359.5"
 BM="LS"
 TI="12"
 DU="8"
@@ -632,8 +632,8 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="495"
-YA="1755"
+XA="119"
+YA="1403"
 BM="LS"
 TI="12"
 DU="8"
@@ -648,8 +648,8 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="545"
-YA="1755"
+XA="871"
+YA="1409.5"
 BM="LS"
 TI="12"
 DU="8"
@@ -664,10 +664,10 @@ KAT="Bohren vertikal"
 MNM="P2 dowel D8"
 
 <102 \BohrVert\
-XA="956.5"
+XA="958.5"
 YA="98"
 BM="LS"
-TI="13"
+TI="13.5"
 DU="35"
 AN="1"
 MI="0"
@@ -680,10 +680,10 @@ KAT="Bohren vertikal"
 MNM="P7 hinge-cup D35"
 
 <102 \BohrVert\
-XA="956.5"
+XA="958.5"
 YA="674"
 BM="LS"
-TI="13"
+TI="13.5"
 DU="35"
 AN="1"
 MI="0"
@@ -696,10 +696,10 @@ KAT="Bohren vertikal"
 MNM="P7 hinge-cup D35"
 
 <102 \BohrVert\
-XA="604.5"
-YA="877"
+XA="1011.5"
+YA="98"
 BM="LS"
-TI="13"
+TI="13.5"
 DU="35"
 AN="1"
 MI="0"
@@ -712,10 +712,10 @@ KAT="Bohren vertikal"
 MNM="P8 hinge-cup D35"
 
 <102 \BohrVert\
-XA="604.5"
-YA="1453"
+XA="1011.5"
+YA="674"
 BM="LS"
-TI="13"
+TI="13.5"
 DU="35"
 AN="1"
 MI="0"
@@ -728,12 +728,12 @@ KAT="Bohren vertikal"
 MNM="P8 hinge-cup D35"
 
 <103 \BohrHoriz\
-XA="10"
-YA="1916"
+XA="1590"
+YA="10"
 ZA="9"
 DU="8"
 TI="30"
-BM="XP"
+BM="YP"
 BM2="STD"
 AN="1"
 AB="0"
@@ -744,12 +744,12 @@ KAT="Bohren horizontal"
 MNM="P4 dowel D8"
 
 <103 \BohrHoriz\
-XA="10"
-YA="1966"
+XA="1540"
+YA="10"
 ZA="9"
 DU="8"
 TI="30"
-BM="XP"
+BM="YP"
 BM2="STD"
 AN="1"
 AB="0"
@@ -760,12 +760,12 @@ KAT="Bohren horizontal"
 MNM="P4 dowel D8"
 
 <103 \BohrHoriz\
-XA="774"
-YA="1916"
+XA="1590"
+YA="774"
 ZA="9"
 DU="8"
 TI="30"
-BM="XM"
+BM="YM"
 BM2="STD"
 AN="1"
 AB="0"
@@ -776,12 +776,12 @@ KAT="Bohren horizontal"
 MNM="P4 dowel D8"
 
 <103 \BohrHoriz\
-XA="774"
-YA="1966"
+XA="1540"
+YA="774"
 ZA="9"
 DU="8"
 TI="30"
-BM="XM"
+BM="YM"
 BM2="STD"
 AN="1"
 AB="0"
@@ -792,12 +792,12 @@ KAT="Bohren horizontal"
 MNM="P4 dowel D8"
 
 <103 \BohrHoriz\
-XA="10"
-YA="1803"
+XA="1476"
+YA="10"
 ZA="9"
 DU="8"
 TI="30"
-BM="XP"
+BM="YP"
 BM2="STD"
 AN="1"
 AB="0"
@@ -808,12 +808,12 @@ KAT="Bohren horizontal"
 MNM="P5 dowel D8"
 
 <103 \BohrHoriz\
-XA="10"
-YA="1853"
+XA="1426"
+YA="10"
 ZA="9"
 DU="8"
 TI="30"
-BM="XP"
+BM="YP"
 BM2="STD"
 AN="1"
 AB="0"
@@ -824,12 +824,12 @@ KAT="Bohren horizontal"
 MNM="P5 dowel D8"
 
 <103 \BohrHoriz\
-XA="774"
-YA="1803"
+XA="1476"
+YA="774"
 ZA="9"
 DU="8"
 TI="30"
-BM="XM"
+BM="YM"
 BM2="STD"
 AN="1"
 AB="0"
@@ -840,12 +840,12 @@ KAT="Bohren horizontal"
 MNM="P5 dowel D8"
 
 <103 \BohrHoriz\
-XA="774"
-YA="1853"
+XA="1426"
+YA="774"
 ZA="9"
 DU="8"
 TI="30"
-BM="XM"
+BM="YM"
 BM2="STD"
 AN="1"
 AB="0"
@@ -856,8 +856,8 @@ KAT="Bohren horizontal"
 MNM="P5 dowel D8"
 
 <103 \BohrHoriz\
-XA="992"
-YA="59"
+XA="894"
+YA="838"
 ZA="9"
 DU="8"
 TI="30"
@@ -872,8 +872,8 @@ KAT="Bohren horizontal"
 MNM="P3 dowel D8"
 
 <103 \BohrHoriz\
-XA="992"
-YA="289"
+XA="894"
+YA="1068"
 ZA="9"
 DU="8"
 TI="30"
@@ -888,8 +888,8 @@ KAT="Bohren horizontal"
 MNM="P3 dowel D8"
 
 <103 \BohrHoriz\
-XA="992"
-YA="519"
+XA="894"
+YA="1298"
 ZA="9"
 DU="8"
 TI="30"
@@ -904,24 +904,8 @@ KAT="Bohren horizontal"
 MNM="P3 dowel D8"
 
 <103 \BohrHoriz\
-XA="1756"
-YA="59"
-ZA="9"
-DU="8"
-TI="30"
-BM="XM"
-BM2="STD"
-AN="1"
-AB="0"
-MI="0"
-F_="STANDARD"
-KO="00"
-KAT="Bohren horizontal"
-MNM="P3 dowel D8"
-
-<103 \BohrHoriz\
-XA="1756"
-YA="289"
+XA="1658"
+YA="838"
 ZA="9"
 DU="8"
 TI="30"
@@ -936,8 +920,24 @@ KAT="Bohren horizontal"
 MNM="P3 dowel D8"
 
 <103 \BohrHoriz\
-XA="1756"
-YA="519"
+XA="1658"
+YA="1068"
+ZA="9"
+DU="8"
+TI="30"
+BM="XM"
+BM2="STD"
+AN="1"
+AB="0"
+MI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren horizontal"
+MNM="P3 dowel D8"
+
+<103 \BohrHoriz\
+XA="1658"
+YA="1298"
 ZA="9"
 DU="8"
 TI="30"
@@ -952,8 +952,8 @@ KAT="Bohren horizontal"
 MNM="P3 dowel D8"
 
 <112 \Tasche\
-XA="1374"
-YA="553.75"
+XA="1276"
+YA="1332.75"
 LA="772"
 BR="6.5"
 RD="3"
@@ -986,10 +986,10 @@ KAT="Tasche"
 MNM="P1 back-groove"
 
 <112 \Tasche\
-XA="25.25"
-YA="1329"
-LA="6.5"
-BR="878"
+XA="445"
+YA="1437.75"
+LA="878"
+BR="6.5"
 RD="3"
 WI="0"
 TI="8"

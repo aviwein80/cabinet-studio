@@ -11,10 +11,10 @@ import type {
 } from './types'
 
 export const DEFAULT_MATERIALS: Material[] = [
-  { id: 'mat-pb18-white', code: 'PB18-WHT', name: 'Melamine PB 18 white', thickness: 18, sheetLength: 2800, sheetWidth: 2070, grain: false, color: '#f1f0ec' },
-  { id: 'mat-pb18-oak', code: 'PB18-OAK', name: 'Melamine PB 18 natural oak (grain)', thickness: 18, sheetLength: 2800, sheetWidth: 2070, grain: true, color: '#c9a77c' },
-  { id: 'mat-mdf18', code: 'MDF18', name: 'MDF 18 raw (paint grade)', thickness: 18, sheetLength: 2440, sheetWidth: 1220, grain: false, color: '#b9a48a' },
-  { id: 'mat-hdf6-white', code: 'HDF6-WHT', name: 'HDF 6 white back', thickness: 6, sheetLength: 2800, sheetWidth: 2070, grain: false, color: '#e9e7e2' },
+  { id: 'mat-pb18-white', code: 'PB18-WHT', name: 'Melamine PB 18 white', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#f1f0ec' },
+  { id: 'mat-pb18-oak', code: 'PB18-OAK', name: 'Melamine PB 18 natural oak (grain)', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: true, color: '#c9a77c' },
+  { id: 'mat-mdf18', code: 'MDF18', name: 'MDF 18 raw (paint grade)', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#b9a48a' },
+  { id: 'mat-hdf6-white', code: 'HDF6-WHT', name: 'HDF 6 white back', thickness: 6, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#e9e7e2' },
 ]
 
 export const DEFAULT_EDGEBANDS: EdgeBand[] = [
@@ -25,8 +25,11 @@ export const DEFAULT_EDGEBANDS: EdgeBand[] = [
 
 export const DEFAULT_HARDWARE: Hardware[] = [
   { id: 'hw-pin', code: 'PIN-5', name: 'Shelf pin 5 mm', category: 'shelf-pin' },
-  { id: 'hw-hinge', code: 'HINGE-110', name: 'Concealed hinge 110°, full overlay', category: 'hinge' },
-  { id: 'hw-plate', code: 'PLATE-CLIP-0', name: 'Clip mounting plate 0 mm', category: 'mounting-plate' },
+  { id: 'hw-hinge', code: 'SALICE-110-SC', name: 'Salice Silentia+ 110° soft-close, full overlay', category: 'hinge' },
+  { id: 'hw-plate', code: 'SALICE-B2VGV-H3', name: 'Salice cruciform plate 3 mm, euro screw (B2VGV)', category: 'mounting-plate' },
+  { id: 'hw-td-15', code: '563H3810B', name: 'Blum TANDEM plus BLUMOTION 15 in', category: 'slide' },
+  { id: 'hw-td-18', code: '563H4570B', name: 'Blum TANDEM plus BLUMOTION 18 in', category: 'slide' },
+  { id: 'hw-td-21', code: '563H5330B', name: 'Blum TANDEM plus BLUMOTION 21 in', category: 'slide' },
   { id: 'hw-dowel', code: 'DOWEL-8x30', name: 'Wood dowel 8 x 30', category: 'dowel' },
   { id: 'hw-confirmat', code: 'CONFIRMAT-7x50', name: 'Confirmat screw 7 x 50', category: 'connector' },
   { id: 'hw-screw', code: 'SCREW-4x50', name: 'Chipboard screw 4 x 50', category: 'screw' },
@@ -49,8 +52,9 @@ export const BASE_PARAMS: CarcassParams = {
   back: { type: 'groove', grooveDepth: 8, setback: 12, clearance: 0.5 },
   shelves: { count: 1, frontSetback: 20, sideClearance: 1 },
   shelfPins: { enabled: true, diameter: 5, depth: 12, setbackFront: 37, setbackBack: 37, pitch: 32, zoneMargin: 60 },
-  doors: { count: 2, gap: 3, hingeSide: 'left', cupDiameter: 35, cupDepth: 13, cupEdgeDistance: 22.5, hingeFromEnd: 100 },
+  doors: { count: 2, gap: 3, hingeSide: 'left', cupDiameter: 35, cupDepth: 13.5, cupEdgeDistance: 20.5, hingeFromEnd: 100 },
   edgebands: { carcassFront: 'eb-white-1', shelfFront: 'eb-white-04', door: 'eb-white-1' },
+  drawers: { count: 0, frontHeight: 152.4, slide: 'auto' },
 }
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -96,6 +100,19 @@ export const BUILTIN_TEMPLATES: CabinetTemplate[] = [
     },
     builtIn: true,
   },
+  {
+    id: 'tpl-base-drawers',
+    name: 'Base cabinet, 3 drawers',
+    description: 'Three equal drawer fronts on Blum TANDEM undermount slides. The runner length follows the cabinet depth.',
+    generator: 'carcass',
+    params: {
+      ...clone(BASE_PARAMS),
+      doors: { ...BASE_PARAMS.doors, count: 0 },
+      shelves: { ...BASE_PARAMS.shelves, count: 0 },
+      drawers: { count: 3, frontHeight: 152.4, slide: 'auto' },
+    },
+    builtIn: true,
+  },
 ]
 
 /**
@@ -129,10 +146,14 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
 
 export const DEFAULT_SETTINGS: ShopSettings = {
   shopName: 'Avi Weinreb Cabinets',
+  units: 'mm',
   nesting: { edgeTrim: 10, extraSpacing: 2, allowRotation: true, premill: 0 },
   labels: { size: '100x70', edgeClearance: 15 },
   outputFolder: '',
 }
+
+/** Nesting table: 12 ft × 5 ft. */
+export const DEFAULT_SHEET = { length: 3658, width: 1524 }
 
 export function defaultLibrary(): Library {
   return {

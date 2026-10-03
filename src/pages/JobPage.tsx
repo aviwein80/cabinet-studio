@@ -34,9 +34,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cutListCsv } from '@/core/cutlist'
+import { formatLength } from '@/core/units'
 import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
 import type { AppData, Job } from '@/core/types'
+import { RoomTab } from './RoomTab'
 import { cn } from '@/lib/utils'
 
 export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
@@ -94,6 +96,7 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
             <TabsTrigger value="cabinets">
               <LayoutGrid /> Cabinets
             </TabsTrigger>
+            <TabsTrigger value="room">Room</TabsTrigger>
             <TabsTrigger value="cutlist">
               <Table2 /> Cut list
             </TabsTrigger>
@@ -112,6 +115,9 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
         )}
         <TabsContent value="cabinets" className="min-h-0 flex-1 overflow-auto p-5">
           <CabinetsTab job={job} data={data} setJob={setJob} />
+        </TabsContent>
+        <TabsContent value="room" className="min-h-0 flex-1 overflow-hidden">
+          <RoomTab job={job} setJob={setJob} />
         </TabsContent>
         <TabsContent value="cutlist" className="min-h-0 flex-1 overflow-auto p-5">
           {out && <CutListTab job={job} data={data} out={out} />}
@@ -167,7 +173,7 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                     <span className="truncate text-sm font-medium">{c.name}</span>
                   </div>
                   <div className="mt-1.5 font-mono text-xs tabular-nums">
-                    {c.params.width} × {c.params.height} × {c.params.depth}
+                    {formatLength(c.params.width, data.settings.units)} × {formatLength(c.params.height, data.settings.units)} × {formatLength(c.params.depth, data.settings.units)}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
                     {matName(c.params.carcassMaterialId)} · {c.params.doors.count} door{c.params.doors.count === 1 ? '' : 's'} · {c.params.shelves.count} shelf
@@ -250,6 +256,8 @@ async function saveOne(file: OutFile, ext: string, label: string) {
 }
 
 function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput }) {
+  const u = data.settings.units
+  const L = (n: number) => formatLength(n, u)
   if (out.cutList.length === 0)
     return <EmptyState icon={<Table2 className="size-5" />} title="Nothing to cut">Add cabinets to this job to build the cut list.</EmptyState>
   const base = job.number.replace(/[^A-Za-z0-9_-]+/g, '-')
@@ -276,7 +284,7 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               <TableHead>Part</TableHead>
               <TableHead>Cabinets</TableHead>
               <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Cut L × W</TableHead>
+              <TableHead className="text-right">Cut L × W ({u})</TableHead>
               <TableHead className="text-right">Finished L × W × T</TableHead>
               <TableHead>Edges L1 / L2 / W1 / W2</TableHead>
               <TableHead>Grain</TableHead>
@@ -290,10 +298,10 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
                 <TableCell className="text-xs text-muted-foreground">{r.cabinets}</TableCell>
                 <TableCell className="text-right tabular-nums">{r.qty}</TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {r.cutLength} × {r.cutWidth}
+                  {L(r.cutLength)} × {L(r.cutWidth)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums text-muted-foreground">
-                  {r.finishedLength} × {r.finishedWidth} × {r.thickness}
+                  {L(r.finishedLength)} × {L(r.finishedWidth)} × {L(r.thickness)}
                 </TableCell>
                 <TableCell className="font-mono text-[11px]">{(['L1', 'L2', 'W1', 'W2'] as const).map((k) => r.edges[k] || '–').join(' / ')}</TableCell>
                 <TableCell>{r.grain}</TableCell>
@@ -308,7 +316,7 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
           rows={[...new Set(out.programs.map((p) => p.materialCode))].map((code) => {
             const progs = out.programs.filter((p) => p.materialCode === code)
             const m = data.library.materials.find((mm) => mm.code === code)
-            return [code, `${m?.sheetLength} × ${m?.sheetWidth}`, `${progs.length}`]
+            return [code, m ? `${formatLength(m.sheetLength, data.settings.units)} × ${formatLength(m.sheetWidth, data.settings.units)}` : '', `${progs.length}`]
           })}
         />
         <SummaryTable title="Edgeband (incl. 50 mm overhang per edge)" rows={out.edgebands.map((e) => [e.code, e.name, `${e.metres} m`])} />
@@ -391,7 +399,7 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="font-mono font-medium">{prog.name}.mpr</span>
             <span className="text-muted-foreground">
-              {mat?.name} · {sh.sheetLength} × {sh.sheetWidth} × {sh.thickness}
+              {mat?.name} · {formatLength(sh.sheetLength, data.settings.units)} × {formatLength(sh.sheetWidth, data.settings.units)} × {formatLength(sh.thickness, data.settings.units)}
             </span>
             <span className="text-muted-foreground">
               Trim {data.settings.nesting.edgeTrim} · spacing {out.nest.spacing} mm

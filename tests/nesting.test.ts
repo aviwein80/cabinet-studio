@@ -87,6 +87,6 @@ describe('MaxRects nesting', () => {
     const byMat = out.nest.sheets.map((s) => s.materialId)
     expect(byMat.filter((m) => m === 'mat-hdf6-white').length).toBe(1)
     expect(byMat.filter((m) => m === 'mat-pb18-white').length).toBe(2)
-    for (const s of out.nest.sheets) assertValid({ sheets: [s], unplaced: [], strategy: '' }, out.nest.spacing)
+    for (const s of out.nest.sheets) assertValid({ sheets: [s], unplaced: [], strategy: '' }, out.nest.spacing, { sheetLength: s.sheetLength, sheetWidth: s.sheetWidth, edgeTrim: 10, spacing: out.nest.spacing, allowRotation: true })
   })
 })

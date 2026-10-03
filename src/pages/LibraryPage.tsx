@@ -14,22 +14,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { importLibraryBundle } from '@/core/library/import'
 import type { AppData, EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
 
-const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'connector', 'dowel', 'screw', 'leg', 'other']
+const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'other']
 
 const MATERIAL_COLS: Column<Material>[] = [
   { key: 'code', label: 'Code', type: 'text', mono: true, width: '130px' },
   { key: 'name', label: 'Name', type: 'text' },
-  { key: 'thickness', label: 'T', type: 'num', width: '70px' },
-  { key: 'sheetLength', label: 'Sheet L', type: 'num', width: '90px' },
-  { key: 'sheetWidth', label: 'Sheet W', type: 'num', width: '90px' },
+  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true },
+  { key: 'sheetLength', label: 'Sheet L', type: 'num', width: '110px', length: true },
+  { key: 'sheetWidth', label: 'Sheet W', type: 'num', width: '110px', length: true },
   { key: 'grain', label: 'Grain', type: 'bool', width: '60px' },
   { key: 'color', label: 'Colour', type: 'color', width: '60px' },
 ]
 const BAND_COLS: Column<EdgeBand>[] = [
   { key: 'code', label: 'Code', type: 'text', mono: true, width: '140px' },
   { key: 'name', label: 'Name', type: 'text' },
-  { key: 'thickness', label: 'T', type: 'num', width: '70px' },
-  { key: 'width', label: 'Width', type: 'num', width: '80px' },
+  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true },
+  { key: 'width', label: 'Width', type: 'num', width: '90px', length: true },
   { key: 'color', label: 'Colour', type: 'color', width: '60px' },
 ]
 const HW_COLS: Column<Hardware>[] = [
@@ -69,7 +69,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
   const add = () => {
     const n = nanoid(5)
     updateLibrary((l) => {
-      if (tab === 'materials') l.materials.push({ id: `mat-${n}`, code: `NEW-${n.toUpperCase()}`, name: 'New sheet material', thickness: 18, sheetLength: 2800, sheetWidth: 2070, grain: false, color: '#e7e2d8' })
+      if (tab === 'materials') l.materials.push({ id: `mat-${n}`, code: `NEW-${n.toUpperCase()}`, name: 'New sheet material', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#e7e2d8' })
       if (tab === 'edgebands') l.edgebands.push({ id: `eb-${n}`, code: `EB-${n.toUpperCase()}`, name: 'New edgeband', thickness: 1, width: 22, color: '#e7e2d8' })
       if (tab === 'hardware') l.hardware.push({ id: `hw-${n}`, code: `HW-${n.toUpperCase()}`, name: 'New hardware item', category: 'other' })
     })

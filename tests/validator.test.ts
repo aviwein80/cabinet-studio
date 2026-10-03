@@ -78,7 +78,7 @@ describe('validator', () => {
   })
 
   it('reports parts that cannot be nested', () => {
-    const c = cabinet('tpl-base-2door', (p) => (p.height = 3000))
+    const c = cabinet('tpl-base-2door', (p) => (p.height = 4000))
     expect(codes(run(job([c]), data()))).toContain('NOT_NESTED')
   })
 

@@ -46,6 +46,7 @@ export type HardwareCategory =
   | 'dowel'
   | 'screw'
   | 'leg'
+  | 'slide'
   | 'other'
 
 export interface Hardware {
@@ -69,6 +70,7 @@ export type OpPurpose =
   | 'screw-pilot'
   | 'back-groove'
   | 'dado'
+  | 'slide'
   | 'custom'
 
 export interface DrillOp {
@@ -122,7 +124,7 @@ export interface PartFrame {
   n: Vec3
 }
 
-export type PartRole = 'side' | 'bottom' | 'top' | 'rail' | 'back' | 'shelf' | 'door' | 'toekick' | 'custom'
+export type PartRole = 'side' | 'bottom' | 'top' | 'rail' | 'back' | 'shelf' | 'door' | 'drawer' | 'toekick' | 'custom'
 
 export interface Part {
   key: string
@@ -197,6 +199,30 @@ export interface CarcassParams {
     shelfFront: string | null
     door: string | null
   }
+  /** Drawer fronts stacked from the bottom of the opening. count 0 = no drawers. */
+  drawers: {
+    count: number
+    /** Front height used when doors share the opening. All-drawer cabinets split the opening equally. */
+    frontHeight: number
+    /** 'auto' picks 15 / 18 / 21 in from the cabinet depth using Blum's table. */
+    slide: 'auto' | 15 | 18 | 21
+  }
+}
+
+/** Where a cabinet sits in the job's room. (x, y) is the minimum corner of its footprint, in mm. */
+export interface CabinetPlacement {
+  x: number
+  y: number
+  /** Which way the front faces: 0 = toward -Y, 90 = toward -X, 180 = toward +Y, 270 = toward +X. */
+  rotation: 0 | 90 | 180 | 270
+  /** Floor of the cabinet. Base and tall sit at 0; wall cabinets default to 54 in. */
+  z: number
+}
+
+export interface Room {
+  width: number
+  depth: number
+  height: number
 }
 
 export interface PartOverride {
@@ -224,6 +250,7 @@ export interface CabinetInstance {
   qty: number
   params: CarcassParams
   overrides: Record<string, PartOverride>
+  placement?: CabinetPlacement
 }
 
 export interface Job {
@@ -235,6 +262,7 @@ export interface Job {
   createdAt: string
   updatedAt: string
   cabinets: CabinetInstance[]
+  room?: Room
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -290,8 +318,12 @@ export interface LabelSettings {
   edgeClearance: number
 }
 
+export type UnitSystem = 'mm' | 'in'
+
 export interface ShopSettings {
   shopName: string
+  /** Display unit. Every stored length stays in millimetres. */
+  units: UnitSystem
   nesting: NestSettings
   labels: LabelSettings
   outputFolder: string

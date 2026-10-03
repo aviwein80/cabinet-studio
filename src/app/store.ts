@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { defaultAppData, PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { sampleJob } from '@/core/sample'
+import { DEFAULT_ROOM } from '@/core/room'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, ShopSettings } from '@/core/types'
 import { backend } from './backend'
 
@@ -13,7 +14,7 @@ export type Route =
   | { page: 'library'; tab?: LibraryTab }
   | { page: 'machine' }
 
-export type JobTab = 'cabinets' | 'cutlist' | 'nesting' | 'output'
+export type JobTab = 'cabinets' | 'room' | 'cutlist' | 'nesting' | 'output'
 export type LibraryTab = 'templates' | 'materials' | 'edgebands' | 'hardware'
 
 interface State {
@@ -43,12 +44,25 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 const now = () => new Date().toISOString()
 
 /** Fill in fields added in later versions so old data files keep loading. */
+const DRAWER_DEFAULT: CarcassParams['drawers'] = { count: 0, frontHeight: 152.4, slide: 'auto' }
+
+function withParams(p: CarcassParams): CarcassParams {
+  return { ...p, drawers: { ...DRAWER_DEFAULT, ...(p.drawers ?? {}) } }
+}
+
 function normalize(raw: Partial<AppData> | null): AppData {
   const d = defaultAppData()
   if (!raw) return d
+  const library = { ...d.library, ...(raw.library ?? {}) }
+  library.templates = (library.templates ?? []).map((t) => ({ ...t, params: withParams(t.params) }))
+  const jobs = (raw.jobs ?? []).map((j) => ({
+    ...j,
+    room: { ...DEFAULT_ROOM, ...(j.room ?? {}) },
+    cabinets: j.cabinets.map((c) => ({ ...c, params: withParams(c.params) })),
+  }))
   return {
     version: 1,
-    library: { ...d.library, ...(raw.library ?? {}) },
+    library,
     machine: { ...d.machine, ...(raw.machine ?? {}), contour: { ...d.machine.contour, ...(raw.machine?.contour ?? {}) }, header: { ...d.machine.header, ...(raw.machine?.header ?? {}) } },
     settings: {
       ...d.settings,
@@ -56,7 +70,7 @@ function normalize(raw: Partial<AppData> | null): AppData {
       nesting: { ...d.settings.nesting, ...(raw.settings?.nesting ?? {}) },
       labels: { ...d.settings.labels, ...(raw.settings?.labels ?? {}) },
     },
-    jobs: raw.jobs ?? [],
+    jobs,
   }
 }
 
@@ -125,7 +139,7 @@ export const useStore = create<State>((set, get) => {
     createJob(fields) {
       const id = `job-${nanoid(8)}`
       mutate((d) => {
-        d.jobs.unshift({ id, ...fields, notes: '', createdAt: now(), updatedAt: now(), cabinets: [] })
+        d.jobs.unshift({ id, ...fields, notes: '', createdAt: now(), updatedAt: now(), cabinets: [], room: { ...DEFAULT_ROOM } })
       })
       return id
     },
@@ -134,7 +148,7 @@ export const useStore = create<State>((set, get) => {
       const j = sampleJob()
       const id = `job-${nanoid(8)}`
       mutate((d) => {
-        d.jobs.unshift({ ...j, id, createdAt: now(), updatedAt: now() })
+        d.jobs.unshift({ ...j, id, room: j.room ?? { ...DEFAULT_ROOM }, createdAt: now(), updatedAt: now() })
       })
       return id
     },

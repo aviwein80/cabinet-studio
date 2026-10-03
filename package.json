@@ -10,6 +10,7 @@
     "build:electron": "esbuild electron/main.ts electron/preload.ts --bundle --platform=node --format=cjs --target=node22 --external:electron --outdir=dist-electron --out-extension:.js=.cjs",
     "start:desktop": "npm run build && npm run build:electron && electron .",
     "dist:win": "npm run build && npm run build:electron && electron-builder --win nsis --x64",
+    "dist:mac": "npm run build && npm run build:electron && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac zip --arm64",
     "test": "vitest run",
     "test:update-golden": "cross-env UPDATE_GOLDEN=1 vitest run tests/mpr.test.ts",
     "sample": "tsx scripts/sample.ts",
@@ -95,6 +96,19 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Cabinet Studio"
+    },
+    "mac": {
+      "identity": null,
+      "category": "public.app-category.graphics-design",
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "CabinetStudio-${version}-arm64-mac.${ext}"
     }
   }
 }

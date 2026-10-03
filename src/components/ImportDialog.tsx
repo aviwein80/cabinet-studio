@@ -31,7 +31,7 @@ const KIND_LABEL: Record<ImportKind, string> = {
 const COLUMNS: Record<ImportKind, string> = {
   materials: 'code, name, thickness, sheetLength, sheetWidth, grain (yes/no), color',
   edgebands: 'code, name, thickness, width, color',
-  hardware: 'code, name, category (hinge, shelf-pin, connector, dowel, screw, leg, other)',
+  hardware: 'code, name, category (hinge, mounting-plate, slide, shelf-pin, connector, dowel, screw, leg, other)',
   templates: 'name, kind (base/wall/tall), width, height, depth, shelves, doors, material, backMaterial, joinery, bottomJoint, backType',
   tools: 'number, type (router, drill-vertical, drill-horizontal, saw), name, diameter, maxDepth',
 }

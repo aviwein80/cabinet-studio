@@ -1,10 +1,12 @@
 import { Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useStore } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { formatLength, parseLength } from '@/core/units'
 import { cn } from '@/lib/utils'
 
 export type Column<T> = {
@@ -14,6 +16,8 @@ export type Column<T> = {
   options?: { value: string; label: string }[]
   width?: string
   mono?: boolean
+  /** Numeric column stored in millimetres, shown in the shop unit. */
+  length?: boolean
 }
 
 function CellInput({ value, onCommit, numeric, mono }: { value: string; onCommit: (v: string) => void; numeric?: boolean; mono?: boolean }) {
@@ -48,6 +52,7 @@ export function EditableTable<T extends { id: string }>({
   canDelete?: (row: T) => string | null
   empty: string
 }) {
+  const units = useStore((s) => s.data?.settings.units ?? 'mm')
   return (
     <div className="overflow-x-auto rounded-xl border bg-background">
       <Table>
@@ -88,7 +93,17 @@ export function EditableTable<T extends { id: string }>({
                           </SelectContent>
                         </Select>
                       ) : (
-                        <CellInput value={String(v ?? '')} numeric={c.type === 'num'} mono={c.mono} onCommit={(x) => onChange(r.id, c.key, c.type === 'num' ? Number(x.replace(',', '.')) : x)} />
+                        <CellInput
+                          value={c.length && typeof v === 'number' ? formatLength(v, units) : String(v ?? '')}
+                          numeric={c.type === 'num' && !c.length}
+                          mono={c.mono || c.length}
+                          onCommit={(x) => {
+                            if (c.length) {
+                              const mm = parseLength(x, units)
+                              if (mm !== null) onChange(r.id, c.key, mm)
+                            } else onChange(r.id, c.key, c.type === 'num' ? Number(x.replace(',', '.')) : x)
+                          }}
+                        />
                       )}
                     </TableCell>
                   )

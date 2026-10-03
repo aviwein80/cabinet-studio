@@ -31,6 +31,7 @@ function explodeOffset(p: Part, amount: number, width: number): Vec3 {
     case 'back':
       return [0, d, 0]
     case 'door':
+    case 'drawer':
       return [0, -d * 1.4, 0]
     case 'shelf':
       return [0, -d * 0.5, 0]
@@ -96,7 +97,7 @@ function PartMesh({
           return (
             <mesh key={op.id} position={T([mid[0] + offset[0], mid[1] + offset[1], mid[2] + offset[2]])} rotation={holeRotation(part.frame.n)}>
               <cylinderGeometry args={[(op.diameter / 2) * S, (op.diameter / 2) * S, (depth + 0.6) * S, 20]} />
-              <meshStandardMaterial color={op.purpose === 'hinge-cup' ? '#3f3a33' : '#2b2722'} />
+              <meshStandardMaterial color={op.purpose === 'hinge-cup' ? '#3f3a33' : op.purpose === 'slide' ? '#1d4ed8' : op.purpose === 'mounting-plate' ? '#7c2d12' : '#2b2722'} />
             </mesh>
           )
         }
@@ -124,6 +125,7 @@ export function Viewer3D({
   width,
   height,
   depth,
+  frame,
   selected,
   onSelect,
   explode = 0,
@@ -135,14 +137,19 @@ export function Viewer3D({
   width: number
   height: number
   depth: number
+  /** Camera frame in cabinet millimetres. Defaults to the single cabinet. */
+  frame?: { width: number; depth: number; height: number }
   selected?: string | null
   onSelect?: (key: string | null) => void
   explode?: number
   showOps?: boolean
   hideDoors?: boolean
 }) {
-  const size = Math.max(width, height, depth) * S
-  const target: [number, number, number] = [(width / 2) * S, (height / 2) * S, (-depth / 2) * S]
+  const fw = frame?.width ?? width
+  const fd = frame?.depth ?? depth
+  const fh = frame?.height ?? height
+  const size = Math.max(fw, fd, fh) * S
+  const target: [number, number, number] = [(fw / 2) * S, (fh / 2) * S, (-fd / 2) * S]
   const cam: [number, number, number] = [target[0] + size * 1.25, target[1] + size * 0.7, target[2] + size * 1.9]
   return (
     <Canvas camera={{ position: cam, fov: 38, near: 0.01, far: 50 }} dpr={[1, 2]} onPointerMissed={() => onSelect?.(null)} gl={{ preserveDrawingBuffer: true, antialias: true }}>

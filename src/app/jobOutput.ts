@@ -43,13 +43,13 @@ export function buildFiles(kinds: ExportKind[], job: Job, data: AppData, out: Jo
         for (const f of mprFiles(job, data, out)) files.push({ name: f.name, data: encodeCp1252(f.text) })
         break
       case 'labels-pdf':
-        files.push({ name: `${base}_labels_${data.settings.labels.size}.pdf`, data: labelsPdf(out, data.settings.labels.size) })
+        files.push({ name: `${base}_labels_${data.settings.labels.size}.pdf`, data: labelsPdf(out, data.settings.labels.size, data.settings.units) })
         break
       case 'sheetmap-pdf':
-        files.push({ name: `${base}_sheet-maps.pdf`, data: sheetMapPdf(job, out, data.library) })
+        files.push({ name: `${base}_sheet-maps.pdf`, data: sheetMapPdf(job, out, data.library, data.settings.units) })
         break
       case 'labels-zpl':
-        files.push({ name: `${base}_labels_${data.settings.labels.size}.zpl`, data: labelsZpl(out, data.settings.labels.size) })
+        files.push({ name: `${base}_labels_${data.settings.labels.size}.zpl`, data: labelsZpl(out, data.settings.labels.size, data.settings.units) })
         break
       case 'cutlist-csv':
         files.push({ name: `${base}_cutlist.csv`, data: cutListCsv(out.cutList) })

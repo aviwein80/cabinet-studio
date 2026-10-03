@@ -1,10 +1,10 @@
 Type,Code,Name,Qty,Unit
-Sheet,HDF6-WHT,"HDF 6 white back 2800x2070",1,sheets
-Sheet,PB18-WHT,"Melamine PB 18 white 2800x2070",2,sheets
+Sheet,HDF6-WHT,"HDF 6 white back 3658x1524",1,sheets
+Sheet,PB18-WHT,"Melamine PB 18 white 3658x1524",2,sheets
 Edgeband,EB-WHT-1.0,"ABS white 1.0 x 22",36.19,m
 Edgeband,EB-WHT-0.4,"PVC white 0.4 x 22",3.52,m
 Hardware,SCREW-4x50,"Chipboard screw 4 x 50",16,pcs
 Hardware,PIN-5,"Shelf pin 5 mm",24,pcs
-Hardware,HINGE-110,"Concealed hinge 110°, full overlay",18,pcs
-Hardware,PLATE-CLIP-0,"Clip mounting plate 0 mm",18,pcs
+Hardware,SALICE-110-SC,"Salice Silentia+ 110° soft-close, full overlay",18,pcs
+Hardware,SALICE-B2VGV-H3,"Salice cruciform plate 3 mm, euro screw (B2VGV)",18,pcs
 Hardware,DOWEL-8x30,"Wood dowel 8 x 30",14,pcs

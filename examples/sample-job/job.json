@@ -57,14 +57,19 @@
           "gap": 3,
           "hingeSide": "left",
           "cupDiameter": 35,
-          "cupDepth": 13,
-          "cupEdgeDistance": 22.5,
+          "cupDepth": 13.5,
+          "cupEdgeDistance": 20.5,
           "hingeFromEnd": 100
         },
         "edgebands": {
           "carcassFront": "eb-white-1",
           "shelfFront": "eb-white-04",
           "door": "eb-white-1"
+        },
+        "drawers": {
+          "count": 0,
+          "frontHeight": 152.4,
+          "slide": "auto"
         }
       },
       "overrides": {}
@@ -119,14 +124,19 @@
           "gap": 3,
           "hingeSide": "right",
           "cupDiameter": 35,
-          "cupDepth": 13,
-          "cupEdgeDistance": 22.5,
+          "cupDepth": 13.5,
+          "cupEdgeDistance": 20.5,
           "hingeFromEnd": 100
         },
         "edgebands": {
           "carcassFront": "eb-white-1",
           "shelfFront": "eb-white-04",
           "door": "eb-white-1"
+        },
+        "drawers": {
+          "count": 0,
+          "frontHeight": 152.4,
+          "slide": "auto"
         }
       },
       "overrides": {}
@@ -181,14 +191,19 @@
           "gap": 3,
           "hingeSide": "left",
           "cupDiameter": 35,
-          "cupDepth": 13,
-          "cupEdgeDistance": 22.5,
+          "cupDepth": 13.5,
+          "cupEdgeDistance": 20.5,
           "hingeFromEnd": 100
         },
         "edgebands": {
           "carcassFront": "eb-white-1",
           "shelfFront": "eb-white-04",
           "door": "eb-white-1"
+        },
+        "drawers": {
+          "count": 0,
+          "frontHeight": 152.4,
+          "slide": "auto"
         }
       },
       "overrides": {}
@@ -243,14 +258,19 @@
           "gap": 3,
           "hingeSide": "left",
           "cupDiameter": 35,
-          "cupDepth": 13,
-          "cupEdgeDistance": 22.5,
+          "cupDepth": 13.5,
+          "cupEdgeDistance": 20.5,
           "hingeFromEnd": 100
         },
         "edgebands": {
           "carcassFront": "eb-white-1",
           "shelfFront": "eb-white-04",
           "door": "eb-white-1"
+        },
+        "drawers": {
+          "count": 0,
+          "frontHeight": 152.4,
+          "slide": "auto"
         }
       },
       "overrides": {}

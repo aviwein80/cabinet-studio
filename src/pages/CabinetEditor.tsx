@@ -276,10 +276,30 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               <div className="grid grid-cols-3 gap-2">
                 <NumField label="Gap" value={p.doors.gap} min={0} max={10} step={0.5} onChange={(v) => setP((x) => (x.doors.gap = v))} />
                 <NumField label="Cup Ø" value={p.doors.cupDiameter} min={20} max={40} onChange={(v) => setP((x) => (x.doors.cupDiameter = v))} />
-                <NumField label="Cup depth" value={p.doors.cupDepth} min={8} max={15} step={0.5} onChange={(v) => setP((x) => (x.doors.cupDepth = v))} />
-                <NumField label="Cup from edge" value={p.doors.cupEdgeDistance} min={18} max={30} step={0.5} onChange={(v) => setP((x) => (x.doors.cupEdgeDistance = v))} />
+                <NumField label="Cup depth" value={p.doors.cupDepth} min={8} max={16} step={0.5} onChange={(v) => setP((x) => (x.doors.cupDepth = v))} />
+                <NumField label="Cup centre" value={p.doors.cupEdgeDistance} min={18} max={30} step={0.5} onChange={(v) => setP((x) => (x.doors.cupEdgeDistance = v))} hint="Salice K3 = 20.5" />
                 <NumField label="From end" value={p.doors.hingeFromEnd} min={50} max={200} onChange={(v) => setP((x) => (x.doors.hingeFromEnd = v))} />
               </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">Salice Silentia+ 110° soft-close. The 35 mm cup is bored K = 3 mm from the door edge, and the 3 mm plate screws go 37 mm back from the side's front edge, 32 mm apart.</p>
+          </Section>
+          <Section title="Drawers" description="Blum TANDEM plus BLUMOTION. Stacked from the bottom; doors, if any, sit above them.">
+            <div className="grid grid-cols-2 gap-2">
+              <NumField label="Drawers" suffix="" value={p.drawers.count} min={0} max={6} onChange={(v) => setP((x) => (x.drawers.count = Math.round(v)))} />
+              <SelectField
+                label="Slide"
+                value={String(p.drawers.slide)}
+                options={[
+                  { value: 'auto', label: 'Auto from depth' },
+                  { value: '15', label: '15 in (381 mm)' },
+                  { value: '18', label: '18 in (457 mm)' },
+                  { value: '21', label: '21 in (533 mm)' },
+                ]}
+                onChange={(v) => setP((x) => (x.drawers.slide = v === 'auto' ? 'auto' : (Number(v) as 15 | 18 | 21)))}
+              />
+            </div>
+            {p.doors.count > 0 && p.drawers.count > 0 && (
+              <NumField label="Drawer front height" value={p.drawers.frontHeight} min={80} max={400} onChange={(v) => setP((x) => (x.drawers.frontHeight = v))} hint="All-drawer cabinets split the opening equally instead." />
             )}
           </Section>
           <Section title="Edgebanding">

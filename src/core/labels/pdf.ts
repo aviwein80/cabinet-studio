@@ -1,10 +1,10 @@
 import JsBarcode from 'jsbarcode'
 import { jsPDF } from 'jspdf'
 import type { PartInstance } from '../cutlist'
-import { fmt } from '../geometry'
+import { formatLength } from '../units'
 import { placementTransform, type SheetProgram } from '../machining'
 import type { JobOutput, LabelRecord } from '../pipeline'
-import type { Job, Library } from '../types'
+import type { Job, Library, UnitSystem } from '../types'
 import { labelDims, type LabelSpot } from './placement'
 
 function code128Bars(text: string): string {
@@ -37,7 +37,7 @@ function cornerMark(doc: jsPDF, x: number, y: number, size: number, color: [numb
   doc.triangle(x, y, x + size, y, x, y + size, 'F')
 }
 
-function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number) {
+function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem) {
   const ratio = l.finished.w / l.finished.l
   let bw = w
   let bh = w * ratio
@@ -62,7 +62,7 @@ function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number
   doc.setLineWidth(0.2)
   doc.setFontSize(6)
   doc.setFont('helvetica', 'normal')
-  doc.text(`${fmt(l.finished.l)}`, ox + bw / 2, oy + bh / 2 + 1, { align: 'center' })
+  doc.text(`${formatLength(l.finished.l, units)}`, ox + bw / 2, oy + bh / 2 + 1, { align: 'center' })
   if (l.grainLocked) {
     const ay = oy + bh / 2 + 3.5
     doc.line(ox + bw * 0.2, ay, ox + bw * 0.8, ay)
@@ -90,7 +90,7 @@ function miniSheet(doc: jsPDF, out: JobOutput, l: LabelRecord, x: number, y: num
   }
 }
 
-export function labelsPdf(out: JobOutput, size: '100x70' | '100x80'): Uint8Array {
+export function labelsPdf(out: JobOutput, size: '100x70' | '100x80', units: UnitSystem = 'mm'): Uint8Array {
   const { w: W, h: H } = labelDims(size)
   const doc = new jsPDF({ unit: 'mm', format: [W, H], orientation: 'landscape', compress: true })
   doc.setProperties({ title: 'Part labels', creator: 'Cabinet Studio' })
@@ -114,7 +114,7 @@ export function labelsPdf(out: JobOutput, size: '100x70' | '100x80'): Uint8Array
     doc.text(prog.materialCode, 4, 22)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
-    doc.text(`${fmt(prog.sheet.sheetLength)} x ${fmt(prog.sheet.sheetWidth)} x ${fmt(prog.sheet.thickness)} mm   ${labels.length} parts   yield ${prog.sheet.utilization}%`, 4, 28)
+    doc.text(`${formatLength(prog.sheet.sheetLength, units)} x ${formatLength(prog.sheet.sheetWidth, units)} x ${formatLength(prog.sheet.thickness, units)}   ${labels.length} parts   yield ${prog.sheet.utilization}%`, 4, 28)
     doc.text(`Program: ${prog.name}.mpr`, 4, 33)
     doc.setFontSize(7)
     doc.text('Labels follow in cut order. Place each label as shown on the sheet map.', 4, 38)
@@ -124,13 +124,13 @@ export function labelsPdf(out: JobOutput, size: '100x70' | '100x80'): Uint8Array
 
     for (const l of labels) {
       doc.addPage([W, H], 'landscape')
-      drawLabel(doc, out, l, W, H)
+      drawLabel(doc, out, l, W, H, units)
     }
   }
   return new Uint8Array(doc.output('arraybuffer'))
 }
 
-function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: number) {
+function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: number, units: UnitSystem) {
   doc.setFillColor(0, 0, 0)
   doc.rect(0, 0, W, 11, 'F')
   cornerMark(doc, 0, 0, 5, [255, 255, 255])
@@ -159,10 +159,10 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.text(l.cabinet.slice(0, 40), 4, 22)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
-  doc.text(`${fmt(l.finished.l)} x ${fmt(l.finished.w)} x ${fmt(l.finished.t)}`, 4, 29.5)
+  doc.text(`${formatLength(l.finished.l, units)} x ${formatLength(l.finished.w, units)} x ${formatLength(l.finished.t, units)}`, 4, 29.5)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
-  doc.text(`finished size   cut ${fmt(l.cut.l)} x ${fmt(l.cut.w)}`, 4, 33.5)
+  doc.text(`finished size   cut ${formatLength(l.cut.l, units)} x ${formatLength(l.cut.w, units)}`, 4, 33.5)
   doc.setFontSize(8)
   doc.text(`${l.materialCode}  ${l.materialName}`.slice(0, 44), 4, 38.5)
   const edgeText = (['L1', 'L2', 'W1', 'W2'] as const)
@@ -172,7 +172,7 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.setFontSize(7)
   doc.text(edgeText ? `Edges: ${edgeText}` : 'Edges: none', 4, 43)
 
-  edgeDiagram(doc, l, 62, 13, 34, 20)
+  edgeDiagram(doc, l, 62, 13, 34, 20, units)
   miniSheet(doc, out, l, 62, 35, 34, 14)
 
   const barY = H - 20
@@ -195,13 +195,13 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
 // Sheet map: one A4 landscape page per sheet showing every part, its number and its label spot.
 // ---------------------------------------------------------------------------------------------
 
-export function sheetMapPdf(job: Job, out: JobOutput, lib: Library): Uint8Array {
+export function sheetMapPdf(job: Job, out: JobOutput, lib: Library, units: UnitSystem = 'mm'): Uint8Array {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape', compress: true })
   doc.setProperties({ title: `Sheet maps ${job.number}`, creator: 'Cabinet Studio' })
   const byUid = new Map(out.instances.map((i) => [i.uid, i]))
   out.programs.forEach((prog, idx) => {
     if (idx > 0) doc.addPage('a4', 'landscape')
-    drawSheetPage(doc, job, out, prog, out.spots.get(prog.sheet.index) ?? [], byUid, lib)
+    drawSheetPage(doc, job, out, prog, out.spots.get(prog.sheet.index) ?? [], byUid, lib, units)
   })
   if (!out.programs.length) {
     doc.setFontSize(14)
@@ -218,6 +218,7 @@ function drawSheetPage(
   spots: LabelSpot[],
   byUid: Map<string, PartInstance>,
   lib: Library,
+  units: UnitSystem,
 ) {
   const s = prog.sheet
   const mat = lib.materials.find((m) => m.id === s.materialId)
@@ -227,7 +228,7 @@ function drawSheetPage(
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.text(
-    `Job ${job.number} ${job.name}  |  ${mat?.name ?? ''}  |  ${fmt(s.sheetLength)} x ${fmt(s.sheetWidth)} x ${fmt(s.thickness)} mm  |  ${s.placements.length} parts  |  yield ${s.utilization}%`,
+    `Job ${job.number} ${job.name}  |  ${mat?.name ?? ''}  |  ${formatLength(s.sheetLength, units)} x ${formatLength(s.sheetWidth, units)} x ${formatLength(s.thickness, units)}  |  ${s.placements.length} parts  |  yield ${s.utilization}%`,
     10,
     19,
   )
@@ -333,7 +334,7 @@ function drawSheetPage(
     doc.text(`${inst.no}`, lx, ly)
     doc.text(inst.part.name.slice(0, 18), lx + 8, ly)
     doc.text(inst.cabinetNumber, lx + 42, ly)
-    doc.text(`${fmt(inst.cutLength)} x ${fmt(inst.cutWidth)}${pl.rotated ? ' R' : ''}${spot && !spot.fits ? ' *' : ''}`, lx + 54, ly)
+    doc.text(`${formatLength(inst.cutLength, units)} x ${formatLength(inst.cutWidth, units)}${pl.rotated ? ' R' : ''}${spot && !spot.fits ? ' *' : ''}`, lx + 54, ly)
     doc.setTextColor(120, 120, 120)
     doc.text(`${i + 1}`, lx + 76, ly, { align: 'right' })
     doc.setTextColor(0, 0, 0)

@@ -19,21 +19,21 @@ INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
 INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
 INFO4="Test job"
 INFO5=""
-_BSX=2800.000000
-_BSY=2070.000000
+_BSX=3658.000000
+_BSY=1524.000000
 _BSZ=18.000000
 _FNX=0.000000
 _FNY=0.000000
 _RNX=0.000000
 _RNY=0.000000
 _RNZ=0.000000
-_RX=2800.000000
-_RY=2070.000000
+_RX=3658.000000
+_RY=1524.000000
 
 [001
-L="2800"
+L="3658"
 KM="Sheet length X"
-B="2070"
+B="1524"
 KM="Sheet width Y"
 D="18"
 KM="Sheet thickness Z"
@@ -41,200 +41,200 @@ KM="Sheet thickness Z"
 ]1
 $E0
 KP 
-X=292.0000
-Y=1991.0000
+X=697.0000
+Y=1176.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=574.0000
-Y=1991.0000
+X=697.0000
+Y=1458.0000
 
 $E2
 KL 
-X=574.0000
-Y=1892.0000
+X=796.0000
+Y=1458.0000
 
 $E3
 KL 
-X=10.0000
-Y=1892.0000
+X=796.0000
+Y=894.0000
 
 $E4
 KL 
-X=10.0000
-Y=1991.0000
+X=697.0000
+Y=894.0000
 
 $E5
 KL 
-X=292.0000
-Y=1991.0000
+X=697.0000
+Y=1176.0000
 
 ]2
 $E0
 KP 
-X=292.0000
-Y=1878.0000
+X=583.0000
+Y=1176.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=574.0000
-Y=1878.0000
+X=583.0000
+Y=1458.0000
 
 $E2
 KL 
-X=574.0000
-Y=1778.0000
+X=683.0000
+Y=1458.0000
 
 $E3
 KL 
-X=10.0000
-Y=1778.0000
+X=683.0000
+Y=894.0000
 
 $E4
 KL 
-X=10.0000
-Y=1878.0000
+X=583.0000
+Y=894.0000
 
 $E5
 KL 
-X=292.0000
-Y=1878.0000
+X=583.0000
+Y=1176.0000
 
 ]3
 $E0
 KP 
-X=583.0000
+X=1156.0000
 Y=392.5000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=583.0000
+X=1156.0000
 Y=775.0000
 
 $E2
 KL 
-X=878.0000
+X=1451.0000
 Y=775.0000
 
 $E3
 KL 
-X=878.0000
+X=1451.0000
 Y=10.0000
 
 $E4
 KL 
-X=583.0000
+X=1156.0000
 Y=10.0000
 
 $E5
 KL 
-X=583.0000
+X=1156.0000
 Y=392.5000
 
 ]4
 $E0
 KP 
-X=583.0000
-Y=1171.5000
+X=1725.6000
+Y=1084.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=583.0000
-Y=1554.0000
+X=2108.1000
+Y=1084.0000
 
 $E2
 KL 
-X=878.0000
-Y=1554.0000
+X=2108.1000
+Y=789.0000
 
 $E3
 KL 
-X=878.0000
+X=1343.1000
 Y=789.0000
 
 $E4
 KL 
-X=583.0000
-Y=789.0000
+X=1343.1000
+Y=1084.0000
 
 $E5
 KL 
-X=583.0000
-Y=1171.5000
+X=1725.6000
+Y=1084.0000
 
 ]5
 $E0
 KP 
-X=1767.0000
-Y=529.1000
+X=810.0000
+Y=1175.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=2048.0000
-Y=529.1000
+X=810.0000
+Y=1456.0000
 
 $E2
 KL 
-X=2048.0000
-Y=10.0000
+X=1329.1000
+Y=1456.0000
 
 $E3
 KL 
-X=1486.0000
-Y=10.0000
+X=1329.1000
+Y=894.0000
 
 $E4
 KL 
-X=1486.0000
-Y=529.1000
+X=810.0000
+Y=894.0000
 
 $E5
 KL 
-X=1767.0000
-Y=529.1000
+X=810.0000
+Y=1175.0000
 
 ]6
 $E0
 KP 
-X=1182.0000
-Y=569.0000
+X=10.0000
+Y=1184.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=1472.0000
-Y=569.0000
+X=10.0000
+Y=1474.0000
 
 $E2
 KL 
-X=1472.0000
-Y=10.0000
+X=569.0000
+Y=1474.0000
 
 $E3
 KL 
-X=892.0000
-Y=10.0000
+X=569.0000
+Y=894.0000
 
 $E4
 KL 
-X=892.0000
-Y=569.0000
+X=10.0000
+Y=894.0000
 
 $E5
 KL 
-X=1182.0000
-Y=569.0000
+X=10.0000
+Y=1184.0000
 
 ]7
 $E0
@@ -282,45 +282,45 @@ Y=445.0000
 ]8
 $E0
 KP 
-X=10.0000
-Y=1329.0000
+X=583.0000
+Y=445.0000
 Z=0.0000
 KO=00
 
 $E1
 KL 
-X=10.0000
-Y=1764.0000
+X=583.0000
+Y=880.0000
 
 $E2
 KL 
-X=569.0000
-Y=1764.0000
+X=1142.0000
+Y=880.0000
 
 $E3
 KL 
-X=569.0000
-Y=994.0000
+X=1142.0000
+Y=110.0000
 
 $E4
 KL 
-X=510.0000
-Y=994.0000
+X=1083.0000
+Y=110.0000
 
 $E5
 KL 
-X=510.0000
-Y=894.0000
+X=1083.0000
+Y=10.0000
 
 $E6
 KL 
-X=10.0000
-Y=894.0000
+X=583.0000
+Y=10.0000
 
 $E7
 KL 
-X=10.0000
-Y=1329.0000
+X=583.0000
+Y=445.0000
 
 <100 \WerkStck\
 LA="L"
@@ -334,14 +334,14 @@ AY="0"
 <101 \Kommentar\
 KM="Cabinet Studio 0.1.0 - job G001 sheet 2/2 PB18-WHT"
 KM="Generated program. Verify in woodWOP simulation before cutting."
-KM="P4 at X10 Y1892 564x99"
-KM="P5 at X10 Y1778 564x100"
-KM="P8 at X583 Y10 295x765 rotated"
-KM="P9 at X583 Y789 295x765 rotated"
-KM="P7 at X1486 Y10 562x519.1"
-KM="P3 at X892 Y10 580x559"
+KM="P4 at X697 Y894 99x564 rotated"
+KM="P5 at X583 Y894 100x564 rotated"
+KM="P8 at X1156 Y10 295x765 rotated"
+KM="P9 at X1343.1 Y789 765x295"
+KM="P7 at X810 Y894 519.1x562 rotated"
+KM="P3 at X10 Y894 559x580 rotated"
 KM="P1 at X10 Y10 559x870 rotated"
-KM="P2 at X10 Y894 559x870 rotated"
+KM="P2 at X583 Y10 559x870 rotated"
 KAT="Kommentar"
 MNM="Kommentar"
 
@@ -349,7 +349,7 @@ MNM="Kommentar"
 XA="46"
 YA="183"
 BM="LS"
-TI="12"
+TI="11"
 TNO="201"
 AN="1"
 MI="0"
@@ -1034,10 +1034,10 @@ KAT="Bohren vertikal"
 MNM="P1 screw-pilot D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1067"
+XA="1106"
+YA="183"
 BM="LS"
-TI="12"
+TI="11"
 TNO="201"
 AN="1"
 MI="0"
@@ -1050,8 +1050,8 @@ KAT="Bohren vertikal"
 MNM="P2 mounting-plate D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1099"
+XA="638.5"
+YA="215"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1066,8 +1066,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1099"
+XA="1106"
+YA="215"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1082,8 +1082,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1131"
+XA="638.5"
+YA="247"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1098,8 +1098,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1131"
+XA="1106"
+YA="247"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1114,8 +1114,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1163"
+XA="638.5"
+YA="279"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1130,8 +1130,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1163"
+XA="1106"
+YA="279"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1146,8 +1146,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1195"
+XA="638.5"
+YA="311"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1162,8 +1162,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1195"
+XA="1106"
+YA="311"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1178,8 +1178,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1227"
+XA="638.5"
+YA="343"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1194,8 +1194,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1227"
+XA="1106"
+YA="343"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1210,8 +1210,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1259"
+XA="638.5"
+YA="375"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1226,8 +1226,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1259"
+XA="1106"
+YA="375"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1242,8 +1242,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1291"
+XA="638.5"
+YA="407"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1258,8 +1258,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1291"
+XA="1106"
+YA="407"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1274,8 +1274,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1323"
+XA="638.5"
+YA="439"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1290,8 +1290,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1323"
+XA="1106"
+YA="439"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1306,8 +1306,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1355"
+XA="638.5"
+YA="471"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1322,8 +1322,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1355"
+XA="1106"
+YA="471"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1338,8 +1338,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1387"
+XA="638.5"
+YA="503"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1354,8 +1354,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1387"
+XA="1106"
+YA="503"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1370,8 +1370,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1419"
+XA="638.5"
+YA="535"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1386,8 +1386,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1419"
+XA="1106"
+YA="535"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1402,8 +1402,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1451"
+XA="638.5"
+YA="567"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1418,8 +1418,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1451"
+XA="1106"
+YA="567"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1434,8 +1434,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1483"
+XA="638.5"
+YA="599"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1450,8 +1450,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1483"
+XA="1106"
+YA="599"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1466,8 +1466,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1515"
+XA="638.5"
+YA="631"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1482,8 +1482,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1515"
+XA="1106"
+YA="631"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1498,8 +1498,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1547"
+XA="638.5"
+YA="663"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1514,8 +1514,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1547"
+XA="1106"
+YA="663"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1530,8 +1530,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1579"
+XA="638.5"
+YA="695"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1546,8 +1546,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1579"
+XA="1106"
+YA="695"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1562,8 +1562,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1611"
+XA="638.5"
+YA="727"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1578,8 +1578,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1611"
+XA="1106"
+YA="727"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1594,8 +1594,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1643"
+XA="638.5"
+YA="759"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1610,8 +1610,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1643"
+XA="1106"
+YA="759"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1626,8 +1626,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="65.5"
-YA="1675"
+XA="638.5"
+YA="791"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1642,8 +1642,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="533"
-YA="1675"
+XA="1106"
+YA="791"
 BM="LS"
 TI="12"
 TNO="201"
@@ -1658,8 +1658,8 @@ KAT="Bohren vertikal"
 MNM="P2 shelf-pin D5"
 
 <102 \BohrVert\
-XA="53.5"
-YA="1755"
+XA="626.5"
+YA="871"
 BM="LSL"
 TI="18.3"
 TNO="201"
@@ -1674,8 +1674,8 @@ KAT="Bohren vertikal"
 MNM="P2 screw-pilot D5"
 
 <102 \BohrVert\
-XA="103.5"
-YA="1755"
+XA="676.5"
+YA="871"
 BM="LSL"
 TI="18.3"
 TNO="201"
@@ -1690,8 +1690,8 @@ KAT="Bohren vertikal"
 MNM="P2 screw-pilot D5"
 
 <102 \BohrVert\
-XA="495"
-YA="1755"
+XA="1068"
+YA="871"
 BM="LSL"
 TI="18.3"
 TNO="201"
@@ -1706,8 +1706,8 @@ KAT="Bohren vertikal"
 MNM="P2 screw-pilot D5"
 
 <102 \BohrVert\
-XA="545"
-YA="1755"
+XA="1118"
+YA="871"
 BM="LSL"
 TI="18.3"
 TNO="201"
@@ -1722,10 +1722,10 @@ KAT="Bohren vertikal"
 MNM="P2 screw-pilot D5"
 
 <102 \BohrVert\
-XA="856.5"
+XA="1431.5"
 YA="98"
 BM="LS"
-TI="13"
+TI="13.5"
 TNO="204"
 AN="1"
 MI="0"
@@ -1738,10 +1738,10 @@ KAT="Bohren vertikal"
 MNM="P8 hinge-cup D35"
 
 <102 \BohrVert\
-XA="856.5"
+XA="1431.5"
 YA="674"
 BM="LS"
-TI="13"
+TI="13.5"
 TNO="204"
 AN="1"
 MI="0"
@@ -1754,10 +1754,10 @@ KAT="Bohren vertikal"
 MNM="P8 hinge-cup D35"
 
 <102 \BohrVert\
-XA="604.5"
-YA="877"
+XA="1431.1"
+YA="1064.5"
 BM="LS"
-TI="13"
+TI="13.5"
 TNO="204"
 AN="1"
 MI="0"
@@ -1770,10 +1770,10 @@ KAT="Bohren vertikal"
 MNM="P9 hinge-cup D35"
 
 <102 \BohrVert\
-XA="604.5"
-YA="1453"
+XA="2007.1"
+YA="1064.5"
 BM="LS"
-TI="13"
+TI="13.5"
 TNO="204"
 AN="1"
 MI="0"
@@ -1786,10 +1786,10 @@ KAT="Bohren vertikal"
 MNM="P9 hinge-cup D35"
 
 <109 \Nuten\
-XA="892"
-YA="553.75"
-XE="1472"
-YE="553.75"
+XA="25.25"
+YA="894"
+XE="25.25"
+YE="1474"
 NB="6.5"
 RK="NOWRK"
 EM="MOD2"
@@ -1840,10 +1840,10 @@ KAT="Nuten"
 MNM="P1 back-groove"
 
 <109 \Nuten\
-XA="569"
-YA="1003"
-XE="10"
-YE="1003"
+XA="1142"
+YA="119"
+XE="583"
+YE="119"
 NB="18"
 RK="NOWRK"
 EM="MOD2"
@@ -1858,10 +1858,10 @@ KAT="Nuten"
 MNM="P2 dado"
 
 <109 \Nuten\
-XA="25.25"
-YA="894"
-XE="25.25"
-YE="1764"
+XA="598.25"
+YA="10"
+XE="598.25"
+YE="880"
 NB="6.5"
 RK="NOWRK"
 EM="MOD2"

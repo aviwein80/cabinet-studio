@@ -177,7 +177,7 @@ export function importEdgebands(rows: Row[], existing: EdgeBand[]): ImportResult
   return { kind: 'edgebands', ...upsert(existing, incoming, (m) => m.code), errors }
 }
 
-const HW_CATS: HardwareCategory[] = ['shelf-pin', 'hinge', 'mounting-plate', 'connector', 'dowel', 'screw', 'leg', 'other']
+const HW_CATS: HardwareCategory[] = ['shelf-pin', 'hinge', 'mounting-plate', 'connector', 'dowel', 'screw', 'leg', 'slide', 'other']
 
 export function importHardware(rows: Row[], existing: Hardware[]): ImportResult<Hardware> {
   const errors: string[] = []

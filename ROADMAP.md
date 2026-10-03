@@ -1,9 +1,11 @@
 # Roadmap
 
-Status: first vertical slice. The path from template to MPR, labels and sheet map works
-end to end. It has **not** been run through woodWOP or on the N-200.
+Status: design is the current focus (units, room layout, Salice hinges, Blum TANDEM slides).
+Proving MPR output on the N-200, and replacing the placeholder tool table, are paused. The path
+from template to MPR, labels and sheet map still works end to end. It has **not** been run through
+woodWOP or on the N-200.
 
-## Phase 0: prove the output on the real machine (next)
+## Phase 0: prove the output on the real machine (paused)
 
 1. Replace the placeholder tool table with the real N-200 tools: export from Tool Manager, then
    import the CSV.

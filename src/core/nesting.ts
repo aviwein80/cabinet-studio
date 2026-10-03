@@ -84,10 +84,11 @@ const better = (a: [number, number], b: [number, number] | null) =>
 class MaxRectsBin {
   free: Rect[]
   used: Rect[] = []
-  constructor(
-    public w: number,
-    public h: number,
-  ) {
+  w: number
+  h: number
+  constructor(w: number, h: number) {
+    this.w = w
+    this.h = h
     this.free = [{ x: 0, y: 0, w, h }]
   }
 

@@ -412,7 +412,7 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
     for (let i = 0; i < nH; i++) {
       const a = dz0 + p.doors.hingeFromEnd
       const bz = dz1 - p.doors.hingeFromEnd
-      wanted.push(nH === 1 ? (a + bz) / 2 : a + ((bz - a) * i) / (nH - 1))
+      wanted.push(a + ((bz - a) * i) / (nH - 1))
     }
     const plateCentres = wanted.map((z) => r3(gridOrigin + Math.round((z - pitch / 2 - gridOrigin) / pitch) * pitch + pitch / 2))
 

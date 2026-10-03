@@ -545,7 +545,7 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
                 {data.machine.placeholder && ' The tool table is still placeholder data.'}
               </p>
               <label className="flex items-center gap-2 text-xs font-medium">
-                <Checkbox checked={ack} onCheckedChange={(v) => setAck(v === true)} />I will simulate every program in woodWOP before running it
+                <Checkbox className="size-4 border-amber-700 bg-white" checked={ack} onCheckedChange={(v) => setAck(v === true)} />I will simulate every program in woodWOP before running it
               </label>
             </div>
           </div>

@@ -53,9 +53,10 @@ export function NumField({
     if (!invalid && inUnit !== value) onChange(inUnit)
     else if (invalid) setText(shown)
   }
+  const unitLabel = length && units === 'in' ? 'in' : suffix
   return (
     <Field label={label} hint={hint} className={className}>
-      <div className="relative">
+      <div className="flex items-center gap-1.5">
         <Input
           id={id}
           inputMode="decimal"
@@ -73,9 +74,9 @@ export function NumField({
               onChange(c)
             }
           }}
-          className={cn('h-8 pr-9 tabular-nums', suffix ? 'pr-9' : 'pr-2')}
+          className="h-8 min-w-0 tabular-nums"
         />
-        {suffix && <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-muted-foreground">{length && units === 'in' ? 'in' : suffix}</span>}
+        {unitLabel && <span className="w-6 shrink-0 text-xs text-muted-foreground">{unitLabel}</span>}
       </div>
     </Field>
   )

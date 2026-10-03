@@ -40,6 +40,11 @@ function explodeOffset(p: Part, amount: number, width: number): Vec3 {
   }
 }
 
+/** Door, or a drawer front sitting in front of the cabinet face. Box parts stay solid. */
+function isFront(p: Part) {
+  return p.role === 'door' || (p.role === 'drawer' && /front/i.test(p.name))
+}
+
 function holeRotation(n: Vec3): [number, number, number] {
   if (Math.abs(n[0]) > 0.5) return [0, 0, Math.PI / 2]
   if (Math.abs(n[1]) > 0.5) return [Math.PI / 2, 0, 0]
@@ -84,7 +89,8 @@ function PartMesh({
           roughness={0.75}
           metalness={0}
           transparent={ghost}
-          opacity={ghost ? 0.35 : 1}
+          opacity={ghost ? 0.28 : 1}
+          depthWrite={!ghost}
           emissive={selected ? '#7c4a03' : '#000000'}
           emissiveIntensity={selected ? 0.25 : 0}
         />
@@ -93,11 +99,13 @@ function PartMesh({
       {ops.map((op) => {
         if (op.kind === 'drill') {
           const depth = Math.min(op.depth, part.thickness)
-          const mid = toWorld(part.frame, op.x, op.y, depth / 2 - 0.2)
+          const proud = op.purpose === 'hinge-cup' || op.purpose === 'slide' ? 3 : 1.2
+          const mid = toWorld(part.frame, op.x, op.y, (depth - proud) / 2)
+          const color = op.purpose === 'hinge-cup' ? '#1c1917' : op.purpose === 'slide' ? '#1d4ed8' : op.purpose === 'mounting-plate' ? '#9a3412' : '#44403c'
           return (
-            <mesh key={op.id} position={T([mid[0] + offset[0], mid[1] + offset[1], mid[2] + offset[2]])} rotation={holeRotation(part.frame.n)}>
-              <cylinderGeometry args={[(op.diameter / 2) * S, (op.diameter / 2) * S, (depth + 0.6) * S, 20]} />
-              <meshStandardMaterial color={op.purpose === 'hinge-cup' ? '#3f3a33' : op.purpose === 'slide' ? '#1d4ed8' : op.purpose === 'mounting-plate' ? '#7c2d12' : '#2b2722'} />
+            <mesh key={op.id} position={T([mid[0] + offset[0], mid[1] + offset[1], mid[2] + offset[2]])} rotation={holeRotation(part.frame.n)} renderOrder={2}>
+              <cylinderGeometry args={[(op.diameter / 2) * S, (op.diameter / 2) * S, (depth + proud) * S, 24]} />
+              <meshStandardMaterial color={color} polygonOffset polygonOffsetFactor={-2} />
             </mesh>
           )
         }
@@ -159,7 +167,7 @@ export function Viewer3D({
       <directionalLight position={[-3, 2, -2]} intensity={0.5} />
       <gridHelper args={[4, 40, '#c9c2b4', '#e2ddd3']} position={[target[0], 0, target[2]]} />
       {parts
-        .filter((p) => !(hideDoors && p.role === 'door'))
+        .filter((p) => !(hideDoors && isFront(p)))
         .map((p) => {
           const mat = library.materials.find((m) => m.id === p.materialId)
           return (
@@ -170,7 +178,7 @@ export function Viewer3D({
               selected={selected === p.key}
               offset={explodeOffset(p, explode, width)}
               showOps={showOps}
-              ghost={p.role === 'door' && !hideDoors && selected !== p.key && explode === 0}
+              ghost={isFront(p) && !hideDoors && selected !== p.key && explode === 0}
               onSelect={onSelect ?? undefined}
             />
           )

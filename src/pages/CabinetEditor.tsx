@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/construction/carcass'
-import type { CabinetInstance, CarcassParams, DrillOp, EdgeKey, Library, Part, PartOverride } from '@/core/types'
+import { formatLength } from '@/core/units'
+import type { CabinetInstance, CarcassParams, DrillOp, EdgeKey, Library, Part, PartOverride, UnitSystem } from '@/core/types'
 import { EDGE_KEYS } from '@/core/types'
 import { cn } from '@/lib/utils'
 
@@ -152,7 +153,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               ]}
               onChange={(v) => setP((x) => (x.kind = v))}
             />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <NumField label="Width" value={p.width} min={150} max={1500} onChange={(v) => setP((x) => (x.width = v))} />
               <NumField label="Height" value={p.height} min={200} max={2700} onChange={(v) => setP((x) => (x.height = v))} />
               <NumField label="Depth" value={p.depth} min={150} max={900} onChange={(v) => setP((x) => (x.depth = v))} />
@@ -329,7 +330,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               </Button>
             </div>
             <div className="absolute right-3 bottom-3 rounded bg-background/80 px-2 py-1 font-mono text-[11px] text-muted-foreground">
-              {p.width} × {p.height} × {p.depth} · drag to orbit
+              {formatLength(p.width, data.settings.units)} × {formatLength(p.height, data.settings.units)} × {formatLength(p.depth, data.settings.units)} · drag to orbit
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-auto bg-background">
@@ -345,6 +346,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               finalParts={finalParts}
               cab={cab}
               lib={lib}
+              units={data.settings.units}
               selected={selected}
               onSelect={setSelected}
               setOverride={setOverride}
@@ -382,6 +384,7 @@ function PartsTable({
   finalParts,
   cab,
   lib,
+  units,
   selected,
   onSelect,
   setOverride,
@@ -392,6 +395,7 @@ function PartsTable({
   finalParts: Part[]
   cab: CabinetInstance
   lib: Library
+  units: UnitSystem
   selected: string | null
   onSelect: (k: string | null) => void
   setOverride: (key: string, fn: (o: PartOverride) => void) => void
@@ -430,7 +434,7 @@ function PartsTable({
                 <div className="font-mono text-[10px] text-muted-foreground">{raw.key}</div>
               </TableCell>
               <TableCell className="text-right font-mono text-xs tabular-nums">
-                {part.length} × {part.width} × {part.thickness}
+                {formatLength(part.length, units)} × {formatLength(part.width, units)} × {formatLength(part.thickness, units)}
               </TableCell>
               <TableCell className="font-mono text-xs">{mat?.code ?? part.materialId}</TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>

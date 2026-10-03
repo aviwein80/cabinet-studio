@@ -99,13 +99,15 @@ function PartMesh({
       {ops.map((op) => {
         if (op.kind === 'drill') {
           const depth = Math.min(op.depth, part.thickness)
-          const proud = op.purpose === 'hinge-cup' || op.purpose === 'slide' ? 3 : 1.2
+          const proud = op.purpose === 'hinge-cup' || op.purpose === 'slide' ? 4 : 1.5
           const mid = toWorld(part.frame, op.x, op.y, (depth - proud) / 2)
+          // Ø5 bores are a few pixels at cabinet scale, so the marker is drawn a little wider than the hole.
+          const visual = op.purpose === 'slide' || op.purpose === 'mounting-plate' ? Math.max(op.diameter, 16) : op.diameter
           const color = op.purpose === 'hinge-cup' ? '#1c1917' : op.purpose === 'slide' ? '#1d4ed8' : op.purpose === 'mounting-plate' ? '#9a3412' : '#44403c'
           return (
             <mesh key={op.id} position={T([mid[0] + offset[0], mid[1] + offset[1], mid[2] + offset[2]])} rotation={holeRotation(part.frame.n)} renderOrder={2}>
-              <cylinderGeometry args={[(op.diameter / 2) * S, (op.diameter / 2) * S, (depth + proud) * S, 24]} />
-              <meshStandardMaterial color={color} polygonOffset polygonOffsetFactor={-2} />
+              <cylinderGeometry args={[(visual / 2) * S, (visual / 2) * S, (depth + proud) * S, 24]} />
+              <meshBasicMaterial color={color} toneMapped={false} />
             </mesh>
           )
         }

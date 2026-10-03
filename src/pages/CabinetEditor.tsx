@@ -225,7 +225,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               onChange={(v) => setP((x) => (x.back.type = v))}
             />
             {p.back.type !== 'applied' && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <NumField label="Depth" value={p.back.grooveDepth} min={3} max={12} step={0.5} onChange={(v) => setP((x) => (x.back.grooveDepth = v))} />
                 <NumField label="Setback" value={p.back.setback} min={0} max={40} onChange={(v) => setP((x) => (x.back.setback = v))} />
                 <NumField label="Clearance" value={p.back.clearance} min={0} max={3} step={0.1} onChange={(v) => setP((x) => (x.back.clearance = v))} />
@@ -239,7 +239,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
             </div>
             <SwitchField label="Shelf-pin rows" checked={p.shelfPins.enabled} onChange={(v) => setP((x) => (x.shelfPins.enabled = v))} hint="Holes on a 32 mm pitch from the bottom panel." />
             {p.shelfPins.enabled && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <NumField label="Ø" value={p.shelfPins.diameter} min={3} max={10} step={0.5} onChange={(v) => setP((x) => (x.shelfPins.diameter = v))} />
                 <NumField label="Depth" value={p.shelfPins.depth} min={5} max={16} onChange={(v) => setP((x) => (x.shelfPins.depth = v))} />
                 <NumField label="Pitch" value={p.shelfPins.pitch} min={16} max={64} onChange={(v) => setP((x) => (x.shelfPins.pitch = v))} />
@@ -274,7 +274,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               )}
             </div>
             {p.doors.count > 0 && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <NumField label="Gap" value={p.doors.gap} min={0} max={10} step={0.5} onChange={(v) => setP((x) => (x.doors.gap = v))} />
                 <NumField label="Cup Ø" value={p.doors.cupDiameter} min={20} max={40} onChange={(v) => setP((x) => (x.doors.cupDiameter = v))} />
                 <NumField label="Cup depth" value={p.doors.cupDepth} min={8} max={16} step={0.5} onChange={(v) => setP((x) => (x.doors.cupDepth = v))} />

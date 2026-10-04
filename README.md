@@ -91,6 +91,24 @@ export checker. Tool numbers are still placeholders.
   engine, and the result with fewer sheets is kept. It handles grain (only half turns when grain
   is locked), priorities, kits kept on one sheet, small parts placed inside cut-outs and cut
   first, an onion-skin final pass, offcuts back into stock, and label copy counters.
+- **3D models** (switch: 3D models): import STL (binary or text), OBJ or 3MF reliefs and shaped
+  parts. Import runs in the background with a progress bar and Cancel. Units and which way is up
+  can be chosen (by default the model is laid flat). The importer joins the facets, closes gaps
+  up to 0.01 mm, turns facets that face the wrong way, and reports holes and other problems. Bad
+  files give a plain message. Per model you can:
+  - place it (turn, scale, mirror, position, top height);
+  - fit the part to it with extra material around, above and below;
+  - cut sections every few mm into closed contours that the normal machining operations use
+    (each keeps its depth);
+  - add its outline seen from above, or use it as the part outline;
+  - turn its folds into 3D polylines;
+  - simplify it by percent, or within a tolerance (the change is measured, not estimated);
+  - remove downward facets, or go back to the original.
+
+  The 3D view shows the stock, the models and the drawing. Model data is stored as compressed
+  files in `data/blobs` next to the shop file, never inside it. Part files (`.csp.json`) carry
+  their models with them. Unused model files are removed after 30 days. 3D toolpaths come next
+  (M2.2); nothing 3D is written to MPR yet.
 - **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and a ghost tool.
   A 2.5D heightfield of the material is shown as a shaded top view or in 3D, with depth readouts.
   It checks for rapids into uncut material, shows pieces cut free, and has a through-cuts-only
@@ -274,6 +292,11 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   batch.ts         part-list CSV -> orders -> runJob; batchWatch.ts inbox watcher
   hardware/patterns.ts, patternImport.ts   drilling patterns, DXF/CSV import, PDF drafts
 src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpaths, native MPR, sim
+  mesh/            3D meshes: STL/OBJ/3MF readers, repair, placement, sections, outline, simplify
+  model/           model data store (compressed, by SHA-256, outside the shop file), part files
+  stock/           stock model interface and the heightfield stock
+  worker/          background compute worker (3D tasks) with progress and cancel
+src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)
 src/pages/         Jobs, Job (cabinets / cut list / nesting / output), Cabinet editor, Library, Machine
 src/components/    3D viewer (react-three-fiber), sheet view (SVG), forms, shadcn/ui
@@ -287,6 +310,14 @@ Stack: Electron 44, Vite 8, React 19, TypeScript 6, Tailwind 4, shadcn/ui, three
 ## Machine assumptions to confirm
 
 All of these can be set on the **Machine & tools** page:
+
+- The **machine model**: table size, travel, tool change position, safe height, spoilboard
+  thickness, and whether a saw unit or aggregate is fitted. All of these are **placeholders**.
+  The saw unit is treated as absent, so saw grooves are blocked by the export checker until it
+  is confirmed. Every export warns while the figures are placeholders.
+- 3D tool data per tool (Edit): cutting shape (ball-nose, bull-nose with corner radius), shank
+  diameter, flute length, stick-out and holder. The ball-nose 6 and 3 mm, bull-nose 12 mm and the
+  collet-chuck holder in the built-in table are invented placeholders.
 
 - Tool numbers and diameters (placeholder data).
 - Whether drills are addressed by diameter or by tool number.

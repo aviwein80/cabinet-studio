@@ -22,6 +22,21 @@ Next for the reader: machine edge grooves and edge profiles (needs the aggregate
 underside milling in the turned-over program, and a per-shop "likely features" list so the
 reader recognises the shop's own hardware codes.
 
+## Custom-part Stage 2 and 3 (in progress)
+
+Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-progress.md`.
+
+- **M2.0 audit: done.** **M2.1 3D foundation: done** (October 2026). It covers 3D model import,
+  mesh tools, the work volume from a model, the machine model, tool holder fields, the stock
+  model, background workers, and part format version 2. Next: **M2.2a**, parallel finishing.
+- Decisions (October 2026):
+  - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
+    normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
+  - N-200 machine figures stay placeholders; the saw unit is absent until confirmed.
+  - Placeholder 3D tools and cutting values are used until the real ones are supplied.
+  - 3D models are stored as separate compressed files next to the shop file.
+  - The new milestone order and the M2.2 split are approved.
+
 ## Phase 0: prove the output on the real machine (paused)
 
 1. Replace the placeholder tool table with the real N-200 tools: export from Tool Manager, then

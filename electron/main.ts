@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { aiCall, aiKeyStatus, aiSetKey } from './aiKeys'
+import { collectBlobs } from './blobGc'
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL
 const MAX_BACKUPS = 30
@@ -18,33 +19,8 @@ const blobFile = (hash: string) => {
   if (!BLOB_RE.test(hash)) throw new Error('Bad model data id.')
   return path.join(blobDir(), `${hash}.bin.gz`)
 }
+/** Unused model data is kept 30 days before it is removed. */
 const BLOB_KEEP_MS = 30 * 24 * 60 * 60 * 1000
-
-/**
- * Remove model data no longer used by the shop file or any backup, once it is 30 days old.
- * Runs at start-up. Anything referenced anywhere is kept.
- */
-function collectBlobs() {
-  if (!fs.existsSync(blobDir())) return
-  const used = new Set<string>()
-  const scan = (file: string) => {
-    try {
-      for (const m of fs.readFileSync(file, 'utf8').matchAll(/"([0-9a-f]{64})"/g)) used.add(m[1])
-    } catch {
-      // unreadable file: keep everything
-      used.add('*')
-    }
-  }
-  if (fs.existsSync(dataFile())) scan(dataFile())
-  if (fs.existsSync(backupDir())) for (const f of fs.readdirSync(backupDir())) if (f.endsWith('.json')) scan(path.join(backupDir(), f))
-  if (used.has('*')) return
-  for (const f of fs.readdirSync(blobDir())) {
-    const hash = f.replace(/\.bin\.gz$/, '')
-    if (!BLOB_RE.test(hash) || used.has(hash)) continue
-    const full = path.join(blobDir(), f)
-    if (Date.now() - fs.statSync(full).mtimeMs > BLOB_KEEP_MS) fs.unlinkSync(full)
-  }
-}
 
 let lastBackup = 0
 
@@ -239,7 +215,7 @@ app.whenReady().then(() => {
   )
   registerIpc()
   try {
-    collectBlobs()
+    collectBlobs({ blobs: blobDir(), dataFile: dataFile(), backups: backupDir() }, BLOB_KEEP_MS)
   } catch {
     // clean-up is best effort; never block start-up
   }

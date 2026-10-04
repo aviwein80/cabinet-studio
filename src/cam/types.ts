@@ -10,6 +10,7 @@
  * (u, v) = (position along the edge from its left end seen from outside, depth below face 1).
  */
 import type { Contour, P } from './geom'
+import type { MeshReport, MeshUnits } from './mesh/types'
 
 export type FaceId = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -50,10 +51,51 @@ export interface Variable {
   note?: string
 }
 
+/** Which axis of the model file points up (becomes +Z, out of face 1). */
+export type UpAxis = '+z' | '-z' | '+y' | '-y' | '+x' | '-x'
+
+/**
+ * Where a 3D model sits in the part. Applied in order: turn `up` to +Z, rotate `rotZ` degrees
+ * about Z, scale, mirror (X), then move so the model's lowest X and Y land on `at[0]`, `at[1]`
+ * and its top on `at[2]` (0 = flush with face 1; negative = below it).
+ */
+export interface ModelPlacement {
+  up: UpAxis
+  rotZ: number
+  scale: number
+  mirror: boolean
+  at: [number, number, number]
+}
+
+/**
+ * A 3D model on the part. The mesh itself is not stored in the part (or the shop file): it is a
+ * compressed file in the blob store, named by the SHA-256 hash in `blob`.
+ */
+export interface ModelRef {
+  id: string
+  name: string
+  kind: 'mesh'
+  /** SHA-256 of the stored mesh: also the cache key and the associativity input. */
+  blob: string
+  /** File the model came from. */
+  source: string
+  /** Unit the file was read in (the stored mesh is in mm). */
+  units: MeshUnits
+  place: ModelPlacement
+  layer: string
+  visible: boolean
+  triangles: number
+  /** Size of the stored mesh in mm (before placement). */
+  size: [number, number, number]
+  /** Blob of the mesh as first imported, kept when the model is simplified or trimmed. */
+  original?: string
+  report?: Omit<MeshReport, 'warnings'> & { warnings?: string[] }
+}
+
 export interface CamPart {
   id: string
   name: string
-  version: 1
+  version: 1 | 2
   materialId: string | null
   length: number
   width: number
@@ -79,6 +121,10 @@ export interface CamPart {
    * job or nested; it becomes 'approved' when a named person confirms they checked it.
    */
   review?: { status: 'draft' | 'approved'; file: string; drafter: string; reviewedBy?: string; reviewedAt?: string }
+  /** 3D models (meshes) placed on the part. */
+  models?: ModelRef[]
+  /** Work volume was fitted to a model with this oversize (mm); kept so it can be refitted. */
+  workVolume?: { modelId: string; oversize: { xy: number; top: number; bottom: number } }
   /** Keep ops on unchanged geometry ids when imports refresh. */
   updatedAt: string
 }

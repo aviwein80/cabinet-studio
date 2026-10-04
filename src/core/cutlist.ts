@@ -1,3 +1,6 @@
+import { partOutline as camOutline } from '@/cam/doc'
+import { toPoints } from '@/cam/geom'
+import type { CamPart } from '@/cam/types'
 import { buildCabinet, partOutline } from './construction/carcass'
 import { EPS, r3 } from './geometry'
 import type { EdgeKey, Job, Library, Operation, Part, ShopSettings, Vec2 } from './types'
@@ -22,6 +25,8 @@ export interface PartInstance {
   ops: Operation[]
   outline: Vec2[]
   canRotate: boolean
+  /** Custom part drawn in the part designer; its machining comes from its own operations. */
+  cam?: CamPart
 }
 
 export interface CutListRow {
@@ -118,6 +123,48 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
           canRotate: !(material?.grain && part.grain === 'length'),
         })
       }
+    }
+  }
+  for (const cp of job.camParts ?? []) {
+    const material = cp.materialId ? lib.materials.find((m) => m.id === cp.materialId) : undefined
+    if (!cp.materialId) warnings.push(`Custom part ${cp.name}: no material chosen, so it cannot be nested.`)
+    else if (!material) warnings.push(`Custom part ${cp.name}: material ${cp.materialId} missing from library.`)
+    else if (Math.abs(material.thickness - cp.thickness) > EPS)
+      warnings.push(`Custom part ${cp.name}: part is ${cp.thickness} mm but material ${material.code} is ${material.thickness} mm.`)
+    const outline = toPoints(camOutline(cp).contour, 0.05).map((p) => ({ x: r3(p.x), y: r3(p.y) }))
+    const part: Part = {
+      key: `cam-${cp.id}`,
+      name: cp.name,
+      role: 'custom',
+      materialId: cp.materialId ?? '',
+      length: cp.length,
+      width: cp.width,
+      thickness: cp.thickness,
+      grain: cp.grain,
+      edges: {},
+      ops: [],
+      outline,
+      frame: { origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0], n: [0, 0, 1] },
+    }
+    for (let copy = 0; copy < Math.max(1, cp.qty); copy++) {
+      no += 1
+      instances.push({
+        uid: `cam:${cp.id}#${copy + 1}`,
+        no,
+        partId: `${job.number}-${String(no).padStart(3, '0')}`,
+        cabinetId: '',
+        cabinetNumber: 'Custom',
+        cabinetName: cp.name,
+        part,
+        materialId: part.materialId,
+        thickness: cp.thickness,
+        cutLength: cp.length,
+        cutWidth: cp.width,
+        ops: [],
+        outline,
+        canRotate: !(material?.grain && cp.grain === 'length'),
+        cam: cp,
+      })
     }
   }
   const hardware = [...hw.entries()].map(([code, qty]) => ({

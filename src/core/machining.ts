@@ -1,5 +1,6 @@
 import type { Seg } from '@/cam/geom'
-import type { Intent } from '@/cam/toolpath'
+import { partProgramOps } from '@/cam/mpr'
+import { generatePart, type Intent } from '@/cam/toolpath'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet } from './nesting'
@@ -141,6 +142,13 @@ export interface SheetProgram {
   ops: ProgramOp[]
   /** Horizontal holes left out of the program because the machine has no horizontal unit. */
   skipped: HDrill[]
+  /** Custom parts on this sheet: toolpath warnings, underside drilling, and whether machining was written. */
+  custom?: { partUid: string; partNo: number; written: boolean; machiningOps: number; backHoles: number; warnings: string[] }[]
+}
+
+export interface ProgramOptions {
+  /** Write custom-part machining (feature flag camMprOutput). Off: only the cut-out is written. */
+  camOutput?: boolean
 }
 
 const safeName = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
@@ -196,6 +204,7 @@ export function buildSheetProgram(
   instances: Map<string, PartInstance>,
   lib: Library,
   machine: MachineProfile,
+  opts: ProgramOptions = {},
 ): SheetProgram {
   const material = lib.materials.find((m) => m.id === sheet.materialId)
   const materialCode = material?.code ?? sheet.materialId
@@ -204,6 +213,8 @@ export function buildSheetProgram(
   const hdrills: HDrill[] = []
   const grooves: (Pocket | SawGroove)[] = []
   const contours: Contour[] = []
+  const camOps: CamProgramOp[] = []
+  const custom: NonNullable<SheetProgram['custom']> = []
   const cutter = cutoutTool(machine) ?? null
 
   for (const pl of sheet.placements) {
@@ -211,6 +222,26 @@ export function buildSheetProgram(
     if (!inst) continue
     const { pt, dir } = placementTransform(inst, pl)
     const base = { partUid: inst.uid, partNo: inst.no }
+    if (inst.cam) {
+      const paths = generatePart(inst.cam, machine)
+      const tf = { pt, dir, rotated: pl.rotated }
+      const all = partProgramOps(inst.cam, paths, tf, inst.uid, inst.no, machine, true)
+      const backHoles = paths.reduce((n, tp) => n + tp.intents.filter((it) => it.k === 'vdrill' && it.back).length, 0)
+      const machining = all.filter((o) => o.kind === 'cam')
+      custom.push({ ...base, written: !!opts.camOutput, machiningOps: machining.length, backHoles, warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)) })
+      for (const o of all) {
+        if (o.kind === 'contour') contours.push(o)
+        else if (o.kind !== 'cam' || !opts.camOutput) continue
+        else if (o.intent.k === 'vdrill') {
+          const it = o.intent
+          drills.push({ ...base, kind: 'vdrill', opId: o.opId, purpose: 'custom', x: it.x, y: it.y, diameter: it.d, depth: it.depth, through: it.through, tool: it.tool })
+        } else if (o.intent.k === 'hdrill') {
+          const it = o.intent
+          hdrills.push({ ...base, kind: 'hdrill', opId: o.opId, purpose: 'custom', x: it.x, y: it.y, z: r3(T - it.z), diameter: it.d, depth: it.depth, dir: it.dir, tool: it.tool })
+        } else camOps.push(o)
+      }
+      continue
+    }
     for (const op of inst.ops) {
       if (op.kind === 'drill') {
         const p = pt(op.x, op.y)
@@ -309,17 +340,18 @@ export function buildSheetProgram(
   grooves.sort((a, b) => rank(a) - rank(b))
   const ops: ProgramOp[] = [...drills]
   if (machine.hasHorizontalDrillUnit) ops.push(...hdrills)
-  ops.push(...grooves, ...contours)
+  ops.push(...grooves, ...camOps.sort((a, b) => rank(a) - rank(b)), ...contours)
   return {
     name: sheetProgramName(job, sheet.index, materialCode),
     sheet,
     materialCode,
     ops,
     skipped: machine.hasHorizontalDrillUnit ? [] : hdrills,
+    ...(custom.length ? { custom } : {}),
   }
 }
 
-export function buildAllPrograms(job: Job, nest: JobNest, instances: PartInstance[], lib: Library, machine: MachineProfile) {
+export function buildAllPrograms(job: Job, nest: JobNest, instances: PartInstance[], lib: Library, machine: MachineProfile, opts: ProgramOptions = {}) {
   const map = new Map(instances.map((i) => [i.uid, i]))
-  return nest.sheets.map((s) => buildSheetProgram(job, s, map, lib, machine))
+  return nest.sheets.map((s) => buildSheetProgram(job, s, map, lib, machine, opts))
 }

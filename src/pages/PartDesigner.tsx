@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
+import { ArrowLeft, Download, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { PartCanvas, type Display } from './part/Canvas'
 import { hitEntity } from './part/hit'
 import { OpsPanel } from './part/OpsPanel'
+import { ProgramDialog } from './part/ProgramDialog'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
@@ -88,6 +89,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [hiddenOps, setHiddenOps] = useState<Set<string>>(new Set())
   const [nodeSeg, setNodeSeg] = useState<{ id: string; seg: number } | null>(null)
   const [fitKey, setFitKey] = useState(0)
+  const [programOpen, setProgramOpen] = useState(false)
   const [display, setDisplay] = useState<Display>({ paths: true, arrows: false, grid: true, snapOn: true, ortho: false, modes: new Set<SnapMode>(ALL_SNAPS.filter((m) => m !== 'nearest')), gridSize: units === 'in' ? 25.4 / 4 : 5 })
   const promptRef = useRef<HTMLInputElement>(null)
   const first = useRef(true)
@@ -310,6 +312,11 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TooltipTrigger>
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
+          {feat.camMachining && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setProgramOpen(true)}>
+              <FileCode2 className="size-3.5" /> Program
+            </Button>
+          )}
           {feat.camImport && (
             <Button
               variant="outline"
@@ -337,6 +344,15 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
           </Button>
         </div>
       </header>
+      <ProgramDialog
+        open={programOpen}
+        onOpenChange={setProgramOpen}
+        part={part}
+        toolpaths={toolpaths}
+        machine={machine}
+        materialCode={data!.library.materials.find((m) => m.id === part.materialId)?.code ?? 'MATERIAL'}
+        outputOn={feat.camMprOutput}
+      />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <nav aria-label="Commands" className="flex shrink-0 gap-3 overflow-x-auto border-b border-white/10 bg-[#15171c] p-2 md:w-[124px] md:flex-col md:gap-2 md:overflow-y-auto md:border-r md:border-b-0">

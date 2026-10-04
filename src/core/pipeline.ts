@@ -1,6 +1,9 @@
+import { partFileName, writePartPrograms } from '@/cam/mpr'
+import { generatePart } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
 import { buildAllPrograms, nestJob, type JobNest, type SheetProgram } from './machining'
+import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeKey, Job } from './types'
 import { validateJob, type Issue } from './validator'
@@ -48,7 +51,7 @@ export function runJob(job: Job, data: AppData): JobOutput {
   const { library: lib, machine, settings } = data
   const expanded = expandJob(job, lib, settings)
   const nest = nestJob(expanded.instances, lib, machine, settings)
-  const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine)
+  const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, { camOutput: featuresOf(settings).camMprOutput })
   const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)
   for (const w of expanded.warnings) issues.unshift({ severity: 'warning', code: 'CONSTRUCTION', message: w })
 
@@ -113,8 +116,21 @@ export function runJob(job: Job, data: AppData): JobOutput {
 }
 
 export function mprFiles(job: Job, data: AppData, out: JobOutput) {
-  return out.programs.map((p, i) => ({
+  const files = out.programs.map((p, i) => ({
     name: `${p.name}.mpr`,
     text: writeSheetMpr(p, { job, machine: data.machine, mprNumber: i + 1, mprCount: out.programs.length }),
   }))
+  // Underside drilling on custom parts: one turned-over program per part design.
+  const done = new Set<string>()
+  for (const p of out.programs)
+    for (const c of p.custom ?? []) {
+      const inst = out.instances.find((i) => i.uid === c.partUid)
+      if (!c.written || !c.backHoles || !inst?.cam || done.has(inst.cam.id)) continue
+      done.add(inst.cam.id)
+      const mat = data.library.materials.find((m) => m.id === inst.materialId)
+      const name = `${job.number.replace(/[^A-Za-z0-9_-]+/g, '-')}_${partFileName(inst.cam)}`
+      const back = writePartPrograms(inst.cam, generatePart(inst.cam, data.machine), data.machine, mat?.code ?? inst.materialId, { name }).find((f) => f.side === 'back')
+      if (back) files.push({ name: back.name, text: back.text })
+    }
+  return files
 }

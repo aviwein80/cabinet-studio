@@ -2,6 +2,7 @@
  * Pre-export safety checks on generated sheet programs. These catch obvious mistakes; they are
  * NOT a substitute for simulating every program in woodWOP before it runs on the machine.
  */
+import { boxOf } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
 import { cutoutTool, type JobNest, type SheetProgram } from './machining'
@@ -169,6 +170,26 @@ export function validateJob(
             message: `${label}: saw blade run-out on a nested sheet can cut into neighbouring parts. Check in simulation or switch grooves to router pockets.`,
           })
           break
+        case 'cam': {
+          const it = op.intent
+          if (it.k === 'comment') break
+          const what = `#${op.partNo} ${it.label}`
+          if (!it.tool) add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${what}: no tool resolved for this custom-part operation.` })
+          const deepest = it.k === 'contour' ? Math.max(...it.passes.map((p) => p.depth)) : it.k === 'pocket-rect' || it.k === 'saw' ? it.depth : 0
+          if (deepest > maxZ + EPS) add({ ...ref, severity: 'error', code: 'DEPTH_SPOILBOARD', message: `${what}: ${fmt(deepest)} mm deep goes past the spoilboard allowance.` })
+          else if ((it.k === 'pocket-rect' || it.k === 'saw') && deepest >= T - EPS) add({ ...ref, severity: 'error', code: 'DEPTH', message: `${what}: ${fmt(deepest)} mm cuts through ${fmt(T)} mm material.` })
+          if (it.tool && deepest > it.tool.maxDepth + EPS) add({ ...ref, severity: 'error', code: 'DEPTH', message: `${what}: ${fmt(deepest)} mm exceeds T${it.tool.number} max depth ${it.tool.maxDepth} mm.` })
+          if (it.k === 'contour') {
+            const r = (it.tool?.diameter ?? 0) / 2 + 0.5
+            const p = placementOf.get(op.partUid)
+            const bx = boxOf([{ segs: it.segs, closed: it.closed }])
+            if (p && (bx.minX < p.x - r || bx.minY < p.y - r || bx.maxX > p.x + p.dx + r || bx.maxY > p.y + p.dy + r))
+              add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${what}: path leaves its part and would cut a neighbour.` })
+          }
+          if (it.k === 'saw')
+            add({ ...ref, severity: 'warning', code: 'SAW_RUNOUT', message: `${what}: saw blade run-out on a nested sheet can cut into neighbouring parts. Check in simulation.` })
+          break
+        }
         case 'contour': {
           if (!op.tool) add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `#${op.partNo}: cut-out router missing.` })
           const below = -op.za
@@ -181,6 +202,21 @@ export function validateJob(
           break
         }
       }
+    }
+
+    for (const c of prog.custom ?? []) {
+      const ref = { sheet: sheetNo, partNo: c.partNo, partUid: c.partUid }
+      const name = byUid.get(c.partUid)?.part.name ?? c.partUid
+      if (!c.written && c.machiningOps > 0)
+        add({
+          ...ref,
+          severity: 'error',
+          code: 'CAM_OUTPUT_OFF',
+          message: `Custom part #${c.partNo} ${name}: ${c.machiningOps} machining operation(s) are not written to MPR because custom-part MPR output is off (Machine > Features). Only its cut-out would be cut.`,
+        })
+      if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
+      if (c.written && c.backHoles > 0)
+        add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })
     }
 
     if (prog.skipped.length) {

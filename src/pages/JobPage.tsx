@@ -625,7 +625,7 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
                 <div className="min-w-0">
                   <div className="truncate font-mono">{f.name}</div>
                   <div className="text-muted-foreground">
-                    {out.programs[i].sheet.placements.length} parts · {out.programs[i].ops.length} operations
+                    {out.programs[i] ? `${out.programs[i].sheet.placements.length} parts · ${out.programs[i].ops.length} operations` : 'Custom part turned over: underside drilling'}
                   </div>
                 </div>
                 <Button size="xs" variant="outline" onClick={() => setPreview(f)}>

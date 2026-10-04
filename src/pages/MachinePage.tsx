@@ -11,13 +11,21 @@ import { NumField, Section, SelectField, SwitchField, TextField } from '@/compon
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { partSpacing } from '@/core/machining'
-import type { Tool, ToolType } from '@/core/types'
+import { featuresOf } from '@/core/features'
+import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 
 const TOOL_TYPES: { value: ToolType; label: string }[] = [
   { value: 'router', label: 'Router' },
   { value: 'drill-vertical', label: 'Vertical drill' },
   { value: 'drill-horizontal', label: 'Horizontal drill' },
   { value: 'saw', label: 'Saw' },
+]
+
+const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
+  ['camCad', 'Part designer', 'Draw and edit shaped parts.'],
+  ['camImport', 'Drawing import and export', 'DXF in and out, PDF/AI vectors in.'],
+  ['camMachining', 'Machining operations', 'Profile, pocket, drill, engrave, V-carve, sweep, saw.'],
+  ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
 ]
 
 const TOOL_COLS: Column<Tool>[] = [
@@ -36,6 +44,7 @@ export function MachinePage() {
   const m = data.machine
   const s = data.settings
   const routers = m.tools.filter((t) => t.type === 'router')
+  const feat = featuresOf(s)
 
   const exportTools = async () => {
     const csv = ['number,type,name,diameter,maxDepth', ...m.tools.map((t) => [t.number, t.type, `"${t.name.replace(/"/g, '""')}"`, t.diameter, t.maxDepth].join(','))].join('\r\n') + '\r\n'
@@ -191,6 +200,11 @@ export function MachinePage() {
                 onChange={(v) => updateSettings((x) => (x.outputFolder = v))}
                 hint="Each export creates a JOB_date subfolder here. A network share to the machine PC works."
               />
+            </Section>
+            <Section title="Custom-part features" description="Screens for drawn and imported parts. Writing their machining into N-200 programs stays off until the tool table is real.">
+              {FEATURE_ROWS.map(([key, label, hint]) => (
+                <SwitchField key={key} label={label} hint={hint} checked={feat[key]} onChange={(v) => updateSettings((x) => void (x.features = { ...featuresOf(x), [key]: v }))} />
+              ))}
             </Section>
           </div>
           <div className="flex flex-col gap-3 p-5">

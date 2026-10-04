@@ -69,7 +69,8 @@ export type Intent =
       label: string
       passes: ContourPass[]
     }
-  | { k: 'vdrill'; x: number; y: number; d: number; depth: number; through: boolean; tool: Tool | null; label: string }
+  /** `back`: drilled from face 6 in a separate program after the part is turned over (x mirrored). */
+  | { k: 'vdrill'; x: number; y: number; d: number; depth: number; through: boolean; tool: Tool | null; label: string; back?: boolean }
   | { k: 'hdrill'; x: number; y: number; z: number; d: number; depth: number; dir: HDrillDir; face: FaceId; tool: Tool | null; label: string }
   | { k: 'pocket-rect'; cx: number; cy: number; len: number; wid: number; r: number; angle: number; depth: number; stepoverPct: number; ccw: boolean; tool: Tool | null; label: string }
   | { k: 'saw'; xa: number; ya: number; xe: number; ye: number; width: number; depth: number; tool: Tool | null; label: string }
@@ -821,13 +822,19 @@ function genDrill(op: DrillOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   for (const [, list] of [...groups.entries()].sort((a, b) => a[1][0].face - b[1][0].face || a[1][0].d - b[1][0].d)) {
     const face = list[0].face
     const d = list[0].d
-    const type = face === 1 ? 'drill-vertical' : 'drill-horizontal'
+    const type = face === 1 || face === 6 ? 'drill-vertical' : 'drill-horizontal'
     const tool = op.toolId ? (machine.tools.find((t) => t.id === op.toolId) ?? null) : (resolveTool(op, machine, { diameter: d }) ?? machine.tools.find((t) => t.type === type && Math.abs(t.diameter - d) < 0.01) ?? null)
+    const vertical = face === 1 || face === 6
+    if (!tool) tp.warnings.push(`No ${vertical ? 'vertical' : 'horizontal'} drill D${d} in the tool table.`)
     if (face === 6) {
-      tp.warnings.push(`${list.length} hole(s) on face 6 (underside) need a flipped program and are not generated.`)
+      tp.warnings.push(`${list.length} hole(s) on face 6 (underside) go into a separate program run after the part is turned over end for end.`)
+      for (const h of list) {
+        const through = op.levels.through || h.depth >= T - 1e-9
+        const depth = through ? T + machine.throughDepth : h.depth
+        tp.intents.push({ k: 'vdrill', x: h.x, y: h.y, d, depth: Math.round(depth * 1000) / 1000, through, tool, label: op.name, back: true })
+      }
       continue
     }
-    if (!tool) tp.warnings.push(`No ${face === 1 ? 'vertical' : 'horizontal'} drill D${d} in the tool table.`)
     // nearest-neighbour order from the origin
     const todo = [...list]
     let cur = { x: 0, y: 0 }

@@ -61,7 +61,7 @@ export function cutoutSegs(c: Contour, machine: MachineProfile): Seg[] {
 }
 
 /** Program ops for one part: its intents (outline profile dropped when `withCutout` adds the standard cut-out). */
-export function partProgramOps(part: CamPart, paths: Toolpath[], tf: Placement2D, partUid: string, partNo: number, machine: MachineProfile, withCutout: boolean, T: number): ProgramOp[] {
+export function partProgramOps(part: CamPart, paths: Toolpath[], tf: Placement2D, partUid: string, partNo: number, machine: MachineProfile, withCutout: boolean): ProgramOp[] {
   const ops: ProgramOp[] = []
   const outline = partOutline(part)
   const cutouts: CutContour[] = []
@@ -94,7 +94,7 @@ export function partProgramOps(part: CamPart, paths: Toolpath[], tf: Placement2D
 /** Stand-alone program for one custom part (work volume = part size, origin at its lower-left). */
 export function writePartMpr(part: CamPart, paths: Toolpath[], machine: MachineProfile, materialCode = 'MATERIAL', opts: { withCutout?: boolean } = {}): string {
   const uid = part.id
-  const ops = partProgramOps(part, paths, IDENTITY, uid, 1, machine, opts.withCutout ?? false, part.thickness)
+  const ops = partProgramOps(part, paths, IDENTITY, uid, 1, machine, opts.withCutout ?? false)
   const prog: SheetProgram = {
     name: part.name.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'PART',
     sheet: { index: 1, materialId: part.materialId ?? '', sheetLength: part.length, sheetWidth: part.width, thickness: part.thickness, placements: [], utilization: 0 },

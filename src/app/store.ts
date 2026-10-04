@@ -1,8 +1,10 @@
 import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { DEFAULT_FEATURES } from '@/core/features'
 import { sampleJob } from '@/core/sample'
 import { DEFAULT_ROOM } from '@/core/room'
+import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, ShopSettings } from '@/core/types'
 import { backend } from './backend'
 
@@ -13,8 +15,10 @@ export type Route =
   | { page: 'template'; templateId: string }
   | { page: 'library'; tab?: LibraryTab }
   | { page: 'machine' }
+  | { page: 'parts' }
+  | { page: 'part'; partId: string; jobId?: string }
 
-export type JobTab = 'cabinets' | 'room' | 'cutlist' | 'nesting' | 'output'
+export type JobTab = 'cabinets' | 'room' | 'parts' | 'cutlist' | 'nesting' | 'output'
 export type LibraryTab = 'templates' | 'materials' | 'edgebands' | 'hardware'
 
 interface State {
@@ -38,6 +42,14 @@ interface State {
   updateMachine(fn: (m: MachineProfile) => void): void
   updateSettings(fn: (s: ShopSettings) => void): void
   resetMachine(): void
+  /** Insert or replace a custom part in a job (jobId) or the shared part library. */
+  savePart(part: CamPart, jobId?: string): void
+  deletePart(partId: string, jobId?: string): void
+}
+
+export function partsOf(d: AppData, jobId?: string): CamPart[] {
+  if (!jobId) return d.library.partLibrary ?? []
+  return d.jobs.find((j) => j.id === jobId)?.camParts ?? []
 }
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -70,6 +82,7 @@ function normalize(raw: Partial<AppData> | null): AppData {
       ...(raw.settings ?? {}),
       nesting: { ...d.settings.nesting, ...(raw.settings?.nesting ?? {}) },
       labels: { ...d.settings.labels, ...(raw.settings?.labels ?? {}) },
+      features: { ...DEFAULT_FEATURES, ...(raw.settings?.features ?? {}) },
     },
     jobs,
   }
@@ -222,5 +235,24 @@ export const useStore = create<State>((set, get) => {
       mutate((d) => {
         d.machine = clone(PLACEHOLDER_MACHINE)
       }),
+    savePart(part, jobId) {
+      mutate((d) => {
+        const write = (list: CamPart[] | undefined) => {
+          const out = [...(list ?? [])]
+          const i = out.findIndex((p) => p.id === part.id)
+          if (i < 0) out.push(clone(part))
+          else out[i] = clone(part)
+          return out
+        }
+        if (!jobId) d.library.partLibrary = write(d.library.partLibrary)
+        else touchJob(d, jobId, (j) => (j.camParts = write(j.camParts)))
+      })
+    },
+    deletePart(partId, jobId) {
+      mutate((d) => {
+        if (!jobId) d.library.partLibrary = (d.library.partLibrary ?? []).filter((p) => p.id !== partId)
+        else touchJob(d, jobId, (j) => (j.camParts = (j.camParts ?? []).filter((p) => p.id !== partId)))
+      })
+    },
   }
 })

@@ -1,4 +1,4 @@
-import { Boxes, Cpu, FolderKanban, Library as LibraryIcon, Loader2, TriangleAlert } from 'lucide-react'
+import { Boxes, Cpu, FolderKanban, Library as LibraryIcon, Loader2, PenTool, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -10,9 +10,12 @@ import { JobPage } from './pages/JobPage'
 import { JobsPage } from './pages/JobsPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { MachinePage } from './pages/MachinePage'
+import { PartDesignerPage } from './pages/PartDesigner'
+import { PartsPage } from './pages/PartsPage'
 
 const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page'][] }[] = [
   { label: 'Jobs', icon: FolderKanban, route: { page: 'jobs' }, match: ['jobs', 'job', 'cabinet'] },
+  { label: 'Custom parts', icon: PenTool, route: { page: 'parts' }, match: ['parts', 'part'] },
   { label: 'Library', icon: LibraryIcon, route: { page: 'library' }, match: ['library', 'template'] },
   { label: 'Machine & tools', icon: Cpu, route: { page: 'machine' }, match: ['machine'] },
 ]
@@ -105,6 +108,8 @@ export default function App() {
           {route.page === 'template' && <CabinetEditorPage target={{ kind: 'template', templateId: route.templateId }} />}
           {route.page === 'library' && <LibraryPage tab={route.tab ?? 'templates'} />}
           {route.page === 'machine' && <MachinePage />}
+          {route.page === 'parts' && <PartsPage />}
+          {route.page === 'part' && <PartDesignerPage partId={route.partId} jobId={route.jobId} />}
         </main>
       </div>
       <Toaster position="bottom-right" richColors />

@@ -1,0 +1,459 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { moveNode, nodesOf } from '@/cam/cad'
+import { entityContours, layerOf } from '@/cam/doc'
+import { boxOf, closestOnContour, type Contour, dist, pointAt, type P, rect, tangentAt } from '@/cam/geom'
+import { snap, type SnapMode, type SnapResult } from '@/cam/snap'
+import type { Toolpath } from '@/cam/toolpath'
+import type { CamPart, Entity } from '@/cam/types'
+import { cn } from '@/lib/utils'
+import { contourPath, entitiesInBox, hitEntity } from './hit'
+import type { Click, ToolDef } from './tools'
+
+export interface Display {
+  paths: boolean
+  arrows: boolean
+  grid: boolean
+  snapOn: boolean
+  ortho: boolean
+  modes: Set<SnapMode>
+  gridSize: number
+}
+
+interface View {
+  cx: number
+  cy: number
+  s: number
+}
+
+function toolpathPaths(tp: Toolpath) {
+  let x = 0
+  let y = 0
+  let first = true
+  let cut = ''
+  let rapid = ''
+  const drills: P[] = []
+  const f = (n: number) => (Math.round(n * 1000) / 1000).toString()
+  for (const m of tp.moves) {
+    if (m.t === 'drill') {
+      drills.push({ x: m.x, y: m.y })
+      x = m.x
+      y = m.y
+      continue
+    }
+    if (first) {
+      x = m.x
+      y = m.y
+      first = false
+      continue
+    }
+    if (m.t === 'rapid') {
+      if (Math.abs(m.x - x) > 1e-9 || Math.abs(m.y - y) > 1e-9) rapid += `M${f(x)} ${f(y)}L${f(m.x)} ${f(m.y)}`
+    } else if (m.t === 'feed') {
+      if (Math.abs(m.x - x) > 1e-9 || Math.abs(m.y - y) > 1e-9) cut += `M${f(x)} ${f(y)}L${f(m.x)} ${f(m.y)}`
+    } else {
+      const r = Math.hypot(x - m.cx, y - m.cy)
+      const a0 = Math.atan2(y - m.cy, x - m.cx)
+      let a1 = Math.atan2(m.y - m.cy, m.x - m.cx)
+      if (m.ccw && a1 <= a0) a1 += 2 * Math.PI
+      if (!m.ccw && a1 >= a0) a1 -= 2 * Math.PI
+      cut += `M${f(x)} ${f(y)}A${f(r)} ${f(r)} 0 ${Math.abs(a1 - a0) > Math.PI ? 1 : 0} ${m.ccw ? 1 : 0} ${f(m.x)} ${f(m.y)}`
+    }
+    x = m.x
+    y = m.y
+  }
+  const start = tp.moves.find((m) => m.t !== 'rapid')
+  return { cut, rapid, drills, start }
+}
+
+function arrowsFor(c: Contour): { p: P; a: number }[] {
+  const out: { p: P; a: number }[] = []
+  const n = Math.min(c.segs.length, 12)
+  for (let i = 0; i < n; i++) {
+    const s = c.segs[Math.floor((i * c.segs.length) / n)]
+    const t = tangentAt(s, 0.5)
+    out.push({ p: pointAt(s, 0.5), a: (Math.atan2(t.y, t.x) * 180) / Math.PI })
+  }
+  return out
+}
+
+export interface CanvasProps {
+  part: CamPart
+  sel: string[]
+  toolpaths: Toolpath[]
+  hiddenOps: Set<string>
+  display: Display
+  tool: ToolDef
+  clicks: Click[]
+  preview: Contour[]
+  nodeSeg: { id: string; seg: number } | null
+  fitKey: number
+  onCursor: (s: SnapResult) => void
+  onClick: (c: Click, shift: boolean) => void
+  onFinish: () => void
+  onSelect: (ids: string[], additive: boolean) => void
+  onNodeMove: (id: string, idx: number, p: P) => void
+  onSegPick: (id: string, seg: number) => void
+}
+
+export function PartCanvas(props: CanvasProps) {
+  const { part, sel, toolpaths, display, tool, clicks, preview } = props
+  const host = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 800, h: 600 })
+  const [view, setView] = useState<View>({ cx: part.length / 2, cy: part.width / 2, s: 1 })
+  const [cursor, setCursor] = useState<SnapResult | null>(null)
+  const [hover, setHover] = useState<string | null>(null)
+  const [boxSel, setBoxSel] = useState<{ a: P; b: P } | null>(null)
+  const [drag, setDrag] = useState<{ id: string; idx: number; p: P } | null>(null)
+  const pan = useRef<{ x: number; y: number; view: View; moved: boolean; button: number } | null>(null)
+  const space = useRef(false)
+
+  useEffect(() => {
+    const el = host.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }))
+    ro.observe(el)
+    setSize({ w: el.clientWidth, h: el.clientHeight })
+    return () => ro.disconnect()
+  }, [])
+
+  const fit = useCallback(() => {
+    const cs = part.entities.filter((e) => e.face === 1).flatMap(entityContours)
+    const b = boxOf([...cs, rect(0, 0, part.length, part.width)])
+    const w = Math.max(1, b.maxX - b.minX)
+    const h = Math.max(1, b.maxY - b.minY)
+    const s = Math.min((size.w - 80) / w, (size.h - 80) / h)
+    setView({ cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2, s: Math.max(0.01, s) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size.w, size.h, part.id, part.length, part.width])
+
+  useEffect(() => fit(), [fit, props.fitKey])
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => e.code === 'Space' && (space.current = true)
+    const up = (e: KeyboardEvent) => e.code === 'Space' && (space.current = false)
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
+
+  const toWorld = (sx: number, sy: number): P => ({ x: (sx - size.w / 2) / view.s + view.cx, y: -(sy - size.h / 2) / view.s + view.cy })
+  const local = (e: { clientX: number; clientY: number }) => {
+    const r = host.current!.getBoundingClientRect()
+    return { sx: e.clientX - r.left, sy: e.clientY - r.top }
+  }
+  const tol = 9 / view.s
+
+  const snapContours = useMemo(
+    () =>
+      part.entities
+        .filter((e) => e.face === 1 && layerOf(part, e.layer)?.visible !== false)
+        .flatMap(entityContours),
+    [part],
+  )
+  const snapPoints = useMemo(() => part.entities.flatMap((e) => (e.g.t === 'point' ? [e.g.p] : [])), [part])
+
+  const snapAt = (w: P): SnapResult => {
+    const drawing = tool.group === 'draw' || tool.id === 'measure' || ((tool.group === 'change' || tool.group === 'area') && !tool.pick?.includes(clicks.length))
+    if (!drawing) return { p: w, kind: 'free', guides: [] }
+    return snap(
+      {
+        contours: snapContours,
+        points: [...snapPoints, ...clicks.map((c) => c.p), { x: 0, y: 0 }, { x: part.length, y: 0 }, { x: part.length, y: part.width }, { x: 0, y: part.width }],
+        modes: display.modes,
+        tol,
+        grid: display.gridSize,
+        ortho: display.ortho,
+        last: clicks[clicks.length - 1]?.p,
+        enabled: display.snapOn,
+      },
+      w,
+    )
+  }
+
+  const nodeHit = (w: P) => {
+    if (tool.id !== 'nodes') return null
+    for (const id of sel) {
+      const e = part.entities.find((x) => x.id === id)
+      if (!e) continue
+      const ns = nodesOf(e)
+      for (let i = 0; i < ns.length; i++) if (dist(ns[i], w) <= tol) return { id, idx: i }
+    }
+    return null
+  }
+
+  const onWheel = (e: React.WheelEvent) => {
+    const { sx, sy } = local(e)
+    const before = toWorld(sx, sy)
+    const k = Math.exp(-e.deltaY * 0.0015)
+    const s = Math.min(200, Math.max(0.01, view.s * k))
+    setView({ s, cx: before.x - (sx - size.w / 2) / s, cy: before.y + (sy - size.h / 2) / s })
+  }
+
+  const onDown = (e: RPointerEvent) => {
+    host.current?.focus()
+    const { sx, sy } = local(e)
+    const w = toWorld(sx, sy)
+    if (e.button === 1 || e.button === 2 || space.current) {
+      pan.current = { x: sx, y: sy, view, moved: false, button: e.button }
+      ;(e.target as Element).setPointerCapture?.(e.pointerId)
+      return
+    }
+    if (e.button !== 0) return
+    if (tool.id === 'select' || tool.id === 'nodes') {
+      const n = nodeHit(w)
+      if (n) {
+        setDrag({ ...n, p: w })
+        ;(e.target as Element).setPointerCapture?.(e.pointerId)
+        return
+      }
+      const h = hitEntity(part, w, tol)
+      if (h) {
+        if (tool.id === 'nodes' && sel.includes(h)) {
+          const ent = part.entities.find((x) => x.id === h)!
+          if (ent.g.t === 'contour') props.onSegPick(h, closestOnContour(ent.g.c, w).seg)
+          return
+        }
+        props.onSelect([h], e.shiftKey || e.ctrlKey || e.metaKey)
+        return
+      }
+      setBoxSel({ a: w, b: w })
+      ;(e.target as Element).setPointerCapture?.(e.pointerId)
+      return
+    }
+    const s = snapAt(w)
+    props.onClick({ p: s.p, hit: hitEntity(part, w, tol) }, e.shiftKey)
+  }
+
+  const onMove = (e: RPointerEvent) => {
+    const { sx, sy } = local(e)
+    if (pan.current) {
+      const dx = sx - pan.current.x
+      const dy = sy - pan.current.y
+      if (Math.abs(dx) + Math.abs(dy) > 3) pan.current.moved = true
+      setView({ ...pan.current.view, cx: pan.current.view.cx - dx / view.s, cy: pan.current.view.cy + dy / view.s })
+      return
+    }
+    const w = toWorld(sx, sy)
+    if (drag) {
+      const s = snap({ contours: snapContours, points: snapPoints, modes: display.modes, tol, grid: display.gridSize, ortho: false, enabled: display.snapOn }, w)
+      setDrag({ ...drag, p: s.p })
+      return
+    }
+    if (boxSel) {
+      setBoxSel({ ...boxSel, b: w })
+      return
+    }
+    const s = snapAt(w)
+    setCursor(s)
+    props.onCursor(s)
+    setHover(tool.id === 'select' || tool.id === 'nodes' || tool.pick?.includes(clicks.length) ? hitEntity(part, w, tol) : null)
+  }
+
+  const onUp = (e: RPointerEvent) => {
+    if (pan.current) {
+      const p = pan.current
+      pan.current = null
+      if (p.button === 2 && !p.moved) props.onFinish()
+      return
+    }
+    if (drag) {
+      props.onNodeMove(drag.id, drag.idx, drag.p)
+      setDrag(null)
+      return
+    }
+    if (boxSel) {
+      const tiny = dist(boxSel.a, boxSel.b) * view.s < 4
+      if (tiny) props.onSelect([], e.shiftKey)
+      else props.onSelect(entitiesInBox(part, boxSel.a, boxSel.b, boxSel.b.x < boxSel.a.x), e.shiftKey || e.ctrlKey || e.metaKey)
+      setBoxSel(null)
+    }
+  }
+
+  const shown = drag ? moveNode(part, drag.id, drag.idx, drag.p) : part
+  const tx = size.w / 2 - view.cx * view.s
+  const ty = size.h / 2 + view.cy * view.s
+  const worldTf = `matrix(${view.s},0,0,${-view.s},${tx},${ty})`
+  const px = (p: P) => ({ x: p.x * view.s + tx, y: -p.y * view.s + ty })
+
+  const grid = useMemo(() => {
+    if (!display.grid) return null
+    let g = display.gridSize > 0 ? display.gridSize : 10
+    while (g * view.s < 8) g *= 5
+    const x0 = Math.floor(toWorld(0, 0).x / g) * g
+    const x1 = toWorld(size.w, 0).x
+    const y0 = Math.floor(toWorld(0, size.h).y / g) * g
+    const y1 = toWorld(0, 0).y
+    const minor: string[] = []
+    const major: string[] = []
+    for (let x = x0, i = Math.round(x0 / g); x <= x1; x += g, i++) (i % 5 === 0 ? major : minor).push(`M${x} ${y0}L${x} ${y1}`)
+    for (let y = y0, i = Math.round(y0 / g); y <= y1; y += g, i++) (i % 5 === 0 ? major : minor).push(`M${x0} ${y}L${x1} ${y}`)
+    return { minor: minor.join(''), major: major.join('') }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [display.grid, display.gridSize, view, size])
+
+  const visible = (e: Entity) => e.face === 1 && layerOf(shown, e.layer)?.visible !== false
+  const colorOf = (e: Entity) => layerOf(shown, e.layer)?.color ?? '#e2e8f0'
+
+  return (
+    <div
+      ref={host}
+      tabIndex={0}
+      className={cn('relative h-full w-full touch-none overflow-hidden bg-[#16181d] outline-none select-none', tool.id === 'select' ? 'cursor-default' : 'cursor-crosshair')}
+      onWheel={onWheel}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerLeave={() => setCursor(null)}
+      onDoubleClick={() => tool.open && props.onFinish()}
+      onContextMenu={(e) => e.preventDefault()}
+      data-testid="part-canvas"
+    >
+      <svg width={size.w} height={size.h} className="absolute inset-0">
+        <g transform={worldTf}>
+          {grid && (
+            <>
+              <path d={grid.minor} stroke="#262a33" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <path d={grid.major} stroke="#323845" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            </>
+          )}
+          <rect x={0} y={0} width={shown.length} height={shown.width} fill="#3a3226" fillOpacity={0.55} stroke="#8a7350" strokeDasharray="6 4" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          <path d={`M0 0L${40 / view.s} 0`} stroke="#ef4444" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+          <path d={`M0 0L0 ${40 / view.s}`} stroke="#22c55e" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+
+          {display.paths &&
+            toolpaths
+              .filter((tp) => !props.hiddenOps.has(tp.opId))
+              .map((tp) => {
+                const { cut, rapid, drills } = toolpathPaths(tp)
+                const d = tp.tool?.diameter ?? 6
+                return (
+                  <g key={tp.opId}>
+                    <path d={cut} stroke="#0ea5e9" strokeOpacity={0.18} strokeWidth={d} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <path d={cut} stroke="#38bdf8" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />
+                    <path d={rapid} stroke="#f87171" strokeWidth={1} strokeDasharray="4 4" fill="none" vectorEffect="non-scaling-stroke" />
+                    {drills.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r={d / 2} fill="#f59e0b" fillOpacity={0.25} stroke="#f59e0b" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                    ))}
+                  </g>
+                )
+              })}
+
+          {shown.entities.filter(visible).map((e) => {
+            const selected = sel.includes(e.id)
+            const hot = hover === e.id
+            const construction = layerOf(shown, e.layer)?.construction
+            if (e.g.t === 'point') {
+              const p = e.g.p
+              return <path key={e.id} d={`M${p.x - 4 / view.s} ${p.y}L${p.x + 4 / view.s} ${p.y}M${p.x} ${p.y - 4 / view.s}L${p.x} ${p.y + 4 / view.s}`} stroke={selected ? '#fbbf24' : colorOf(e)} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            }
+            const d = entityContours(e).map(contourPath).join('')
+            return (
+              <g key={e.id}>
+                {(selected || hot) && <path d={d} stroke={selected ? '#fbbf24' : '#fde68a'} strokeOpacity={selected ? 0.35 : 0.25} strokeWidth={7} fill="none" vectorEffect="non-scaling-stroke" />}
+                <path
+                  d={d}
+                  stroke={selected ? '#fbbf24' : colorOf(e)}
+                  strokeWidth={e.id === shown.outlineId ? 2 : 1.4}
+                  strokeDasharray={construction ? '6 4' : undefined}
+                  fill={e.id === shown.outlineId ? '#d6b98a' : 'none'}
+                  fillOpacity={0.08}
+                  fillRule="evenodd"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </g>
+            )
+          })}
+
+          {(boxSel || preview.length > 0) && (
+            <>
+              {preview.map((c, i) => (
+                <path key={i} d={contourPath(c)} stroke="#fbbf24" strokeWidth={1.2} strokeDasharray="5 4" fill="none" vectorEffect="non-scaling-stroke" />
+              ))}
+              {boxSel && (
+                <rect
+                  x={Math.min(boxSel.a.x, boxSel.b.x)}
+                  y={Math.min(boxSel.a.y, boxSel.b.y)}
+                  width={Math.abs(boxSel.b.x - boxSel.a.x)}
+                  height={Math.abs(boxSel.b.y - boxSel.a.y)}
+                  fill={boxSel.b.x < boxSel.a.x ? '#22c55e' : '#3b82f6'}
+                  fillOpacity={0.08}
+                  stroke={boxSel.b.x < boxSel.a.x ? '#22c55e' : '#3b82f6'}
+                  strokeDasharray={boxSel.b.x < boxSel.a.x ? '5 3' : undefined}
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+              )}
+            </>
+          )}
+        </g>
+
+        {display.arrows &&
+          shown.entities
+            .filter((e) => visible(e) && e.g.t === 'contour')
+            .flatMap((e) => entityContours(e).flatMap((c) => arrowsFor(c).map((a, i) => ({ ...a, k: `${e.id}-${i}`, first: i === 0, c }))))
+            .map((a) => {
+              const q = px(a.p)
+              return <path key={a.k} d="M-5 -4L4 0L-5 4" transform={`translate(${q.x} ${q.y}) rotate(${-a.a})`} fill="none" stroke="#a3e635" strokeWidth={1.5} />
+            })}
+        {display.arrows &&
+          shown.entities
+            .filter((e) => visible(e) && e.g.t === 'contour')
+            .map((e) => {
+              const c = (e.g as { c: Contour }).c
+              if (!c.segs.length) return null
+              const q = px(c.segs[0].a)
+              return <circle key={`s-${e.id}`} cx={q.x} cy={q.y} r={3.5} fill="#a3e635" />
+            })}
+
+        {display.paths &&
+          toolpaths
+            .filter((tp) => !props.hiddenOps.has(tp.opId))
+            .map((tp) => {
+              const st = toolpathPaths(tp).start
+              if (!st) return null
+              const q = px(st)
+              return <rect key={`st-${tp.opId}`} x={q.x - 4} y={q.y - 4} width={8} height={8} fill="#22c55e" stroke="#0f172a" strokeWidth={1} />
+            })}
+
+        {tool.id === 'nodes' &&
+          sel.flatMap((id) => {
+            const e = shown.entities.find((x) => x.id === id)
+            if (!e) return []
+            return nodesOf(e).map((n, i) => {
+              const q = px(n)
+              return <rect key={`${id}-${i}`} x={q.x - 4} y={q.y - 4} width={8} height={8} fill="#0f172a" stroke="#fbbf24" strokeWidth={1.5} />
+            })
+          })}
+        {props.nodeSeg &&
+          (() => {
+            const e = shown.entities.find((x) => x.id === props.nodeSeg!.id)
+            const s = e?.g.t === 'contour' ? e.g.c.segs[props.nodeSeg!.seg] : undefined
+            if (!s) return null
+            return <path d={contourPath({ closed: false, segs: [s] })} transform={worldTf} stroke="#f472b6" strokeWidth={4} fill="none" vectorEffect="non-scaling-stroke" />
+          })()}
+
+        {clicks.map((c, i) => {
+          const q = px(c.p)
+          return <circle key={i} cx={q.x} cy={q.y} r={3} fill="#fbbf24" />
+        })}
+        {cursor &&
+          cursor.guides.map((g, i) => {
+            const a = px(g.from)
+            const b = px(g.to)
+            return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#a78bfa" strokeDasharray="3 3" />
+          })}
+        {cursor && cursor.kind !== 'free' && (
+          <g transform={`translate(${px(cursor.p).x} ${px(cursor.p).y})`}>
+            <rect x={-6} y={-6} width={12} height={12} fill="none" stroke="#a78bfa" strokeWidth={1.5} />
+            <text x={10} y={-8} fill="#c4b5fd" fontSize={11}>
+              {cursor.kind}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  )
+}

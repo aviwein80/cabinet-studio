@@ -8,6 +8,7 @@ import {
   Info,
   LayoutGrid,
   Pencil,
+  PenTool,
   Plus,
   Printer,
   ShieldAlert,
@@ -39,6 +40,9 @@ import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
 import type { AppData, Job } from '@/core/types'
 import { RoomTab } from './RoomTab'
+import { PartList } from '@/components/PartList'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 
 export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
@@ -97,6 +101,9 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
               <LayoutGrid /> Cabinets
             </TabsTrigger>
             <TabsTrigger value="room">Room</TabsTrigger>
+            <TabsTrigger value="parts">
+              <PenTool /> Custom parts{job.camParts?.length ? ` (${job.camParts.length})` : ''}
+            </TabsTrigger>
             <TabsTrigger value="cutlist">
               <Table2 /> Cut list
             </TabsTrigger>
@@ -118,6 +125,9 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
         </TabsContent>
         <TabsContent value="room" className="min-h-0 flex-1 overflow-hidden">
           <RoomTab job={job} setJob={setJob} />
+        </TabsContent>
+        <TabsContent value="parts" className="min-h-0 flex-1 overflow-auto p-5">
+          <CustomPartsTab job={job} data={data} />
         </TabsContent>
         <TabsContent value="cutlist" className="min-h-0 flex-1 overflow-auto p-5">
           {out && <CutListTab job={job} data={data} out={out} />}
@@ -636,6 +646,36 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
           <pre className="max-h-[65vh] overflow-auto rounded-md bg-stone-950 p-3 font-mono text-[11px] leading-relaxed text-stone-200">{preview?.text}</pre>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function CustomPartsTab({ job, data }: { job: Job; data: AppData }) {
+  const { go, savePart, deletePart } = useStore()
+  const lib = data.library.partLibrary ?? []
+  return (
+    <div className="flex flex-col gap-5">
+      <PartList
+        parts={job.camParts ?? []}
+        units={data.settings.units}
+        onOpen={(id) => go({ page: 'part', partId: id, jobId: job.id })}
+        onSave={(p) => savePart(p, job.id)}
+        onDelete={(id) => deletePart(id, job.id)}
+        emptyText="Shaped parts for this job (curved tops, brackets, signs). They use the job's materials and machine tools."
+        extraActions={(p) => <DropdownMenuItem onSelect={() => savePart({ ...structuredClone(p), id: nanoid(10), updatedAt: new Date().toISOString() })}>Copy to part library</DropdownMenuItem>}
+      />
+      {lib.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Add from the part library</h3>
+          <div className="flex flex-wrap gap-2">
+            {lib.map((p) => (
+              <Button key={p.id} variant="outline" size="sm" onClick={() => savePart({ ...structuredClone(p), id: nanoid(10), updatedAt: new Date().toISOString() }, job.id)}>
+                <Plus /> {p.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

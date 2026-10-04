@@ -1,6 +1,6 @@
-import { Copy, FileUp, MoreHorizontal, PenTool, Plus, Trash2 } from 'lucide-react'
+import { Copy, FileInput, FileUp, MoreHorizontal, PenTool, Plus, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { entityContours, layerOf, newPart, parsePart } from '@/cam/doc'
 import { boxOf, rect } from '@/cam/geom'
@@ -9,7 +9,8 @@ import { EmptyState } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { formatLength } from '@/core/units'
-import type { UnitSystem } from '@/core/types'
+import type { Material, UnitSystem } from '@/core/types'
+import { DrawingImportDialog } from '@/components/DrawingImportDialog'
 import { contourPath } from '@/pages/part/hit'
 
 export function PartThumb({ part, className }: { part: CamPart; className?: string }) {
@@ -40,6 +41,7 @@ export function PartThumb({ part, className }: { part: CamPart; className?: stri
 export function PartList({
   parts,
   units,
+  materials,
   onOpen,
   onSave,
   onDelete,
@@ -48,6 +50,7 @@ export function PartList({
 }: {
   parts: CamPart[]
   units: UnitSystem
+  materials: Material[]
   onOpen: (id: string) => void
   onSave: (p: CamPart) => void
   onDelete: (id: string) => void
@@ -55,6 +58,7 @@ export function PartList({
   extraActions?: (p: CamPart) => React.ReactNode
 }) {
   const file = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
   const create = () => {
     const p = newPart({ name: `Part ${parts.length + 1}` })
     onSave(p)
@@ -76,9 +80,22 @@ export function PartList({
         <Button onClick={create}>
           <Plus /> New part
         </Button>
+        <Button variant="outline" onClick={() => setImporting(true)}>
+          <FileInput /> Import drawing
+        </Button>
         <Button variant="outline" onClick={() => file.current?.click()}>
           <FileUp /> Open part file
         </Button>
+        <DrawingImportDialog
+          open={importing}
+          onOpenChange={setImporting}
+          units={units}
+          materials={materials}
+          onImport={(p) => {
+            onSave(p)
+            onOpen(p.id)
+          }}
+        />
         <input ref={file} type="file" accept=".json,.csp.json" className="hidden" onChange={(e) => {
             const f = e.target.files?.[0]
             if (f) void openFile(f)

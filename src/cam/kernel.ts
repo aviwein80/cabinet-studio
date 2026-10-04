@@ -181,8 +181,11 @@ export function offsetChain(c: Contour, d: number): Contour {
 // CAD edits on contours
 // ---------------------------------------------------------------------------------------------
 
-/** Chain open contours whose ends meet within tol; chains that close become closed contours. */
-export function joinContours(cs: Contour[], tol = TOL.join): Contour[] {
+/**
+ * Chain open contours whose ends meet within tol; chains that close become closed contours.
+ * `accept(before, after)` can refuse a joint (e.g. only join where the path stays tangent).
+ */
+export function joinContours(cs: Contour[], tol = TOL.join, accept?: (before: Seg, after: Seg) => boolean): Contour[] {
   const closed = cs.filter((c) => c.closed)
   const pool = cs.filter((c) => !c.closed && c.segs.length).map((c) => ({ segs: [...c.segs], closed: false }))
   const out: Contour[] = [...closed]
@@ -207,6 +210,7 @@ export function joinContours(cs: Contour[], tol = TOL.join): Contour[] {
           atEnd = false
         }
         if (!add) continue
+        if (accept && !(atEnd ? accept(cur.segs[cur.segs.length - 1], add[0]) : accept(add[add.length - 1], cur.segs[0]))) continue
         if (atEnd) {
           const a = { ...add[0], a: endOf(cur) } as Seg
           cur.segs.push(a, ...add.slice(1))
@@ -219,7 +223,7 @@ export function joinContours(cs: Contour[], tol = TOL.join): Contour[] {
         break
       }
     }
-    if (cur.segs.length > 1 && near(startOf(cur), endOf(cur), tol)) {
+    if (cur.segs.length > 1 && near(startOf(cur), endOf(cur), tol) && (!accept || accept(cur.segs[cur.segs.length - 1], cur.segs[0]))) {
       const last = cur.segs[cur.segs.length - 1]
       cur.segs[cur.segs.length - 1] = { ...last, b: startOf(cur) } as Seg
       cur.closed = true

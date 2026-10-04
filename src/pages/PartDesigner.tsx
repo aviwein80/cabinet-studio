@@ -8,7 +8,8 @@ import { commit, historyOf, redo, serializePart, undo, type History } from '@/ca
 import { evalLength, parseCoord, resolveVariables } from '@/cam/expr'
 import { dist, type P } from '@/cam/geom'
 import { ALL_SNAPS, SNAP_LABEL, type SnapMode, type SnapResult } from '@/cam/snap'
-import { generateOp, type Toolpath } from '@/cam/toolpath'
+import { generateOp, toolpathContours, type Toolpath } from '@/cam/toolpath'
+import { exportDxf } from '@/cam/dxf'
 import type { CamPart } from '@/cam/types'
 import { EmptyState } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ const PARAM_LABEL: Record<keyof ToolParams, string> = {
   spacingY: 'Spacing Y',
   gap: 'Gap',
 }
+const fileBase = (s: string) => s.replace(/[^\w-]+/g, '-') || 'part'
 const LENGTH_PARAMS = new Set<keyof ToolParams>(['radius', 'distance', 'width', 'height', 'spacingX', 'spacingY', 'gap'])
 
 export function PartDesignerPage({ partId, jobId }: { partId: string; jobId?: string }) {
@@ -308,6 +310,20 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TooltipTrigger>
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
+          {feat.camImport && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 border-white/15 bg-transparent"
+              onClick={async () => {
+                const tps = feat.camMachining ? toolpaths.filter((t) => !hiddenOps.has(t.opId)).map((t) => ({ name: t.name, contours: toolpathContours(t) })) : []
+                const where = await backend.saveFile({ name: `${fileBase(part.name)}.dxf`, data: exportDxf(part, { toolpaths: tps }) }, [{ name: 'DXF drawing', extensions: ['dxf'] }])
+                if (where) toast.success(`Saved ${where}`)
+              }}
+            >
+              <Download className="size-3.5" /> DXF
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

@@ -13,6 +13,7 @@ export function PartsPage() {
         <PartList
           parts={parts}
           units={data.settings.units}
+          materials={data.library.materials}
           onOpen={(id) => go({ page: 'part', partId: id })}
           onSave={(p) => savePart(p)}
           onDelete={(id) => deletePart(id)}

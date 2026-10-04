@@ -989,3 +989,26 @@ export function generatePart(part: CamPart, machine: MachineProfile): Toolpath[]
   return part.ops.filter((o) => o.enabled).map((op) => generateOp(op, { part, machine }))
 }
 
+
+/** Cutting moves as 2D contours (rapids split them); used for DXF export and nesting checks. */
+export function toolpathContours(tp: Toolpath): Contour[] {
+  const out: Contour[] = []
+  let segs: Seg[] = []
+  let at: { x: number; y: number } | null = null
+  const flush = () => {
+    if (segs.length) out.push({ closed: Math.hypot(segs[0].a.x - segs[segs.length - 1].b.x, segs[0].a.y - segs[segs.length - 1].b.y) < 1e-6, segs })
+    segs = []
+  }
+  for (const m of tp.moves) {
+    if (m.t === 'rapid' || m.t === 'drill') {
+      flush()
+      at = { x: m.x, y: m.y }
+      continue
+    }
+    const b = { x: m.x, y: m.y }
+    if (at && Math.hypot(b.x - at.x, b.y - at.y) > 1e-9) segs.push(m.t === 'arc' ? { k: 'A', a: at, b, c: { x: m.cx, y: m.cy }, ccw: m.ccw } : { k: 'L', a: at, b })
+    at = b
+  }
+  flush()
+  return out
+}

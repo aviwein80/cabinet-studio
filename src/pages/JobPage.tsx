@@ -658,6 +658,7 @@ function CustomPartsTab({ job, data }: { job: Job; data: AppData }) {
       <PartList
         parts={job.camParts ?? []}
         units={data.settings.units}
+        materials={data.library.materials}
         onOpen={(id) => go({ page: 'part', partId: id, jobId: job.id })}
         onSave={(p) => savePart(p, job.id)}
         onDelete={(id) => deletePart(id, job.id)}

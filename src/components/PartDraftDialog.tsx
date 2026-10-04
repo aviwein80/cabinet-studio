@@ -271,7 +271,7 @@ function Review({ src, initial, units, onCancel, onApproved }: { src: SpecSource
             {spec.grooves.length === 0 && <Empty>None drafted.</Empty>}
             {spec.grooves.map((g, i) => (
               <Row key={i} onRemove={() => upd((s) => void s.grooves.splice(i, 1))} label={g.label}>
-                <Input className="h-7 w-32 text-xs" value={g.label} aria-label={`Groove ${i + 1} name`} onChange={(ev) => upd((s) => void (s.grooves[i].label = ev.target.value))} />
+                <Input className="h-7 w-44 text-xs" value={g.label} aria-label={`Groove ${i + 1} name`} onChange={(ev) => upd((s) => void (s.grooves[i].label = ev.target.value))} />
                 <Select value={g.face} onValueChange={(v) => upd((s) => void Object.assign(s.grooves[i], { face: v, edge: v === 'edge' ? (s.grooves[i].edge ?? 'bottom') : undefined }))}>
                   <SelectTrigger size="sm" className="h-7 w-28 text-xs" aria-label={`${g.label} face`}>
                     <SelectValue />
@@ -329,7 +329,7 @@ function Review({ src, initial, units, onCancel, onApproved }: { src: SpecSource
             {spec.cutouts.length === 0 && <Empty>None drafted.</Empty>}
             {spec.cutouts.map((c, i) => (
               <Row key={i} onRemove={() => upd((s) => void s.cutouts.splice(i, 1))} label={c.label}>
-                <Input className="h-7 w-28 text-xs" value={c.label} aria-label={`Cut-out ${i + 1} name`} onChange={(ev) => upd((s) => void (s.cutouts[i].label = ev.target.value))} />
+                <Input className="h-7 w-36 text-xs" value={c.label} aria-label={`Cut-out ${i + 1} name`} onChange={(ev) => upd((s) => void (s.cutouts[i].label = ev.target.value))} />
                 <Select value={c.shape} onValueChange={(v) => upd((s) => void (s.cutouts[i].shape = v as 'rect' | 'circle'))}>
                   <SelectTrigger size="sm" className="h-7 w-24 text-xs" aria-label={`${c.label} shape`}>
                     <SelectValue />
@@ -418,7 +418,7 @@ function Review({ src, initial, units, onCancel, onApproved }: { src: SpecSource
           {(spec.warnings.length > 0 || preview.warnings.length > 0) && (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
               <div className="mb-1 flex items-center gap-1.5 font-medium">
-                <FileSearch className="size-3.5" /> Notes from the reader
+                <FileSearch className="size-3.5" /> Notes from the reader (as first read)
               </div>
               <ul className="max-h-32 list-disc space-y-0.5 overflow-y-auto pl-4">
                 {[...spec.warnings, ...preview.warnings].map((w, i) => (
@@ -437,6 +437,7 @@ function Review({ src, initial, units, onCancel, onApproved }: { src: SpecSource
         <label className="flex items-center gap-2 text-xs">
           <Checkbox checked={checked} onCheckedChange={(v) => setChecked(v === true)} /> I checked every value against the customer’s drawing
         </label>
+        <span className="text-[11px] text-muted-foreground">Any change clears the tick.</span>
       </div>
       <DialogFooter>
         <Button variant="ghost" onClick={onCancel}>

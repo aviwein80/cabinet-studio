@@ -499,7 +499,7 @@ export const textPartDrafter: PartDrafter = {
           const d = new RegExp(String.raw`${NUM}\s*(?:mm)?\s*deep|depth\s*[:=]?\s*${NUM}`, 'i').exec(l)
           const edge = /\b(bottom|top|left|right)\s+edge\b/i.exec(l)
           s.grooves.push({
-            label: raw.trim().slice(0, 40),
+            label: raw.replace(/[:,(]?\s*\d.*$/, '').trim().slice(0, 40) || `Groove ${s.grooves.length + 1}`,
             face: edge ? 'edge' : /underside|back face|rear face/i.test(l) ? 'underside' : 'top',
             ...(edge ? { edge: edge[1].toLowerCase() as SpecEdge } : {}),
             x0: blank(),

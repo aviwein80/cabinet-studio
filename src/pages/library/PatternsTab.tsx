@@ -478,7 +478,7 @@ function ReviewDialog({
                     {fields.map((f) => (
                       <div key={f.key} className="flex flex-col gap-1">
                         <Label className="text-xs text-muted-foreground">{f.label}</Label>
-                        <LenInput label={f.label} value={(item.hardware[f.key] as number | undefined) ?? NaN} units={units} onChange={(v) => setHw({ [f.key]: v })} className="w-full" />
+                        <LenInput label={f.label} optional value={(item.hardware[f.key] as number | undefined) ?? NaN} units={units} onChange={(v) => setHw({ [f.key]: v })} className="w-full" />
                         {chip(`item.${f.key}`, item.cites[f.key])}
                       </div>
                     ))}
@@ -518,13 +518,30 @@ function ReviewDialog({
             </div>
           </div>
         </div>
-        {editable && (draft.warnings.length > 0 || issues.length > 0) && (
-          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
-            <ul className="list-disc space-y-0.5 pl-4">
-              {[...draft.warnings, ...issues].map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
+        {editable && (issues.length > 0 || draft.warnings.length > 0) && (
+          <div className="grid gap-2 md:grid-cols-2">
+            {issues.length > 0 && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs">
+                <div className="mb-1 flex items-center gap-1.5 font-medium text-destructive">
+                  <TriangleAlert className="size-3.5" /> {issues.length} to fix before approving
+                </div>
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {issues.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {draft.warnings.length > 0 && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+                <div className="mb-1 font-medium">Notes from the reader (as first read)</div>
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {draft.warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
         {editable && (
@@ -536,6 +553,7 @@ function ReviewDialog({
             <label className="flex items-center gap-2 text-xs">
               <Checkbox checked={checked} onCheckedChange={(v) => setChecked(v === true)} /> I checked every value against the source
             </label>
+            <span className="text-[11px] text-muted-foreground">Any change clears the tick.</span>
           </div>
         )}
         <DialogFooter>

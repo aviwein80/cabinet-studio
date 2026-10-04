@@ -8,7 +8,7 @@ import type { CamPart } from '@/cam/types'
 import { defaultAppData } from '@/core/defaults'
 import type { AiCall } from '@/core/hardware/aiProviders'
 import { DEFAULT_AI, providerInfo } from '@/core/hardware/aiProviders'
-import { pdfTextPages, type TextPage } from '@/core/hardware/patternImport'
+import { pdfTextPages, textDrafter, type TextPage } from '@/core/hardware/patternImport'
 import { boringPattern, placePattern } from '@/core/hardware/patterns'
 import { mprFiles, runJob } from '@/core/pipeline'
 import { known } from '@/core/spec/cite'
@@ -135,6 +135,18 @@ describe('Hardware sheet, end to end with a mocked model', () => {
     expect(placed.warnings).toEqual([])
 
     expect(approveHardwareDraft(lib, { ...filled, id: 'pat-again' }, d.item, { reviewer: 'Avi', checked: true }, now).errors[0]).toContain('already in the library')
+  })
+
+  it('offline fallback cites each value it read with its line on the page and leaves the rest blank', async () => {
+    const d = await textDrafter.draft(await pages(ROLLER_SHEET), 'tr50.pdf')
+    expect(d.pattern.holes.map((h) => [h.x, h.diameter, h.depth])).toEqual([
+      [-25, 5, 10],
+      [25, 5, 10],
+    ])
+    expect(d.pattern.holes.every((h) => Number.isNaN(h.y))).toBe(true)
+    expect(d.holeCites?.[0].diameter).toMatchObject({ page: 1, quote: 'Two fixing screws Ø5 x 10 deep, 50 mm apart' })
+    expect(d.holeCites?.[0].diameter?.region).toHaveLength(4)
+    expect(d.holeCites?.[0].y).toBeUndefined()
   })
 
   it('reads a photo with no text layer and says no quote could be checked', async () => {

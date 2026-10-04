@@ -125,7 +125,8 @@ export function PatternsTab() {
         d = await textDrafter.draft(src.pages, f.name)
         if (!src.pages.some((p) => p.lines.length)) d.warnings.unshift('This is a scan or a photo with no text. Reading it needs an AI provider and its key in Settings; otherwise enter the holes by hand from the page shown.')
       }
-      const draft: PatternDraft = { ...d, source: { file: f.name, images: src.images } }
+      const known = d.item?.hardware.code.trim() && lib.hardware.find((h) => h.code.trim().toLowerCase() === d.item!.hardware.code.trim().toLowerCase())
+      const draft: PatternDraft = { ...d, source: { file: f.name, images: src.images }, ...(known && d.item ? { item: { ...d.item, add: false }, pattern: { ...d.pattern, hardwareId: known.id } } : {}) }
       setQueue((q) => [...q, draft])
       setOpen({ draft, fromQueue: true })
     } catch (e) {

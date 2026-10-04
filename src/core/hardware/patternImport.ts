@@ -298,31 +298,45 @@ export const textDrafter: PatternDrafter = {
     const small = dias.find((d) => d.value < 20)
     const depthFor = (d: number) => hits.depth.find((h) => h.label === `Depth for Ø${d}`) ?? hits.depth.find((h) => h.label === 'Depth')
     const holes: PatternHole[] = []
+    const holeCites: NonNullable<PatternDraft['holeCites']> = []
+    const ct = (h?: Hit): Cite | undefined => (h ? { page: h.page, quote: h.quote, ...(h.region ? { region: h.region } : {}) } : undefined)
+    const push = (hole: PatternHole, c: { x?: Hit; y?: Hit; diameter?: Hit; depth?: Hit }) => {
+      holes.push(hole)
+      const out: NonNullable<PatternDraft['holeCites']>[number] = {}
+      for (const k of ['x', 'y', 'diameter', 'depth'] as const) if (c[k] && Number.isFinite(hole[k])) out[k] = ct(c[k])
+      holeCites.push(out)
+    }
     if (cup) {
       const k = hits.edge[0]
       const cupY = Number.isFinite(take(k)) ? k!.value + cup.value / 2 : NaN
-      holes.push({ x: 0, y: round(cupY), diameter: take(cup), depth: take(depthFor(cup.value)), face: 1 })
+      const cupDepth = depthFor(cup.value)
+      push({ x: 0, y: round(cupY), diameter: take(cup), depth: take(cupDepth), face: 1 }, { y: k, diameter: cup, depth: cupDepth })
       if (!k) warnings.push('No edge distance (K) found for the cup: enter the cup centre from the edge.')
       if (small && hits.spacing[0]) {
-        const s = take(hits.spacing[0])
-        for (const sx of [-s / 2, s / 2]) holes.push({ x: round(sx), y: NaN, diameter: take(small), depth: take(depthFor(small.value)), face: 1 })
+        const sp = hits.spacing[0]
+        const s = take(sp)
+        const sd = depthFor(small.value)
+        for (const sx of [-s / 2, s / 2]) push({ x: round(sx), y: NaN, diameter: take(small), depth: take(sd), face: 1 }, { x: sp, diameter: small, depth: sd })
         warnings.push('Cup screw or dowel holes found: enter their distance from the edge.')
       }
     } else if (small) {
       const d = take(small)
-      const depth = take(depthFor(small.value))
-      const y = hits.line[0] ? take(hits.line[0]) : hits.setback[0] ? take(hits.setback[0]) : NaN
-      if (hits.positions.length >= 2) for (const p of hits.positions) holes.push({ x: take(p), y, diameter: d, depth, face: 1 })
+      const dh = depthFor(small.value)
+      const depth = take(dh)
+      const yh = hits.line[0] ?? hits.setback[0]
+      const y = yh ? take(yh) : NaN
+      if (hits.positions.length >= 2) for (const p of hits.positions) push({ x: take(p), y, diameter: d, depth, face: 1 }, { x: p, y: yh, diameter: small, depth: dh })
       else if (hits.spacing[0]) {
-        const s = take(hits.spacing[0])
-        for (const sx of [-s / 2, s / 2]) holes.push({ x: round(sx), y, diameter: d, depth, face: 1 })
-      } else holes.push({ x: 0, y, diameter: d, depth, face: 1 })
+        const sp = hits.spacing[0]
+        const s = take(sp)
+        for (const sx of [-s / 2, s / 2]) push({ x: round(sx), y, diameter: d, depth, face: 1 }, { x: sp, y: yh, diameter: small, depth: dh })
+      } else push({ x: 0, y, diameter: d, depth, face: 1 }, { y: yh, diameter: small, depth: dh })
       if (!Number.isFinite(y)) warnings.push('No distance from the reference edge found: enter y for each hole.')
     } else warnings.push('No hole diameters found in the text. The sheet may be a scan or a drawing without text; enter the holes by hand.')
     if (holes.some((h) => !Number.isFinite(h.depth))) warnings.push('No depth found for some holes.')
     if (/\b\d+\s*\/\s*\d+\s*(?:"|in)/.test(all)) warnings.push('The sheet has inch fractions; only millimetre values were read.')
     const provenance = findings.filter((f) => f.used).map((f) => ({ file, page: f.page, quote: f.quote, note: `${f.label}: ${f.value}`, ...(f.region ? { region: f.region } : {}) }))
-    return { pattern: draftOf(title, 'pdf-draft', holes, { manufacturer, provenance }), findings, warnings }
+    return { pattern: draftOf(title, 'pdf-draft', holes, { manufacturer, provenance }), findings, warnings, holeCites }
   },
 }
 

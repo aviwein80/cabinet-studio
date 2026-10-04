@@ -54,6 +54,38 @@ export interface Hardware {
   code: string
   name: string
   category: HardwareCategory
+  /** Recorded cruciform plate height H. Does not move holes. */
+  plateHeight?: number
+  /** Plate screws, back from the front of the side. Drives boring. */
+  plateSetback?: number
+  /** Vertical distance between the two plate screws. Drives boring. */
+  plateSpacing?: number
+  /** Plate or slide screw diameter. Drives boring. */
+  holeDiameter?: number
+  /** Plate or slide screw depth. Drives boring. */
+  holeDepth?: number
+  /** Hinge cup diameter. Written onto a cabinet's doors when jobs are updated. */
+  cupDiameter?: number
+  cupDepth?: number
+  /** Cup centre from the hinge-side door edge. */
+  cupCentre?: number
+  /** Drawer-box / runner length. Drives the box and the cabinet-side holes. */
+  slideLength?: number
+  /** Slide screw holes from the front of the cabinet side. */
+  slideHoles?: number[]
+  /** Smallest cabinet depth for this runner. */
+  minCabinetDepth?: number
+}
+
+/** Geometry frozen on one cabinet so a library edit can leave that job alone. */
+export interface HardwarePin {
+  plateSetback?: number
+  plateSpacing?: number
+  holeDiameter?: number
+  holeDepth?: number
+  slideLength?: number
+  slideHoles?: number[]
+  minCabinetDepth?: number
 }
 
 /** L1: long edge at y = 0, L2: long edge at y = width, W1: short edge at x = 0, W2: short edge at x = length. */
@@ -251,6 +283,8 @@ export interface CabinetInstance {
   params: CarcassParams
   overrides: Record<string, PartOverride>
   placement?: CabinetPlacement
+  /** Old hardware geometry kept after a library edit. Absent means follow the library. */
+  pin?: { hardware?: Record<string, HardwarePin> }
 }
 
 export interface Job {

@@ -13,29 +13,31 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { importLibraryBundle } from '@/core/library/import'
 import type { AppData, EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
+import { LibraryEditDialog, TemplateJobsButton } from './LibraryEditDialog'
 
 const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'other']
 
 const MATERIAL_COLS: Column<Material>[] = [
   { key: 'code', label: 'Code', type: 'text', mono: true, width: '130px' },
   { key: 'name', label: 'Name', type: 'text' },
-  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true },
-  { key: 'sheetLength', label: 'Sheet L', type: 'num', width: '110px', length: true },
-  { key: 'sheetWidth', label: 'Sheet W', type: 'num', width: '110px', length: true },
-  { key: 'grain', label: 'Grain', type: 'bool', width: '60px' },
+  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true, readOnly: true },
+  { key: 'sheetLength', label: 'Sheet L', type: 'num', width: '110px', length: true, readOnly: true },
+  { key: 'sheetWidth', label: 'Sheet W', type: 'num', width: '110px', length: true, readOnly: true },
+  { key: 'grain', label: 'Grain', type: 'bool', width: '70px', readOnly: true },
   { key: 'color', label: 'Colour', type: 'color', width: '60px' },
 ]
 const BAND_COLS: Column<EdgeBand>[] = [
   { key: 'code', label: 'Code', type: 'text', mono: true, width: '140px' },
   { key: 'name', label: 'Name', type: 'text' },
-  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true },
-  { key: 'width', label: 'Width', type: 'num', width: '90px', length: true },
+  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true, readOnly: true },
+  { key: 'width', label: 'Width', type: 'num', width: '90px', length: true, readOnly: true },
   { key: 'color', label: 'Colour', type: 'color', width: '60px' },
 ]
 const HW_COLS: Column<Hardware>[] = [
-  { key: 'code', label: 'Code', type: 'text', mono: true, width: '140px' },
+  { key: 'code', label: 'Code', type: 'text', mono: true, width: '150px' },
   { key: 'name', label: 'Name', type: 'text' },
-  { key: 'category', label: 'Category', type: 'select', width: '170px', options: HW_CATEGORIES.map((c) => ({ value: c, label: c })) },
+  { key: 'category', label: 'Category', type: 'select', width: '160px', options: HW_CATEGORIES.map((c) => ({ value: c, label: c })) },
+  { key: 'plateHeight', label: 'Plate H', type: 'num', width: '90px', length: true, readOnly: true },
 ]
 
 function materialInUse(d: AppData, id: string) {
@@ -50,6 +52,7 @@ function bandInUse(d: AppData, id: string) {
 export function LibraryPage({ tab }: { tab: LibraryTab }) {
   const { data, go, updateLibrary } = useStore()
   const [importOpen, setImportOpen] = useState(false)
+  const [editing, setEditing] = useState<Material | EdgeBand | Hardware | null>(null)
   const bundleInput = useRef<HTMLInputElement>(null)
   if (!data) return null
   const lib = data.library
@@ -151,10 +154,11 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
                       <div className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{t.description || `${t.params.kind} cabinet`}</div>
                     </div>
                   </button>
-                  <div className="mt-auto flex justify-end gap-0.5 border-t px-2 py-1">
-                    <Button size="icon-sm" variant="ghost" aria-label="Edit template" onClick={() => go({ page: 'template', templateId: t.id })}>
-                      <Pencil />
+                  <div className="mt-auto flex flex-wrap items-center justify-end gap-1 border-t px-2 py-1.5">
+                    <Button size="sm" variant="outline" onClick={() => go({ page: 'template', templateId: t.id })}>
+                      <Pencil /> Edit
                     </Button>
+                    <TemplateJobsButton templateId={t.id} />
                     <Button
                       size="icon-sm"
                       variant="ghost"
@@ -177,28 +181,35 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             rows={lib.materials}
             columns={MATERIAL_COLS}
             onChange={setField('materials')}
+            onEdit={setEditing}
             onDelete={remove('materials')}
             canDelete={(m) => (materialInUse(data, m.id) ? 'Used by a template or job cabinet' : null)}
             empty="No sheet materials. Add one or import a CSV."
           />
-          <p className="mt-2 text-[11px] text-muted-foreground">Grain = the sheet has a visible grain along its length. Parts marked grain-locked will not be rotated on these sheets.</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Thickness, sheet size and grain drive parts and nesting. Change them with Edit. Code, name and colour are labels. Existing jobs are asked before a size change; new cabinets use the new value.</p>
         </TabsContent>
         <TabsContent value="edgebands" className="min-h-0 flex-1 overflow-auto p-5">
           <EditableTable
             rows={lib.edgebands}
             columns={BAND_COLS}
             onChange={setField('edgebands')}
+            onEdit={setEditing}
             onDelete={remove('edgebands')}
             canDelete={(b) => (bandInUse(data, b.id) ? 'Used by a template or job cabinet' : null)}
             empty="No edgebands."
           />
-          <p className="mt-2 text-[11px] text-muted-foreground">Band thickness is subtracted from the cut size of every banded edge (plus the pre-mill allowance set on the Machine page).</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Band thickness is subtracted from the cut size of every banded edge (plus the pre-mill allowance set on the Machine page). Change thickness with Edit.</p>
         </TabsContent>
         <TabsContent value="hardware" className="min-h-0 flex-1 overflow-auto p-5">
-          <EditableTable rows={lib.hardware} columns={HW_COLS} onChange={setField('hardware')} onDelete={remove('hardware')} empty="No hardware." />
-          <p className="mt-2 text-[11px] text-muted-foreground">Generated cabinets count hinges, plates, shelf pins and connectors by code. Keep the built-in codes (HINGE-110, PIN-5, ...) or the BOM will show the code only.</p>
+          <EditableTable rows={lib.hardware} columns={HW_COLS} onChange={setField('hardware')} onEdit={setEditing} onDelete={remove('hardware')} empty="No hardware." />
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Plate H on the Salice plate is 3 mm. That height is a label: it does not move holes. Setback, screw spacing and hole size do — change those with Edit. Code and name are labels too. Jobs keep the id, so a rename does not retarget them.
+          </p>
         </TabsContent>
       </Tabs>
+      {editing && tab !== 'templates' && (
+        <LibraryEditDialog item={editing} kind={tab === 'materials' ? 'material' : tab === 'edgebands' ? 'edgeband' : 'hardware'} onClose={() => setEditing(null)} />
+      )}
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}

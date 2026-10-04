@@ -25,15 +25,35 @@ export const DEFAULT_EDGEBANDS: EdgeBand[] = [
 
 export const DEFAULT_HARDWARE: Hardware[] = [
   { id: 'hw-pin', code: 'PIN-5', name: 'Shelf pin 5 mm', category: 'shelf-pin' },
-  { id: 'hw-hinge', code: 'SALICE-110-SC', name: 'Salice Silentia+ 110° soft-close, full overlay', category: 'hinge' },
-  { id: 'hw-plate', code: 'SALICE-B2VGV-H3', name: 'Salice cruciform plate 3 mm, euro screw (B2VGV)', category: 'mounting-plate' },
-  { id: 'hw-td-15', code: '563H3810B', name: 'Blum TANDEM plus BLUMOTION 15 in', category: 'slide' },
-  { id: 'hw-td-18', code: '563H4570B', name: 'Blum TANDEM plus BLUMOTION 18 in', category: 'slide' },
-  { id: 'hw-td-21', code: '563H5330B', name: 'Blum TANDEM plus BLUMOTION 21 in', category: 'slide' },
+  { id: 'hw-hinge', code: 'SALICE-110-SC', name: 'Salice Silentia+ 110° soft-close, full overlay', category: 'hinge', cupDiameter: 35, cupDepth: 13.5, cupCentre: 20.5 },
+  {
+    id: 'hw-plate',
+    code: 'SALICE-B2VGV-H3',
+    name: 'Salice cruciform plate 3 mm, euro screw (B2VGV)',
+    category: 'mounting-plate',
+    plateHeight: 3,
+    plateSetback: 37,
+    plateSpacing: 32,
+    holeDiameter: 5,
+    holeDepth: 11,
+  },
+  { id: 'hw-td-15', code: '563H3810B', name: 'Blum TANDEM plus BLUMOTION 15 in', category: 'slide', slideLength: 381, slideHoles: [165, 357], minCabinetDepth: 457 },
+  { id: 'hw-td-18', code: '563H4570B', name: 'Blum TANDEM plus BLUMOTION 18 in', category: 'slide', slideLength: 457, slideHoles: [261, 453], minCabinetDepth: 533 },
+  { id: 'hw-td-21', code: '563H5330B', name: 'Blum TANDEM plus BLUMOTION 21 in', category: 'slide', slideLength: 533, slideHoles: [261, 517], minCabinetDepth: 610 },
   { id: 'hw-dowel', code: 'DOWEL-8x30', name: 'Wood dowel 8 x 30', category: 'dowel' },
   { id: 'hw-confirmat', code: 'CONFIRMAT-7x50', name: 'Confirmat screw 7 x 50', category: 'connector' },
   { id: 'hw-screw', code: 'SCREW-4x50', name: 'Chipboard screw 4 x 50', category: 'screw' },
 ]
+
+/** Fill boring numbers on known hardware ids. A saved 0 is kept; a missing field is not a stored 0. */
+export function fillHardwareSpecs(rows: Hardware[]): Hardware[] {
+  return rows.map((row) => {
+    const base = DEFAULT_HARDWARE.find((h) => h.id === row.id)
+    if (!base) return row
+    const saved = Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined && v !== null))
+    return { ...base, ...saved }
+  })
+}
 
 export const BASE_PARAMS: CarcassParams = {
   kind: 'base',

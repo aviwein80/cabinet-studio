@@ -122,7 +122,7 @@ function upsert<T extends { id: string; code?: string }>(existing: T[], incoming
   for (const item of incoming) {
     const idx = out.findIndex((e) => keyOf(e).toLowerCase() === keyOf(item).toLowerCase())
     if (idx >= 0) {
-      out[idx] = { ...item, id: out[idx].id }
+      out[idx] = { ...out[idx], ...item, id: out[idx].id }
       updated++
     } else {
       out.push(item)

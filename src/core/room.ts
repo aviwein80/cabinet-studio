@@ -36,8 +36,23 @@ function nearest(value: number, targets: number[], tol: number) {
   return best
 }
 
-/** Snap a footprint to walls and to the other cabinets' edges. Tolerance is millimetres. */
-export function snapPlacement(pl: CabinetPlacement, width: number, depth: number, others: { x: number; y: number; w: number; d: number }[], room: Room, tol = 12.7): CabinetPlacement {
+export type SnapTarget = { x: number; y: number; w: number; d: number; z?: number; h?: number }
+
+/**
+ * Snap a footprint to walls and to neighbouring cabinets (side to side, aligned fronts).
+ * When `height` is set, also snap the floor to 0, the 54 in wall line, the ceiling, and
+ * neighbour tops (a wall cabinet sitting on a base). `enabled: false` returns the placement unchanged.
+ */
+export function snapPlacement(
+  pl: CabinetPlacement,
+  width: number,
+  depth: number,
+  others: SnapTarget[],
+  room: Room,
+  tol = 12.7,
+  opts?: { enabled?: boolean; height?: number },
+): CabinetPlacement {
+  if (opts?.enabled === false) return { ...pl }
   const fp = footprint(width, depth, pl)
   const xs = [0, room.width - fp.w]
   const ys = [0, room.depth - fp.d]
@@ -45,7 +60,15 @@ export function snapPlacement(pl: CabinetPlacement, width: number, depth: number
     xs.push(o.x, o.x + o.w, o.x - fp.w, o.x + o.w - fp.w)
     ys.push(o.y, o.y + o.d, o.y - fp.d, o.y + o.d - fp.d)
   }
-  return { ...pl, x: nearest(pl.x, xs, tol), y: nearest(pl.y, ys, tol) }
+  const next = { ...pl, x: nearest(pl.x, xs, tol), y: nearest(pl.y, ys, tol) }
+  if (opts?.height == null) return next
+  const h = opts.height
+  const zs = [0, WALL_ELEVATION, Math.max(0, room.height - h)]
+  for (const o of others) {
+    if (o.z == null || o.h == null) continue
+    zs.push(o.z, o.z + o.h, o.z + o.h - h, o.z - h)
+  }
+  return { ...next, z: nearest(pl.z, zs, tol) }
 }
 
 /**

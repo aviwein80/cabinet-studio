@@ -18,6 +18,8 @@ export type Column<T> = {
   mono?: boolean
   /** Numeric column stored in millimetres, shown in the shop unit. */
   length?: boolean
+  /** Shown, but changed from the Edit form so a geometry change can ask about existing jobs. */
+  readOnly?: boolean
 }
 
 function CellInput({ value, onCommit, numeric, mono }: { value: string; onCommit: (v: string) => void; numeric?: boolean; mono?: boolean }) {
@@ -42,6 +44,7 @@ export function EditableTable<T extends { id: string }>({
   columns,
   onChange,
   onDelete,
+  onEdit,
   canDelete,
   empty,
 }: {
@@ -49,6 +52,7 @@ export function EditableTable<T extends { id: string }>({
   columns: Column<T>[]
   onChange: (id: string, key: keyof T, value: unknown) => void
   onDelete: (row: T) => void
+  onEdit?: (row: T) => void
   canDelete?: (row: T) => string | null
   empty: string
 }) {
@@ -63,7 +67,7 @@ export function EditableTable<T extends { id: string }>({
                 {c.label}
               </TableHead>
             ))}
-            <TableHead className="w-10" />
+            <TableHead className="w-28" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,7 +79,9 @@ export function EditableTable<T extends { id: string }>({
                   const v = r[c.key] as unknown
                   return (
                     <TableCell key={c.key} className="py-1">
-                      {c.type === 'bool' ? (
+                      {c.readOnly ? (
+                        <span className="block px-1.5 text-xs text-muted-foreground tabular-nums">{c.type === 'bool' ? (v ? 'Yes' : 'No') : c.length && typeof v === 'number' ? formatLength(v, units) : v == null || v === '' ? '—' : String(v)}</span>
+                      ) : c.type === 'bool' ? (
                         <Checkbox checked={!!v} onCheckedChange={(x) => onChange(r.id, c.key, x === true)} />
                       ) : c.type === 'color' ? (
                         <input type="color" value={String(v ?? '#cccccc')} onChange={(e) => onChange(r.id, c.key, e.target.value)} className="h-7 w-10 cursor-pointer rounded border bg-transparent" aria-label={c.label} />
@@ -109,9 +115,16 @@ export function EditableTable<T extends { id: string }>({
                   )
                 })}
                 <TableCell className="py-1">
-                  <Button size="icon-xs" variant="ghost" aria-label="Delete" title={blocked ?? 'Delete'} disabled={!!blocked} onClick={() => onDelete(r)}>
-                    <Trash2 />
-                  </Button>
+                  <div className="flex justify-end gap-1">
+                    {onEdit && (
+                      <Button size="xs" variant="outline" onClick={() => onEdit(r)}>
+                        Edit
+                      </Button>
+                    )}
+                    <Button size="icon-xs" variant="ghost" aria-label="Delete" title={blocked ?? 'Delete'} disabled={!!blocked} onClick={() => onDelete(r)}>
+                      <Trash2 />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )

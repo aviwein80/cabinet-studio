@@ -11,7 +11,8 @@ import {
   vecEq,
   type Box3,
 } from '../geometry'
-import { BLUM, SALICE, hingeHeights, selectTandem } from '../hardware/specs'
+import { PLATE_ID, hingeCode, plateBoring, slideBoring, SLIDE_IDS } from '../hardware/resolve'
+import { BLUM, hingeHeights, selectTandem } from '../hardware/specs'
 import type {
   CabinetInstance,
   CarcassParams,
@@ -21,6 +22,7 @@ import type {
   HDrillDir,
   HDrillOp,
   HardwareLine,
+  HardwarePin,
   Library,
   Operation,
   OpPurpose,
@@ -38,8 +40,6 @@ export interface GeneratedCabinet {
 
 export const HW = {
   shelfPin: 'PIN-5',
-  hinge: SALICE.hingeCode,
-  plate: SALICE.plateCode,
   dowel: 'DOWEL-8x30',
   confirmat: 'CONFIRMAT-7x50',
   screw: 'SCREW-4x50',
@@ -205,7 +205,7 @@ function jointPositions(y0: number, y1: number) {
   return ys.map(r3)
 }
 
-export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabinet {
+export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware?: Record<string, HardwarePin> }): GeneratedCabinet {
   const warnings: string[] = []
   const hardware = new Map<string, number>()
   const addHw = (code: string, n: number) => n > 0 && hardware.set(code, (hardware.get(code) ?? 0) + n)
@@ -413,16 +413,18 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
       warnings.push('Drawer fronts were shortened so a door still fits above them.')
     }
     if (frontH < 60) warnings.push('Drawer fronts are under 60 mm tall.')
-    const { slide, shallow } = selectTandem(D, p.drawers?.slide ?? 'auto')
-    if (shallow) warnings.push(`Cabinet depth ${D} mm is under Blum's ${slide.minCabinetDepth} mm minimum for a ${slide.inches} in TANDEM runner.`)
+    const { slide } = selectTandem(D, p.drawers?.slide ?? 'auto')
+    const slideId = SLIDE_IDS[slide.part]
+    const runner = slideBoring(lib, slide, slideId ? pin?.hardware?.[slideId] : undefined)
+    if (D + 0.01 < runner.minCabinetDepth) warnings.push(`Cabinet depth ${D} mm is under the ${runner.minCabinetDepth} mm minimum for a ${slide.inches} in TANDEM runner.`)
     const sideT = T
     if (T > BLUM.maxSideThickness)
       warnings.push(`Blum TANDEM allows drawer sides up to ${BLUM.maxSideThickness} mm (5/8 in). These sides are the ${T} mm carcass board, so check the runner before building the box.`)
     const openingW = W - 2 * T
     const insideW = r3(openingW - BLUM.insideWidthDeduction)
     const sideGap = r3((openingW - (insideW + 2 * sideT)) / 2)
-    const boxDepth = Math.min(slide.length, r3(backFrontY - BLUM.runnerSetback))
-    if (boxDepth < slide.length - 0.1) warnings.push(`Drawer box shortened to ${boxDepth} mm to clear the back.`)
+    const boxDepth = Math.min(runner.length, r3(backFrontY - BLUM.runnerSetback))
+    if (boxDepth < runner.length - 0.1) warnings.push(`Drawer box shortened to ${boxDepth} mm to clear the back.`)
     const bottomT = Math.min(Tb, 16)
 
     for (let i = 0; i < drawerCount; i++) {
@@ -460,10 +462,10 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
 
       const screwZ = r3(z0 + BLUM.line)
       for (const { b, faceX } of sides) {
-        for (const y of slide.holesFromFront) b.drill([faceX, y, screwZ], BLUM.holeDiameter, BLUM.holeDepth, 'slide')
+        for (const y of runner.holes) b.drill([faceX, y, screwZ], BLUM.holeDiameter, BLUM.holeDepth, 'slide')
       }
     }
-    addHw(slide.part, drawerCount)
+    addHw(runner.code, drawerCount)
   }
 
   // ---- doors with Salice cups and 3 mm plates ---------------------------------------------
@@ -479,6 +481,7 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
               { x0: g / 2, x1: W / 2 - g / 2, hinge: 'left' },
               { x0: W / 2 + g / 2, x1: W - g / 2, hinge: 'right' },
             ]
+      const plate = plateBoring(lib, pin?.hardware?.[PLATE_ID])
       const plateCentres = hingeHeights(dz0, dz1, p.doors.hingeFromEnd, hingeCount(doorH), gridOrigin, pitch)
       spans.forEach((sp, i) => {
         const key = spans.length === 1 ? 'door' : i === 0 ? 'door-left' : 'door-right'
@@ -491,11 +494,11 @@ export function generateCarcass(p: CarcassParams, lib: Library): GeneratedCabine
 
         const side = sp.hinge === 'left' ? sides[0] : sides[1]
         for (const zc of plateCentres) {
-          side.b.drill([side.faceX, SALICE.plateSetback, zc - pitch / 2], SALICE.plateHoleDiameter, SALICE.plateHoleDepth, 'mounting-plate')
-          side.b.drill([side.faceX, SALICE.plateSetback, zc + pitch / 2], SALICE.plateHoleDiameter, SALICE.plateHoleDepth, 'mounting-plate')
+          side.b.drill([side.faceX, plate.setback, zc - plate.spacing / 2], plate.diameter, plate.depth, 'mounting-plate')
+          side.b.drill([side.faceX, plate.setback, zc + plate.spacing / 2], plate.diameter, plate.depth, 'mounting-plate')
         }
-        addHw(HW.hinge, plateCentres.length)
-        addHw(HW.plate, plateCentres.length)
+        addHw(hingeCode(lib), plateCentres.length)
+        addHw(plate.code, plateCentres.length)
       })
     } else if (drawerCount > 0) warnings.push('No room left above the drawers for a door.')
   }
@@ -515,7 +518,7 @@ function toLocalBox(b: PartBuilder) {
 
 /** Generate a cabinet instance and apply its per-part overrides. */
 export function buildCabinet(cab: CabinetInstance, lib: Library): GeneratedCabinet {
-  const g = generateCarcass(cab.params, lib)
+  const g = generateCarcass(cab.params, lib, cab.pin)
   const parts: Part[] = []
   for (const part of g.parts) {
     const ov = cab.overrides[part.key]

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/construction/carcass'
+import { TemplateJobsButton } from '@/pages/LibraryEditDialog'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CarcassParams, DrillOp, EdgeKey, Library, Part, PartOverride, UnitSystem } from '@/core/types'
 import { EDGE_KEYS } from '@/core/types'
@@ -24,7 +25,7 @@ type Target = { kind: 'cabinet'; jobId: string; cabinetId: string } | { kind: 't
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
 export function CabinetEditorPage({ target }: { target: Target }) {
-  const { data, go, updateCabinet, updateLibrary, saveTemplate } = useStore()
+  const { data, go, route, updateCabinet, updateLibrary, saveTemplate } = useStore()
   const [selected, setSelected] = useState<string | null>(null)
   const [explode, setExplode] = useState(0)
   const [hideDoors, setHideDoors] = useState(false)
@@ -43,7 +44,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   const built = useMemo(() => {
     if (!cab || !data) return null
     try {
-      return { all: generateCarcass(cab.params, data.library).parts, final: buildCabinet(cab, data.library), error: null }
+      return { all: generateCarcass(cab.params, data.library, cab.pin).parts, final: buildCabinet(cab, data.library), error: null }
     } catch (e) {
       return { all: [], final: null, error: e instanceof Error ? e.message : String(e) }
     }
@@ -58,7 +59,6 @@ export function CabinetEditorPage({ target }: { target: Target }) {
     )
 
   const lib = data.library
-  const template = target.kind === 'template' ? lib.templates.find((t) => t.id === target.templateId) : undefined
 
   const commit = (next: CabinetInstance) => {
     if (target.kind === 'cabinet') updateCabinet(target.jobId, next)
@@ -86,7 +86,8 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   }
 
   const p = cab.params
-  const back = () => (target.kind === 'cabinet' ? go({ page: 'job', jobId: target.jobId }) : go({ page: 'library', tab: 'templates' }))
+  const from = route.page === 'cabinet' ? route.from : undefined
+  const back = () => (target.kind === 'cabinet' ? go({ page: 'job', jobId: target.jobId, tab: from }) : go({ page: 'library', tab: 'templates' }))
   const matOptions = (thin?: boolean) =>
     lib.materials
       .filter((m) => (thin === undefined ? true : thin ? m.thickness <= 10 : m.thickness > 10))
@@ -113,7 +114,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
             {cab.name}
           </span>
         }
-        subtitle={target.kind === 'cabinet' ? `${job?.number} · ${job?.name}` : template?.builtIn ? 'Built-in template (edits apply to new cabinets only)' : 'Library template'}
+        subtitle={target.kind === 'cabinet' ? `${job?.number} · ${job?.name}` : 'Existing jobs keep their copy of this template. New cabinets use what you edit here.'}
         actions={
           <>
             {target.kind === 'cabinet' && cab.templateId && (
@@ -130,6 +131,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
                 <RotateCcw /> Reset to template
               </Button>
             )}
+            {target.kind === 'template' && <TemplateJobsButton templateId={target.templateId} />}
             <Button size="sm" variant="outline" onClick={() => setSaveOpen(true)}>
               <Save /> Save as template
             </Button>

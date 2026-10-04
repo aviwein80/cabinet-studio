@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import { create } from 'zustand'
-import { defaultAppData, PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { sampleJob } from '@/core/sample'
 import { DEFAULT_ROOM } from '@/core/room'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, ShopSettings } from '@/core/types'
@@ -9,7 +9,7 @@ import { backend } from './backend'
 export type Route =
   | { page: 'jobs' }
   | { page: 'job'; jobId: string; tab?: JobTab }
-  | { page: 'cabinet'; jobId: string; cabinetId: string }
+  | { page: 'cabinet'; jobId: string; cabinetId: string; from?: JobTab }
   | { page: 'template'; templateId: string }
   | { page: 'library'; tab?: LibraryTab }
   | { page: 'machine' }
@@ -54,6 +54,7 @@ function normalize(raw: Partial<AppData> | null): AppData {
   const d = defaultAppData()
   if (!raw) return d
   const library = { ...d.library, ...(raw.library ?? {}) }
+  library.hardware = fillHardwareSpecs(library.hardware ?? [])
   library.templates = (library.templates ?? []).map((t) => ({ ...t, params: withParams(t.params) }))
   const jobs = (raw.jobs ?? []).map((j) => ({
     ...j,

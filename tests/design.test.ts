@@ -3,6 +3,7 @@ import { generateCarcass } from '../src/core/construction/carcass'
 import { BASE_PARAMS, defaultLibrary } from '../src/core/defaults'
 import { BLUM, SALICE, selectTandem } from '../src/core/hardware/specs'
 import { toWorld } from '../src/core/geometry'
+import { elevationOf, facesViewer } from '../src/core/elevation'
 import { arrangeCabinets, snapPlacement } from '../src/core/room'
 import { formatInches, formatLength, parseLength, toMm } from '../src/core/units'
 import type { DrillOp } from '../src/core/types'
@@ -118,5 +119,50 @@ describe('room arrangement', () => {
     const snapped = snapPlacement({ x: 8, y: 8, rotation: 0, z: 0 }, 600, 560, [{ x: 600, y: 0, w: 600, d: 560 }], room, 12.7)
     expect(snapped.x).toBe(0)
     expect(snapped.y).toBe(0)
+  })
+
+  it('leaves an overlapping position alone when snap is off', () => {
+    const room = { width: 3000, depth: 3000, height: 2400 }
+    const snapped = snapPlacement({ x: 8, y: 8, rotation: 0, z: 12 }, 600, 560, [{ x: 600, y: 0, w: 600, d: 560, z: 0, h: 870 }], room, 12.7, { enabled: false, height: 870 })
+    expect(snapped).toMatchObject({ x: 8, y: 8, z: 12 })
+  })
+
+  it('snaps a wall cabinet onto the top of the base beside it', () => {
+    const room = { width: 3000, depth: 3000, height: 2400 }
+    const snapped = snapPlacement(
+      { x: 4, y: 3000 - 320 + 3, rotation: 0, z: 875 },
+      600,
+      320,
+      [{ x: 0, y: 3000 - 560, w: 600, d: 560, z: 0, h: 870 }],
+      room,
+      12.7,
+      { height: 720 },
+    )
+    expect(snapped.x).toBe(0)
+    expect(snapped.y).toBe(3000 - 320)
+    expect(snapped.z).toBe(870)
+  })
+})
+
+describe('elevation', () => {
+  it('shows a back-wall base facing the viewer, with its width and two doors', () => {
+    const room = { width: 3000, depth: 2400, height: 2400 }
+    const cab = {
+      id: 'a',
+      number: 'B1',
+      name: 'Base',
+      templateId: null,
+      qty: 1,
+      overrides: {},
+      params: BASE_PARAMS,
+      placement: { x: 0, y: 2400 - 560, rotation: 0 as const, z: 0 },
+    }
+    const items = elevationOf([cab], room, 'back', (c) => c.placement!)
+    expect(items).toHaveLength(1)
+    expect(items[0]!.faces).toBe(true)
+    expect(items[0]!.w).toBe(600)
+    expect(items[0]!.divisions.filter((d) => d.kind === 'door')).toHaveLength(2)
+    expect(facesViewer('back', 180)).toBe(false)
+    expect(elevationOf([{ ...cab, placement: { ...cab.placement, rotation: 180 } }], room, 'back', (c) => c.placement! )[0]!.faces).toBe(false)
   })
 })

@@ -16,9 +16,13 @@ tool table, are paused.
 
 ## What it does
 
-1. **Library**: cabinet templates, sheet materials, edgebands and hardware. Edit them in the app,
-   or bulk-import CSV / XLSX / JSON (see `examples/import/`). The whole library can be exported or
-   imported as a JSON bundle.
+1. **Library**: cabinet templates, sheet materials, edgebands and hardware. Each row has an Edit
+   form. Fields that move holes, cut sizes or sheets are marked; code and name are labels.
+   Items are stored by id, so renaming one does not break jobs. If a geometry change is already
+   used by a job, the form lists those jobs and asks whether to update them or keep the old
+   values. New cabinets use the new value. Templates stay a copy: existing jobs change only when
+   you choose Update existing jobs. Bulk-import CSV / XLSX / JSON (see `examples/import/`). The
+   whole library can be exported or imported as a JSON bundle.
 2. **Parametric cabinets**: base, wall and tall carcasses. Settings cover width, height and depth;
    materials; toe kick (notched sides); rails or a full top; a dado or butt bottom; and screw,
    dowel or confirmat joinery. The back can be grooved, rabbeted or applied. There are 32 mm
@@ -28,7 +32,11 @@ tool table, are paused.
 3. **Per-job customisation**: each cabinet in a job is a copy of its template. You can change any
    parameter, exclude parts, change the edgeband on any edge, or add custom holes. A 3D view
    (orbit, exploded view, holes shown) updates live. The **Room** tab places every cabinet in the
-   job side by side, in plan and in 3D, snapped to walls and to each other.
+   job. Switch between 3D, a top-down plan (back wall at the top, fronts marked) and an elevation
+   of each wall. Click a cabinet in any of those views to change its size, doors and drawers
+   there, or open the full editor and come back to the room. Snap is on by default: cabinets
+   meet side to side, fronts and tops line up, and a wall cabinet sits on a base. Turn Snap off,
+   or hold Alt, to place freely, including overlaps.
 4. **Millimetres or inches.** The sidebar switches the whole shop. Lengths are stored in
    millimetres. Inches display as fractions to the nearest 1/16 in (for example `23-1/4"`), and
    you can type a decimal or a fraction. Showing the same value again does not change the stored
@@ -173,7 +181,9 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   types.ts         domain model (mm internally; cabinet X=width, Y=depth, Z=up; part x=length/grain)
   units.ts         mm storage, fractional-inch display, parse 23-1/4 and 23.25
   hardware/        published Salice Silentia+ and Blum TANDEM boring numbers
-  room.ts          placements, wall snap, arrange a run along the back wall
+  room.ts          placements, wall and neighbour snap (including tops), arrange a run
+  elevation.ts     plan-facing walls and the door/drawer divisions drawn on an elevation
+  library/         CSV/XLSX/JSON import, and keep-or-update when a library edit hits existing jobs
   geometry.ts      frames, world<->part transforms, polygons
   construction/    parametric carcass generator -> parts with drilling/grooves in part coords
   cutlist.ts       job expansion, part numbering/IDs, edgeband cut-size compensation, BOM
@@ -182,7 +192,6 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   mpr/             woodWOP MPR 4.0 writer + minimal parser (tests)
   validator.ts     pre-export checks
   labels/          label placement on parts, labels/sheet-map PDF (jsPDF), ZPL
-  library/         CSV/XLSX/JSON import with column aliases, upsert by code
   pipeline.ts      runJob(): expand -> nest -> programs -> validate -> labels
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)
 src/pages/         Jobs, Job (cabinets / cut list / nesting / output), Cabinet editor, Library, Machine

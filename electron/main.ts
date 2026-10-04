@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import { Worker } from 'node:worker_threads'
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL
 const MAX_BACKUPS = 30
@@ -70,6 +71,88 @@ function registerIpc() {
   })
 
   ipcMain.handle('shell:open', (_e, p: string) => shell.openPath(p))
+
+  ipcMain.handle('dialog:pickFolder', async (e, title: string) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const res = await dialog.showOpenDialog(win!, { title, properties: ['openDirectory', 'createDirectory'] })
+    return res.canceled ? null : (res.filePaths[0] ?? null)
+  })
+
+  ipcMain.handle('batch:start', (_e, cfg: { inbox: string; outbox: string }) => startBatch(cfg))
+  ipcMain.handle('batch:stop', () => stopBatch())
+  ipcMain.handle('batch:cancel', () => cancelBatch())
+  ipcMain.handle('batch:status', () => batchStatus())
+}
+
+// ---------------------------------------------------------------------------------------------
+// Batch watcher (worker thread)
+// ---------------------------------------------------------------------------------------------
+
+type BatchEvent = { type: 'log'; at: string; msg: string } | { type: 'busy'; csv: string } | { type: 'idle' } | { type: 'state' }
+
+let batch: { worker: Worker; cancel: SharedArrayBuffer; inbox: string; outbox: string; busy: string | null } | null = null
+const batchLog: { at: string; msg: string }[] = []
+
+const batchStatus = () => ({ running: !!batch, inbox: batch?.inbox ?? null, outbox: batch?.outbox ?? null, busy: batch?.busy ?? null, log: batchLog.slice(-200) })
+
+function emit(ev: BatchEvent) {
+  if (ev.type === 'log') {
+    batchLog.push({ at: ev.at, msg: ev.msg })
+    if (batchLog.length > 500) batchLog.splice(0, batchLog.length - 500)
+  }
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.send('batch:event', ev)
+}
+
+function startBatch(cfg: { inbox: string; outbox: string }) {
+  if (batch) stopBatch()
+  if (!cfg.inbox || !cfg.outbox) return batchStatus()
+  const cancel = new SharedArrayBuffer(4)
+  const worker = new Worker(path.join(__dirname, 'batchWorker.cjs'), { workerData: { inbox: cfg.inbox, outbox: cfg.outbox, dataFile: dataFile(), cancel } })
+  const me = { worker, cancel, inbox: cfg.inbox, outbox: cfg.outbox, busy: null as string | null }
+  batch = me
+  worker.on('message', (ev: BatchEvent) => {
+    if (ev.type === 'busy') me.busy = ev.csv
+    if (ev.type === 'idle') me.busy = null
+    emit(ev)
+  })
+  worker.on('error', (err) => emit({ type: 'log', at: new Date().toISOString(), msg: `Batch worker error: ${err.message}` }))
+  worker.on('exit', () => {
+    if (batch === me) batch = null
+    emit({ type: 'state' })
+  })
+  emit({ type: 'state' })
+  return batchStatus()
+}
+
+function stopBatch() {
+  const b = batch
+  if (!b) return batchStatus()
+  batch = null
+  Atomics.store(new Int32Array(b.cancel), 0, 1)
+  b.worker.postMessage({ type: 'stop' })
+  setTimeout(() => void b.worker.terminate(), 3000)
+  emit({ type: 'state' })
+  return batchStatus()
+}
+
+/** Stop the CSV being processed. If the worker does not stop by itself, it is ended and restarted. */
+function cancelBatch() {
+  const b = batch
+  if (!b?.busy) return batchStatus()
+  Atomics.store(new Int32Array(b.cancel), 0, 1)
+  const csv = b.busy
+  setTimeout(() => {
+    if (batch !== b || b.busy !== csv) return
+    void b.worker.terminate().then(() => {
+      const from = path.join(b.inbox, csv)
+      const dir = path.join(b.inbox, 'cancelled')
+      fs.mkdirSync(dir, { recursive: true })
+      if (fs.existsSync(from)) fs.renameSync(from, path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}_${csv}`))
+      emit({ type: 'log', at: new Date().toISOString(), msg: `${csv}: cancelled (worker restarted)` })
+      startBatch({ inbox: b.inbox, outbox: b.outbox })
+    })
+  }, 10_000)
+  return batchStatus()
 }
 
 function createWindow() {

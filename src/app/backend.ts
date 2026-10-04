@@ -6,7 +6,8 @@
 import JSZip from 'jszip'
 import type { AppData } from '@/core/types'
 
-export type OutFile = { name: string; data: string | Uint8Array }
+import type { OutFile } from '@/core/output'
+export type { OutFile }
 
 interface Bridge {
   load(): Promise<string | null>
@@ -15,6 +16,32 @@ interface Bridge {
   exportFiles(files: OutFile[], opts: { folder?: string; subfolder?: string }): Promise<string | null>
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
   openPath(p: string): Promise<string>
+  pickFolder(title: string): Promise<string | null>
+  batchStart(cfg: { inbox: string; outbox: string }): Promise<BatchStatus>
+  batchStop(): Promise<BatchStatus>
+  batchCancel(): Promise<BatchStatus>
+  batchStatus(): Promise<BatchStatus>
+  onBatchEvent(cb: (ev: BatchEvent) => void): () => void
+}
+
+export interface BatchStatus {
+  running: boolean
+  inbox: string | null
+  outbox: string | null
+  busy: string | null
+  log: { at: string; msg: string }[]
+}
+
+export type BatchEvent = { type: 'log'; at: string; msg: string } | { type: 'busy'; csv: string } | { type: 'idle' } | { type: 'state' }
+
+/** Folder watcher in the desktop app (worker thread in the main process). */
+export interface BatchBridge {
+  pickFolder(title: string): Promise<string | null>
+  start(cfg: { inbox: string; outbox: string }): Promise<BatchStatus>
+  stop(): Promise<BatchStatus>
+  cancel(): Promise<BatchStatus>
+  status(): Promise<BatchStatus>
+  onEvent(cb: (ev: BatchEvent) => void): () => void
 }
 
 declare global {
@@ -32,6 +59,7 @@ export interface Backend {
   exportFiles(files: OutFile[], opts: { folder?: string; subfolder: string }): Promise<string | null>
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
   openPath?(p: string): Promise<void>
+  batch?: BatchBridge
 }
 
 const LS_KEY = 'cabinet-studio-data-v1'
@@ -92,6 +120,14 @@ function desktopBackend(b: Bridge): Backend {
     saveFile: (file, filters) => b.saveFile(file, filters),
     async openPath(p) {
       await b.openPath(p)
+    },
+    batch: {
+      pickFolder: (t) => b.pickFolder(t),
+      start: (cfg) => b.batchStart(cfg),
+      stop: () => b.batchStop(),
+      cancel: () => b.batchCancel(),
+      status: () => b.batchStatus(),
+      onEvent: (cb) => b.onBatchEvent(cb),
     },
   }
 }

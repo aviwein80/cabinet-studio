@@ -1,8 +1,8 @@
 import { nanoid } from 'nanoid'
 import { create } from 'zustand'
-import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_MACHINE } from '@/core/defaults'
-import { DEFAULT_FEATURES } from '@/core/features'
+import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { sampleJob } from '@/core/sample'
+import { normalizeData } from '@/core/normalize'
 import { DEFAULT_ROOM } from '@/core/room'
 import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, ShopSettings } from '@/core/types'
@@ -15,6 +15,7 @@ export type Route =
   | { page: 'template'; templateId: string }
   | { page: 'library'; tab?: LibraryTab }
   | { page: 'machine' }
+  | { page: 'batch' }
   | { page: 'parts' }
   | { page: 'part'; partId: string; jobId?: string }
 
@@ -54,39 +55,6 @@ export function partsOf(d: AppData, jobId?: string): CamPart[] {
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 const now = () => new Date().toISOString()
-
-/** Fill in fields added in later versions so old data files keep loading. */
-const DRAWER_DEFAULT: CarcassParams['drawers'] = { count: 0, frontHeight: 152.4, slide: 'auto' }
-
-function withParams(p: CarcassParams): CarcassParams {
-  return { ...p, drawers: { ...DRAWER_DEFAULT, ...(p.drawers ?? {}) } }
-}
-
-function normalize(raw: Partial<AppData> | null): AppData {
-  const d = defaultAppData()
-  if (!raw) return d
-  const library = { ...d.library, ...(raw.library ?? {}) }
-  library.hardware = fillHardwareSpecs(library.hardware ?? [])
-  library.templates = (library.templates ?? []).map((t) => ({ ...t, params: withParams(t.params) }))
-  const jobs = (raw.jobs ?? []).map((j) => ({
-    ...j,
-    room: { ...DEFAULT_ROOM, ...(j.room ?? {}) },
-    cabinets: j.cabinets.map((c) => ({ ...c, params: withParams(c.params) })),
-  }))
-  return {
-    version: 1,
-    library,
-    machine: { ...d.machine, ...(raw.machine ?? {}), contour: { ...d.machine.contour, ...(raw.machine?.contour ?? {}) }, header: { ...d.machine.header, ...(raw.machine?.header ?? {}) } },
-    settings: {
-      ...d.settings,
-      ...(raw.settings ?? {}),
-      nesting: { ...d.settings.nesting, ...(raw.settings?.nesting ?? {}) },
-      labels: { ...d.settings.labels, ...(raw.settings?.labels ?? {}) },
-      features: { ...DEFAULT_FEATURES, ...(raw.settings?.features ?? {}) },
-    },
-    jobs,
-  }
-}
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -141,10 +109,10 @@ export const useStore = create<State>((set, get) => {
     async init() {
       try {
         const raw = await backend.load()
-        set({ data: normalize(raw) })
+        set({ data: normalizeData(raw) })
         if (!raw) scheduleSave()
       } catch (e) {
-        set({ loadError: e instanceof Error ? e.message : String(e), data: normalize(null) })
+        set({ loadError: e instanceof Error ? e.message : String(e), data: normalizeData(null) })
       }
     },
 

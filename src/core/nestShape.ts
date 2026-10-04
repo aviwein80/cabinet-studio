@@ -10,6 +10,7 @@
  * feasible vertex that keeps the used length of the sheet shortest (then lowest, then leftmost).
  * That fills the sheet from one end and leaves a clean strip for an offcut.
  */
+import { checkCancel } from './cancel'
 import {
   difference,
   EndType,
@@ -438,6 +439,7 @@ function run(
   };
   let placed = 0;
   for (const u of units(preps, !!opt.keepKits, sizeKey)) {
+    checkCancel(opt.isCancelled)
     if (u.kit && u.members.length > 1) {
       let ok = sheets.some((sh) => placeAll(sh, u.members));
       while (!ok && queue.length) ok = placeAll(newSheet(), u.members);

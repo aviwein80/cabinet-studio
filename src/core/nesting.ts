@@ -11,6 +11,7 @@
  * result with the fewest sheets (then the emptiest last sheet, which leaves the best remnant)
  * wins. Everything is deterministic: the same input always produces the same nest.
  */
+import { checkCancel, type CancelCheck } from './cancel'
 import { nestShapes } from './nestShape'
 import type { NestEngine, Vec2 } from './types'
 
@@ -89,6 +90,8 @@ export interface NestOptions {
   offcutMin?: { length: number; width: number }
   /** Wall-clock budget for trying more strategies. */
   timeLimitMs?: number
+  /** Polled during nesting; true stops with `Cancelled`. */
+  isCancelled?: CancelCheck
 }
 
 export type MaterialSheet = Omit<NestedSheet, 'index' | 'materialId' | 'thickness'>
@@ -330,6 +333,7 @@ function rectNest(fitting: NestPart[], opt: NestOptions) {
   let best: { sheets: RawSheet[]; name: string; cost: [number, number, number] } | null = null
   for (const order of ORDERS) {
     for (const heur of HEURISTICS) {
+      checkCancel(opt.isCancelled)
       const sheets = runStrategy(fitting, opt, heur, order)
       const placedCount = sheets.reduce((n, sh) => n + sh.placements.length, 0)
       if (placedCount < fitting.length) continue

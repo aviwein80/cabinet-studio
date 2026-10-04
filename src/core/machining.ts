@@ -1,6 +1,7 @@
 import type { Seg } from '@/cam/geom'
 import { partProgramOps } from '@/cam/mpr'
 import { generatePart, type Intent } from '@/cam/toolpath'
+import type { CancelCheck } from './cancel'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
@@ -37,7 +38,7 @@ export const NEST_DEFAULTS: Required<Omit<NestSettings, 'edgeTrim' | 'extraSpaci
 
 export const nestSettingsOf = (settings: ShopSettings) => ({ ...NEST_DEFAULTS, ...settings.nesting })
 
-export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings): JobNest {
+export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings, isCancelled?: CancelCheck): JobNest {
   const spacing = partSpacing(machine, settings)
   const ns = nestSettingsOf(settings)
   const byMaterial = new Map<string, PartInstance[]>()
@@ -72,6 +73,7 @@ export function nestJob(instances: PartInstance[], lib: Library, machine: Machin
       offcuts: ns.useOffcuts ? (lib.offcuts ?? []).filter((o) => o.materialId === materialId) : [],
       offcutType: ns.offcutType,
       offcutMin: { length: ns.offcutMinLength, width: ns.offcutMinWidth },
+      isCancelled,
     })
     for (const sh of res.sheets) sheets.push({ ...sh, index: sheets.length + 1, materialId, thickness: material.thickness })
     unplaced.push(...res.unplaced)

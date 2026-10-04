@@ -4,7 +4,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import { buildFiles } from '../src/app/jobOutput'
+import { buildFiles } from '../src/core/output'
 import { defaultAppData } from '../src/core/defaults'
 import { runJob } from '../src/core/pipeline'
 import { sampleJob } from '../src/core/sample'

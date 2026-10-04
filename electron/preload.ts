@@ -11,4 +11,14 @@ contextBridge.exposeInMainWorld('cabinetStudio', {
   saveFile: (file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null> =>
     ipcRenderer.invoke('files:save', file, filters),
   openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:open', p),
+  pickFolder: (title: string): Promise<string | null> => ipcRenderer.invoke('dialog:pickFolder', title),
+  batchStart: (cfg: { inbox: string; outbox: string }) => ipcRenderer.invoke('batch:start', cfg),
+  batchStop: () => ipcRenderer.invoke('batch:stop'),
+  batchCancel: () => ipcRenderer.invoke('batch:cancel'),
+  batchStatus: () => ipcRenderer.invoke('batch:status'),
+  onBatchEvent: (cb: (ev: unknown) => void) => {
+    const h = (_e: unknown, ev: unknown) => cb(ev)
+    ipcRenderer.on('batch:event', h)
+    return () => void ipcRenderer.removeListener('batch:event', h)
+  },
 })

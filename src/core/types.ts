@@ -435,6 +435,8 @@ export interface ShopSettings {
   outputFolder: string
   /** Custom-part module switches. Absent keys take the defaults in `DEFAULT_FEATURES`. */
   features?: Partial<FeatureFlags>
+  /** Folder watcher for part-list CSVs (desktop app). */
+  batch?: { inbox: string; outbox: string }
 }
 
 export interface FeatureFlags {

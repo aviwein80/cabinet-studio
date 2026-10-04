@@ -1,4 +1,5 @@
 import { partFileName, writePartPrograms } from '@/cam/mpr'
+import type { CancelCheck } from './cancel'
 import { generatePart } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
@@ -49,10 +50,10 @@ export interface JobOutput {
   warnings: string[]
 }
 
-export function runJob(job: Job, data: AppData): JobOutput {
+export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelCheck } = {}): JobOutput {
   const { library: lib, machine, settings } = data
   const expanded = expandJob(job, lib, settings)
-  const nest = nestJob(expanded.instances, lib, machine, settings)
+  const nest = nestJob(expanded.instances, lib, machine, settings, opts.isCancelled)
   const ns = nestSettingsOf(settings)
   const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, {
     camOutput: featuresOf(settings).camMprOutput,

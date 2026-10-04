@@ -54,11 +54,20 @@ export function placeLabels(
     if (!inst) continue
     const { pt } = placementTransform(inst, pl)
     const poly: Vec2[] = inst.outline.map((p) => pt(p.x, p.y))
+    const holes: Vec2[][] = (inst.holes ?? []).map((h) => h.map((p) => pt(p.x, p.y)))
     const keepOut: Box[] = []
     const pad = 5
+    for (const h of holes) {
+      const xs = h.map((p) => p.x)
+      const ys = h.map((p) => p.y)
+      keepOut.push({ x1: Math.min(...xs) - pad, y1: Math.min(...ys) - pad, x2: Math.max(...xs) + pad, y2: Math.max(...ys) + pad })
+    }
     for (const op of program.ops) {
       if (op.partUid !== pl.uid) continue
-      if (op.kind === 'vdrill') {
+      if (op.kind === 'cam' && op.intent.k === 'vdrill') {
+        const r = op.intent.d / 2 + pad
+        keepOut.push({ x1: op.intent.x - r, y1: op.intent.y - r, x2: op.intent.x + r, y2: op.intent.y + r })
+      } else if (op.kind === 'vdrill') {
         const r = op.diameter / 2 + pad
         keepOut.push({ x1: op.x - r, y1: op.y - r, x2: op.x + r, y2: op.y + r })
       } else if (op.kind === 'pocket') keepOut.push({ x1: op.x1 - pad, y1: op.y1 - pad, x2: op.x2 + pad, y2: op.y2 + pad })

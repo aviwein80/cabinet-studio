@@ -385,6 +385,38 @@ export interface NestSettings {
   allowRotation: boolean
   /** Pre-mill allowance per banded edge (edgebander pre-mill station). */
   premill: number
+  /** rect = rectangles only; shape = true outlines; auto = try both, keep the better nest. */
+  engine?: NestEngine
+  /** Let small parts nest inside the cut-outs of larger custom parts. */
+  nestInApertures?: boolean
+  /** Put all parts of a kit (cabinet, or the kit name on custom parts) on one sheet when they fit. */
+  keepKitsTogether?: boolean
+  /** Treat each cabinet as a kit. */
+  kitByCabinet?: boolean
+  /** Onion skin left by the first cut-out pass on small parts (mm, 0 = off); a final pass cuts it. */
+  onionSkin?: number
+  /** Parts with less area than this (mm²) get the onion skin. */
+  onionSkinMaxArea?: number
+  /** Which remnant strips to report and save. */
+  offcutType?: 'vertical' | 'horizontal' | 'both'
+  /** Smallest remnant worth keeping. */
+  offcutMinLength?: number
+  offcutMinWidth?: number
+  /** Fill saved offcuts of the same material before starting full sheets. */
+  useOffcuts?: boolean
+}
+
+export type NestEngine = 'rect' | 'shape' | 'auto'
+
+/** A saved sheet remnant kept for later jobs. */
+export interface Offcut {
+  id: string
+  materialId: string
+  length: number
+  width: number
+  /** Job the remnant came from. */
+  from?: string
+  createdAt: string
 }
 
 export interface LabelSettings {
@@ -443,6 +475,8 @@ export interface Library {
   doorStyles?: DoorStyle[]
   /** Saved custom parts that can be inserted into other parts or jobs. */
   partLibrary?: CamPart[]
+  /** Sheet remnants in stock. */
+  offcuts?: Offcut[]
 }
 
 export interface AppData {

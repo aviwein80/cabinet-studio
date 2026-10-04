@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { NumField, Section, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { partSpacing } from '@/core/machining'
+import { nestSettingsOf, partSpacing } from '@/core/machining'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 
@@ -47,6 +47,7 @@ export function MachinePage() {
   const s = data.settings
   const routers = m.tools.filter((t) => t.type === 'router')
   const feat = featuresOf(s)
+  const ns = nestSettingsOf(s)
 
   const exportTools = async () => {
     const csv = ['number,type,name,diameter,maxDepth', ...m.tools.map((t) => [t.number, t.type, `"${t.name.replace(/"/g, '""')}"`, t.diameter, t.maxDepth].join(','))].join('\r\n') + '\r\n'
@@ -180,6 +181,39 @@ export function MachinePage() {
                 <NumField label="Pre-mill / edge" value={s.nesting.premill} min={0} max={3} step={0.5} onChange={(v) => updateSettings((x) => (x.nesting.premill = v))} hint="Edgebander pre-mill" />
               </div>
               <SwitchField label="Allow 90° rotation" checked={s.nesting.allowRotation} onChange={(v) => updateSettings((x) => (x.nesting.allowRotation = v))} hint="Grain-locked parts on grained sheets are never rotated." />
+              <SelectField
+                label="Nesting engine"
+                value={ns.engine}
+                options={[
+                  { value: 'auto', label: 'Best of both' },
+                  { value: 'shape', label: 'True shape' },
+                  { value: 'rect', label: 'Rectangles' },
+                ]}
+                onChange={(v) => updateSettings((x) => (x.nesting.engine = v))}
+                hint="True shape nests real outlines, turns shaped parts end for end, and fills cut-outs. Best of both runs each and keeps the nest with fewer sheets."
+              />
+              <SwitchField label="Nest parts in cut-outs" checked={ns.nestInApertures} onChange={(v) => updateSettings((x) => (x.nesting.nestInApertures = v))} hint="Small parts go in the openings of larger custom parts and are cut before the opening." />
+              <SwitchField label="Keep kits on one sheet" checked={ns.keepKitsTogether} onChange={(v) => updateSettings((x) => (x.nesting.keepKitsTogether = v))} hint="A kit is the kit name on a custom part, or a whole cabinet when the next switch is on." />
+              <SwitchField label="Each cabinet is a kit" checked={ns.kitByCabinet} onChange={(v) => updateSettings((x) => (x.nesting.kitByCabinet = v))} />
+              <div className="grid grid-cols-2 gap-2">
+                <NumField label="Onion skin" value={ns.onionSkin} min={0} max={2} step={0.1} onChange={(v) => updateSettings((x) => (x.nesting.onionSkin = v))} hint="0 = off. Left by the first cut-out pass, cut last." />
+                <NumField label="On parts under" suffix="m²" value={Math.round(ns.onionSkinMaxArea / 1e4) / 100} min={0} max={3} step={0.01} onChange={(v) => updateSettings((x) => (x.nesting.onionSkinMaxArea = v * 1e6))} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <SelectField
+                  label="Offcuts"
+                  value={ns.offcutType}
+                  options={[
+                    { value: 'vertical', label: 'End strip' },
+                    { value: 'horizontal', label: 'Side strip' },
+                    { value: 'both', label: 'Both' },
+                  ]}
+                  onChange={(v) => updateSettings((x) => (x.nesting.offcutType = v))}
+                />
+                <NumField label="Min length" value={ns.offcutMinLength} min={0} max={3000} onChange={(v) => updateSettings((x) => (x.nesting.offcutMinLength = v))} />
+                <NumField label="Min width" value={ns.offcutMinWidth} min={0} max={1500} onChange={(v) => updateSettings((x) => (x.nesting.offcutMinWidth = v))} />
+              </div>
+              <SwitchField label="Use stock offcuts first" checked={ns.useOffcuts} onChange={(v) => updateSettings((x) => (x.nesting.useOffcuts = v))} hint="Saved offcuts of the job's materials are filled before full sheets. Manage them under Library, Offcuts." />
             </Section>
             <Section title="Labels and output">
               <div className="grid grid-cols-2 gap-2">

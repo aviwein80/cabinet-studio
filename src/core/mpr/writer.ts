@@ -198,7 +198,7 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('ZSTART', 0)
   w.kv('ANZZST', 0)
   w.kv('KAT', 'Fraesen')
-  w.kv('MNM', mprText(`P${c.partNo} cut-out`))
+  w.kv('MNM', mprText(`P${c.partNo} ${c.skin ? 'onion-skin pass' : 'cut-out'}`))
 }
 
 /** Native macros for one custom-part intent (already in program coordinates). */

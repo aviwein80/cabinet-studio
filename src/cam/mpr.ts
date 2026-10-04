@@ -15,6 +15,8 @@ export interface Placement2D {
   pt: (x: number, y: number) => Vec2
   dir: (d: HDrillDir) => HDrillDir
   rotated: boolean
+  /** Turn in degrees applied to directional macros; defaults to 90 when `rotated`. */
+  angle?: number
 }
 
 export const IDENTITY: Placement2D = { pt: (x, y) => ({ x, y }), dir: (d) => d, rotated: false }
@@ -41,7 +43,7 @@ export function placeIntent(it: Intent, tf: Placement2D): Intent {
     }
     case 'pocket-rect': {
       const q = tf.pt(it.cx, it.cy)
-      return { ...it, cx: q.x, cy: q.y, angle: r3(it.angle + (tf.rotated ? 90 : 0)) }
+      return { ...it, cx: q.x, cy: q.y, angle: r3((it.angle + (tf.angle ?? (tf.rotated ? 90 : 0))) % 360) }
     }
     case 'saw': {
       const a = tf.pt(it.xa, it.ya)

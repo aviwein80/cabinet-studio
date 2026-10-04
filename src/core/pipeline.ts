@@ -2,7 +2,7 @@ import { partFileName, writePartPrograms } from '@/cam/mpr'
 import { generatePart } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
-import { buildAllPrograms, nestJob, type JobNest, type SheetProgram } from './machining'
+import { buildAllPrograms, nestJob, nestSettingsOf, type JobNest, type SheetProgram } from './machining'
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeKey, Job } from './types'
@@ -28,6 +28,8 @@ export interface LabelRecord {
   sheetCount: number
   /** Position of the part in the sheet's cut order (1 = cut first). */
   cutOrder: number
+  /** Copy counter for parts made more than once from one design ("2 of 5"). */
+  copy?: { n: number; of: number }
   program: string
   rotated: boolean
   spot: LabelSpot
@@ -51,11 +53,17 @@ export function runJob(job: Job, data: AppData): JobOutput {
   const { library: lib, machine, settings } = data
   const expanded = expandJob(job, lib, settings)
   const nest = nestJob(expanded.instances, lib, machine, settings)
-  const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, { camOutput: featuresOf(settings).camMprOutput })
+  const ns = nestSettingsOf(settings)
+  const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, {
+    camOutput: featuresOf(settings).camMprOutput,
+    ...(ns.onionSkin > 0 ? { onionSkin: { thickness: ns.onionSkin, maxArea: ns.onionSkinMaxArea } } : {}),
+  })
   const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)
   for (const w of expanded.warnings) issues.unshift({ severity: 'warning', code: 'CONSTRUCTION', message: w })
 
   const byUid = new Map(expanded.instances.map((i) => [i.uid, i]))
+  const copies = new Map<string, string[]>()
+  for (const i of expanded.instances) copies.set(i.part.key, [...(copies.get(i.part.key) ?? []), i.uid])
   const labels: LabelRecord[] = []
   const spots = new Map<number, LabelSpot[]>()
   for (const prog of programs) {
@@ -93,6 +101,7 @@ export function runJob(job: Job, data: AppData): JobOutput {
         sheetIndex: sh.index,
         sheetCount: programs.length,
         cutOrder: idx + 1,
+        ...((copies.get(inst.part.key)?.length ?? 0) > 1 ? { copy: { n: copies.get(inst.part.key)!.indexOf(inst.uid) + 1, of: copies.get(inst.part.key)!.length } } : {}),
         program: prog.name,
         rotated: pl.rotated,
         spot,

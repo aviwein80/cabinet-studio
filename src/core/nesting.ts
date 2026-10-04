@@ -1,17 +1,33 @@
 /**
- * Rectangular nesting with the MaxRects algorithm (Jylanki, "A Thousand Ways to Pack the Bin").
+ * Sheet nesting. Two engines share one result format:
+ *
+ *   rect   MaxRects (Jylanki, "A Thousand Ways to Pack the Bin") on cut rectangles.
+ *   shape  True outlines with no-fit polygons (nestShape.ts): parts turn 0/90/180/270,
+ *          interlock, and small parts can sit in the cut-outs of larger ones.
+ *   auto   Runs both and keeps the better nest.
  *
  * Parts are inflated by the part spacing (cut-out tool diameter + extra) so that the tool path
  * between two neighbours never overlaps. Several heuristics / orderings are tried and the
  * result with the fewest sheets (then the emptiest last sheet, which leaves the best remnant)
  * wins. Everything is deterministic: the same input always produces the same nest.
  */
+import { nestShapes } from './nestShape'
+import type { NestEngine, Vec2 } from './types'
 
 export interface NestPart {
   uid: string
   length: number
   width: number
   canRotate: boolean
+  /** True outline in the cut frame (0..length × 0..width). Absent = the cut rectangle. */
+  outline?: Vec2[]
+  /** Openings right through the part that other parts may nest in. */
+  holes?: Vec2[][]
+  /** Parts with the same key have the same outline (no-fit polygons are shared). */
+  shape?: string
+  /** Higher numbers go on earlier sheets. */
+  priority?: number
+  kit?: string
 }
 
 export interface Placement {
@@ -24,6 +40,19 @@ export interface Placement {
   /** Footprint on the sheet (after rotation). */
   dx: number
   dy: number
+  /** Turned half a turn (applied before `rotated`); grain still runs the same way. */
+  flip?: boolean
+  /** The part sits in a cut-out of this part, so it is cut out first. */
+  inside?: string
+}
+
+/** Unused strip of a sheet, measured from the last part's cut (after the spacing). */
+export interface Remnant {
+  x: number
+  y: number
+  length: number
+  width: number
+  dir: 'vertical' | 'horizontal'
 }
 
 export interface NestedSheet {
@@ -35,6 +64,15 @@ export interface NestedSheet {
   placements: Placement[]
   /** Percent of the full sheet area covered by parts (0-100). */
   utilization: number
+  /** Stock offcut used instead of a full sheet. */
+  offcutId?: string
+  remnants?: Remnant[]
+}
+
+export interface StockOffcut {
+  id: string
+  length: number
+  width: number
 }
 
 export interface NestOptions {
@@ -43,12 +81,25 @@ export interface NestOptions {
   edgeTrim: number
   spacing: number
   allowRotation: boolean
+  engine?: NestEngine
+  keepKits?: boolean
+  /** Saved offcuts filled before full sheets. */
+  offcuts?: StockOffcut[]
+  offcutType?: 'vertical' | 'horizontal' | 'both'
+  offcutMin?: { length: number; width: number }
+  /** Wall-clock budget for trying more strategies. */
+  timeLimitMs?: number
 }
 
+export type MaterialSheet = Omit<NestedSheet, 'index' | 'materialId' | 'thickness'>
+
 export interface MaterialNest {
-  sheets: Omit<NestedSheet, 'index' | 'materialId' | 'thickness'>[]
+  sheets: MaterialSheet[]
   unplaced: { uid: string; reason: string }[]
   strategy: string
+  engine: 'rect' | 'shape'
+  /** Kits whose parts ended up on more than one sheet. */
+  splitKits: string[]
 }
 
 interface Rect {
@@ -151,51 +202,82 @@ function sortParts(parts: NestPart[], order: Order) {
         return p.length + p.width
     }
   }
-  return [...parts].sort((a, b) => key(b) - key(a) || a.uid.localeCompare(b.uid))
+  return [...parts].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0) || key(b) - key(a) || a.uid.localeCompare(b.uid))
+}
+
+/** Area the part covers: its true outline less its openings, or the cut rectangle. */
+export function partArea(p: NestPart) {
+  if (!p.outline || p.outline.length < 3) return p.length * p.width
+  return Math.abs(polyArea(p.outline)) - (p.holes ?? []).reduce((s, h) => s + Math.abs(polyArea(h)), 0)
+}
+
+export function polyArea(poly: Vec2[]) {
+  let a = 0
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) a += (poly[j].x + poly[i].x) * (poly[j].y - poly[i].y)
+  return -a / 2
+}
+
+export interface Bin {
+  length: number
+  width: number
+  offcutId?: string
+}
+
+/** Offcut bins first (smallest first, so they get used up), then full sheets as needed. */
+export function binQueue(opt: NestOptions): Bin[] {
+  return [...(opt.offcuts ?? [])].sort((a, b) => a.length * a.width - b.length * b.width || a.id.localeCompare(b.id)).map((o) => ({ length: o.length, width: o.width, offcutId: o.id }))
 }
 
 function runStrategy(parts: NestPart[], opt: NestOptions, heur: Heuristic, order: Order) {
   const s = opt.spacing
-  const binW = opt.sheetLength - 2 * opt.edgeTrim + s
-  const binH = opt.sheetWidth - 2 * opt.edgeTrim + s
   let remaining = sortParts(parts, order)
-  const sheets: { placements: Placement[]; area: number }[] = []
+  const sheets: { placements: Placement[]; area: number; bin: Bin }[] = []
+  const queue = binQueue(opt)
+  const full: Bin = { length: opt.sheetLength, width: opt.sheetWidth }
   while (remaining.length) {
-    const bin = new MaxRectsBin(binW, binH)
+    const bin = queue.shift() ?? full
+    const usable = bin.length - 2 * opt.edgeTrim + s
+    const usableW = bin.width - 2 * opt.edgeTrim + s
+    const mr = new MaxRectsBin(usable, usableW)
     const placements: Placement[] = []
     let area = 0
     const rotOk = (p: NestPart) => opt.allowRotation && p.canRotate
     if (order === 'global') {
       for (;;) {
-        let best: { idx: number; rect: Rect; rotated: boolean; s: [number, number] } | null = null
+        let best: { idx: number; rect: Rect; rotated: boolean; s: [number, number]; prio: number } | null = null
         remaining.forEach((p, idx) => {
-          const f = bin.find(p.length + s, p.width + s, rotOk(p), heur)
-          if (f && better(f.s, best?.s ?? null)) best = { idx, ...f }
+          const f = mr.find(p.length + s, p.width + s, rotOk(p), heur)
+          if (!f) return
+          const prio = p.priority ?? 0
+          if (!best || prio > best.prio || (prio === best.prio && better(f.s, best.s))) best = { idx, prio, ...f }
         })
         if (!best) break
         const b = best as { idx: number; rect: Rect; rotated: boolean }
         const p = remaining[b.idx]
-        bin.place(b.rect)
+        mr.place(b.rect)
         placements.push(toPlacement(p, b.rect, b.rotated, opt))
-        area += p.length * p.width
+        area += partArea(p)
         remaining = remaining.filter((_, i) => i !== b.idx)
       }
     } else {
       const left: NestPart[] = []
       for (const p of remaining) {
-        const f = bin.find(p.length + s, p.width + s, rotOk(p), heur)
+        const f = mr.find(p.length + s, p.width + s, rotOk(p), heur)
         if (!f) {
           left.push(p)
           continue
         }
-        bin.place(f.rect)
+        mr.place(f.rect)
         placements.push(toPlacement(p, f.rect, f.rotated, opt))
-        area += p.length * p.width
+        area += partArea(p)
       }
       remaining = left
     }
-    if (!placements.length) break
-    sheets.push({ placements, area })
+    if (!placements.length) {
+      if (bin.offcutId) continue
+      break
+    }
+    sheets.push({ placements, area, bin })
   }
   return sheets
 }
@@ -209,6 +291,53 @@ function toPlacement(p: NestPart, r: Rect, rotated: boolean, opt: NestOptions): 
     dx: rotated ? p.width : p.length,
     dy: rotated ? p.length : p.width,
   }
+}
+
+export interface RawSheet {
+  placements: Placement[]
+  area: number
+  bin: Bin
+}
+
+/** Lower is better: kit splits (when kits are kept), full sheets, then the area on the last full sheet. */
+export function nestCost(sheets: RawSheet[], parts: NestPart[], keepKits: boolean): [number, number, number] {
+  const fullSheets = sheets.filter((s) => !s.bin.offcutId)
+  const last = fullSheets[fullSheets.length - 1]?.area ?? 0
+  return [keepKits ? splitKitsOf(sheets, parts).length : 0, fullSheets.length, last]
+}
+
+const lessCost = (a: [number, number, number], b: [number, number, number]) => a[0] < b[0] || (a[0] === b[0] && (a[1] < b[1] || (a[1] === b[1] && a[2] < b[2] - 1e-6)))
+
+export function splitKitsOf(sheets: RawSheet[], parts: NestPart[]) {
+  const kitOf = new Map(parts.filter((p) => p.kit).map((p) => [p.uid, p.kit!]))
+  const where = new Map<string, Set<number>>()
+  sheets.forEach((sh, i) =>
+    sh.placements.forEach((pl) => {
+      const k = kitOf.get(pl.uid)
+      if (k) where.set(k, (where.get(k) ?? new Set()).add(i))
+    }),
+  )
+  return [...where.entries()].filter(([, s]) => s.size > 1).map(([k]) => k).sort()
+}
+
+const isRect = (p: NestPart) => {
+  if (p.holes?.length) return false
+  if (!p.outline || p.outline.length < 3) return true
+  return Math.abs(Math.abs(polyArea(p.outline)) - p.length * p.width) <= 0.002 * p.length * p.width
+}
+
+function rectNest(fitting: NestPart[], opt: NestOptions) {
+  let best: { sheets: RawSheet[]; name: string; cost: [number, number, number] } | null = null
+  for (const order of ORDERS) {
+    for (const heur of HEURISTICS) {
+      const sheets = runStrategy(fitting, opt, heur, order)
+      const placedCount = sheets.reduce((n, sh) => n + sh.placements.length, 0)
+      if (placedCount < fitting.length) continue
+      const cost = nestCost(sheets, fitting, !!opt.keepKits)
+      if (!best || lessCost(cost, best.cost)) best = { sheets, name: `${heur}/${order}`, cost }
+    }
+  }
+  return best
 }
 
 /** Nest all parts of one material onto as few sheets as possible. */
@@ -228,36 +357,71 @@ export function nestMaterial(parts: NestPart[], opt: NestOptions): MaterialNest 
       })
   }
 
-  let best: { sheets: ReturnType<typeof runStrategy>; name: string } | null = null
-  const sheetArea = opt.sheetLength * opt.sheetWidth
-  for (const order of ORDERS) {
-    for (const heur of HEURISTICS) {
-      const sheets = runStrategy(fitting, opt, heur, order)
-      const placedCount = sheets.reduce((n, sh) => n + sh.placements.length, 0)
-      if (placedCount < fitting.length) continue
-      const lastArea = (s: typeof sheets) => s[s.length - 1]?.area ?? 0
-      if (
-        !best ||
-        sheets.length < best.sheets.length ||
-        (sheets.length === best.sheets.length && lastArea(sheets) < lastArea(best.sheets) - 1e-6)
-      )
-        best = { sheets, name: `${heur}/${order}` }
+  const engine = opt.engine ?? 'rect'
+  const hasKits = !!opt.keepKits && fitting.some((p) => p.kit)
+  const wantShape = engine === 'shape' || (engine === 'auto' && (fitting.some((p) => !isRect(p)) || hasKits))
+  let chosen: { sheets: RawSheet[]; name: string; engine: 'rect' | 'shape' } | null = null
+  if (engine !== 'shape') {
+    const r = rectNest(fitting, opt)
+    if (r) chosen = { sheets: r.sheets, name: r.name, engine: 'rect' }
+  }
+  if (wantShape && fitting.length) {
+    const s = nestShapes(fitting, opt)
+    if (s.placed === fitting.length) {
+      const keep = !!opt.keepKits
+      if (!chosen || lessCost(nestCost(s.sheets, fitting, keep), nestCost(chosen.sheets, fitting, keep))) chosen = { sheets: s.sheets, name: s.name, engine: 'shape' }
     }
   }
-  const chosen = best?.sheets ?? []
+  const sheetArea = (b: Bin) => b.length * b.width
+  const sheets = (chosen?.sheets ?? []).map((sh) => ({
+    sheetLength: sh.bin.length,
+    sheetWidth: sh.bin.width,
+    placements: orderForCutting(sh.placements),
+    utilization: Math.round((sh.area / sheetArea(sh.bin)) * 1000) / 10,
+    ...(sh.bin.offcutId ? { offcutId: sh.bin.offcutId } : {}),
+    remnants: remnantsOf(sh.bin, sh.placements, opt),
+  }))
   return {
-    sheets: chosen.map((sh) => ({
-      sheetLength: opt.sheetLength,
-      sheetWidth: opt.sheetWidth,
-      placements: orderForCutting(sh.placements),
-      utilization: Math.round((sh.area / sheetArea) * 1000) / 10,
-    })),
+    sheets,
     unplaced,
-    strategy: best?.name ?? 'none',
+    strategy: chosen?.name ?? 'none',
+    engine: chosen?.engine ?? 'rect',
+    splitKits: chosen ? splitKitsOf(chosen.sheets, fitting) : [],
   }
 }
 
-/** Small parts first (they lose vacuum hold-down fastest once neighbours are cut free), then by position. */
+/** Full-width strip past the last part (vertical) and/or full-length strip above the highest (horizontal). */
+export function remnantsOf(bin: Bin, placements: Placement[], opt: Pick<NestOptions, 'spacing' | 'offcutType' | 'offcutMin'>): Remnant[] {
+  if (!placements.length) return []
+  const r1 = (n: number) => Math.round(n * 10) / 10
+  const maxX = Math.max(...placements.map((p) => p.x + p.dx)) + opt.spacing
+  const maxY = Math.max(...placements.map((p) => p.y + p.dy)) + opt.spacing
+  const min = opt.offcutMin ?? { length: 300, width: 300 }
+  const ok = (l: number, w: number) => Math.max(l, w) >= Math.max(min.length, min.width) - 1e-9 && Math.min(l, w) >= Math.min(min.length, min.width) - 1e-9
+  const type = opt.offcutType ?? 'vertical'
+  const out: Remnant[] = []
+  const vL = bin.length - maxX
+  if (type !== 'horizontal' && ok(vL, bin.width)) out.push({ x: r1(maxX), y: 0, length: r1(vL), width: bin.width, dir: 'vertical' })
+  const hLen = type === 'both' && out.length ? maxX : bin.length
+  const hW = bin.width - maxY
+  if (type !== 'vertical' && ok(hLen, hW)) out.push({ x: 0, y: r1(maxY), length: r1(hLen), width: r1(hW), dir: 'horizontal' })
+  return out
+}
+
+/**
+ * Cut order: parts in cut-outs before the part around them, then small parts first (they lose
+ * vacuum hold-down fastest once neighbours are cut free), then by position.
+ */
 export function orderForCutting(placements: Placement[]) {
-  return [...placements].sort((a, b) => a.dx * a.dy - b.dx * b.dy || a.y - b.y || a.x - b.x)
+  const sorted = [...placements].sort((a, b) => a.dx * a.dy - b.dx * b.dy || a.y - b.y || a.x - b.x)
+  const out: Placement[] = []
+  const done = new Set<string>()
+  const visit = (p: Placement, depth = 0) => {
+    if (done.has(p.uid) || depth > placements.length) return
+    for (const c of sorted) if (c.inside === p.uid) visit(c, depth + 1)
+    done.add(p.uid)
+    out.push(p)
+  }
+  for (const p of sorted) visit(p)
+  return out
 }

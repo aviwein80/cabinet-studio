@@ -116,6 +116,8 @@ export function PropertiesPanel({
               onChange({ ...part, materialId: v === NONE ? null : v, thickness: m?.thickness ?? part.thickness, grain: m ? (m.grain ? 'length' : 'none') : part.grain })
             }}
           />
+          <NumField label="Nest priority" suffix="" value={part.priority ?? 0} min={0} max={99} onChange={(v) => onChange({ ...part, priority: Math.max(0, Math.round(v)) || undefined })} hint="Higher goes on earlier sheets" />
+          <TextField label="Kit" value={part.kit ?? ''} placeholder="none" onChange={(v) => onChange({ ...part, kit: v.trim() ? v : undefined })} hint="Same kit, same sheet" />
           <SelectField label="Grain" value={part.grain} options={[{ value: 'length', label: 'Along X' }, { value: 'none', label: 'No grain' }]} onChange={(v) => onChange({ ...part, grain: v })} />
           <div className="flex items-end">
             <Button size="sm" variant="outline" className="h-8 w-full border-white/15 bg-transparent text-xs" onClick={() => (onChange(fitWorkVolume(part)), onFit())} disabled={!outline.entity}>

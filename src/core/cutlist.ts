@@ -1,4 +1,4 @@
-import { partOutline as camOutline } from '@/cam/doc'
+import { partApertures, partOutline as camOutline } from '@/cam/doc'
 import { toPoints } from '@/cam/geom'
 import type { CamPart } from '@/cam/types'
 import { buildCabinet, partOutline } from './construction/carcass'
@@ -27,6 +27,11 @@ export interface PartInstance {
   canRotate: boolean
   /** Custom part drawn in the part designer; its machining comes from its own operations. */
   cam?: CamPart
+  /** Through openings in the cut-size frame (custom parts). */
+  holes?: Vec2[][]
+  /** Nesting priority (higher first) and kit name. */
+  priority?: number
+  kit?: string
 }
 
 export interface CutListRow {
@@ -132,6 +137,7 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
     else if (Math.abs(material.thickness - cp.thickness) > EPS)
       warnings.push(`Custom part ${cp.name}: part is ${cp.thickness} mm but material ${material.code} is ${material.thickness} mm.`)
     const outline = toPoints(camOutline(cp).contour, 0.05).map((p) => ({ x: r3(p.x), y: r3(p.y) }))
+    const holes = partApertures(cp).map((c) => toPoints(c, 0.05).map((p) => ({ x: r3(p.x), y: r3(p.y) })))
     const part: Part = {
       key: `cam-${cp.id}`,
       name: cp.name,
@@ -164,6 +170,9 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
         outline,
         canRotate: !(material?.grain && cp.grain === 'length'),
         cam: cp,
+        ...(holes.length ? { holes } : {}),
+        ...(cp.priority ? { priority: cp.priority } : {}),
+        ...(cp.kit ? { kit: cp.kit } : {}),
       })
     }
   }

@@ -35,6 +35,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cutListCsv } from '@/core/cutlist'
+import { jobRemnants, updateOffcutStock } from '@/core/offcuts'
 import { formatLength } from '@/core/units'
 import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
@@ -133,7 +134,7 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
           {out && <CutListTab job={job} data={data} out={out} />}
         </TabsContent>
         <TabsContent value="nesting" className="min-h-0 flex-1 overflow-hidden">
-          {out && <NestingTab data={data} out={out} />}
+          {out && <NestingTab job={job} data={data} out={out} />}
         </TabsContent>
         <TabsContent value="output" className="min-h-0 flex-1 overflow-auto p-5">
           {out && <OutputTab job={job} data={data} out={out} />}
@@ -359,7 +360,8 @@ function SummaryTable({ title, rows }: { title: string; rows: string[][] }) {
   )
 }
 
-function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
+function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput }) {
+  const updateLibrary = useStore((s) => s.updateLibrary)
   const [sheetIdx, setSheetIdx] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const [showLabels, setShowLabels] = useState(true)
@@ -379,6 +381,19 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
   const sel = selected ? instances.get(selected) : null
   const selLabel = selected ? out.labels.find((l) => l.uid === selected) : null
   const sheetIssues = out.issues.filter((i) => i.sheet === sh.index)
+  const matNest = out.nest.materials?.find((m) => m.materialId === sh.materialId)
+  const selPl = selected ? sh.placements.find((p) => p.uid === selected) : undefined
+  const remnants = jobRemnants(out.nest)
+  const usedOffcuts = out.nest.sheets.filter((x) => x.offcutId).length
+  const saveOffcuts = () => {
+    let res = { used: 0, added: 0 }
+    updateLibrary((l) => {
+      const r = updateOffcutStock(l.offcuts ?? [], out.nest, job.number)
+      l.offcuts = r.offcuts
+      res = r
+    })
+    toast.success(`Offcut stock updated`, { description: `${res.added} remnant${res.added === 1 ? '' : 's'} added${res.used ? `, ${res.used} used offcut${res.used === 1 ? '' : 's'} taken out` : ''}.` })
+  }
 
   return (
     <div className="flex h-full flex-col lg:flex-row">
@@ -389,7 +404,10 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
             onClick={() => (setSheetIdx(i), setSelected(null))}
             className={cn('min-w-40 rounded-lg border p-2.5 text-left text-xs transition', i === sheetIdx ? 'border-stone-800 bg-stone-50' : 'hover:bg-muted/50')}
           >
-            <div className="font-semibold">Sheet {p.sheet.index}</div>
+            <div className="flex items-center justify-between font-semibold">
+              Sheet {p.sheet.index}
+              {p.sheet.offcutId && <span className="rounded bg-emerald-100 px-1 text-[10px] font-medium text-emerald-800">offcut</span>}
+            </div>
             <div className="font-mono text-[11px] text-muted-foreground">{p.materialCode}</div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-muted">
               <div className="h-full bg-amber-500" style={{ width: `${Math.round(p.sheet.utilization)}%` }} />
@@ -414,6 +432,8 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
             <span className="text-muted-foreground">
               Trim {data.settings.nesting.edgeTrim} · spacing {out.nest.spacing} mm
             </span>
+            {matNest && <span className="text-muted-foreground">{matNest.engine === 'shape' ? 'True-shape nest' : 'Rectangular nest'}</span>}
+            {matNest && matNest.splitKits.length > 0 && <span className="text-amber-700">Kits on more than one sheet: {matNest.splitKits.join(', ')}</span>}
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-1.5">
@@ -424,6 +444,16 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
             </label>
           </div>
         </div>
+        {(remnants.length > 0 || usedOffcuts > 0) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-emerald-50/60 px-4 py-1.5 text-xs text-emerald-900">
+            <span>
+              {remnants.length} offcut{remnants.length === 1 ? '' : 's'} left by this job{usedOffcuts ? ` · ${usedOffcuts} stock offcut${usedOffcuts === 1 ? '' : 's'} used` : ''}. Update the stock once the sheets are cut.
+            </span>
+            <Button size="xs" variant="outline" className="bg-background" onClick={saveOffcuts}>
+              Update offcut stock
+            </Button>
+          </div>
+        )}
         <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
           <div className="min-h-[320px] min-w-0 flex-1 p-4">
             <SheetView program={prog} instances={instances} spots={out.spots.get(sh.index) ?? []} showLabels={showLabels} showOps={showOps} selectedUid={selected} onSelect={setSelected} />
@@ -451,8 +481,14 @@ function NestingTab({ data, out }: { data: AppData; out: JobOutput }) {
                   <dd className="font-mono">{selLabel.edgeDiagram}</dd>
                   <dt className="text-muted-foreground">Cut order</dt>
                   <dd>{selLabel.cutOrder}</dd>
-                  <dt className="text-muted-foreground">Rotated</dt>
-                  <dd>{selLabel.rotated ? 'Yes (90°)' : 'No'}</dd>
+                  <dt className="text-muted-foreground">Turned</dt>
+                  <dd>{((selPl?.flip ? 180 : 0) + (selPl?.rotated ? 90 : 0)) || 'No'}{selPl && (selPl.flip || selPl.rotated) ? '°' : ''}</dd>
+                  {selPl?.inside && (
+                    <>
+                      <dt className="text-muted-foreground">Nested in</dt>
+                      <dd>#{instances.get(selPl.inside)?.no} (cut first)</dd>
+                    </>
+                  )}
                   <dt className="text-muted-foreground">Label</dt>
                   <dd>{selLabel.spot.fits ? `on part, ${selLabel.spot.rotation}°` : 'back face'}</dd>
                 </dl>

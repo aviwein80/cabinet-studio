@@ -4,7 +4,7 @@ import type { PartInstance } from '../cutlist'
 import { formatLength } from '../units'
 import { placementTransform, type SheetProgram } from '../machining'
 import type { JobOutput, LabelRecord } from '../pipeline'
-import type { Job, Library, UnitSystem } from '../types'
+import type { Job, Library, UnitSystem, Vec2 } from '../types'
 import { labelDims, type LabelSpot } from './placement'
 
 function code128Bars(text: string): string {
@@ -37,7 +37,7 @@ function cornerMark(doc: jsPDF, x: number, y: number, size: number, color: [numb
   doc.triangle(x, y, x + size, y, x, y + size, 'F')
 }
 
-function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem) {
+function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem, shape?: { outline: Vec2[]; holes: Vec2[][]; L: number; W: number }) {
   const ratio = l.finished.w / l.finished.l
   let bw = w
   let bh = w * ratio
@@ -52,7 +52,18 @@ function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number
   doc.setDrawColor(0)
   doc.setLineWidth(0.2)
   doc.setFillColor(235, 235, 235)
-  doc.rect(ox, oy, bw, bh, 'FD')
+  if (shape) {
+    // Custom part: its true outline and openings, part x to the right, y up.
+    const map = (p: Vec2): [number, number] => [ox + (p.x / shape.L) * bw, oy + bh - (p.y / shape.W) * bh]
+    const draw = (pts: Vec2[], style: 'FD' | 'S') => {
+      if (pts.length < 3) return
+      const m = pts.map(map)
+      doc.lines(m.slice(1).map((q, i) => [q[0] - m[i][0], q[1] - m[i][1]]), m[0][0], m[0][1], [1, 1], style, true)
+    }
+    draw(shape.outline, 'FD')
+    doc.setFillColor(255, 255, 255)
+    for (const hole of shape.holes) draw(hole, 'FD')
+  } else doc.rect(ox, oy, bw, bh, 'FD')
   doc.setLineWidth(1.4)
   // Part frame on the label: local x to the right, local y up. L1 = bottom, L2 = top, W1 = left, W2 = right.
   if (l.edges.L1) doc.line(ox, oy + bh, ox + bw, oy + bh)
@@ -148,7 +159,7 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.text(`S${l.sheetIndex}/${l.sheetCount}`, W - 3, 5.2, { align: 'right' })
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
-  doc.text(`cut ${l.cutOrder}`, W - 3, 9, { align: 'right' })
+  doc.text(`cut ${l.cutOrder}${l.copy ? `  ·  ${l.copy.n} of ${l.copy.of}` : ''}`, W - 3, 9, { align: 'right' })
   doc.setTextColor(0, 0, 0)
 
   doc.setFont('helvetica', 'bold')
@@ -172,7 +183,9 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.setFontSize(7)
   doc.text(edgeText ? `Edges: ${edgeText}` : 'Edges: none', 4, 43)
 
-  edgeDiagram(doc, l, 62, 13, 34, 20, units)
+  const inst = out.instances.find((i) => i.uid === l.uid)
+  const shape = inst?.cam ? { outline: inst.outline, holes: inst.holes ?? [], L: inst.cutLength, W: inst.cutWidth } : undefined
+  edgeDiagram(doc, l, 62, 13, 34, 20, units, shape)
   miniSheet(doc, out, l, 62, 35, 34, 14)
 
   const barY = H - 20

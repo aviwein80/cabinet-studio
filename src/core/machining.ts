@@ -3,13 +3,15 @@ import { partProgramOps } from '@/cam/mpr'
 import { generatePart, type Intent } from '@/cam/toolpath'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
-import { nestMaterial, type NestedSheet } from './nesting'
-import type { HDrillDir, Job, Library, MachineProfile, OpPurpose, ShopSettings, Tool, Vec2 } from './types'
+import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
+import type { HDrillDir, Job, Library, MachineProfile, NestSettings, OpPurpose, ShopSettings, Tool, Vec2 } from './types'
 
 export interface JobNest {
   sheets: NestedSheet[]
   unplaced: { uid: string; reason: string }[]
   spacing: number
+  /** Engine and kit result per material. */
+  materials?: { materialId: string; engine: 'rect' | 'shape'; strategy: string; splitKits: string[] }[]
 }
 
 export function cutoutTool(machine: MachineProfile): Tool | undefined {
@@ -20,8 +22,24 @@ export function partSpacing(machine: MachineProfile, settings: ShopSettings) {
   return (cutoutTool(machine)?.diameter ?? 12) + settings.nesting.extraSpacing
 }
 
+export const NEST_DEFAULTS: Required<Omit<NestSettings, 'edgeTrim' | 'extraSpacing' | 'allowRotation' | 'premill'>> = {
+  engine: 'auto',
+  nestInApertures: true,
+  keepKitsTogether: false,
+  kitByCabinet: false,
+  onionSkin: 0,
+  onionSkinMaxArea: 100_000,
+  offcutType: 'vertical',
+  offcutMinLength: 300,
+  offcutMinWidth: 300,
+  useOffcuts: false,
+}
+
+export const nestSettingsOf = (settings: ShopSettings) => ({ ...NEST_DEFAULTS, ...settings.nesting })
+
 export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings): JobNest {
   const spacing = partSpacing(machine, settings)
+  const ns = nestSettingsOf(settings)
   const byMaterial = new Map<string, PartInstance[]>()
   for (const inst of instances) {
     const list = byMaterial.get(inst.materialId) ?? []
@@ -30,6 +48,7 @@ export function nestJob(instances: PartInstance[], lib: Library, machine: Machin
   }
   const sheets: NestedSheet[] = []
   const unplaced: JobNest['unplaced'] = []
+  const materials: NonNullable<JobNest['materials']> = []
   const materialOrder = [...byMaterial.keys()].sort((a, b) => {
     const ma = lib.materials.find((m) => m.id === a)?.code ?? a
     const mb = lib.materials.find((m) => m.id === b)?.code ?? b
@@ -42,20 +61,38 @@ export function nestJob(instances: PartInstance[], lib: Library, machine: Machin
       for (const i of list) unplaced.push({ uid: i.uid, reason: `Material ${materialId} not in library` })
       continue
     }
-    const res = nestMaterial(
-      list.map((i) => ({ uid: i.uid, length: i.cutLength, width: i.cutWidth, canRotate: i.canRotate })),
-      {
-        sheetLength: material.sheetLength,
-        sheetWidth: material.sheetWidth,
-        edgeTrim: settings.nesting.edgeTrim,
-        spacing,
-        allowRotation: settings.nesting.allowRotation,
-      },
-    )
+    const res = nestMaterial(list.map((i) => nestPartOf(i, ns)), {
+      sheetLength: material.sheetLength,
+      sheetWidth: material.sheetWidth,
+      edgeTrim: settings.nesting.edgeTrim,
+      spacing,
+      allowRotation: settings.nesting.allowRotation,
+      engine: ns.engine,
+      keepKits: ns.keepKitsTogether,
+      offcuts: ns.useOffcuts ? (lib.offcuts ?? []).filter((o) => o.materialId === materialId) : [],
+      offcutType: ns.offcutType,
+      offcutMin: { length: ns.offcutMinLength, width: ns.offcutMinWidth },
+    })
     for (const sh of res.sheets) sheets.push({ ...sh, index: sheets.length + 1, materialId, thickness: material.thickness })
     unplaced.push(...res.unplaced)
+    materials.push({ materialId, engine: res.engine, strategy: res.strategy, splitKits: res.splitKits })
   }
-  return { sheets, unplaced, spacing }
+  return { sheets, unplaced, spacing, materials }
+}
+
+export function nestPartOf(i: PartInstance, ns: ReturnType<typeof nestSettingsOf>): NestPart {
+  const kit = i.kit ?? (ns.kitByCabinet && i.cabinetId ? `Cabinet ${i.cabinetNumber}` : undefined)
+  return {
+    uid: i.uid,
+    length: i.cutLength,
+    width: i.cutWidth,
+    canRotate: i.canRotate,
+    ...(i.outline.length >= 3 ? { outline: i.outline } : {}),
+    ...(ns.nestInApertures && i.holes?.length ? { holes: i.holes } : {}),
+    shape: i.cam ? `cam-${i.cam.id}-${i.cam.updatedAt}` : undefined,
+    ...(i.priority ? { priority: i.priority } : {}),
+    ...(kit ? { kit } : {}),
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -125,6 +162,8 @@ export interface Contour extends Base {
   tool: Tool | null
   /** Native lines and arcs (custom parts). When present the writer uses these instead of `points`. */
   segs?: Seg[]
+  /** Final pass through an onion skin left by the first cut-out pass. */
+  skin?: boolean
 }
 
 /** A custom-part operation in sheet coordinates, written as native woodWOP macros. */
@@ -149,6 +188,13 @@ export interface SheetProgram {
 export interface ProgramOptions {
   /** Write custom-part machining (feature flag camMprOutput). Off: only the cut-out is written. */
   camOutput?: boolean
+  /** Small parts: the cut-out leaves `thickness` and a last pass at the end of the sheet cuts it. */
+  onionSkin?: { thickness: number; maxArea: number }
+}
+
+function partAreaOf(inst: PartInstance | undefined) {
+  if (!inst) return Infinity
+  return inst.outline.length >= 3 ? Math.abs(polygonArea(inst.outline)) : inst.cutLength * inst.cutWidth
 }
 
 const safeName = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
@@ -167,15 +213,20 @@ export function findPocketTool(machine: MachineProfile, width: number, depth: nu
   return fits[0] ?? null
 }
 
-/** Part-local -> sheet transform for a placement. Rotation is 90 degrees counter-clockwise. */
-export function placementTransform(inst: PartInstance, pl: { x: number; y: number; rotated: boolean }) {
-  const pt = (x: number, y: number): Vec2 =>
-    pl.rotated ? { x: r3(pl.x + (inst.cutWidth - y)), y: r3(pl.y + x) } : { x: r3(pl.x + x), y: r3(pl.y + y) }
-  const dir = (d: HDrillDir): HDrillDir => {
+/** Part-local -> sheet transform for a placement: optional half turn, then a quarter turn counter-clockwise. */
+export function placementTransform(inst: Pick<PartInstance, 'cutLength' | 'cutWidth'>, pl: { x: number; y: number; rotated: boolean; flip?: boolean }) {
+  const pt = (x0: number, y0: number): Vec2 => {
+    const x = pl.flip ? inst.cutLength - x0 : x0
+    const y = pl.flip ? inst.cutWidth - y0 : y0
+    return pl.rotated ? { x: r3(pl.x + (inst.cutWidth - y)), y: r3(pl.y + x) } : { x: r3(pl.x + x), y: r3(pl.y + y) }
+  }
+  const dir = (d0: HDrillDir): HDrillDir => {
+    const d = pl.flip ? ({ XP: 'XM', XM: 'XP', YP: 'YM', YM: 'YP' } as const)[d0] : d0
     if (!pl.rotated) return d
     return ({ XP: 'YP', XM: 'YM', YP: 'XM', YM: 'XP' } as const)[d]
   }
-  return { pt, dir }
+  const angle = (pl.flip ? 180 : 0) + (pl.rotated ? 90 : 0)
+  return { pt, dir, angle }
 }
 
 function startAtLongestEdge(poly: Vec2[]) {
@@ -220,11 +271,11 @@ export function buildSheetProgram(
   for (const pl of sheet.placements) {
     const inst = instances.get(pl.uid)
     if (!inst) continue
-    const { pt, dir } = placementTransform(inst, pl)
+    const { pt, dir, angle } = placementTransform(inst, pl)
     const base = { partUid: inst.uid, partNo: inst.no }
     if (inst.cam) {
       const paths = generatePart(inst.cam, machine)
-      const tf = { pt, dir, rotated: pl.rotated }
+      const tf = { pt, dir, rotated: pl.rotated, angle }
       const all = partProgramOps(inst.cam, paths, tf, inst.uid, inst.no, machine, true)
       const backHoles = paths.reduce((n, tp) => n + tp.intents.filter((it) => it.k === 'vdrill' && it.back).length, 0)
       const machining = all.filter((o) => o.kind === 'cam')
@@ -340,7 +391,21 @@ export function buildSheetProgram(
   grooves.sort((a, b) => rank(a) - rank(b))
   const ops: ProgramOp[] = [...drills]
   if (machine.hasHorizontalDrillUnit) ops.push(...hdrills)
-  ops.push(...grooves, ...camOps.sort((a, b) => rank(a) - rank(b)), ...contours)
+  ops.push(...grooves)
+  // A part in another part's cut-out is finished before that cut-out frees the slug under it.
+  const inner = new Set(sheet.placements.filter((p) => p.inside).map((p) => p.uid))
+  for (const p of sheet.placements)
+    if (inner.has(p.uid)) ops.push(...camOps.filter((o) => o.partUid === p.uid), ...contours.filter((c) => c.partUid === p.uid))
+  ops.push(...camOps.filter((o) => !inner.has(o.partUid)).sort((a, b) => rank(a) - rank(b)))
+  const outer = contours.filter((c) => !inner.has(c.partUid))
+  const skin = opts.onionSkin && opts.onionSkin.thickness > 0 ? opts.onionSkin : null
+  const skinned = new Set(
+    skin
+      ? sheet.placements.filter((p) => !inner.has(p.uid) && !sheet.placements.some((q) => q.inside === p.uid) && partAreaOf(instances.get(p.uid)) < skin.maxArea).map((p) => p.uid)
+      : [],
+  )
+  for (const c of outer) ops.push(skinned.has(c.partUid) ? { ...c, za: r3(skin!.thickness) } : c)
+  for (const c of outer) if (skinned.has(c.partUid)) ops.push({ ...c, skin: true })
   return {
     name: sheetProgramName(job, sheet.index, materialCode),
     sheet,

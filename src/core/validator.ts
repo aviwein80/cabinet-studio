@@ -5,7 +5,9 @@
 import { boxOf } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
-import { cutoutTool, type JobNest, type SheetProgram } from './machining'
+import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type Paths64 } from 'clipper2-ts'
+import { cutoutTool, placementTransform, type JobNest, type SheetProgram } from './machining'
+import type { Placement } from './nesting'
 import type { Library, MachineProfile, ShopSettings } from './types'
 
 export type Severity = 'error' | 'warning' | 'info'
@@ -96,18 +98,24 @@ export function validateJob(
         const b = sh.placements[j]
         const gapX = Math.max(b.x - (a.x + a.dx), a.x - (b.x + b.dx))
         const gapY = Math.max(b.y - (a.y + a.dy), a.y - (b.y + b.dy))
-        const gap = Math.max(gapX, gapY)
+        const boxGap = Math.max(gapX, gapY)
+        if (boxGap >= spacing - EPS) continue
         const na = byUid.get(a.uid)?.no
         const nb = byUid.get(b.uid)?.no
-        if (gap < -EPS)
-          add({ severity: 'error', code: 'OVERLAP', sheet: sheetNo, partNo: na, message: `Parts #${na} and #${nb} overlap.` })
-        else if (gap < spacing - EPS)
+        const ia = byUid.get(a.uid)
+        const ib = byUid.get(b.uid)
+        const shaped = ia && ib && (!isRectInst(ia) || !isRectInst(ib))
+        const close = shaped ? shapeClash(regionOf(ia, a), regionOf(ib, b), spacing) : boxGap < -EPS ? 'overlap' : 'close'
+        if (close === 'overlap') add({ severity: 'error', code: 'OVERLAP', sheet: sheetNo, partNo: na, message: `Parts #${na} and #${nb} overlap.` })
+        else if (close === 'close')
           add({
             severity: 'error',
             code: 'SPACING',
             sheet: sheetNo,
             partNo: na,
-            message: `Parts #${na} and #${nb} are ${fmt(gap)} mm apart; the cut-out tool needs ${fmt(spacing)} mm.`,
+            message: shaped
+              ? `Parts #${na} and #${nb} are closer than ${fmt(spacing)} mm; the cut-out tool needs that much room.`
+              : `Parts #${na} and #${nb} are ${fmt(boxGap)} mm apart; the cut-out tool needs ${fmt(spacing)} mm.`,
           })
       }
     }
@@ -243,3 +251,32 @@ export const countBySeverity = (issues: Issue[]) => ({
   warning: issues.filter((i) => i.severity === 'warning').length,
   info: issues.filter((i) => i.severity === 'info').length,
 })
+
+const K = 100
+
+const isRectInst = (i: PartInstance) => {
+  if (i.holes?.length) return false
+  let a = 0
+  const o = i.outline
+  for (let k = 0, j = o.length - 1; k < o.length; j = k++) a += (o[j].x + o[k].x) * (o[j].y - o[k].y)
+  return o.length < 3 || Math.abs(Math.abs(a / 2) - i.cutLength * i.cutWidth) <= 0.002 * i.cutLength * i.cutWidth
+}
+
+/** Part outline less its openings, on the sheet, in 0.01 mm units. */
+function regionOf(inst: PartInstance, pl: Placement): Paths64 {
+  const { pt } = placementTransform(inst, pl)
+  const ring = (pts: { x: number; y: number }[]) => pts.map((p) => pt(p.x, p.y)).map((q) => ({ x: Math.round(q.x * K), y: Math.round(q.y * K) }))
+  const outline = inst.outline.length >= 3 ? inst.outline : [{ x: 0, y: 0 }, { x: inst.cutLength, y: 0 }, { x: inst.cutLength, y: inst.cutWidth }, { x: 0, y: inst.cutWidth }]
+  const signed = (r: Paths64[number], positive: boolean) => {
+    let a = 0
+    for (let k = 0, j = r.length - 1; k < r.length; j = k++) a += (r[j].x + r[k].x) * (r[j].y - r[k].y)
+    return (a < 0) === positive ? r : [...r].reverse()
+  }
+  return [signed(ring(outline), true), ...(inst.holes ?? []).map((h) => signed(ring(h), false))]
+}
+
+function shapeClash(a: Paths64, b: Paths64, spacing: number): 'overlap' | 'close' | null {
+  if (areaPaths(intersect(a, b, FillRule.EvenOdd)) > K * K) return 'overlap'
+  const grow = (p: Paths64) => inflatePaths(p, ((spacing - 0.05) / 2) * K, JoinType.Round, EndType.Polygon)
+  return areaPaths(intersect(grow(a), grow(b), FillRule.NonZero)) > 1 ? 'close' : null
+}

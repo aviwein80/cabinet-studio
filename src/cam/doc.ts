@@ -4,7 +4,7 @@
  */
 import { nanoid } from 'nanoid'
 import { strokeText } from './font'
-import { area, boxOf, circle, type Contour, fitPoints, type P, polyline, pt, rect, transform, type Mat } from './geom'
+import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, polyline, pt, rect, transform, type Mat } from './geom'
 import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
 
 export const CAM_FILE_VERSION = 1
@@ -154,6 +154,31 @@ export function partOutline(part: CamPart): { entity: Entity | null; contour: Co
       }
   }
   return best ? { entity: best.entity, contour: best.contour } : { entity: null, contour: rect(0, 0, part.length, part.width) }
+}
+
+/**
+ * Openings cut right through the part (through profiles on the inside or on the line of a
+ * closed shape inside the outline). Other parts may nest in them; the slug is waste.
+ */
+export function partApertures(part: CamPart): Contour[] {
+  const outline = partOutline(part)
+  const outer = Math.abs(area(outline.contour))
+  const out: Contour[] = []
+  const seen = new Set<string>()
+  for (const op of part.ops) {
+    if (op.kind !== 'profile' || !op.levels.through || op.side === 'outside') continue
+    for (const id of op.geometry) {
+      if (id === outline.entity?.id || seen.has(id)) continue
+      const e = part.entities.find((x) => x.id === id)
+      if (!e || e.face !== 1) continue
+      seen.add(id)
+      for (const c of entityContours(e)) {
+        const a = Math.abs(area(c))
+        if (c.closed && a > 1 && a < outer && pointInContour(outline.contour, c.segs[0].a)) out.push(c)
+      }
+    }
+  }
+  return out
 }
 
 /** Fit the work volume to the outline and move everything so the outline starts at (0, 0). */

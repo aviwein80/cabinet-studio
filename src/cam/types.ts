@@ -68,6 +68,10 @@ export interface CamPart {
   outlineId?: string
   /** Parametric door the geometry was generated from. */
   door?: { styleId: string; values: Record<string, number> }
+  /** Nesting priority: higher numbers go on earlier sheets. */
+  priority?: number
+  /** Parts sharing a kit name are kept on one sheet when they fit. */
+  kit?: string
   notes?: string
   source?: string
   /** Keep ops on unchanged geometry ids when imports refresh. */

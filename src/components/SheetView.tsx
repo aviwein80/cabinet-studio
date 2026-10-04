@@ -60,6 +60,15 @@ export function SheetView({
             />
           )
         })}
+        {s.placements.map((pl) => {
+          const inst = instances.get(pl.uid)
+          if (!inst?.holes?.length) return null
+          const { pt } = placementTransform(inst, pl)
+          return inst.holes.map((h, k) => <polygon key={`${pl.uid}-h${k}`} points={h.map((p) => pt(p.x, p.y)).map((p) => `${p.x},${p.y}`).join(' ')} fill="#f7f3ea" stroke="#475569" strokeWidth={2} pointerEvents="none" />)
+        })}
+        {(s.remnants ?? []).map((r, i) => (
+          <rect key={`rem${i}`} x={r.x} y={r.y} width={r.length} height={r.width} fill="#dcfce7" fillOpacity={0.45} stroke="#15803d" strokeWidth={3} strokeDasharray="18 10" pointerEvents="none" />
+        ))}
         {showOps &&
           program.ops.map((op, i) => {
             if (op.kind === 'vdrill')
@@ -107,6 +116,11 @@ export function SheetView({
           </text>
         )
       })}
+      {(s.remnants ?? []).map((r, i) => (
+        <text key={`remt${i}`} x={r.x + r.length / 2} y={s.sheetWidth - (r.y + r.width / 2)} textAnchor="middle" fontSize={fontBase * 0.9} fill="#15803d" fontWeight={600} pointerEvents="none" fontFamily="Geist Variable, sans-serif">
+          Offcut {Math.round(r.length)} × {Math.round(r.width)}
+        </text>
+      ))}
       <text x={130} y={s.sheetWidth + 30} fontSize={fontBase * 0.8} fill="#dc2626" fontFamily="Geist Variable, sans-serif">
         X
       </text>

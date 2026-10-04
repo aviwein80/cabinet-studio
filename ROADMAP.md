@@ -5,6 +5,22 @@ Proving MPR output on the N-200, and replacing the placeholder tool table, are p
 from template to MPR, labels and sheet map still works end to end. It has **not** been run through
 woodWOP or on the N-200.
 
+## Decisions (October 2026)
+
+- **DWG import: skipped for now.** DXF only. DWG would need the commercial ODA SDK.
+- **AI spec-sheet reader: built.** It covers library hardware (manufacturer PDFs, scans and
+  photos to a drilling pattern plus item data) and full custom pieces (a customer's spec or
+  drawing to an editable part). Every value cites its source, unread values stay blank, and
+  nothing is saved, placed or nested until someone ticks that they checked it. Default provider:
+  Anthropic Claude Sonnet 4.5, with the offline text reader as the fallback.
+- **Cabinet-side boring from the pattern library.** Plate and TANDEM runner screws now come from
+  the newest approved library pattern linked to the item, else the built-in pattern with the
+  library item's numbers. Hinge cups still use each cabinet's door values.
+
+Next for the reader: machine edge grooves and edge profiles (needs the aggregate or a saw step),
+underside milling in the turned-over program, and a per-shop "likely features" list so the
+reader recognises the shop's own hardware codes.
+
 ## Phase 0: prove the output on the real machine (paused)
 
 1. Replace the placeholder tool table with the real N-200 tools: export from Tool Manager, then

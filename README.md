@@ -78,7 +78,7 @@ export checker. Tool numbers are still placeholders.
   move, copy, mirror, array, offset, fillet (including T-bone relief), trim, extend, and unite,
   subtract or intersect (arcs are kept). Snaps, typed coordinates, layers, undo, and DXF in and out.
 - **Import**: DXF (join tolerance, tangent-only join, combine, units, blocks, splines) and PDF or
-  Illustrator vectors. DWG needs the commercial ODA SDK and is not included.
+  Illustrator vectors. DXF only: DWG is skipped for now (it needs the commercial ODA SDK).
 - **Machining**: profile (sides, leads, tabs, multiple passes), pocket (contour, zig-zag, spiral,
   islands, ramps), drill and peck, engrave, V-carve, saw groove and profiled sweep. **Layer rules**
   machine an imported drawing from its layer names.
@@ -98,20 +98,37 @@ export checker. Tool numbers are still placeholders.
 - **Drilling patterns** (Library → Drilling patterns): verified Salice and Blum patterns come
   built from the published numbers below. Patterns can also come from manufacturer DXF (circles,
   with depth in the layer name such as `DRILL_D12`) or CSV (`pattern,manufacturer,x,y,diameter,depth,face,units`).
-  The **PDF spec-sheet reader** drafts a pattern from the sheet's text and quotes the line and page
-  behind every number it used. Every import is a draft, and **nothing is saved until a named
-  person ticks that they checked every hole and approves it**. The part designer's **Hardware**
-  button places only verified or approved patterns.
-- **AI spec-sheet reader (optional)**: under **Settings → Spec-sheet reader**, choose OpenAI,
-  Anthropic, Google Gemini or xAI Grok, or keep the offline built-in reader. Each provider has its
-  own API key and an editable vision model (defaults `gpt-4.1`, `claude-sonnet-4-5`,
-  `gemini-2.5-flash`, `grok-4`). The PDF's pages are rendered and sent to that provider. Holes
-  the model returns keep their page and quote, and quotes missing from the PDF text are flagged.
-  The result is a draft like any other import. Keys come from each provider's developer console;
-  chat subscriptions, including Cursor's, can't be used. Keys are kept on this computer only, in
-  `secrets/ai-keys.json` under the app's data folder, never in the shop file or its backups. The
-  desktop app encrypts them with the system keychain and makes the calls from the main process.
-  The browser preview keeps them unencrypted in browser storage.
+  **Draft from spec sheet** reads a manufacturer PDF, scan or photo and drafts the pattern
+  plus the item's library data (part number, category, cup / plate / runner / screw numbers).
+  The **Hardware** button in the part designer places only verified or approved patterns, and an
+  approved pattern linked to the plate or a TANDEM runner also drives the cabinet-side boring
+  (newest approved pattern wins; library item edits flow through; a job's kept values still win).
+- **Draft from customer drawing** (Custom parts page, also in a job's Custom parts tab): a
+  customer's spec, drawing, scan or photo of one piece, such as a sliding door, becomes a complete
+  editable part: outline (square, rounded, arched or polygon), size and quantity, material,
+  edge treatments, grooves and dados (a groove that matches a router bit is cut in one pass with
+  it), holes, cut-outs and recesses, and hardware bored from approved library patterns. Edge
+  grooves, edge profiles and underside milling are drafted into the notes with a warning, since
+  they are not machined from this side.
+- **Safety rules for every draft** (hardware and parts): every value cites its page, the printed
+  text, and a box on the page; values the reader can't find stay **blank**, never guessed;
+  quotes missing from the PDF's text layer are flagged. The review dialog shows the source page
+  beside the drafted geometry, and clicking a value's source chip highlights its box. **Nothing
+  can be saved, placed, added to a job or nested until a named person ticks that they checked
+  it**: drafts are refused by the library, the part store and the cut list.
+- **Readers**: under **Settings → Spec-sheet reader**, choose a vision model provider: OpenAI,
+  **Anthropic (default, Claude Sonnet 4.5)**, Google Gemini or xAI Grok. Each provider has its
+  own API key and an editable model (defaults `gpt-4.1`, `claude-sonnet-4-5`,
+  `gemini-2.5-flash`, `grok-4`). PDF pages are rendered, photos are scaled to 2000 px, and the
+  images are sent to that provider. Without internet or a key, the **offline built-in reader**
+  is used: it reads numbers printed as text (hole sizes, depths, spacing, overall size,
+  thickness, corner radius, quantity, groove sizes) and leaves the rest blank. Scans and photos
+  need a provider. Keys come from each provider's developer console; chat subscriptions,
+  including Cursor's, can't be used. Keys are kept on this computer only, in
+  `secrets/ai-keys.json` under the app's data folder, never in the shop file, its backups or the
+  repository. The desktop app encrypts them with the system keychain and makes the calls from
+  the main process. The browser preview keeps them unencrypted in browser storage.
+  Samples to try: `examples/specs/top-roller-tr50.pdf` and `examples/specs/sliding-door-cohen.pdf`.
 - **Batch runs**: drop a part-list CSV (cabinet-side parts, DXF drawings, or doors) into an inbox
   folder. Nested MPRs, labels, sheet maps, a cut list, a BOM and a report appear in the outbox
   without touching the UI. A list with validator errors is reported and not exported. Cancel

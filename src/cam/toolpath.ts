@@ -93,7 +93,7 @@ export interface GenContext {
   machine: MachineProfile
 }
 
-const RAPID_RATE = 40000
+export const RAPID_RATE = 40000
 
 // ---------------------------------------------------------------------------------------------
 // Move builder

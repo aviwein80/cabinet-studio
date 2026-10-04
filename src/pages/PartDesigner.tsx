@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
+import { ArrowLeft, CirclePlay, Download, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
@@ -24,6 +24,7 @@ import { PartCanvas, type Display } from './part/Canvas'
 import { hitEntity } from './part/hit'
 import { OpsPanel } from './part/OpsPanel'
 import { ProgramDialog } from './part/ProgramDialog'
+import { SimulateDialog } from './part/SimulateDialog'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
@@ -90,6 +91,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [nodeSeg, setNodeSeg] = useState<{ id: string; seg: number } | null>(null)
   const [fitKey, setFitKey] = useState(0)
   const [programOpen, setProgramOpen] = useState(false)
+  const [simOpen, setSimOpen] = useState(false)
   const [display, setDisplay] = useState<Display>({ paths: true, arrows: false, grid: true, snapOn: true, ortho: false, modes: new Set<SnapMode>(ALL_SNAPS.filter((m) => m !== 'nearest')), gridSize: units === 'in' ? 25.4 / 4 : 5 })
   const promptRef = useRef<HTMLInputElement>(null)
   const first = useRef(true)
@@ -313,6 +315,11 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
           {feat.camMachining && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setSimOpen(true)}>
+              <CirclePlay className="size-3.5" /> Simulate
+            </Button>
+          )}
+          {feat.camMachining && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setProgramOpen(true)}>
               <FileCode2 className="size-3.5" /> Program
             </Button>
@@ -353,6 +360,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
         materialCode={data!.library.materials.find((m) => m.id === part.materialId)?.code ?? 'MATERIAL'}
         outputOn={feat.camMprOutput}
       />
+      <SimulateDialog open={simOpen} onOpenChange={setSimOpen} part={part} toolpaths={toolpaths} units={units} color={data!.library.materials.find((m) => m.id === part.materialId)?.color} />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <nav aria-label="Commands" className="flex shrink-0 gap-3 overflow-x-auto border-b border-white/10 bg-[#15171c] p-2 md:w-[124px] md:flex-col md:gap-2 md:overflow-y-auto md:border-r md:border-b-0">

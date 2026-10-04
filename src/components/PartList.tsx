@@ -1,4 +1,4 @@
-import { Copy, FileInput, FileUp, MoreHorizontal, PenTool, Plus, Trash2 } from 'lucide-react'
+import { Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -10,7 +10,10 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { formatLength } from '@/core/units'
 import type { Material, UnitSystem } from '@/core/types'
+import { DoorDialog } from '@/components/DoorDialog'
 import { DrawingImportDialog } from '@/components/DrawingImportDialog'
+import { useStore } from '@/app/store'
+import { featuresOf } from '@/core/features'
 import { contourPath } from '@/pages/part/hit'
 
 export function PartThumb({ part, className }: { part: CamPart; className?: string }) {
@@ -59,6 +62,8 @@ export function PartList({
 }) {
   const file = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
+  const [doors, setDoors] = useState(false)
+  const doorsOn = useStore((s) => featuresOf(s.data?.settings).camParametric)
   const create = () => {
     const p = newPart({ name: `Part ${parts.length + 1}` })
     onSave(p)
@@ -83,9 +88,24 @@ export function PartList({
         <Button variant="outline" onClick={() => setImporting(true)}>
           <FileInput /> Import drawing
         </Button>
+        {doorsOn && (
+          <Button variant="outline" onClick={() => setDoors(true)}>
+            <DoorOpen /> Doors
+          </Button>
+        )}
         <Button variant="outline" onClick={() => file.current?.click()}>
           <FileUp /> Open part file
         </Button>
+        {doorsOn && (
+          <DoorDialog
+            open={doors}
+            onOpenChange={setDoors}
+            onCreate={(ps) => {
+              for (const p of ps) onSave(p)
+              toast.success(`${ps.length} door design${ps.length === 1 ? '' : 's'} added`, { description: `${ps.reduce((n, p) => n + p.qty, 0)} doors in total` })
+            }}
+          />
+        )}
         <DrawingImportDialog
           open={importing}
           onOpenChange={setImporting}

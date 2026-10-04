@@ -11,6 +11,10 @@ import { Input } from '@/components/ui/input'
 import type { Material, UnitSystem } from '@/core/types'
 import { formatLength } from '@/core/units'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { useStore } from '@/app/store'
+import { doorStylesOf, rebuildDoor } from '@/cam/doors'
+import { recipesOf } from '@/cam/rules'
 
 const LAYER_COLORS = ['#e2e8f0', '#38bdf8', '#f59e0b', '#a78bfa', '#34d399', '#f472b6', '#fb7185', '#facc15']
 
@@ -123,6 +127,7 @@ export function PropertiesPanel({
           Outline: {outline.entity ? `${fmt(boxOf([outline.contour]).maxX - boxOf([outline.contour]).minX)} × ${fmt(boxOf([outline.contour]).maxY - boxOf([outline.contour]).minY)}` : 'none drawn (the work rectangle is used)'}
         </p>
       </section>
+      {part.door && <DoorSection part={part} onChange={onChange} />}
       <section className="px-4 py-3">
         <h4 className="mb-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">Variables</h4>
         <p className="mb-2 text-[11px] leading-snug text-stone-500">Use them in any typed value, e.g. “W/2 - rail”. L, W and T are the part size.</p>
@@ -159,6 +164,31 @@ export function PropertiesPanel({
         </div>
       </section>
     </div>
+  )
+}
+
+function DoorSection({ part, onChange }: { part: CamPart; onChange: (p: CamPart) => void }) {
+  const lib = useStore((s) => s.data?.library)
+  const styles = lib ? doorStylesOf(lib) : []
+  const style = styles.find((s) => s.id === part.door?.styleId)
+  const rebuild = () => {
+    if (!lib) return
+    const r = rebuildDoor(part, styles, recipesOf(lib))
+    if (!r) return void toast.error('This door style is no longer in the library.')
+    onChange(r.part)
+    if (r.warnings.length) toast.warning('Door rebuilt with warnings', { description: r.warnings.join(' ') })
+    else toast.success('Door rebuilt from its variables')
+  }
+  return (
+    <section className="border-b border-white/10 px-4 py-3">
+      <h4 className="mb-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">Door</h4>
+      <p className="mb-2 text-[11px] leading-snug text-stone-500">
+        {style ? `${style.name} style.` : 'Style not found.'} Change W, H or the style variables below, then rebuild. Hand edits to the outline, field and hardware are replaced.
+      </p>
+      <Button size="sm" variant="outline" className="h-7 border-white/15 bg-transparent text-xs" onClick={rebuild} disabled={!style}>
+        Rebuild from variables
+      </Button>
+    </section>
   )
 }
 

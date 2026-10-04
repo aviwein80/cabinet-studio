@@ -1,3 +1,4 @@
+import { modelFootprint } from '@/cam/mesh/place'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { moveNode, nodesOf } from '@/cam/cad'
 import { entityContours, layerOf } from '@/cam/doc'
@@ -320,6 +321,12 @@ export function PartCanvas(props: CanvasProps) {
             </>
           )}
           <rect x={0} y={0} width={shown.length} height={shown.width} fill="#3a3226" fillOpacity={0.55} stroke="#8a7350" strokeDasharray="6 4" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          {(shown.models ?? [])
+            .filter((m) => m.visible)
+            .map((m) => {
+              const f = modelFootprint(m)
+              return <rect key={m.id} x={f.x} y={f.y} width={f.dx} height={f.dy} fill="#c084fc" fillOpacity={0.08} stroke="#c084fc" strokeDasharray="2 3" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            })}
           <path d={`M0 0L${40 / view.s} 0`} stroke="#ef4444" strokeWidth={2} vectorEffect="non-scaling-stroke" />
           <path d={`M0 0L0 ${40 / view.s}`} stroke="#22c55e" strokeWidth={2} vectorEffect="non-scaling-stroke" />
 

@@ -39,7 +39,7 @@ export async function simplifyMesh(mesh: Mesh, target: SimplifyTarget, work?: Wo
   // Open edges stay where they are, so a relief keeps its boundary and joins stay closed.
   const flags: ('LockBorder' | 'ErrorAbsolute')[] = ['LockBorder', 'ErrorAbsolute']
   const run = (count: number, err: number) => rebuild({ positions: mesh.positions, indices: S.simplify(mesh.indices, mesh.positions, 3, count, err, flags)[0] }).mesh
-  const measure = (m: Mesh, from: number, span: number) => meshDeviation(mesh, m, { work: { isCancelled: work?.isCancelled, progress: (f, n) => work?.progress?.(from + span * f, n) } })
+  const measure = (m: Mesh, from: number, span: number, samples?: number) => meshDeviation(mesh, m, { samples, work: { isCancelled: work?.isCancelled, progress: (f, n) => work?.progress?.(from + span * f, n) } })
 
   if (target.k === 'percent') {
     const out = run(Math.max(3, Math.floor((before * Math.max(0, Math.min(100, target.percent))) / 100) * 3), Number.MAX_VALUE)
@@ -48,20 +48,41 @@ export async function simplifyMesh(mesh: Mesh, target: SimplifyTarget, work?: Wo
     const d = measure(out, 0.5, 0.5)
     return { mesh: out, before, after: triCount(out), deviation: d.max, meanDeviation: d.mean }
   }
-  // Tolerance: the simplifier's own error estimate is not a distance guarantee, so measure the
-  // result and tighten until the measured deviation is within the limit (at most 6 tries).
+  // Tolerance: the simplifier's own error setting is not a distance guarantee (it can move a
+  // surface even at 0), so every candidate is measured. First try the tolerance as the error
+  // limit; if the measured deviation is too big, search for the smallest facet count whose
+  // measured deviation is within the limit (the cheapest collapses go first, so fewer
+  // collapses never move the surface more).
   const tol = Math.max(0, target.mm)
-  let err = tol
-  for (let i = 0; i < 6; i++) {
+  const steps = 9
+  let k = 0
+  // Search steps measure a sample; the result is measured in full before it is returned.
+  const tryOut = (count: number, err: number) => {
     checkCancel(work?.isCancelled)
-    const out = run(0, err)
-    const d = measure(out, (i / 6) * 0.95, 0.95 / 6)
-    if (d.max <= tol || i === 5) {
-      work?.progress?.(1, 'Done')
-      if (d.max > tol) return { mesh, before, after: before, deviation: 0, meanDeviation: 0 }
-      return { mesh: out, before, after: triCount(out), deviation: d.max, meanDeviation: d.mean }
-    }
-    err *= Math.max(0.2, Math.min(0.8, (tol / d.max) * 0.9))
+    const out = run(count, err)
+    const d = measure(out, (k / (steps + 1)) * 0.95, 0.95 / (steps + 1), 60_000)
+    k++
+    return { out, d }
   }
-  return { mesh, before, after: before, deviation: 0, meanDeviation: 0 }
+  const verified = (r: { out: Mesh }) => {
+    const d = measure(r.out, 0.95, 0.05)
+    return d.max <= tol ? { mesh: r.out, before, after: triCount(r.out), deviation: d.max, meanDeviation: d.mean } : null
+  }
+  const first = tryOut(0, tol)
+  const ok = first.d.max <= tol ? verified(first) : null
+  if (ok) return ok
+  let lo = triCount(first.out)
+  let hi = before
+  let best: { out: Mesh; d: { max: number; mean: number } } | null = null
+  while (k < steps && hi - lo > Math.max(16, before * 0.01)) {
+    const mid = Math.round((lo + hi) / 2)
+    const r = tryOut(mid * 3, Number.MAX_VALUE)
+    if (r.d.max <= tol) {
+      hi = triCount(r.out)
+      best = r
+    } else lo = mid
+  }
+  const result = best ? verified(best) : null
+  work?.progress?.(1, 'Done')
+  return result ?? { mesh, before, after: before, deviation: 0, meanDeviation: 0 }
 }

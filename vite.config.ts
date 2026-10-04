@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' blob: data: https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.x.ai"
+const CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' blob: data: https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.x.ai"
 
 /** Production-only CSP: the dev server needs inline scripts for React refresh. */
 const csp = (): Plugin => ({

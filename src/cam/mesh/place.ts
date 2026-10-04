@@ -86,6 +86,19 @@ export function placedBounds(model: Pick<ModelRef, 'place'>, size: [number, numb
   return { min: [x, y, z - size[2]], max: [x + size[0], y + size[1], z] }
 }
 
+/**
+ * Footprint of a placed model from its stored size alone (no mesh needed): exact when the turn
+ * about Z is a multiple of 90 degrees, otherwise the box around the turned bounding box.
+ */
+export function modelFootprint(model: Pick<ModelRef, 'place' | 'size'>): { x: number; y: number; dx: number; dy: number; top: number; bottom: number } {
+  const [sx, sy, sz] = model.size
+  const corners: number[] = []
+  for (let i = 0; i < 8; i++) corners.push(i & 1 ? sx : 0, i & 2 ? sy : 0, i & 4 ? sz : 0)
+  const b = meshBounds({ positions: oriented({ positions: Float32Array.from(corners), indices: new Uint32Array(0) }, model.place) })
+  const [x, y, z] = model.place.at
+  return { x, y, dx: b.max[0] - b.min[0], dy: b.max[1] - b.min[1], top: z, bottom: z - (b.max[2] - b.min[2]) }
+}
+
 export interface Oversize {
   /** Added on every side in X and Y. */
   xy: number

@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { nestSettingsOf, partSpacing } from '@/core/machining'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
+import { MachineModelSection } from './machine/MachineModelSection'
+import { ToolDialog } from './machine/ToolDialog'
 
 const TOOL_TYPES: { value: ToolType; label: string }[] = [
   { value: 'router', label: 'Router' },
@@ -31,6 +33,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camBackplot', 'Simulation', 'Play the toolpaths and see the material that is left.'],
   ['camBatch', 'Batch runs', 'Part lists from CSV or an inbox folder, without opening the screens.'],
   ['hardwarePatterns', 'Drilling patterns', 'Hardware drilling patterns in the library and the Hardware button on parts.'],
+  ['cam3d', '3D models', 'Import STL, OBJ and 3MF models onto parts: sections, outlines, simplify, work volume from the model.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
 ]
 
@@ -46,6 +49,7 @@ export function MachinePage() {
   const { data, updateMachine, updateSettings, resetMachine } = useStore()
   const [importOpen, setImportOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  const [editTool, setEditTool] = useState<string | null>(null)
   if (!data) return null
   const m = data.machine
   const s = data.settings
@@ -178,6 +182,7 @@ export function MachinePage() {
                 <NumField label="Header FM" suffix="" value={m.header.FM} min={0} max={99} onChange={(v) => updateMachine((x) => (x.header.FM = v))} />
               </div>
             </Section>
+            <MachineModelSection machine={m} updateMachine={updateMachine} />
             <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${partSpacing(m, s)} mm`}>
               <div className="grid grid-cols-2 gap-2">
                 <NumField label="Edge trim" value={s.nesting.edgeTrim} min={0} max={50} onChange={(v) => updateSettings((x) => (x.nesting.edgeTrim = v))} />
@@ -272,6 +277,7 @@ export function MachinePage() {
                 })
               }
               onDelete={(t) => updateMachine((x) => void (x.tools = x.tools.filter((tt) => tt.id !== t.id)))}
+              onEdit={(t) => setEditTool(t.id)}
               canDelete={(t) => (t.number === m.cutoutToolNumber ? 'This is the cut-out tool' : null)}
               empty="No tools. Import the machine's tool list as CSV."
             />
@@ -282,6 +288,19 @@ export function MachinePage() {
         </div>
       </div>
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} kinds={['tools']} />
+      {editTool && m.tools.some((t) => t.id === editTool) && (
+        <ToolDialog
+          tool={m.tools.find((t) => t.id === editTool)!}
+          machine={m}
+          onClose={() => setEditTool(null)}
+          update={(fn) =>
+            updateMachine((x) => {
+              const t = x.tools.find((tt) => tt.id === editTool)
+              if (t) fn(t)
+            })
+          }
+        />
+      )}
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent>
           <DialogHeader>

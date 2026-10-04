@@ -1,4 +1,4 @@
-import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
+import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box, Rotate3d } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
@@ -29,6 +29,9 @@ import { SimulateDialog } from './part/SimulateDialog'
 import { PatternDialog } from './part/PatternDialog'
 import { usablePatterns } from '@/core/hardware/patterns'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
+import { Model3DView } from './part/Model3DView'
+import { ModelImportDialog } from './part/ModelImportDialog'
+import { ModelsPanel } from './part/ModelsPanel'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
 const PARAM_LABEL: Record<keyof ToolParams, string> = {
@@ -96,6 +99,8 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [programOpen, setProgramOpen] = useState(false)
   const [simOpen, setSimOpen] = useState(false)
   const [patternOpen, setPatternOpen] = useState(false)
+  const [modelOpen, setModelOpen] = useState(false)
+  const [view3d, setView3d] = useState(false)
   const [display, setDisplay] = useState<Display>({ paths: true, arrows: false, grid: true, snapOn: true, ortho: false, modes: new Set<SnapMode>(ALL_SNAPS.filter((m) => m !== 'nearest')), gridSize: units === 'in' ? 25.4 / 4 : 5 })
   const promptRef = useRef<HTMLInputElement>(null)
   const first = useRef(true)
@@ -318,6 +323,14 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TooltipTrigger>
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
+          {feat.cam3d && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setModelOpen(true)}>
+              <Box className="size-3.5" /> 3D model
+            </Button>
+          )}
+          <Button variant="outline" size="sm" aria-pressed={view3d} className={cn('h-8 gap-1.5 border-white/15 bg-transparent', view3d && 'border-amber-400 text-amber-300')} onClick={() => setView3d((v) => !v)}>
+            <Rotate3d className="size-3.5" /> {view3d ? '2D view' : '3D view'}
+          </Button>
           {feat.hardwarePatterns && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setPatternOpen(true)}>
               <Drill className="size-3.5" /> Hardware
@@ -378,6 +391,19 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
           withOp={feat.camMachining}
           onPlace={(p, msg) => {
             change(p)
+            toast.success(msg)
+          }}
+        />
+      )}
+      {modelOpen && (
+        <ModelImportDialog
+          part={part}
+          units={units}
+          onClose={() => setModelOpen(false)}
+          onAdd={(p, msg) => {
+            change(p)
+            setTab('models')
+            setFitKey((k) => k + 1)
             toast.success(msg)
           }}
         />
@@ -447,7 +473,8 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
                 setTab('props')
               }}
             />
-            {part.entities.length <= 1 && part.ops.length === 0 && toolId === 'select' && (
+            {view3d && <Model3DView part={part} />}
+            {!view3d && part.entities.length <= 1 && part.ops.length === 0 && toolId === 'select' && (
               <div className="pointer-events-none absolute top-3 left-1/2 w-[min(92%,520px)] -translate-x-1/2 rounded-lg border border-white/10 bg-black/60 px-4 py-3 text-center text-xs leading-relaxed text-stone-300 backdrop-blur">
                 Draw with the commands on the left or type points below (<span className="font-mono">x,y</span>, <span className="font-mono">@dx,dy</span>, <span className="font-mono">@length&lt;angle</span>). The dashed rectangle is the panel; its solid shape is the cut-out outline. Middle-drag or Space-drag to pan, wheel to zoom.
               </div>
@@ -522,11 +549,17 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
 
         <aside className="flex min-h-[320px] w-full shrink-0 flex-col border-t border-white/10 bg-[#15171c] md:min-h-0 md:w-[340px] md:border-t-0 md:border-l">
           <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col gap-0">
-            <TabsList className="m-2 grid w-auto grid-cols-3">
+            <TabsList className={cn('m-2 grid w-auto', feat.cam3d ? 'grid-cols-4' : 'grid-cols-3')}>
               {feat.camMachining && <TabsTrigger value="ops">Machining</TabsTrigger>}
               <TabsTrigger value="layers">Layers</TabsTrigger>
               <TabsTrigger value="props">Properties</TabsTrigger>
+              {feat.cam3d && <TabsTrigger value="models">3D</TabsTrigger>}
             </TabsList>
+            {feat.cam3d && (
+              <TabsContent value="models" className="min-h-0 flex-1 overflow-auto">
+                <ModelsPanel part={part} units={units} onChange={change} onImport={() => setModelOpen(true)} />
+              </TabsContent>
+            )}
             {feat.camMachining && (
               <TabsContent value="ops" className="flex min-h-0 flex-1 flex-col">
                 <OpsPanel

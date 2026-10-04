@@ -1,4 +1,4 @@
-import { ArrowLeft, CirclePlay, Download, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
+import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
@@ -25,6 +25,8 @@ import { hitEntity } from './part/hit'
 import { OpsPanel } from './part/OpsPanel'
 import { ProgramDialog } from './part/ProgramDialog'
 import { SimulateDialog } from './part/SimulateDialog'
+import { PatternDialog } from './part/PatternDialog'
+import { usablePatterns } from '@/core/hardware/patterns'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
@@ -92,6 +94,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [fitKey, setFitKey] = useState(0)
   const [programOpen, setProgramOpen] = useState(false)
   const [simOpen, setSimOpen] = useState(false)
+  const [patternOpen, setPatternOpen] = useState(false)
   const [display, setDisplay] = useState<Display>({ paths: true, arrows: false, grid: true, snapOn: true, ortho: false, modes: new Set<SnapMode>(ALL_SNAPS.filter((m) => m !== 'nearest')), gridSize: units === 'in' ? 25.4 / 4 : 5 })
   const promptRef = useRef<HTMLInputElement>(null)
   const first = useRef(true)
@@ -314,6 +317,9 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TooltipTrigger>
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setPatternOpen(true)}>
+            <Drill className="size-3.5" /> Hardware
+          </Button>
           {feat.camMachining && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setSimOpen(true)}>
               <CirclePlay className="size-3.5" /> Simulate
@@ -360,6 +366,19 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
         materialCode={data!.library.materials.find((m) => m.id === part.materialId)?.code ?? 'MATERIAL'}
         outputOn={feat.camMprOutput}
       />
+      {patternOpen && (
+        <PatternDialog
+          open
+          onOpenChange={setPatternOpen}
+          part={part}
+          patterns={usablePatterns(data!.library)}
+          withOp={feat.camMachining}
+          onPlace={(p, msg) => {
+            change(p)
+            toast.success(msg)
+          }}
+        />
+      )}
       <SimulateDialog open={simOpen} onOpenChange={setSimOpen} part={part} toolpaths={toolpaths} units={units} color={data!.library.materials.find((m) => m.id === part.materialId)?.color} />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">

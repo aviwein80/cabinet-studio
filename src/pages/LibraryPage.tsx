@@ -15,6 +15,7 @@ import { importLibraryBundle } from '@/core/library/import'
 import type { AppData, EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
 import { LibraryEditDialog, TemplateJobsButton } from './LibraryEditDialog'
 import { OffcutsTab } from './library/OffcutsTab'
+import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
 
 const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'other']
@@ -123,6 +124,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             <TabsTrigger value="materials">Materials ({lib.materials.length})</TabsTrigger>
             <TabsTrigger value="edgebands">Edgebands ({lib.edgebands.length})</TabsTrigger>
             <TabsTrigger value="hardware">Hardware ({lib.hardware.length})</TabsTrigger>
+            <TabsTrigger value="patterns">Drilling patterns</TabsTrigger>
             <TabsTrigger value="rules">Machining rules</TabsTrigger>
             <TabsTrigger value="offcuts">Offcuts ({lib.offcuts?.length ?? 0})</TabsTrigger>
           </TabsList>
@@ -213,6 +215,9 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
         <TabsContent value="rules" className="min-h-0 flex-1 overflow-auto p-5">
           <RulesTab />
         </TabsContent>
+        <TabsContent value="patterns" className="min-h-0 flex-1 overflow-auto p-5">
+          <PatternsTab />
+        </TabsContent>
         <TabsContent value="offcuts" className="min-h-0 flex-1 overflow-auto p-5">
           <OffcutsTab />
         </TabsContent>
@@ -223,7 +228,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        kinds={tab === 'templates' || tab === 'rules' || tab === 'offcuts' ? ['templates', 'materials', 'edgebands', 'hardware'] : [tab, ...(['materials', 'edgebands', 'hardware', 'templates'] as const).filter((k) => k !== tab)]}
+        kinds={tab === 'templates' || tab === 'rules' || tab === 'offcuts' || tab === 'patterns' ? ['templates', 'materials', 'edgebands', 'hardware'] : [tab, ...(['materials', 'edgebands', 'hardware', 'templates'] as const).filter((k) => k !== tab)]}
         onApplied={(k) => k !== 'tools' && go({ page: 'library', tab: k })}
       />
     </div>

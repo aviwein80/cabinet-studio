@@ -20,7 +20,7 @@ export type Route =
   | { page: 'part'; partId: string; jobId?: string }
 
 export type JobTab = 'cabinets' | 'room' | 'parts' | 'cutlist' | 'nesting' | 'output'
-export type LibraryTab = 'templates' | 'materials' | 'edgebands' | 'hardware' | 'rules' | 'offcuts'
+export type LibraryTab = 'templates' | 'materials' | 'edgebands' | 'hardware' | 'rules' | 'offcuts' | 'patterns'
 
 interface State {
   data: AppData | null

@@ -9,8 +9,7 @@ import { deleteFacets, featureEdges, projectOutline, sectionAt, sectionContours,
 import { type Mesh, meshBounds, meshVolume, triCount } from '@/cam/mesh/types'
 import { newPart } from '@/cam/doc'
 import { Cancelled } from '@/core/cancel'
-import { box, relief, rng, type Soup, sphere, stlAscii, stlBinary, threeMf, torus } from './mesh-fixtures'
-import { isWatertight } from './cam-machine-stock.test'
+import { box, isWatertight, relief, rng, type Soup, sphere, stlAscii, stlBinary, threeMf, torus } from './mesh-fixtures'
 
 const enc = (s: string) => new TextEncoder().encode(s)
 const load = async (bytes: Uint8Array, name: string, units?: 'mm' | 'in') => buildMesh(await readMeshFile(bytes, name), { units })

@@ -1,3 +1,4 @@
+import { migratePart } from '@/cam/doc'
 import { defaultAppData, fillHardwareSpecs } from './defaults'
 import { DEFAULT_FEATURES } from './features'
 import { DEFAULT_ROOM } from './room'
@@ -16,10 +17,12 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
   const library = { ...d.library, ...(raw.library ?? {}) }
   library.hardware = fillHardwareSpecs(library.hardware ?? [])
   library.templates = (library.templates ?? []).map((t) => ({ ...t, params: withParams(t.params) }))
+  if (library.partLibrary) library.partLibrary = library.partLibrary.map(migratePart)
   const jobs = (raw.jobs ?? []).map((j) => ({
     ...j,
     room: { ...DEFAULT_ROOM, ...(j.room ?? {}) },
     cabinets: j.cabinets.map((c) => ({ ...c, params: withParams(c.params) })),
+    ...(j.camParts ? { camParts: j.camParts.map(migratePart) } : {}),
   }))
   return {
     version: 1,

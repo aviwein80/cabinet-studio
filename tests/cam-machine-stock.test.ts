@@ -6,23 +6,7 @@ import { HeightfieldStock } from '@/cam/stock/heightfield'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { cutterOutline, holderOf, machineModelOf, PLACEHOLDER_N200_MODEL } from '@/core/machineModel'
 import { squareEnd } from '@/core/machining'
-
-/** Every edge is used exactly twice, once in each direction: the mesh is closed and consistently oriented. */
-export function isWatertight(ix: Uint32Array) {
-  const seen = new Map<string, number>()
-  for (let t = 0; t < ix.length; t += 3)
-    for (let k = 0; k < 3; k++) {
-      const a = ix[t + k]
-      const b = ix[t + ((k + 1) % 3)]
-      const key = `${a},${b}`
-      seen.set(key, (seen.get(key) ?? 0) + 1)
-    }
-  for (const [key, n] of seen) {
-    const [a, b] = key.split(',')
-    if (n !== 1 || seen.get(`${b},${a}`) !== 1) return false
-  }
-  return true
-}
+import { isWatertight } from './mesh-fixtures'
 
 describe('M2.1 machine model and holder fields', () => {
   it('the N-200 model is a marked placeholder: 3 axes, sheet-size table, no saw, no aggregate, no rotary or 5-axis', () => {

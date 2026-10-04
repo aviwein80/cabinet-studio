@@ -2,7 +2,9 @@ import { Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, ScanT
 import { nanoid } from 'nanoid'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { entityContours, layerOf, newPart, parsePart } from '@/cam/doc'
+import { backend } from '@/app/backend'
+import { entityContours, layerOf, newPart } from '@/cam/doc'
+import { parsePartFile } from '@/cam/model/partFile'
 import { boxOf, rect } from '@/cam/geom'
 import type { CamPart } from '@/cam/types'
 import { EmptyState } from '@/components/PageHeader'
@@ -73,10 +75,11 @@ export function PartList({
   }
   const openFile = async (f: File) => {
     try {
-      const p = parsePart(await f.text())
+      const { part: p, missing } = await parsePartFile(await f.text(), backend.blobs)
       const copy = { ...p, id: nanoid(10), updatedAt: new Date().toISOString() }
       onSave(copy)
-      toast.success(`Loaded ${copy.name}`)
+      if (missing.length) toast.warning(`Loaded ${copy.name}, but ${missing.length} 3D model(s) have no data in the file.`)
+      else toast.success(`Loaded ${copy.name}`)
     } catch (e) {
       toast.error(`Could not read ${f.name}: ${e instanceof Error ? e.message : String(e)}`)
     }

@@ -8,7 +8,8 @@ import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, p
 import type { MachineProfile } from '@/core/types'
 import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
 
-export const CAM_FILE_VERSION = 1
+/** Part document version. 2 (Stage 2): optional 3D models (`models`) and `workVolume`. */
+export const CAM_FILE_VERSION = 2
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -24,7 +25,7 @@ export function newPart(fields: Partial<CamPart> = {}): CamPart {
   const part: CamPart = {
     id: nanoid(10),
     name: 'Custom part',
-    version: 1,
+    version: CAM_FILE_VERSION,
     materialId: null,
     length,
     width,
@@ -228,11 +229,29 @@ export function redo<T>(h: History<T>): History<T> {
 export function serializePart(part: CamPart): string {
   return JSON.stringify({ format: 'cabinet-studio-part', version: CAM_FILE_VERSION, part }, null, 1)
 }
+/**
+ * Step-by-step upgrades of a stored part, one per version. Each takes the part as stored in the
+ * older version and returns it in the next one. Nothing a v1 part holds changes meaning in v2.
+ */
+const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, unknown>> = {
+  // v1 -> v2: 3D models and the fitted work volume are new optional fields.
+  1: (p) => ({ ...p, version: 2 }),
+}
+
+/** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */
+export function migratePart<T extends { version?: number }>(stored: T): CamPart {
+  let p = stored as unknown as Record<string, unknown>
+  let v = typeof p.version === 'number' ? p.version : 1
+  if (v > CAM_FILE_VERSION) throw new Error(`Part version ${v} is newer than this app.`)
+  while (v < CAM_FILE_VERSION) p = MIGRATIONS[v++](p)
+  return p as unknown as CamPart
+}
+
 export function parsePart(text: string): CamPart {
   const raw = JSON.parse(text)
   if (raw?.format !== 'cabinet-studio-part' || !raw.part) throw new Error('Not a Cabinet Studio part file.')
   if (raw.version > CAM_FILE_VERSION) throw new Error(`Part file version ${raw.version} is newer than this app.`)
-  const p = raw.part as CamPart
+  const p = migratePart(raw.part as CamPart)
   return { ...newPart({ entities: [] }), ...p, layers: p.layers?.length ? p.layers : DEFAULT_LAYERS.map((l) => ({ ...l })) }
 }
 

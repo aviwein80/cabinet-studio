@@ -4,7 +4,8 @@ import { toast } from 'sonner'
 import { backend } from '@/app/backend'
 import { partsOf, useStore } from '@/app/store'
 import { deleteEntities, moveNode as nodeMove } from '@/cam/cad'
-import { commit, historyOf, redo, serializePart, undo, type History } from '@/cam/doc'
+import { commit, historyOf, redo, undo, type History } from '@/cam/doc'
+import { serializePartFile } from '@/cam/model/partFile'
 import { evalLength, parseCoord, resolveVariables } from '@/cam/expr'
 import { dist, type P } from '@/cam/geom'
 import { ALL_SNAPS, SNAP_LABEL, type SnapMode, type SnapResult } from '@/cam/snap'
@@ -351,7 +352,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             size="sm"
             className="h-8 gap-1.5 border-white/15 bg-transparent"
             onClick={async () => {
-              const where = await backend.saveFile({ name: `${part.name.replace(/[^\w-]+/g, '-') || 'part'}.csp.json`, data: serializePart(part) }, [{ name: 'Cabinet Studio part', extensions: ['json'] }])
+              const where = await backend.saveFile({ name: `${part.name.replace(/[^\w-]+/g, '-') || 'part'}.csp.json`, data: await serializePartFile(part, backend.blobs) }, [{ name: 'Cabinet Studio part', extensions: ['json'] }])
               if (where) toast.success(`Saved ${where}`)
             }}
           >

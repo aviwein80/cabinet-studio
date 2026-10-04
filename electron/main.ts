@@ -11,6 +11,40 @@ const BACKUP_INTERVAL_MS = 10 * 60 * 1000
 const dataDir = () => path.join(app.getPath('userData'), 'data')
 const dataFile = () => path.join(dataDir(), 'cabinet-studio.json')
 const backupDir = () => path.join(dataDir(), 'backups')
+/** 3D model data (gzip files named by the SHA-256 of their content), kept out of the shop file. */
+const blobDir = () => path.join(dataDir(), 'blobs')
+const BLOB_RE = /^[0-9a-f]{64}$/
+const blobFile = (hash: string) => {
+  if (!BLOB_RE.test(hash)) throw new Error('Bad model data id.')
+  return path.join(blobDir(), `${hash}.bin.gz`)
+}
+const BLOB_KEEP_MS = 30 * 24 * 60 * 60 * 1000
+
+/**
+ * Remove model data no longer used by the shop file or any backup, once it is 30 days old.
+ * Runs at start-up. Anything referenced anywhere is kept.
+ */
+function collectBlobs() {
+  if (!fs.existsSync(blobDir())) return
+  const used = new Set<string>()
+  const scan = (file: string) => {
+    try {
+      for (const m of fs.readFileSync(file, 'utf8').matchAll(/"([0-9a-f]{64})"/g)) used.add(m[1])
+    } catch {
+      // unreadable file: keep everything
+      used.add('*')
+    }
+  }
+  if (fs.existsSync(dataFile())) scan(dataFile())
+  if (fs.existsSync(backupDir())) for (const f of fs.readdirSync(backupDir())) if (f.endsWith('.json')) scan(path.join(backupDir(), f))
+  if (used.has('*')) return
+  for (const f of fs.readdirSync(blobDir())) {
+    const hash = f.replace(/\.bin\.gz$/, '')
+    if (!BLOB_RE.test(hash) || used.has(hash)) continue
+    const full = path.join(blobDir(), f)
+    if (Date.now() - fs.statSync(full).mtimeMs > BLOB_KEEP_MS) fs.unlinkSync(full)
+  }
+}
 
 let lastBackup = 0
 
@@ -44,6 +78,17 @@ function registerIpc() {
   ipcMain.handle('data:save', (_e, json: string) => {
     rotateBackups()
     writeAtomic(dataFile(), json)
+    return true
+  })
+
+  ipcMain.handle('blob:has', (_e, hash: string) => fs.existsSync(blobFile(hash)))
+  ipcMain.handle('blob:get', (_e, hash: string) => {
+    const f = blobFile(hash)
+    return fs.existsSync(f) ? new Uint8Array(fs.readFileSync(f)) : null
+  })
+  ipcMain.handle('blob:put', (_e, hash: string, gz: Uint8Array) => {
+    const f = blobFile(hash)
+    if (!fs.existsSync(f)) writeAtomic(f, Buffer.from(gz))
     return true
   })
 
@@ -193,6 +238,11 @@ app.whenReady().then(() => {
     ]),
   )
   registerIpc()
+  try {
+    collectBlobs()
+  } catch {
+    // clean-up is best effort; never block start-up
+  }
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

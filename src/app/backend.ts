@@ -8,9 +8,13 @@ import type { AppData } from '@/core/types'
 
 import type { OutFile } from '@/core/output'
 import { AI_PROVIDERS, type AiCall, type AiProviderId, callProvider } from '@/core/hardware/aiProviders'
+import type { BlobStore } from '@/cam/model/blobs'
 export type { OutFile }
 
 interface Bridge {
+  blobHas(hash: string): Promise<boolean>
+  blobGet(hash: string): Promise<Uint8Array | null>
+  blobPut(hash: string, gz: Uint8Array): Promise<boolean>
   load(): Promise<string | null>
   save(json: string): Promise<boolean>
   info(): Promise<{ dataFile: string; version: string; platform: string }>
@@ -75,6 +79,8 @@ export interface Backend {
   openPath?(p: string): Promise<void>
   batch?: BatchBridge
   ai: AiBridge
+  /** 3D model data, kept outside the shop file. */
+  blobs: BlobStore
 }
 
 const AI_LS_KEY = 'cabinet-studio-ai-keys'
@@ -115,9 +121,35 @@ function download(name: string, data: string | Uint8Array | Blob, type = 'applic
   setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
+/** Browser preview: model data in IndexedDB (this browser only). */
+function indexedDbBlobs(): BlobStore {
+  let db: Promise<IDBDatabase> | null = null
+  const open = () =>
+    (db ??= new Promise((resolve, reject) => {
+      const req = indexedDB.open('cabinet-studio-blobs', 1)
+      req.onupgradeneeded = () => req.result.createObjectStore('blobs')
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    }))
+  const run = async <T,>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>) => {
+    const s = (await open()).transaction('blobs', mode).objectStore('blobs')
+    return new Promise<T>((resolve, reject) => {
+      const r = fn(s)
+      r.onsuccess = () => resolve(r.result)
+      r.onerror = () => reject(r.error)
+    })
+  }
+  return {
+    has: async (h) => (await run('readonly', (s) => s.count(h))) > 0,
+    get: async (h) => ((await run('readonly', (s) => s.get(h))) as Uint8Array | undefined) ?? null,
+    put: async (h, gz) => void (await run('readwrite', (s) => s.put(gz, h))),
+  }
+}
+
 function browserBackend(): Backend {
   return {
     kind: 'browser',
+    blobs: indexedDbBlobs(),
     ai: browserAi(),
     async load() {
       const raw = localStorage.getItem(LS_KEY)
@@ -146,6 +178,7 @@ function browserBackend(): Backend {
 function desktopBackend(b: Bridge): Backend {
   return {
     kind: 'desktop',
+    blobs: { has: (h) => b.blobHas(h), get: (h) => b.blobGet(h), put: async (h, gz) => void (await b.blobPut(h, gz)) },
     async load() {
       const raw = await b.load()
       return raw ? (JSON.parse(raw) as AppData) : null

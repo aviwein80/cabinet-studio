@@ -4,13 +4,14 @@ import { describe, expect, it } from 'vitest'
 import { parsePart, serializePart } from '../src/cam/doc'
 import { writePartMpr } from '../src/cam/mpr'
 import { readMpr } from '../src/cam/mprRead'
-import { generatePart, type Toolpath } from '../src/cam/toolpath'
+import { generatePart } from '../src/cam/toolpath'
+import { digest } from './cam-digest'
+export { digest }
 import { PLACEHOLDER_MACHINE } from '../src/core/defaults'
 import { referenceParts } from './cam-reference'
 
 const DIR = path.join(import.meta.dirname, 'golden', 'cam')
 const UPDATE = process.env.UPDATE_GOLDEN === '1'
-const r3 = (n: number) => Math.round(n * 1000) / 1000
 
 function file(name: string, make: () => string) {
   const f = path.join(DIR, name)
@@ -19,39 +20,6 @@ function file(name: string, make: () => string) {
     fs.writeFileSync(f, make(), 'latin1')
   }
   return fs.readFileSync(f, 'latin1')
-}
-
-/** Stable summary of a toolpath: counts, lengths, extents, depths and native intents. */
-export function digest(tp: Toolpath) {
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  let zMin = Infinity
-  const count = { rapid: 0, feed: 0, arc: 0, drill: 0 }
-  for (const m of tp.moves) {
-    count[m.t]++
-    if (m.t === 'rapid') continue
-    minX = Math.min(minX, m.x)
-    minY = Math.min(minY, m.y)
-    maxX = Math.max(maxX, m.x)
-    maxY = Math.max(maxY, m.y)
-    zMin = Math.min(zMin, m.z)
-  }
-  const intents: Record<string, number> = {}
-  for (const it of tp.intents) intents[it.k] = (intents[it.k] ?? 0) + 1
-  return {
-    op: tp.name,
-    kind: tp.kind,
-    tool: tp.tool?.number ?? null,
-    moves: count,
-    cutMm: Math.round(tp.stats.cut * 10) / 10,
-    box: Number.isFinite(minX) ? [r3(minX), r3(minY), r3(maxX), r3(maxY)] : null,
-    zMin: Number.isFinite(zMin) ? r3(zMin) : null,
-    intents,
-    warnings: tp.warnings,
-    first: tp.moves.slice(0, 4).map((m) => ({ ...m, x: r3(m.x), y: r3(m.y), z: r3(m.z) })),
-  }
 }
 
 const machine = PLACEHOLDER_MACHINE

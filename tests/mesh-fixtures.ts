@@ -123,3 +123,20 @@ export function rng(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
+
+/** Every edge is used exactly twice, once in each direction: the mesh is closed and consistently oriented. */
+export function isWatertight(ix: Uint32Array) {
+  const seen = new Map<string, number>()
+  for (let t = 0; t < ix.length; t += 3)
+    for (let k = 0; k < 3; k++) {
+      const a = ix[t + k]
+      const b = ix[t + ((k + 1) % 3)]
+      const key = `${a},${b}`
+      seen.set(key, (seen.get(key) ?? 0) + 1)
+    }
+  for (const [key, n] of seen) {
+    const [a, b] = key.split(',')
+    if (n !== 1 || seen.get(`${b},${a}`) !== 1) return false
+  }
+  return true
+}

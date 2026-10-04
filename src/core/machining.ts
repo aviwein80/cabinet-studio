@@ -1,3 +1,5 @@
+import type { Seg } from '@/cam/geom'
+import type { Intent } from '@/cam/toolpath'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet } from './nesting'
@@ -120,9 +122,17 @@ export interface Contour extends Base {
   /** Z of the cut relative to the sheet underside (negative = into spoilboard). */
   za: number
   tool: Tool | null
+  /** Native lines and arcs (custom parts). When present the writer uses these instead of `points`. */
+  segs?: Seg[]
 }
 
-export type ProgramOp = VDrill | HDrill | Pocket | SawGroove | Contour
+/** A custom-part operation in sheet coordinates, written as native woodWOP macros. */
+export interface CamProgramOp extends Base {
+  kind: 'cam'
+  intent: Intent
+}
+
+export type ProgramOp = VDrill | HDrill | Pocket | SawGroove | Contour | CamProgramOp
 
 export interface SheetProgram {
   name: string

@@ -30,6 +30,7 @@
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
     "class-variance-authority": "^0.7.1",
+    "clipper2-ts": "^2.0.1-18",
     "clsx": "^2.1.1",
     "concurrently": "^10.0.5",
     "cross-env": "^10.1.0",

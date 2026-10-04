@@ -9,6 +9,8 @@
  *   ("face-up") face on top. Operation depths are measured down from that face.
  */
 
+import type { CamPart, DoorStyle, HardwarePattern, LayerRuleSet, Recipe } from '../cam/types'
+
 export type Vec3 = [number, number, number]
 
 export interface Vec2 {
@@ -297,6 +299,8 @@ export interface Job {
   updatedAt: string
   cabinets: CabinetInstance[]
   room?: Room
+  /** Custom (CAD/CAM) parts cut with this job. They share materials, tools, nesting and labels. */
+  camParts?: CamPart[]
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -304,6 +308,8 @@ export interface Job {
 // ---------------------------------------------------------------------------------------------
 
 export type ToolType = 'router' | 'drill-vertical' | 'drill-horizontal' | 'saw'
+/** Cutting-edge shape, used by custom-part machining. Cabinet machining only reads `type`. */
+export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile'
 
 export interface Tool {
   id: string
@@ -314,6 +320,39 @@ export interface Tool {
   diameter: number
   /** Maximum usable cutting depth. */
   maxDepth: number
+  shape?: ToolShape
+  /** Library folder shown in the tool browser, e.g. "Routers/Compression". */
+  folder?: string
+  flutes?: number
+  rpm?: number
+  /** 'calculated' = rpm x flutes x feed per tooth; 'fixed' = `feed` as entered. */
+  feedMode?: 'calculated' | 'fixed'
+  feedPerTooth?: number
+  /** mm/min. */
+  feed?: number
+  plungeFeed?: number
+  /** Depth per pass. 0 or absent = one pass up to maxDepth. */
+  stepdown?: number
+  centreCutting?: boolean
+  /** Deepest straight plunge allowed; deeper entries must ramp or helix. */
+  maxPlunge?: number
+  /** Included angle for V tools (degrees). */
+  angle?: number
+  cornerRadius?: number
+  /** Saw blade kerf. */
+  kerf?: number
+  spindle?: 'cw' | 'ccw'
+  length?: number
+  notes?: string
+}
+
+/** Feeds and speeds for one tool in one material; overrides the tool's own values. */
+export interface MaterialFeed {
+  toolId: string
+  materialId: string
+  rpm: number
+  feed: number
+  plungeFeed: number
 }
 
 export interface MachineProfile {
@@ -335,6 +374,7 @@ export interface MachineProfile {
   contour: { approach: 'SEN' | 'TAN' | 'SEI'; ramp: boolean; direction: 'climb-cw' | 'ccw' }
   header: { OP: number; FM: number }
   tools: Tool[]
+  feeds?: MaterialFeed[]
 }
 
 export interface NestSettings {
@@ -361,6 +401,31 @@ export interface ShopSettings {
   nesting: NestSettings
   labels: LabelSettings
   outputFolder: string
+  /** Custom-part module switches. Absent keys take the defaults in `DEFAULT_FEATURES`. */
+  features?: Partial<FeatureFlags>
+}
+
+export interface FeatureFlags {
+  /** Custom-part drawing screen. */
+  camCad: boolean
+  /** DXF import/export on custom parts. */
+  camImport: boolean
+  /** Profile, pocket, drill, V-carve, sweep operations. */
+  camMachining: boolean
+  /** Recipes and layer rules. */
+  camRules: boolean
+  /** Parametric door styles and CSV door lists. */
+  camParametric: boolean
+  /** True-shape nesting of custom parts. */
+  camNesting: boolean
+  /** Unattended batch runs from CSV. */
+  camBatch: boolean
+  /** Toolpath backplot and material-cut view. */
+  camBackplot: boolean
+  /** Spec-sheet to hardware-pattern pipeline. */
+  hardwarePatterns: boolean
+  /** Write custom-part operations into N-200 MPR files. Off until the owner has proven output on the machine. */
+  camMprOutput: boolean
 }
 
 export interface Library {
@@ -368,6 +433,16 @@ export interface Library {
   edgebands: EdgeBand[]
   hardware: Hardware[]
   templates: CabinetTemplate[]
+  /** Drilling patterns for hardware: verified, imported, or drafted and approved. */
+  patterns?: HardwarePattern[]
+  /** Saved machining recipes (one or more operations applied to geometry). */
+  recipes?: Recipe[]
+  /** Layer name -> recipe tables used when importing drawings. */
+  layerRules?: LayerRuleSet[]
+  /** Parametric door styles. */
+  doorStyles?: DoorStyle[]
+  /** Saved custom parts that can be inserted into other parts or jobs. */
+  partLibrary?: CamPart[]
 }
 
 export interface AppData {

@@ -1,0 +1,164 @@
+/**
+ * Operation defaults, tool selection and feeds. Tools come from the shared machine profile so
+ * custom parts and cabinets use one tool table.
+ */
+import { nanoid } from 'nanoid'
+import { cutoutTool, findDrill } from '@/core/machining'
+import type { MachineProfile, Tool } from '@/core/types'
+import type { CamOp, CamOpKind, Leads, Levels, OpTemplate, Tags } from './types'
+
+export const DEFAULT_LEVELS: Levels = { safeZ: 20, rapidZ: 3, depth: 6, through: false, stockZ: 0, passDepth: 0 }
+export const DEFAULT_LEADS: Leads = { in: 'arc', out: 'arc', length: 2, radius: 1.5, rampAngle: 5, overlap: 2, feedPct: 50 }
+export const DEFAULT_TAGS: Tags = { mode: 'none', count: 4, length: 12, height: 2, shape: 'flat', rampAngle: 30, at: [] }
+
+export const OP_LABEL: Record<CamOpKind, string> = {
+  profile: 'Profile',
+  pocket: 'Pocket',
+  drill: 'Drill',
+  engrave: 'Engrave',
+  vcarve: 'V-carve',
+  saw: 'Saw groove',
+  sweep: 'Profiled sweep',
+  code: 'Program note',
+}
+
+export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
+  const base = {
+    id: nanoid(8),
+    name: OP_LABEL[kind],
+    enabled: true,
+    geometry,
+    toolId: null,
+    levels: { ...DEFAULT_LEVELS },
+    feeds: {},
+    face: 1 as const,
+  }
+  let op: CamOp
+  switch (kind) {
+    case 'profile':
+      op = {
+        ...base,
+        kind,
+        side: 'outside',
+        direction: 'climb',
+        compensation: 'cam',
+        corners: 'round',
+        stockXY: 0,
+        leads: { ...DEFAULT_LEADS },
+        tags: { ...DEFAULT_TAGS, at: [] },
+        bidirectional: false,
+        slope: 0,
+        levels: { ...DEFAULT_LEVELS, through: true },
+      }
+      break
+    case 'pocket':
+      op = { ...base, kind, pattern: 'offset', stepover: 0.45, angle: 0, direction: 'climb', islands: true, entry: 'helix', rampAngle: 5, helixPct: 0.8, finishPass: true, stockXY: 0 }
+      break
+    case 'drill':
+      op = { ...base, kind, cycle: 'drill', peck: 5, dwell: 0, select: { mode: 'all' }, depthRef: 'tip', levels: { ...DEFAULT_LEVELS, depth: 13 } }
+      break
+    case 'engrave':
+      op = { ...base, kind, levels: { ...DEFAULT_LEVELS, depth: 1 } }
+      break
+    case 'vcarve':
+      op = { ...base, kind, step: 0.25, levels: { ...DEFAULT_LEVELS, depth: 8 } }
+      break
+    case 'saw':
+      op = { ...base, kind, levels: { ...DEFAULT_LEVELS, depth: 8 } }
+      break
+    case 'sweep':
+      op = {
+        ...base,
+        kind,
+        side: 'inside',
+        step: 1,
+        section: [
+          { inset: 0, depth: 10 },
+          { inset: 40, depth: 3 },
+          { inset: 42, depth: 0 },
+        ],
+      }
+      break
+    case 'code':
+      op = { ...base, kind, text: '', stop: false }
+      break
+  }
+  return { ...op, ...extra } as CamOp
+}
+
+export function toTemplate(op: CamOp): OpTemplate {
+  const { id: _id, geometry: _g, builtHash: _h, ...rest } = op
+  return rest as OpTemplate
+}
+export function fromTemplate(t: OpTemplate, geometry: string[]): CamOp {
+  return { ...structuredClone(t), id: nanoid(8), geometry } as CamOp
+}
+
+const routers = (m: MachineProfile) => m.tools.filter((t) => t.type === 'router')
+
+/** Tool for an op. Drill ops pick per hole, so this returns the explicit tool or null. */
+export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?: number; diameter?: number }): Tool | null {
+  if (op.toolId) return machine.tools.find((t) => t.id === op.toolId) ?? null
+  switch (op.kind) {
+    case 'profile':
+      return cutoutTool(machine) ?? routers(machine)[0] ?? null
+    case 'pocket':
+    case 'sweep': {
+      const fits = routers(machine)
+        .filter((t) => t.shape !== 'v' && (!hint?.width || t.diameter <= hint.width + 1e-9))
+        .sort((a, b) => b.diameter - a.diameter || a.number - b.number)
+      return fits[0] ?? null
+    }
+    case 'engrave':
+      return routers(machine).filter((t) => t.shape !== 'v').sort((a, b) => a.diameter - b.diameter)[0] ?? null
+    case 'vcarve':
+      return routers(machine).find((t) => t.shape === 'v') ?? null
+    case 'saw':
+      return machine.tools.find((t) => t.type === 'saw') ?? null
+    case 'drill':
+      return hint?.diameter ? findDrill(machine, hint.diameter, 0, op.face === 1 ? 'drill-vertical' : 'drill-horizontal') : null
+    case 'code':
+      return null
+  }
+}
+
+export interface Feeds {
+  rpm: number
+  feed: number
+  plunge: number
+  source: 'op' | 'material' | 'calculated' | 'fixed' | 'default'
+}
+
+/** Feeds: op override > material table > tool (calculated or fixed) > safe defaults. */
+export function feedsFor(op: CamOp, tool: Tool | null, materialId: string | null, machine: MachineProfile): Feeds {
+  const fromMat = tool && materialId ? machine.feeds?.find((f) => f.toolId === tool.id && f.materialId === materialId) : undefined
+  let f: Feeds = { rpm: 18000, feed: 5000, plunge: 2000, source: 'default' }
+  if (tool) {
+    if (tool.feedMode === 'calculated' && tool.rpm && tool.flutes && tool.feedPerTooth)
+      f = { rpm: tool.rpm, feed: tool.rpm * tool.flutes * tool.feedPerTooth, plunge: tool.plungeFeed ?? (tool.rpm * tool.flutes * tool.feedPerTooth) / 3, source: 'calculated' }
+    else if (tool.feed) f = { rpm: tool.rpm ?? f.rpm, feed: tool.feed, plunge: tool.plungeFeed ?? tool.feed / 3, source: 'fixed' }
+  }
+  if (fromMat) f = { rpm: fromMat.rpm, feed: fromMat.feed, plunge: fromMat.plungeFeed, source: 'material' }
+  if (op.feeds.feed || op.feeds.rpm || op.feeds.plunge) f = { rpm: op.feeds.rpm ?? f.rpm, feed: op.feeds.feed ?? f.feed, plunge: op.feeds.plunge ?? f.plunge, source: 'op' }
+  return f
+}
+
+/** Depth of each pass: equal passes no deeper than `max`. */
+export function passDepths(total: number, max: number): number[] {
+  if (total <= 0) return []
+  const n = max > 0 ? Math.max(1, Math.ceil(total / max - 1e-9)) : 1
+  return Array.from({ length: n }, (_, i) => Math.round(((total * (i + 1)) / n) * 1e6) / 1e6)
+}
+
+/** Reorder ops by a saved tool-number order; ops on tools not in the list keep their relative order at the end. */
+export function orderByTool(ops: CamOp[], toolOf: (op: CamOp) => Tool | null, order: number[]): CamOp[] {
+  const rank = (op: CamOp) => {
+    const t = toolOf(op)
+    const i = t ? order.indexOf(t.number) : -1
+    return i < 0 ? order.length : i
+  }
+  return ops
+    .map((op, i) => ({ op, i, r: rank(op) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.op)
+}

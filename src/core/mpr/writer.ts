@@ -8,8 +8,9 @@
  * Machine-specific numbers (tools, depths, feeds) never appear here as constants; they come in
  * through the SheetProgram, which resolved them from the editable machine profile.
  */
+import { radius, type Seg, splitMajorArcs } from '@/cam/geom'
 import { fmt } from '../geometry'
-import type { Contour, HDrill, Pocket, ProgramOp, SawGroove, SheetProgram, VDrill } from '../machining'
+import type { CamProgramOp, Contour, HDrill, Pocket, ProgramOp, SawGroove, SheetProgram, VDrill } from '../machining'
 import type { Job, MachineProfile } from '../types'
 
 export const GENERATOR = 'Cabinet Studio 0.1.0'
@@ -19,6 +20,8 @@ export interface MprContext {
   machine: MachineProfile
   mprNumber: number
   mprCount: number
+  /** Single custom-part program instead of a nested sheet. */
+  single?: { partName: string }
 }
 
 /** Make a value safe for a quoted MPR string: ASCII, no double quotes, no line breaks. */
@@ -38,7 +41,7 @@ export function mprText(s: string, max = 80) {
 const f6 = (n: number) => n.toFixed(6)
 const f4 = (n: number) => n.toFixed(4)
 
-class Lines {
+export class Lines {
   out: string[] = []
   line(s = '') {
     this.out.push(s)
@@ -48,7 +51,7 @@ class Lines {
   }
 }
 
-function writeVDrill(w: Lines, op: VDrill, machine: MachineProfile) {
+export function writeVDrill(w: Lines, op: VDrill, machine: MachineProfile) {
   w.line('<102 \\BohrVert\\')
   w.kv('XA', op.x)
   w.kv('YA', op.y)
@@ -67,7 +70,7 @@ function writeVDrill(w: Lines, op: VDrill, machine: MachineProfile) {
   w.kv('MNM', mprText(`P${op.partNo} ${op.purpose} D${fmt(op.diameter)}`))
 }
 
-function writeHDrill(w: Lines, op: HDrill, machine: MachineProfile) {
+export function writeHDrill(w: Lines, op: HDrill, machine: MachineProfile) {
   w.line('<103 \\BohrHoriz\\')
   w.kv('XA', op.x)
   w.kv('YA', op.y)
@@ -125,7 +128,40 @@ function writeSaw(w: Lines, op: SawGroove) {
   w.kv('MNM', mprText(`P${op.partNo} ${op.purpose}`))
 }
 
+/**
+ * Contour block with native arcs. KA carries the end point, radius and DS (0 = CW, 1 = CCW,
+ * both at most 180 degrees; larger arcs are split so DS 2/3 are never needed).
+ * [UNCERTAIN until one arc is checked in woodWOP: DS direction is taken from the MPR 4.x spec.]
+ */
+export function writeSegsGeometry(w: Lines, n: number, segs: Seg[], z = 0) {
+  const list = splitMajorArcs(segs)
+  w.line(`]${n}`)
+  w.line('$E0')
+  w.line('KP ')
+  w.line(`X=${f4(list[0].a.x)}`)
+  w.line(`Y=${f4(list[0].a.y)}`)
+  w.line(`Z=${f4(z)}`)
+  w.line('KO=00')
+  w.line()
+  list.forEach((sg, i) => {
+    w.line(`$E${i + 1}`)
+    w.line(sg.k === 'L' ? 'KL ' : 'KA ')
+    w.line(`X=${f4(sg.b.x)}`)
+    w.line(`Y=${f4(sg.b.y)}`)
+    if (sg.k === 'A') {
+      w.line(`R=${f4(radius(sg))}`)
+      w.line(`DS=${sg.ccw ? 1 : 0}`)
+    }
+    w.line()
+  })
+  return list.length
+}
+
 function writeContourGeometry(w: Lines, n: number, c: Contour) {
+  if (c.segs) {
+    writeSegsGeometry(w, n, c.segs)
+    return
+  }
   w.line(`]${n}`)
   c.points.forEach((p, i) => {
     w.line(`$E${i}`)
@@ -147,7 +183,7 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('EA', `${n}:0`)
   w.kv('MDA', approach)
   w.kv('RK', cw ? 'WRKL' : 'WRKR')
-  w.kv('EE', `${n}:${c.points.length - 1}`)
+  w.kv('EE', `${n}:${c.segs ? splitMajorArcs(c.segs).length : c.points.length - 1}`)
   w.kv('MDE', `${approach}_AB`)
   w.kv('EM', machine.contour.ramp ? 1 : 0)
   w.kv('RI', 1)
@@ -165,6 +201,89 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('MNM', mprText(`P${c.partNo} cut-out`))
 }
 
+/** Native macros for one custom-part intent (already in program coordinates). */
+function writeCamIntent(w: Lines, n: number, op: CamProgramOp, T: number, machine: MachineProfile) {
+  const it = op.intent
+  const tag = `P${op.partNo}`
+  switch (it.k) {
+    case 'contour': {
+      const count = splitMajorArcs(it.segs).length
+      const map = elementMap(it.segs)
+      it.passes.forEach((ps, i) => {
+        if (i) w.line()
+        w.line('<105 \\Konturfraesen\\')
+        w.kv('EA', `${n}:${map[ps.from]}`)
+        w.kv('MDA', it.approach)
+        w.kv('RK', it.rk)
+        w.kv('EE', `${n}:${Math.min(count, map[ps.to + 1])}`)
+        w.kv('MDE', `${it.approach}_AB`)
+        w.kv('EM', it.ramp ? 1 : 0)
+        w.kv('RI', 1)
+        w.kv('TNO', it.tool ? it.tool.number : 0)
+        w.kv('SM', 0)
+        w.kv('S_', 'STANDARD')
+        w.kv('F_', 'STANDARD')
+        w.kv('AB', 0)
+        w.kv('AF', 0)
+        w.kv('ZA', Math.round((T - ps.depth) * 1000) / 1000)
+        w.kv('STUFEN', 0)
+        w.kv('ZSTART', 0)
+        w.kv('ANZZST', 0)
+        w.kv('KAT', 'Fraesen')
+        w.kv('MNM', mprText(`${tag} ${it.label} D${fmt(ps.depth)}`))
+      })
+      break
+    }
+    case 'vdrill':
+      writeVDrill(w, { kind: 'vdrill', partUid: op.partUid, partNo: op.partNo, opId: op.opId, purpose: 'custom', x: it.x, y: it.y, diameter: it.d, depth: it.depth, through: it.through, tool: it.tool }, machine)
+      break
+    case 'hdrill':
+      writeHDrill(w, { kind: 'hdrill', partUid: op.partUid, partNo: op.partNo, opId: op.opId, purpose: 'custom', x: it.x, y: it.y, z: Math.round((T - it.z) * 1000) / 1000, diameter: it.d, depth: it.depth, dir: it.dir, tool: it.tool }, machine)
+      break
+    case 'pocket-rect':
+      w.line('<112 \\Tasche\\')
+      w.kv('XA', Math.round(it.cx * 1000) / 1000)
+      w.kv('YA', Math.round(it.cy * 1000) / 1000)
+      w.kv('LA', Math.round(it.len * 1000) / 1000)
+      w.kv('BR', Math.round(it.wid * 1000) / 1000)
+      w.kv('RD', it.r)
+      w.kv('WI', Math.round(it.angle * 1000) / 1000)
+      w.kv('TI', it.depth)
+      w.kv('ZT', 0)
+      w.kv('XY', it.stepoverPct)
+      w.kv('DS', it.ccw ? 1 : 0)
+      w.kv('T_', it.tool ? it.tool.number : 0)
+      w.kv('F_', 'STANDARD')
+      w.kv('KO', '00')
+      w.kv('KAT', 'Tasche')
+      w.kv('MNM', mprText(`${tag} ${it.label}`))
+      break
+    case 'saw':
+      writeSaw(w, { kind: 'saw', partUid: op.partUid, partNo: op.partNo, opId: op.opId, purpose: 'custom', xa: it.xa, ya: it.ya, xe: it.xe, ye: it.ye, width: it.width, depth: it.depth, throughEnds: false, tool: it.tool })
+      break
+    case 'comment':
+      w.line('<101 \\Kommentar\\')
+      w.kv('KM', mprText(`${tag} ${it.stop ? 'PROGRAM STOP: ' : ''}${it.text}`))
+      w.kv('KAT', 'Kommentar')
+      w.kv('MNM', 'Kommentar')
+      break
+  }
+}
+
+/** Index of each original segment's start element once major arcs are split. */
+function elementMap(segs: Seg[]) {
+  const map: number[] = []
+  let k = 0
+  for (const sg of segs) {
+    map.push(k)
+    k += splitMajorArcs([sg]).length
+  }
+  map.push(k)
+  return map
+}
+
+const intentHasContour = (o: ProgramOp): o is CamProgramOp => o.kind === 'cam' && o.intent.k === 'contour'
+
 export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
   const { job, machine } = ctx
   const s = prog.sheet
@@ -181,9 +300,9 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
   w.kv('MATERIAL', mprText(prog.materialCode))
   w.kv('CUSTOMER', mprText(job.customer))
   w.kv('ORDER', mprText(job.number))
-  w.kv('ARTICLE', mprText(`Sheet ${ctx.mprNumber} of ${ctx.mprCount}`))
+  w.kv('ARTICLE', mprText(ctx.single ? ctx.single.partName : `Sheet ${ctx.mprNumber} of ${ctx.mprCount}`))
   w.kv('PARTID', mprText(prog.name))
-  w.kv('PARTTYPE', 'NEST')
+  w.kv('PARTTYPE', ctx.single ? 'PART' : 'NEST')
   w.kv('MPRCOUNT', ctx.mprCount)
   w.kv('MPRNUMBER', ctx.mprNumber)
   w.kv('INFO1', mprText(GENERATOR))
@@ -213,7 +332,19 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
   w.line()
 
   const contours = prog.ops.filter((o): o is Contour => o.kind === 'contour')
-  contours.forEach((c, i) => writeContourGeometry(w, i + 1, c))
+  const blockNo = new Map<ProgramOp, number>()
+  let blocks = 0
+  for (const o of prog.ops) {
+    if (o.kind === 'contour') {
+      blocks += 1
+      blockNo.set(o, blocks)
+      writeContourGeometry(w, blocks, o)
+    } else if (intentHasContour(o) && o.intent.k === 'contour') {
+      blocks += 1
+      blockNo.set(o, blocks)
+      writeSegsGeometry(w, blocks, o.intent.segs)
+    }
+  }
 
   w.line('<100 \\WerkStck\\')
   w.kv('LA', 'L')
@@ -226,7 +357,7 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
   w.line()
 
   w.line('<101 \\Kommentar\\')
-  w.kv('KM', mprText(`${GENERATOR} - job ${job.number} sheet ${ctx.mprNumber}/${ctx.mprCount} ${prog.materialCode}`))
+  w.kv('KM', mprText(ctx.single ? `${GENERATOR} - custom part ${ctx.single.partName} ${prog.materialCode}` : `${GENERATOR} - job ${job.number} sheet ${ctx.mprNumber}/${ctx.mprCount} ${prog.materialCode}`))
   w.kv('KM', 'Generated program. Verify in woodWOP simulation before cutting.')
   for (const pl of s.placements) {
     const c = contours.find((cc) => cc.partUid === pl.uid)
@@ -237,7 +368,6 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
   w.kv('MNM', 'Kommentar')
   w.line()
 
-  let contourNo = 0
   for (const op of prog.ops as ProgramOp[]) {
     switch (op.kind) {
       case 'vdrill':
@@ -253,8 +383,10 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
         writeSaw(w, op)
         break
       case 'contour':
-        contourNo += 1
-        writeContourMacro(w, contourNo, op, machine)
+        writeContourMacro(w, blockNo.get(op)!, op, machine)
+        break
+      case 'cam':
+        writeCamIntent(w, blockNo.get(op) ?? 0, op, s.thickness, machine)
         break
     }
     w.line()

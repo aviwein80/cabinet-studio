@@ -1,0 +1,312 @@
+/**
+ * Custom-part document model. One CamPart is one flat panel (work volume L x W x T) with
+ * layered 2D geometry on its six faces and an ordered list of associative operations.
+ *
+ * Part coordinates match the cabinet side: x along length (grain), y along width, face 1 up.
+ * Depths are positive millimetres measured down from face 1.
+ *
+ * Faces follow woodWOP numbering as used here: 1 top, 2 front edge (y = 0), 3 right edge
+ * (x = L), 4 back edge (y = W), 5 left edge (x = 0), 6 underside. Edge-face geometry uses
+ * (u, v) = (position along the edge from its left end seen from outside, depth below face 1).
+ */
+import type { Contour, P } from './geom'
+
+export type FaceId = 1 | 2 | 3 | 4 | 5 | 6
+
+export interface Layer {
+  id: string
+  name: string
+  color: string
+  visible: boolean
+  locked: boolean
+  /** Construction layers are never machined or exported. */
+  construction?: boolean
+}
+
+export type Geom =
+  | { t: 'contour'; c: Contour }
+  | { t: 'circle'; c: P; r: number }
+  | { t: 'point'; p: P }
+  | { t: 'text'; at: P; text: string; height: number; angle: number; spacing?: number; arc?: { c: P; r: number } }
+  | { t: 'spline'; ctrl: P[]; closed: boolean; through?: boolean }
+  | { t: 'poly3d'; pts: [number, number, number][] }
+
+export interface Entity {
+  id: string
+  layer: string
+  g: Geom
+  face: FaceId
+  /** Optional depth for holes drawn as plain circles (used by layer rules and imports). */
+  depth?: number
+  /** Free tag used by hardware insertion and parametric rebuilds. */
+  tag?: string
+}
+
+export interface Variable {
+  name: string
+  value: number
+  /** Optional expression in other variables, e.g. "W - 2*rail". */
+  expr?: string
+  note?: string
+}
+
+export interface CamPart {
+  id: string
+  name: string
+  version: 1
+  materialId: string | null
+  length: number
+  width: number
+  thickness: number
+  grain: 'length' | 'none'
+  qty: number
+  layers: Layer[]
+  entities: Entity[]
+  ops: CamOp[]
+  variables: Variable[]
+  /** Entity whose contour is the part's cut-out outline. Defaults to the largest closed contour on face 1. */
+  outlineId?: string
+  /** Parametric door the geometry was generated from. */
+  door?: { styleId: string; values: Record<string, number> }
+  notes?: string
+  source?: string
+  /** Keep ops on unchanged geometry ids when imports refresh. */
+  updatedAt: string
+}
+
+// ---------------------------------------------------------------------------------------------
+// Operations
+// ---------------------------------------------------------------------------------------------
+
+export interface Levels {
+  /** Clearance height above face 1 for rapids between features. */
+  safeZ: number
+  /** Rapid down to this height above face 1, then feed. */
+  rapidZ: number
+  /** Final depth below face 1. Ignored when `through`. */
+  depth: number
+  /** Cut through the panel plus the machine's through depth. */
+  through: boolean
+  /** Material left on the floor. */
+  stockZ: number
+  /** Depth per pass; 0 = the tool's stepdown (or one pass). */
+  passDepth: number
+}
+
+export type LeadType = 'none' | 'line' | 'arc' | 'line-arc' | 'ramp'
+export interface Leads {
+  in: LeadType
+  out: LeadType
+  /** Line length as a multiple of tool radius. */
+  length: number
+  /** Arc radius as a multiple of tool radius. */
+  radius: number
+  rampAngle: number
+  /** Distance the tool runs past the start point before leaving. Negative leaves a small web. */
+  overlap: number
+  feedPct: number
+}
+
+export interface Tags {
+  mode: 'none' | 'auto' | 'manual'
+  count: number
+  length: number
+  height: number
+  shape: 'flat' | 'ramp' | 'trapezoid'
+  rampAngle: number
+  /** Manual positions as fractions (0..1) of contour length. */
+  at: number[]
+}
+
+export type ProfileSide = 'outside' | 'inside' | 'left' | 'right' | 'centre'
+export type Direction = 'climb' | 'conventional'
+
+interface OpBase {
+  id: string
+  name: string
+  enabled: boolean
+  /** Entity ids this op machines (associative input). */
+  geometry: string[]
+  /** Shared machine-tool id; null = pick automatically. */
+  toolId: string | null
+  levels: Levels
+  feeds: { feed?: number; plunge?: number; rpm?: number }
+  face: FaceId
+  note?: string
+  /** Hash of the inputs when the toolpath was last regenerated; differs = stale. */
+  builtHash?: string
+  recipeId?: string
+}
+
+export interface ProfileOp extends OpBase {
+  kind: 'profile'
+  side: ProfileSide
+  direction: Direction
+  /** 'cam' = tool-centre path computed here; 'machine' = controller compensation (woodWOP WRKL/WRKR). */
+  compensation: 'cam' | 'machine'
+  corners: 'round' | 'straight' | 'loop'
+  stockXY: number
+  leads: Leads
+  tags: Tags
+  /** Alternate direction on each pass (open contours only). */
+  bidirectional: boolean
+  /** Start point as a fraction of contour length; absent = middle of the longest edge. */
+  start?: number
+  /** Wall angle in degrees from vertical (0 = vertical). */
+  slope: number
+}
+
+export interface PocketOp extends OpBase {
+  kind: 'pocket'
+  pattern: 'offset' | 'zigzag' | 'spiral'
+  /** Stepover as a fraction of tool diameter. */
+  stepover: number
+  angle: number
+  direction: Direction
+  islands: boolean
+  entry: 'plunge' | 'ramp' | 'helix'
+  rampAngle: number
+  /** Helix radius as a fraction of tool radius. */
+  helixPct: number
+  finishPass: boolean
+  stockXY: number
+}
+
+export interface DrillOp extends OpBase {
+  kind: 'drill'
+  cycle: 'drill' | 'peck'
+  peck: number
+  dwell: number
+  select: { mode: 'all' | 'diameter' | 'range'; diameter?: number; min?: number; max?: number }
+  depthRef: 'tip' | 'shoulder'
+}
+
+export interface EngraveOp extends OpBase {
+  kind: 'engrave'
+}
+
+export interface VCarveOp extends OpBase {
+  kind: 'vcarve'
+  /** Lateral step between rings. */
+  step: number
+}
+
+export interface SawOp extends OpBase {
+  kind: 'saw'
+}
+
+export interface SweepOp extends OpBase {
+  kind: 'sweep'
+  /** Section: inset from the guide contour (mm) -> depth below face 1 (mm). */
+  section: { inset: number; depth: number }[]
+  side: 'inside' | 'outside'
+  step: number
+}
+
+export interface CodeOp extends OpBase {
+  kind: 'code'
+  text: string
+  stop: boolean
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp
+export type CamOpKind = CamOp['kind']
+
+// ---------------------------------------------------------------------------------------------
+// Recipes and layer rules
+// ---------------------------------------------------------------------------------------------
+
+/** An op template without geometry, saved for reuse. */
+export type OpTemplate = Omit<CamOp, 'id' | 'geometry' | 'builtHash'>
+
+export interface Recipe {
+  id: string
+  name: string
+  description?: string
+  ops: OpTemplate[]
+}
+
+export type QueryField = 'layer' | 'type' | 'closed' | 'diameter' | 'width' | 'height' | 'area' | 'face'
+export type QueryOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'contains' | 'matches'
+export interface QueryTest {
+  field: QueryField
+  op: QueryOp
+  value: string | number | boolean
+}
+
+export interface LayerRule {
+  id: string
+  /** Layer name pattern: exact, glob with * and ?, or /regex/. Case-insensitive. */
+  layer: string
+  recipeId: string
+  /** Extra filter on matched geometry (all tests must pass). */
+  where?: QueryTest[]
+  /** Depth from layer name, e.g. "POCKET_D6" -> 6 mm, when the recipe has no fixed depth. */
+  depthFromName?: boolean
+  side?: ProfileSide
+  direction?: Direction
+  order: number
+}
+
+export interface LayerRuleSet {
+  id: string
+  name: string
+  rules: LayerRule[]
+  /** Layer whose largest closed contour becomes the outline; empty = largest closed contour anywhere. */
+  outlineLayer?: string
+  /** Rotate the drawing so its longest edge runs along X. */
+  alignLongestEdge: boolean
+}
+
+// ---------------------------------------------------------------------------------------------
+// Hardware patterns (spec-sheet pipeline)
+// ---------------------------------------------------------------------------------------------
+
+export interface PatternHole {
+  x: number
+  y: number
+  diameter: number
+  depth: number
+  face: FaceId
+}
+
+export type PatternStatus = 'verified' | 'approved' | 'draft' | 'rejected'
+export type PatternSource = 'library' | 'dxf' | 'csv' | 'pdf-draft' | 'manual'
+
+export interface HardwarePattern {
+  id: string
+  name: string
+  manufacturer: string
+  /** Library hardware item this pattern drills for. */
+  hardwareId?: string
+  /** Holes relative to the insertion point: x along the reference edge, y away from it. */
+  holes: PatternHole[]
+  /** Where the insertion point sits by default when placed on an edge. */
+  anchor: 'edge-start' | 'edge-mid' | 'edge-end' | 'corner' | 'centre'
+  status: PatternStatus
+  source: PatternSource
+  /** Where each number came from (file, page, quoted text). Required for drafts. */
+  provenance: { file?: string; page?: number; quote?: string; note?: string }[]
+  reviewedBy?: string
+  reviewedAt?: string
+  notes?: string
+}
+
+// ---------------------------------------------------------------------------------------------
+// Parametric doors
+// ---------------------------------------------------------------------------------------------
+
+export type DoorKind = 'shaker' | 'arched' | 'cathedral' | 'slab'
+export interface DoorStyle {
+  id: string
+  name: string
+  kind: DoorKind
+  /** Default variable values (mm); W and H come from each door. */
+  defaults: Record<string, number>
+  /** Recipe applied to the generated panel-field geometry. */
+  fieldRecipeId?: string
+  /** Recipe applied to the outline. */
+  outlineRecipeId?: string
+  materialId?: string
+  builtIn?: boolean
+}

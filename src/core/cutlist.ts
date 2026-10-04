@@ -5,6 +5,7 @@ import { buildCabinet, partOutline } from './construction/carcass'
 import { EPS, r3 } from './geometry'
 import type { EdgeKey, Job, Library, Operation, Part, ShopSettings, Vec2 } from './types'
 import { EDGE_KEYS } from './types'
+import { draftBlock } from './spec/draft'
 
 /** One physical panel to be cut, in cut-size coordinates (after edgeband / pre-mill compensation). */
 export interface PartInstance {
@@ -131,6 +132,11 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
     }
   }
   for (const cp of job.camParts ?? []) {
+    const blocked = draftBlock(cp)
+    if (blocked) {
+      warnings.push(`${blocked} It is left out of the cut list and nesting.`)
+      continue
+    }
     const material = cp.materialId ? lib.materials.find((m) => m.id === cp.materialId) : undefined
     if (!cp.materialId) warnings.push(`Custom part ${cp.name}: no material chosen, so it cannot be nested.`)
     else if (!material) warnings.push(`Custom part ${cp.name}: material ${cp.materialId} missing from library.`)

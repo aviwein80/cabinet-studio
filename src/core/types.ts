@@ -50,6 +50,7 @@ export type HardwareCategory =
   | 'screw'
   | 'leg'
   | 'slide'
+  | 'handle'
   | 'other'
 
 export interface Hardware {

@@ -57,12 +57,15 @@ export function SettingsPage() {
               Spec-sheet reader
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              Library → Drilling patterns → Draft from PDF can send the sheet’s
-              pages to a vision model you choose. Each provider needs your own
-              API key from its developer console. Chat subscriptions, including
-              a Cursor subscription, can’t be used here. Whatever the model
-              reads is only a draft: someone still checks every hole and
-              approves it before it is saved.
+              Library → Drilling patterns → Draft from spec sheet, and Custom
+              parts → Draft from customer drawing, can send the pages (PDF,
+              scan or photo) to a vision model you choose. The default is
+              Anthropic Claude Sonnet 4.5. Each provider needs your own API key
+              from its developer console. Chat subscriptions, including a
+              Cursor subscription, can’t be used here. Without a key, or
+              offline, the built-in reader is used. Whatever the model reads is
+              only a draft: every value cites its page, unread values stay
+              blank, and someone checks and approves it before it is saved.
             </p>
           </div>
           <div
@@ -91,8 +94,8 @@ export function SettingsPage() {
             <p className="flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
               <ShieldAlert className="size-4 text-amber-600" /> No{" "}
               {AI_PROVIDERS.find((p) => p.id === ai.provider)?.label} key saved
-              on this computer, so PDF drafts use the built-in reader until you
-              add one.
+              on this computer, so drafts use the built-in offline reader until
+              you add one.
             </p>
           )}
           <div className="grid gap-3 lg:grid-cols-2">

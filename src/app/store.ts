@@ -6,6 +6,8 @@ import { normalizeData } from '@/core/normalize'
 import { DEFAULT_ROOM } from '@/core/room'
 import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, ShopSettings } from '@/core/types'
+import { draftBlock } from '@/core/spec/draft'
+import { toast } from 'sonner'
 import { backend } from './backend'
 
 export type Route =
@@ -205,6 +207,11 @@ export const useStore = create<State>((set, get) => {
         d.machine = clone(PLACEHOLDER_MACHINE)
       }),
     savePart(part, jobId) {
+      const blocked = draftBlock(part)
+      if (blocked) {
+        toast.error(blocked)
+        return
+      }
       mutate((d) => {
         const write = (list: CamPart[] | undefined) => {
           const out = [...(list ?? [])]

@@ -18,7 +18,7 @@ import { OffcutsTab } from './library/OffcutsTab'
 import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
 
-const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'other']
+const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'handle', 'other']
 
 const MATERIAL_COLS: Column<Material>[] = [
   { key: 'code', label: 'Code', type: 'text', mono: true, width: '130px' },

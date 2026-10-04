@@ -1,4 +1,4 @@
-import { Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, Trash2 } from 'lucide-react'
+import { Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, ScanText, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -12,6 +12,7 @@ import { formatLength } from '@/core/units'
 import type { Material, UnitSystem } from '@/core/types'
 import { DoorDialog } from '@/components/DoorDialog'
 import { DrawingImportDialog } from '@/components/DrawingImportDialog'
+import { PartDraftDialog } from '@/components/PartDraftDialog'
 import { useStore } from '@/app/store'
 import { featuresOf } from '@/core/features'
 import { contourPath } from '@/pages/part/hit'
@@ -63,6 +64,7 @@ export function PartList({
   const file = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [doors, setDoors] = useState(false)
+  const [drafting, setDrafting] = useState(false)
   const doorsOn = useStore((s) => featuresOf(s.data?.settings).camParametric)
   const create = () => {
     const p = newPart({ name: `Part ${parts.length + 1}` })
@@ -88,6 +90,17 @@ export function PartList({
         <Button variant="outline" onClick={() => setImporting(true)}>
           <FileInput /> Import drawing
         </Button>
+        <Button variant="outline" onClick={() => setDrafting(true)}>
+          <ScanText /> Draft from customer drawing
+        </Button>
+        <PartDraftDialog
+          open={drafting}
+          onOpenChange={setDrafting}
+          onApproved={(p) => {
+            onSave(p)
+            onOpen(p.id)
+          }}
+        />
         {doorsOn && (
           <Button variant="outline" onClick={() => setDoors(true)}>
             <DoorOpen /> Doors

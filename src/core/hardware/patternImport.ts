@@ -5,15 +5,39 @@
  */
 import { nanoid } from 'nanoid'
 import { importDxf } from '@/cam/dxf'
-import type { FaceId, HardwarePattern, PatternHole } from '@/cam/types'
+import type { FaceId, HardwarePattern, PatternHole, Region } from '@/cam/types'
+import type { Hardware } from '../types'
 import { parseCsv, type Row } from '../library/import'
 import type { PageImage } from './aiProviders'
 
 export interface PatternDraft {
   pattern: HardwarePattern
+  /** Library item data read from the same sheet; added to the library when the pattern is approved. */
+  item?: ItemDraft
+  /** Citation of each hole value, in hole order. */
+  holeCites?: Partial<Record<'x' | 'y' | 'diameter' | 'depth', Cite>>[]
+  /** The pages the draft was read from, shown beside it in the review dialog. */
+  source?: { file: string; images: PageImage[] }
   /** Numbers found in the source, with the text they came from. */
   findings: Finding[]
   warnings: string[]
+}
+
+/** A library hardware row drafted from a sheet. Numbers it could not read stay NaN (blank). */
+export interface ItemDraft {
+  hardware: Hardware
+  /** Where each field came from, keyed by field name. */
+  cites: Partial<Record<keyof Hardware, Cite>>
+  /** Add the row to the library on approval (otherwise only the pattern is saved). */
+  add: boolean
+}
+
+export interface Cite {
+  page?: number
+  quote?: string
+  region?: Region
+  /** The quote is not in the PDF's text layer (it may be in the drawing itself). */
+  unverified?: boolean
 }
 
 export interface Finding {
@@ -21,6 +45,7 @@ export interface Finding {
   value: number
   page?: number
   quote: string
+  region?: Region
   /** Used to build a hole. */
   used: boolean
 }
@@ -146,29 +171,36 @@ export function patternsFromCsv(text: string, file: string): { drafts: PatternDr
 export interface TextPage {
   page: number
   lines: string[]
+  /** Box of each line on the page (same order as `lines`), when the PDF has a text layer. */
+  boxes?: Region[]
 }
 
 interface TextLib {
-  getDocument(src: { data: Uint8Array; isEvalSupported?: boolean; useWorkerFetch?: boolean }): { promise: Promise<{ numPages: number; getPage(n: number): Promise<{ getTextContent(): Promise<{ items: unknown[] }> }> }> }
+  getDocument(src: { data: Uint8Array; isEvalSupported?: boolean; useWorkerFetch?: boolean }): {
+    promise: Promise<{ numPages: number; getPage(n: number): Promise<{ getTextContent(): Promise<{ items: unknown[] }>; getViewport?(o: { scale: number }): { width: number; height: number } }> }>
+  }
 }
 
-/** Text lines per page (items grouped by baseline, left to right). */
+/** Text lines per page (items grouped by baseline, left to right), with each line's box. */
 export async function pdfTextPages(lib: TextLib, data: Uint8Array, maxPages = 12): Promise<TextPage[]> {
   const doc = await lib.getDocument({ data, isEvalSupported: false, useWorkerFetch: false }).promise
   const out: TextPage[] = []
   for (let n = 1; n <= Math.min(doc.numPages, maxPages); n++) {
     const page = await doc.getPage(n)
+    const vp = page.getViewport?.({ scale: 1 })
     const { items } = await page.getTextContent()
-    const rows: { y: number; parts: { x: number; s: string }[] }[] = []
-    for (const it of items as { str?: string; transform?: number[] }[]) {
+    const rows: { y: number; parts: { x: number; s: string; w: number; h: number }[] }[] = []
+    for (const it of items as { str?: string; transform?: number[]; width?: number; height?: number }[]) {
       if (!it.str?.trim() || !it.transform) continue
       const x = it.transform[4]
       const y = it.transform[5]
+      const part = { x, s: it.str, w: it.width ?? 0, h: it.height || Math.abs(it.transform[3]) || 10 }
       const row = rows.find((r) => Math.abs(r.y - y) < 2.5)
-      if (row) row.parts.push({ x, s: it.str })
-      else rows.push({ y, parts: [{ x, s: it.str }] })
+      if (row) row.parts.push(part)
+      else rows.push({ y, parts: [part] })
     }
     rows.sort((a, b) => b.y - a.y)
+    const clamp = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 10000) / 10000
     out.push({
       page: n,
       lines: rows.map((r) =>
@@ -178,6 +210,16 @@ export async function pdfTextPages(lib: TextLib, data: Uint8Array, maxPages = 12
           .join(' ')
           .replace(/\s+/g, ' '),
       ),
+      ...(vp
+        ? {
+            boxes: rows.map((r): Region => {
+              const h = Math.max(...r.parts.map((p) => p.h))
+              const x0 = Math.min(...r.parts.map((p) => p.x))
+              const x1 = Math.max(...r.parts.map((p) => p.x + p.w))
+              return [clamp((x0 - 2) / vp.width), clamp(1 - (r.y + h + 2) / vp.height), clamp((x1 + 2) / vp.width), clamp(1 - (r.y - 3) / vp.height)]
+            }),
+          }
+        : {}),
     })
   }
   return out
@@ -199,16 +241,19 @@ interface Hit {
   value: number
   page: number
   quote: string
+  region?: Region
 }
 
 function scan(pages: TextPage[]) {
   const hits: Record<string, Hit[]> = { diameter: [], depth: [], edge: [], spacing: [], setback: [], positions: [], line: [] }
+  let region: Region | undefined
   const add = (k: string, label: string, value: number, page: number, quote: string) => {
     if (!Number.isFinite(value) || value <= 0 || value > 3000) return
-    if (!hits[k].some((h) => h.value === value)) hits[k].push({ label, value, page, quote })
+    if (!hits[k].some((h) => h.value === value)) hits[k].push({ label, value, page, quote, ...(region ? { region } : {}) })
   }
-  for (const { page, lines } of pages)
-    for (const raw of lines) {
+  for (const { page, lines, boxes } of pages)
+    for (const [li, raw] of lines.entries()) {
+      region = boxes?.[li]
       const line = raw.replace(/[⌀øΦφ]/g, 'Ø')
       const quote = raw.trim().slice(0, 160)
       for (const m of line.matchAll(new RegExp(String.raw`Ø\s*${NUM}(?:\s*mm)?(?:\s*[x×]\s*${NUM})?`, 'g'))) {
@@ -276,7 +321,7 @@ export const textDrafter: PatternDrafter = {
     } else warnings.push('No hole diameters found in the text. The sheet may be a scan or a drawing without text; enter the holes by hand.')
     if (holes.some((h) => !Number.isFinite(h.depth))) warnings.push('No depth found for some holes.')
     if (/\b\d+\s*\/\s*\d+\s*(?:"|in)/.test(all)) warnings.push('The sheet has inch fractions; only millimetre values were read.')
-    const provenance = findings.filter((f) => f.used).map((f) => ({ file, page: f.page, quote: f.quote, note: `${f.label}: ${f.value}` }))
+    const provenance = findings.filter((f) => f.used).map((f) => ({ file, page: f.page, quote: f.quote, note: `${f.label}: ${f.value}`, ...(f.region ? { region: f.region } : {}) }))
     return { pattern: draftOf(title, 'pdf-draft', holes, { manufacturer, provenance }), findings, warnings }
   },
 }

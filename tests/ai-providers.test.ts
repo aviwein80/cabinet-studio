@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   AI_PROVIDERS,
   type AiCall,
-  aiDrafter,
   buildRequest,
   callProvider,
-  draftFromModel,
   modelOf,
   responseText,
 } from "@/core/hardware/aiProviders";
+import { aiDrafter, draftFromModel } from "@/core/spec/hardwareSpec";
 import { approvePattern, savePattern } from "@/core/hardware/patterns";
 import { defaultAppData } from "@/core/defaults";
 

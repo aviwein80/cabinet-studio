@@ -11,7 +11,7 @@ import type { EdgeBand, Hardware, HardwareCategory, Material } from '@/core/type
 
 type Row = Hardware | Material | EdgeBand
 
-const CATS: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'other']
+const CATS: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'handle', 'other']
 
 function JobList({ uses }: { uses: JobUse[] }) {
   return (

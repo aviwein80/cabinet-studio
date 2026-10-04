@@ -74,6 +74,11 @@ export interface CamPart {
   kit?: string
   notes?: string
   source?: string
+  /**
+   * Set on parts drafted from a customer's spec or drawing. A draft cannot be saved, added to a
+   * job or nested; it becomes 'approved' when a named person confirms they checked it.
+   */
+  review?: { status: 'draft' | 'approved'; file: string; drafter: string; reviewedBy?: string; reviewedAt?: string }
   /** Keep ops on unchanged geometry ids when imports refresh. */
   updatedAt: string
 }
@@ -283,6 +288,9 @@ export interface LayerRuleSet {
 // Hardware patterns (spec-sheet pipeline)
 // ---------------------------------------------------------------------------------------------
 
+/** Box on a source page, normalised 0..1 from the top-left corner: [x0, y0, x1, y1]. */
+export type Region = [number, number, number, number]
+
 export interface PatternHole {
   x: number
   y: number
@@ -306,8 +314,8 @@ export interface HardwarePattern {
   anchor: 'edge-start' | 'edge-mid' | 'edge-end' | 'corner' | 'centre'
   status: PatternStatus
   source: PatternSource
-  /** Where each number came from (file, page, quoted text). Required for drafts. */
-  provenance: { file?: string; page?: number; quote?: string; note?: string }[]
+  /** Where each number came from (file, page, quoted text, box on the page). Required for drafts. */
+  provenance: { file?: string; page?: number; quote?: string; note?: string; region?: Region }[]
   reviewedBy?: string
   reviewedAt?: string
   notes?: string

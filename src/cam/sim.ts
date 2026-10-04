@@ -22,6 +22,8 @@ export interface Cutter {
   shape: ToolShape
   /** Included angle for V cutters (degrees). */
   angle: number
+  /** Corner radius for bull-nose cutters. */
+  cornerRadius?: number
 }
 
 export interface SimSeg {
@@ -77,7 +79,7 @@ function cutterOf(tp: Toolpath, d?: number): Cutter {
     dia = w && w.k === 'saw' ? w.width : (t?.kerf ?? 4)
   }
   if (!dia) dia = tp.kind === 'vcarve' ? 20 : 6
-  return { r: dia / 2, shape, angle: t?.angle ?? 90 }
+  return { r: dia / 2, shape, angle: t?.angle ?? 90, ...(shape === 'bull' ? { cornerRadius: t?.cornerRadius ?? 0 } : {}) }
 }
 
 /** Cutter bottom height at horizontal distance `d` from the tool axis, tool tip at `z`. */
@@ -85,6 +87,13 @@ export function cutterZ(c: Cutter, z: number, d: number): number {
   if (d > c.r + 1e-9) return Infinity
   if (c.shape === 'ball') return z + c.r - Math.sqrt(Math.max(0, c.r * c.r - d * d))
   if (c.shape === 'v') return z + d / Math.tan(((c.angle || 90) * Math.PI) / 360)
+  if (c.shape === 'bull') {
+    const rc = Math.min(Math.max(0, c.cornerRadius ?? 0), c.r)
+    const flat = c.r - rc
+    if (d <= flat) return z
+    const e = d - flat
+    return z + rc - Math.sqrt(Math.max(0, rc * rc - e * e))
+  }
   return z
 }
 
@@ -234,7 +243,8 @@ export function heightAt(hf: Heightfield, x: number, y: number): number {
   return hf.top[j * hf.nx + i]
 }
 
-function stamp(hf: Heightfield, p: V3, c: Cutter) {
+/** Lower the heightfield to the cutter's bottom surface with the tip at `p`. */
+export function stamp(hf: Heightfield, p: V3, c: Cutter) {
   const floor = -hf.thickness
   if (p.z >= 0) return
   const r = c.r

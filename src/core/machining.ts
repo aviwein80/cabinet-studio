@@ -20,6 +20,11 @@ export function cutoutTool(machine: MachineProfile): Tool | undefined {
   return machine.tools.find((t) => t.type === 'router' && t.number === machine.cutoutToolNumber)
 }
 
+/** Flat-bottomed router: what 2D pockets, grooves and engraving are calculated for (not V, ball or bull-nose). */
+export function squareEnd(t: Tool) {
+  return t.type === 'router' && t.shape !== 'v' && t.shape !== 'ball' && t.shape !== 'bull'
+}
+
 export function partSpacing(machine: MachineProfile, settings: ShopSettings) {
   return (cutoutTool(machine)?.diameter ?? 12) + settings.nesting.extraSpacing
 }
@@ -212,7 +217,7 @@ export function findDrill(machine: MachineProfile, diameter: number, depth: numb
 }
 
 export function findPocketTool(machine: MachineProfile, width: number, depth: number) {
-  const fits = machine.tools.filter((t) => t.type === 'router' && t.shape !== 'v' && t.diameter <= width + 1e-9 && t.maxDepth + 1e-9 >= depth)
+  const fits = machine.tools.filter((t) => squareEnd(t) && t.diameter <= width + 1e-9 && t.maxDepth + 1e-9 >= depth)
   fits.sort((a, b) => b.diameter - a.diameter || a.number - b.number)
   return fits[0] ?? null
 }

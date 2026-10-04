@@ -87,6 +87,10 @@ describe('validator', () => {
     expect(codes(run(sink, data()), 'warning')).toContain('HORIZONTAL_SKIPPED')
     const saw = data((x) => (x.machine.grooveMethod = 'saw'))
     expect(codes(run(base(), saw), 'warning')).toContain('SAW_RUNOUT')
+    // no saw unit in the (placeholder) machine model: cabinet saw grooves are blocked too
+    expect(codes(run(base(), saw))).toContain('MACHINE_CANNOT')
+    const big = data((x) => (x.library.materials = x.library.materials.map((m) => ({ ...m, sheetLength: 4000 }))))
+    expect(codes(run(base(), big))).toContain('OFF_TABLE')
   })
 
   it('flags horizontal holes with no matching horizontal drill when the unit is enabled', () => {

@@ -3,7 +3,7 @@
  * custom parts and cabinets use one tool table.
  */
 import { nanoid } from 'nanoid'
-import { cutoutTool, findDrill } from '@/core/machining'
+import { cutoutTool, findDrill, squareEnd } from '@/core/machining'
 import type { MachineProfile, Tool } from '@/core/types'
 import type { CamOp, CamOpKind, Leads, Levels, OpTemplate, Tags } from './types'
 
@@ -101,16 +101,16 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
   if (op.toolId) return machine.tools.find((t) => t.id === op.toolId) ?? null
   switch (op.kind) {
     case 'profile':
-      return cutoutTool(machine) ?? routers(machine)[0] ?? null
+      return cutoutTool(machine) ?? routers(machine).find(squareEnd) ?? null
     case 'pocket':
     case 'sweep': {
       const fits = routers(machine)
-        .filter((t) => t.shape !== 'v' && (!hint?.width || t.diameter <= hint.width + 1e-9))
+        .filter((t) => squareEnd(t) && (!hint?.width || t.diameter <= hint.width + 1e-9))
         .sort((a, b) => b.diameter - a.diameter || a.number - b.number)
       return fits[0] ?? null
     }
     case 'engrave':
-      return routers(machine).filter((t) => t.shape !== 'v').sort((a, b) => a.diameter - b.diameter)[0] ?? null
+      return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter)[0] ?? null
     case 'vcarve':
       return routers(machine).find((t) => t.shape === 'v') ?? null
     case 'saw':

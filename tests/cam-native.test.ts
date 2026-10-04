@@ -7,12 +7,15 @@ import { defaultOp } from '@/cam/ops'
 import { generatePart } from '@/cam/toolpath'
 import type { CamOp, CamPart, FaceId } from '@/cam/types'
 import { defaultAppData } from '@/core/defaults'
+import { PLACEHOLDER_N200_MODEL } from '@/core/machineModel'
 import { mprFiles, runJob } from '@/core/pipeline'
 import type { AppData, Job, MachineProfile } from '@/core/types'
 
-function machineWithHorizontal(base: MachineProfile): MachineProfile {
+/** A machine with a horizontal drill unit and (since M2.1) a saw unit declared in its model. */
+function machineWithHorizontal(base: MachineProfile, saw = true): MachineProfile {
   const m = structuredClone(base)
   m.hasHorizontalDrillUnit = true
+  if (saw) m.physical = { ...structuredClone(PLACEHOLDER_N200_MODEL), capabilities: { ...PLACEHOLDER_N200_MODEL.capabilities, saw: true } }
   m.tools.push({ id: 't301', number: 301, type: 'drill-horizontal', name: 'Horizontal drill 8 mm (placeholder)', diameter: 8, maxDepth: 40 })
   return m
 }
@@ -110,9 +113,9 @@ describe('C4 native woodWOP macros', () => {
 })
 
 describe('C4 job integration behind the export checker', () => {
-  function jobData(on: boolean, partFn = sixFacePanel): { job: Job; data: AppData } {
+  function jobData(on: boolean, partFn = sixFacePanel, saw = true): { job: Job; data: AppData } {
     const data = defaultAppData()
-    data.machine = machineWithHorizontal(data.machine)
+    data.machine = machineWithHorizontal(data.machine, saw)
     data.settings.features = { ...(data.settings.features ?? {}), camMprOutput: on } as AppData['settings']['features']
     const p = partFn()
     p.qty = 2
@@ -159,6 +162,15 @@ describe('C4 job integration behind the export checker', () => {
     }
     expect(macros(sheet, 112)).toHaveLength(2)
     expect(macros(sheet, 103)).toHaveLength(8)
+  })
+
+  it('saw grooves are blocked while the machine model has no saw unit (the default)', () => {
+    const { job, data } = jobData(true, sixFacePanel, false)
+    const out = runJob(job, data)
+    const errs = out.issues.filter((i) => i.severity === 'error')
+    expect([...new Set(errs.map((i) => i.code))]).toEqual(['MACHINE_CANNOT'])
+    expect(errs[0].message).toMatch(/no saw unit/)
+    expect(out.issues.some((i) => i.code === 'MACHINE_PLACEHOLDER' && i.severity === 'warning')).toBe(true)
   })
 
   it('the checker catches a custom operation deeper than the spoilboard allows', () => {

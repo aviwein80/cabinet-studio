@@ -346,6 +346,59 @@ export interface Tool {
   spindle?: 'cw' | 'ccw'
   length?: number
   notes?: string
+  /** Shank diameter above the flutes (collision checks). Absent = the cutting diameter. */
+  shankDiameter?: number
+  /** Length of the cutting edge from the tip. Absent = `maxDepth`. */
+  fluteLength?: number
+  /** Stick-out: tip to the face of the holder. Anything deeper than this hits the holder. */
+  gaugeLength?: number
+  /** Holder from `MachineProfile.holders`. */
+  holderId?: string
+}
+
+/**
+ * Tool holder as a revolved outline: radius `r` at height `z` above the holder face (the gauge
+ * line), listed bottom to top. Used to draw the holder and to check it against the material.
+ */
+export interface ToolHolder {
+  id: string
+  name: string
+  profile: { z: number; r: number }[]
+  /** Invented numbers until the shop measures its real holders. */
+  placeholder?: boolean
+  notes?: string
+}
+
+export type MachineAxisId = 'X' | 'Y' | 'Z' | 'A' | 'B' | 'C'
+export type MachineHeadKind = 'spindle' | 'drill-block' | 'saw' | 'aggregate'
+
+/**
+ * What the machine physically has and can do: axes and travel, table, spoilboard, tool change,
+ * heads and capabilities. One model used by the simulator, collision checks, the export checker
+ * and posts. Lengths in mm, in machine coordinates (origin at the sheet origin).
+ */
+export interface MachineModel {
+  /** True while any value here is invented. Shown as a warning on every export. */
+  placeholder: boolean
+  axes: { id: MachineAxisId; min: number; max: number }[]
+  /** Usable table (vacuum) area. */
+  table: { length: number; width: number }
+  spoilboard: { thickness: number }
+  toolChange: { x: number; y: number; z: number }
+  /** Machine clearance height above the sheet top for long rapids. */
+  safeZ: number
+  heads: { id: string; kind: MachineHeadKind; name: string }[]
+  capabilities: {
+    /** 3-axis simultaneous milling (3D surfaces). */
+    mill3d: boolean
+    /** A saw unit is fitted (saw-groove output allowed). */
+    saw: boolean
+    /** An aggregate head is fitted (edge milling, angled work). */
+    aggregate: boolean
+    rotary: boolean
+    positional: boolean
+    simultaneous5: boolean
+  }
 }
 
 /** Feeds and speeds for one tool in one material; overrides the tool's own values. */
@@ -377,6 +430,9 @@ export interface MachineProfile {
   header: { OP: number; FM: number }
   tools: Tool[]
   feeds?: MaterialFeed[]
+  holders?: ToolHolder[]
+  /** Machine model (axes, table, heads, capabilities); absent = the placeholder N-200 model (`machineModelOf`). */
+  physical?: MachineModel
 }
 
 export interface NestSettings {
@@ -464,6 +520,8 @@ export interface FeatureFlags {
   hardwarePatterns: boolean
   /** Write custom-part operations into N-200 MPR files. Off until the owner has proven output on the machine. */
   camMprOutput: boolean
+  /** 3D models on custom parts: STL/OBJ/3MF import, mesh tools, sections, work volume from a model. */
+  cam3d: boolean
 }
 
 export interface Library {

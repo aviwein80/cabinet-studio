@@ -8,6 +8,7 @@ import type {
   MachineProfile,
   Material,
   ShopSettings,
+  ToolHolder,
 } from './types'
 
 export const DEFAULT_MATERIALS: Material[] = [
@@ -139,6 +140,19 @@ export const BUILTIN_TEMPLATES: CabinetTemplate[] = [
  * PLACEHOLDER tool table. These numbers are invented. They must be replaced with the shop's real
  * HOMAG CENTATEQ N-200 tool table before any program is run, even in simulation.
  */
+/** PLACEHOLDER holder: a generic collet chuck outline. Not a real HOMAG holder. */
+export const PLACEHOLDER_HOLDER: ToolHolder = {
+  id: 'h-placeholder',
+  name: 'Collet chuck (placeholder)',
+  placeholder: true,
+  profile: [
+    { z: 0, r: 17.5 },
+    { z: 30, r: 21 },
+    { z: 30, r: 32 },
+    { z: 70, r: 32 },
+  ],
+}
+
 export const PLACEHOLDER_MACHINE: MachineProfile = {
   name: 'HOMAG CENTATEQ N-200 (placeholder tools)',
   model: 'CENTATEQ N-200',
@@ -162,7 +176,12 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
     { id: 't203', number: 203, type: 'drill-vertical', name: 'Dowel drill 8 mm', diameter: 8, maxDepth: 35 },
     { id: 't204', number: 204, type: 'drill-vertical', name: 'Hinge boring bit 35 mm', diameter: 35, maxDepth: 15 },
     { id: 't140', number: 140, type: 'saw', name: 'Grooving saw 4 mm kerf', diameter: 4, maxDepth: 15 },
+    // 3D tools: invented shapes and lengths for development only.
+    { id: 't105', number: 105, type: 'router', name: 'Ball-nose 6 mm (placeholder)', diameter: 6, maxDepth: 25, shape: 'ball', centreCutting: true, shankDiameter: 6, fluteLength: 25, gaugeLength: 50, holderId: 'h-placeholder' },
+    { id: 't106', number: 106, type: 'router', name: 'Ball-nose 3 mm (placeholder)', diameter: 3, maxDepth: 12, shape: 'ball', centreCutting: true, shankDiameter: 6, fluteLength: 12, gaugeLength: 40, holderId: 'h-placeholder' },
+    { id: 't107', number: 107, type: 'router', name: 'Bull-nose 12 mm R2 (placeholder)', diameter: 12, maxDepth: 30, shape: 'bull', cornerRadius: 2, centreCutting: true, shankDiameter: 12, fluteLength: 30, gaugeLength: 60, holderId: 'h-placeholder' },
   ],
+  holders: [PLACEHOLDER_HOLDER],
 }
 
 export const DEFAULT_SETTINGS: ShopSettings = {

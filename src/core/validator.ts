@@ -8,6 +8,7 @@ import { EPS, fmt } from './geometry'
 import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type Paths64 } from 'clipper2-ts'
 import { cutoutTool, placementTransform, type JobNest, type SheetProgram } from './machining'
 import type { Placement } from './nesting'
+import { machineModelOf } from './machineModel'
 import type { Library, MachineProfile, ShopSettings } from './types'
 
 export type Severity = 'error' | 'warning' | 'info'
@@ -44,6 +45,15 @@ export function validateJob(
       message: 'Machine profile uses PLACEHOLDER tool data. Replace it with the real N-200 tool table before running any program.',
     })
 
+  const model = machineModelOf(machine)
+  if (model.placeholder)
+    add({
+      severity: 'warning',
+      code: 'MACHINE_PLACEHOLDER',
+      message: 'Machine model (table, travel, tool change, spoilboard, saw and aggregate units) is PLACEHOLDER data. Confirm the real N-200 figures on the Machine page.',
+    })
+  const noSaw = (what: string) => `${what}: the machine model has no saw unit. Confirm the unit on the Machine page (Saw unit fitted) or use router pockets.`
+
   const cutter = cutoutTool(machine)
   if (!cutter)
     add({ severity: 'error', code: 'TOOL_MISSING', message: `Cut-out router T${machine.cutoutToolNumber} is not in the tool table.` })
@@ -69,6 +79,13 @@ export function validateJob(
     const sheetNo = sh.index
     const maxZ = T + machine.spoilboardAllowance
     const trim = settings.nesting.edgeTrim
+    if (sh.sheetLength > model.table.length + EPS || sh.sheetWidth > model.table.width + EPS)
+      add({
+        severity: 'error',
+        code: 'OFF_TABLE',
+        sheet: sheetNo,
+        message: `Sheet ${fmt(sh.sheetLength)} x ${fmt(sh.sheetWidth)} mm is larger than the machine table ${fmt(model.table.length)} x ${fmt(model.table.width)} mm.`,
+      })
 
     // Placement checks: inside sheet, spacing, grain, thickness.
     for (const pl of sh.placements) {
@@ -168,6 +185,7 @@ export function validateJob(
           break
         }
         case 'saw':
+          if (!model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(label) })
           if (!op.tool) add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no saw unit in the tool table.` })
           if (op.depth >= T - EPS)
             add({ ...ref, severity: 'error', code: 'DEPTH', message: `${label}: saw groove ${fmt(op.depth)} mm cuts through ${fmt(T)} mm material.` })
@@ -194,6 +212,7 @@ export function validateJob(
             if (p && (bx.minX < p.x - r || bx.minY < p.y - r || bx.maxX > p.x + p.dx + r || bx.maxY > p.y + p.dy + r))
               add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${what}: path leaves its part and would cut a neighbour.` })
           }
+          if (it.k === 'saw' && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(what) })
           if (it.k === 'saw')
             add({ ...ref, severity: 'warning', code: 'SAW_RUNOUT', message: `${what}: saw blade run-out on a nested sheet can cut into neighbouring parts. Check in simulation.` })
           break

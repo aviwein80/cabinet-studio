@@ -1,4 +1,5 @@
 WARNING PLACEHOLDER_TOOLS  Machine profile uses PLACEHOLDER tool data. Replace it with the real N-200 tool table before running any program.
+WARNING MACHINE_PLACEHOLDER Machine model (table, travel, tool change, spoilboard, saw and aggregate units) is PLACEHOLDER data. Confirm the real N-200 figures on the Machine page.
 WARNING SMALL_PART         S2 #22 Part #22 (764 x 100) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
 WARNING HORIZONTAL_SKIPPED S2 10 horizontal holes on parts #20, #22 are not in the program (no horizontal drill unit). Drill them off-machine.
 WARNING SMALL_PART         S3 #13 Part #13 (414 x 99) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).

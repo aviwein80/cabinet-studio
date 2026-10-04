@@ -1,0 +1,34 @@
+/**
+ * Stock model: the simulated material left after each move. One interface, several
+ * implementations: the heightfield (exact for a vertical 3-axis tool) now; a tri-dexel or voxel
+ * stock for rotary, 3+2 and 5-axis later (Stage 3) behind the same calls.
+ *
+ * Part frame: X along the length, Y along the width, Z = 0 at face 1 and negative into the material.
+ */
+import type { Box3, Mesh } from '../mesh/types'
+import type { Cutter, V3 } from '../sim'
+
+export interface StockSnapshot {
+  kind: string
+  data: Float32Array
+}
+
+export interface StockModel {
+  readonly kind: 'heightfield'
+  /** Material extents before any cutting. */
+  bounds(): Box3
+  /** Remove what the cutter sweeps moving in a straight line from `a` to `b` (tip positions). */
+  carve(a: V3, b: V3, cutter: Cutter): void
+  /** Top of the material at (x, y); NaN outside the stock. */
+  heightAt(x: number, y: number): number
+  /** Is (x, y, z) inside the remaining material? */
+  occupied(x: number, y: number, z: number): boolean
+  /** Highest remaining material within radius `r` of (x, y); -Infinity when there is none. */
+  maxInDisc(x: number, y: number, r: number): number
+  /** Volume removed so far (mm³). */
+  removedVolume(): number
+  /** Remaining material as a closed (watertight) triangle mesh. */
+  toMesh(): Mesh
+  snapshot(): StockSnapshot
+  restore(s: StockSnapshot): void
+}

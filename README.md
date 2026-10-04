@@ -102,6 +102,16 @@ export checker. Tool numbers are still placeholders.
   behind every number it used. Every import is a draft, and **nothing is saved until a named
   person ticks that they checked every hole and approves it**. The part designer's **Hardware**
   button places only verified or approved patterns.
+- **AI spec-sheet reader (optional)**: under **Settings → Spec-sheet reader**, choose OpenAI,
+  Anthropic, Google Gemini or xAI Grok, or keep the offline built-in reader. Each provider has its
+  own API key and an editable vision model (defaults `gpt-4.1`, `claude-sonnet-4-5`,
+  `gemini-2.5-flash`, `grok-4`). The PDF's pages are rendered and sent to that provider. Holes
+  the model returns keep their page and quote, and quotes missing from the PDF text are flagged.
+  The result is a draft like any other import. Keys come from each provider's developer console;
+  chat subscriptions, including Cursor's, can't be used. Keys are kept on this computer only, in
+  `secrets/ai-keys.json` under the app's data folder, never in the shop file or its backups. The
+  desktop app encrypts them with the system keychain and makes the calls from the main process.
+  The browser preview keeps them unencrypted in browser storage.
 - **Batch runs**: drop a part-list CSV (cabinet-side parts, DXF drawings, or doors) into an inbox
   folder. Nested MPRs, labels, sheet maps, a cut list, a BOM and a report appear in the outbox
   without touching the UI. A list with validator errors is reported and not exported. Cancel

@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { Worker } from 'node:worker_threads'
+import { aiCall, aiKeyStatus, aiSetKey } from './aiKeys'
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL
 const MAX_BACKUPS = 30
@@ -77,6 +78,10 @@ function registerIpc() {
     const res = await dialog.showOpenDialog(win!, { title, properties: ['openDirectory', 'createDirectory'] })
     return res.canceled ? null : (res.filePaths[0] ?? null)
   })
+
+  ipcMain.handle('ai:status', () => aiKeyStatus())
+  ipcMain.handle('ai:setKey', (_e, id, key: string | null) => aiSetKey(id, key))
+  ipcMain.handle('ai:call', (_e, call) => aiCall(call))
 
   ipcMain.handle('batch:start', (_e, cfg: { inbox: string; outbox: string }) => startBatch(cfg))
   ipcMain.handle('batch:stop', () => stopBatch())

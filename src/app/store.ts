@@ -16,6 +16,7 @@ export type Route =
   | { page: 'library'; tab?: LibraryTab }
   | { page: 'machine' }
   | { page: 'batch' }
+  | { page: 'settings' }
   | { page: 'parts' }
   | { page: 'part'; partId: string; jobId?: string }
 

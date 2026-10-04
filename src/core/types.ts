@@ -10,6 +10,7 @@
  */
 
 import type { CamPart, DoorStyle, HardwarePattern, LayerRuleSet, Recipe } from '../cam/types'
+import type { AiSettings } from './hardware/aiProviders'
 
 export type Vec3 = [number, number, number]
 
@@ -437,6 +438,8 @@ export interface ShopSettings {
   features?: Partial<FeatureFlags>
   /** Folder watcher for part-list CSVs (desktop app). */
   batch?: { inbox: string; outbox: string }
+  /** Spec-sheet reader provider and models. API keys are never stored here. */
+  ai?: AiSettings
 }
 
 export interface FeatureFlags {

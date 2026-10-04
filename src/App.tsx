@@ -1,4 +1,4 @@
-import { Boxes, Cpu, FolderKanban, Inbox, Library as LibraryIcon, Loader2, PenTool, TriangleAlert } from 'lucide-react'
+import { Boxes, Cpu, FolderKanban, Inbox, Library as LibraryIcon, Loader2, PenTool, Settings, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -13,6 +13,7 @@ import { LibraryPage } from './pages/LibraryPage'
 import { MachinePage } from './pages/MachinePage'
 import { PartDesignerPage } from './pages/PartDesigner'
 import { PartsPage } from './pages/PartsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page'][] }[] = [
   { label: 'Jobs', icon: FolderKanban, route: { page: 'jobs' }, match: ['jobs', 'job', 'cabinet'] },
@@ -20,6 +21,7 @@ const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page
   { label: 'Library', icon: LibraryIcon, route: { page: 'library' }, match: ['library', 'template'] },
   { label: 'Batch runs', icon: Inbox, route: { page: 'batch' }, match: ['batch'] },
   { label: 'Machine & tools', icon: Cpu, route: { page: 'machine' }, match: ['machine'] },
+  { label: 'Settings', icon: Settings, route: { page: 'settings' }, match: ['settings'] },
 ]
 
 export default function App() {
@@ -110,6 +112,7 @@ export default function App() {
           {route.page === 'template' && <CabinetEditorPage target={{ kind: 'template', templateId: route.templateId }} />}
           {route.page === 'library' && <LibraryPage tab={route.tab ?? 'templates'} />}
           {route.page === 'machine' && <MachinePage />}
+          {route.page === 'settings' && <SettingsPage />}
           {route.page === 'batch' && <BatchPage />}
           {route.page === 'parts' && <PartsPage />}
           {route.page === 'part' && <PartDesignerPage partId={route.partId} jobId={route.jobId} />}

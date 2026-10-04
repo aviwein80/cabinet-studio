@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('cabinetStudio', {
   batchStop: () => ipcRenderer.invoke('batch:stop'),
   batchCancel: () => ipcRenderer.invoke('batch:cancel'),
   batchStatus: () => ipcRenderer.invoke('batch:status'),
+  aiKeyStatus: () => ipcRenderer.invoke('ai:status'),
+  aiSetKey: (provider: string, key: string | null) => ipcRenderer.invoke('ai:setKey', provider, key),
+  aiCall: (call: unknown): Promise<string> => ipcRenderer.invoke('ai:call', call),
   onBatchEvent: (cb: (ev: unknown) => void) => {
     const h = (_e: unknown, ev: unknown) => cb(ev)
     ipcRenderer.on('batch:event', h)

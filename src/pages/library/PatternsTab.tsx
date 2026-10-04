@@ -13,7 +13,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { DRAFTERS, type Finding, type PatternDraft, patternFromDxf, patternsFromCsv, pdfTextPages } from '@/core/hardware/patternImport'
+import { type Finding, type PatternDraft, patternFromDxf, patternsFromCsv, pdfTextPages, textDrafter } from '@/core/hardware/patternImport'
+import { aiDrafter, DEFAULT_AI, modelOf } from '@/core/hardware/aiProviders'
+import { backend } from '@/app/backend'
+import { renderPdfPages } from '@/app/pdfImages'
 import { approvePattern, patternIssues, patternsOf, savePattern, withdrawPattern } from '@/core/hardware/patterns'
 import type { UnitSystem } from '@/core/types'
 import { formatLength, parseLength } from '@/core/units'
@@ -105,8 +108,21 @@ export function PatternsTab() {
     if (!f) return
     setBusy(true)
     try {
-      const pages = await pdfTextPages((await loadPdfLib()) as never, new Uint8Array(await f.arrayBuffer()))
-      const d = await DRAFTERS[0].draft(pages, f.name)
+      const bytes = new Uint8Array(await f.arrayBuffer())
+      const lib = await loadPdfLib()
+      const pages = await pdfTextPages(lib as never, bytes.slice())
+      const ai = data.settings.ai ?? DEFAULT_AI
+      let d: PatternDraft | null = null
+      if (ai.provider !== 'off' && (await backend.ai.status())[ai.provider]?.saved) {
+        const drafter = aiDrafter(ai.provider, modelOf(ai, ai.provider), backend.ai.call)
+        try {
+          toast.info(`Sending ${f.name} to ${drafter.label}…`)
+          d = await drafter.draft(pages, f.name, await renderPdfPages(lib as never, bytes.slice()))
+        } catch (e) {
+          toast.error(`${drafter.label}: ${e instanceof Error ? e.message : String(e)}. Using the built-in reader instead.`)
+        }
+      }
+      d ??= await textDrafter.draft(pages, f.name)
       setQueue((q) => [...q, d])
       setOpen({ draft: d, fromQueue: true })
     } catch (e) {

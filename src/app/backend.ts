@@ -7,6 +7,7 @@ import JSZip from 'jszip'
 import type { AppData } from '@/core/types'
 
 import type { OutFile } from '@/core/output'
+import { AI_PROVIDERS, type AiCall, type AiProviderId, callProvider } from '@/core/hardware/aiProviders'
 export type { OutFile }
 
 interface Bridge {
@@ -22,6 +23,19 @@ interface Bridge {
   batchCancel(): Promise<BatchStatus>
   batchStatus(): Promise<BatchStatus>
   onBatchEvent(cb: (ev: BatchEvent) => void): () => void
+  aiKeyStatus(): Promise<AiKeyStatus>
+  aiSetKey(provider: AiProviderId, key: string | null): Promise<AiKeyStatus>
+  aiCall(call: AiCall): Promise<string>
+}
+
+/** Which providers have a key saved on this computer. Keys themselves never come back. */
+export type AiKeyStatus = Record<AiProviderId, { saved: boolean; where: string }>
+
+/** API keys and calls to vision providers. Keys stay on this computer, outside the shop file. */
+export interface AiBridge {
+  status(): Promise<AiKeyStatus>
+  setKey(provider: AiProviderId, key: string | null): Promise<AiKeyStatus>
+  call(call: AiCall): Promise<string>
 }
 
 export interface BatchStatus {
@@ -60,6 +74,31 @@ export interface Backend {
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
   openPath?(p: string): Promise<void>
   batch?: BatchBridge
+  ai: AiBridge
+}
+
+const AI_LS_KEY = 'cabinet-studio-ai-keys'
+
+function browserAi(): AiBridge {
+  const read = (): Partial<Record<AiProviderId, string>> => {
+    try {
+      return JSON.parse(localStorage.getItem(AI_LS_KEY) ?? '{}')
+    } catch {
+      return {}
+    }
+  }
+  const status = (): AiKeyStatus => Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, { saved: !!read()[p.id], where: 'this browser (not encrypted)' }])) as AiKeyStatus
+  return {
+    status: async () => status(),
+    async setKey(provider, key) {
+      const keys = read()
+      if (key?.trim()) keys[provider] = key.trim()
+      else delete keys[provider]
+      localStorage.setItem(AI_LS_KEY, JSON.stringify(keys))
+      return status()
+    },
+    call: (c) => callProvider(c, read()[c.provider] ?? ''),
+  }
 }
 
 const LS_KEY = 'cabinet-studio-data-v1'
@@ -79,6 +118,7 @@ function download(name: string, data: string | Uint8Array | Blob, type = 'applic
 function browserBackend(): Backend {
   return {
     kind: 'browser',
+    ai: browserAi(),
     async load() {
       const raw = localStorage.getItem(LS_KEY)
       return raw ? (JSON.parse(raw) as AppData) : null
@@ -129,6 +169,7 @@ function desktopBackend(b: Bridge): Backend {
       status: () => b.batchStatus(),
       onEvent: (cb) => b.onBatchEvent(cb),
     },
+    ai: { status: () => b.aiKeyStatus(), setKey: (p, k) => b.aiSetKey(p, k), call: (c) => b.aiCall(c) },
   }
 }
 

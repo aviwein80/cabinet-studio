@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid'
 import { importDxf } from '@/cam/dxf'
 import type { FaceId, HardwarePattern, PatternHole } from '@/cam/types'
 import { parseCsv, type Row } from '../library/import'
+import type { PageImage } from './aiProviders'
 
 export interface PatternDraft {
   pattern: HardwarePattern
@@ -186,7 +187,8 @@ export async function pdfTextPages(lib: TextLib, data: Uint8Array, maxPages = 12
 export interface PatternDrafter {
   id: string
   label: string
-  draft(pages: TextPage[], file: string): Promise<PatternDraft>
+  /** `images`: rendered pages, for drafters that read the drawing itself. */
+  draft(pages: TextPage[], file: string, images?: PageImage[]): Promise<PatternDraft>
 }
 
 const NUM = String.raw`(\d+(?:[.,]\d+)?)`
@@ -237,7 +239,7 @@ export const textDrafter: PatternDrafter = {
     const hits = scan(pages)
     const warnings: string[] = []
     const findings: Finding[] = Object.values(hits).flatMap((list) => list.map((h) => ({ ...h, used: false })))
-    const use = (h: Hit | undefined) => {
+    const take = (h: Hit | undefined) => {
       if (!h) return NaN
       const f = findings.find((q) => q.label === h.label && q.value === h.value && q.quote === h.quote)
       if (f) f.used = true
@@ -253,21 +255,21 @@ export const textDrafter: PatternDrafter = {
     const holes: PatternHole[] = []
     if (cup) {
       const k = hits.edge[0]
-      const cupY = Number.isFinite(use(k)) ? k!.value + cup.value / 2 : NaN
-      holes.push({ x: 0, y: round(cupY), diameter: use(cup), depth: use(depthFor(cup.value)), face: 1 })
+      const cupY = Number.isFinite(take(k)) ? k!.value + cup.value / 2 : NaN
+      holes.push({ x: 0, y: round(cupY), diameter: take(cup), depth: take(depthFor(cup.value)), face: 1 })
       if (!k) warnings.push('No edge distance (K) found for the cup: enter the cup centre from the edge.')
       if (small && hits.spacing[0]) {
-        const s = use(hits.spacing[0])
-        for (const sx of [-s / 2, s / 2]) holes.push({ x: round(sx), y: NaN, diameter: use(small), depth: use(depthFor(small.value)), face: 1 })
+        const s = take(hits.spacing[0])
+        for (const sx of [-s / 2, s / 2]) holes.push({ x: round(sx), y: NaN, diameter: take(small), depth: take(depthFor(small.value)), face: 1 })
         warnings.push('Cup screw or dowel holes found: enter their distance from the edge.')
       }
     } else if (small) {
-      const d = use(small)
-      const depth = use(depthFor(small.value))
-      const y = hits.line[0] ? use(hits.line[0]) : hits.setback[0] ? use(hits.setback[0]) : NaN
-      if (hits.positions.length >= 2) for (const p of hits.positions) holes.push({ x: use(p), y, diameter: d, depth, face: 1 })
+      const d = take(small)
+      const depth = take(depthFor(small.value))
+      const y = hits.line[0] ? take(hits.line[0]) : hits.setback[0] ? take(hits.setback[0]) : NaN
+      if (hits.positions.length >= 2) for (const p of hits.positions) holes.push({ x: take(p), y, diameter: d, depth, face: 1 })
       else if (hits.spacing[0]) {
-        const s = use(hits.spacing[0])
+        const s = take(hits.spacing[0])
         for (const sx of [-s / 2, s / 2]) holes.push({ x: round(sx), y, diameter: d, depth, face: 1 })
       } else holes.push({ x: 0, y, diameter: d, depth, face: 1 })
       if (!Number.isFinite(y)) warnings.push('No distance from the reference edge found: enter y for each hole.')

@@ -5,6 +5,7 @@
 import { nanoid } from 'nanoid'
 import { strokeText } from './font'
 import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, polyline, pt, rect, transform, type Mat } from './geom'
+import type { MachineProfile } from '@/core/types'
 import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
 
 export const CAM_FILE_VERSION = 1
@@ -248,15 +249,29 @@ export function fnv(s: string) {
   return (h >>> 0).toString(36)
 }
 
-export function opInputHash(op: CamOp, part: CamPart, tool: unknown): string {
+/** Machine settings a toolpath reads besides its tool: through depth and the material feed table. */
+export type OpMachineInputs = Pick<MachineProfile, 'throughDepth' | 'feeds'>
+
+/**
+ * Hash of everything an op's toolpath depends on: its parameters, the picked geometry, the tool,
+ * the part thickness and, when `machine` is given, the through depth and the feed-table row for
+ * this tool in the part's material. Changing any of them marks the op stale.
+ */
+export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: OpMachineInputs): string {
   const { builtHash: _b, name: _n, note: _note, ...params } = op
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
-  return fnv(JSON.stringify([params, geo, tool, part.thickness]))
+  const deps: unknown[] = [params, geo, tool, part.thickness]
+  if (machine) {
+    const toolId = tool && typeof tool === 'object' && 'id' in tool ? (tool as { id: string }).id : null
+    const feed = toolId && part.materialId ? (machine.feeds?.find((f) => f.toolId === toolId && f.materialId === part.materialId) ?? null) : null
+    deps.push({ through: machine.throughDepth, material: part.materialId, feed })
+  }
+  return fnv(JSON.stringify(deps))
 }
 
 export type OpState = 'new' | 'current' | 'stale' | 'broken'
-export function opState(op: CamOp, part: CamPart, tool: unknown): OpState {
+export function opState(op: CamOp, part: CamPart, tool: unknown, machine?: OpMachineInputs): OpState {
   if (op.kind !== 'code' && op.geometry.some((id) => !part.entities.some((e) => e.id === id))) return 'broken'
   if (!op.builtHash) return 'new'
-  return op.builtHash === opInputHash(op, part, tool) ? 'current' : 'stale'
+  return op.builtHash === opInputHash(op, part, tool, machine) ? 'current' : 'stale'
 }

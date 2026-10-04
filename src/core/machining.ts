@@ -2,6 +2,7 @@ import type { Seg } from '@/cam/geom'
 import { partProgramOps } from '@/cam/mpr'
 import { generatePart, type Intent } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
+import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
@@ -68,7 +69,8 @@ export function nestJob(instances: PartInstance[], lib: Library, machine: Machin
       edgeTrim: settings.nesting.edgeTrim,
       spacing,
       allowRotation: settings.nesting.allowRotation,
-      engine: ns.engine,
+      // True-shape nesting has its own switch; off = rectangles only.
+      engine: featuresOf(settings).camNesting ? ns.engine : 'rect',
       keepKits: ns.keepKitsTogether,
       offcuts: ns.useOffcuts ? (lib.offcuts ?? []).filter((o) => o.materialId === materialId) : [],
       offcutType: ns.offcutType,

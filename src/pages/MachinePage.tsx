@@ -27,6 +27,10 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camMachining', 'Machining operations', 'Profile, pocket, drill, engrave, V-carve, sweep, saw.'],
   ['camParametric', 'Parametric doors', 'Shaker, arched and cathedral doors from variables or a door list.'],
   ['camRules', 'Machining rules', 'Layer names in imported drawings choose the operations.'],
+  ['camNesting', 'True-shape nesting', 'Shaped parts nest by their outline. Off: every part nests as its rectangle.'],
+  ['camBackplot', 'Simulation', 'Play the toolpaths and see the material that is left.'],
+  ['camBatch', 'Batch runs', 'Part lists from CSV or an inbox folder, without opening the screens.'],
+  ['hardwarePatterns', 'Drilling patterns', 'Hardware drilling patterns in the library and the Hardware button on parts.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
 ]
 

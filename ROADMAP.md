@@ -7,7 +7,8 @@ woodWOP or on the N-200.
 
 ## Decisions (October 2026)
 
-- **DWG import: skipped for now.** DXF only. DWG would need the commercial ODA SDK.
+- **DWG import: out.** DXF only. DWG files are converted to DXF first with the free ODA File
+  Converter (a separate program); the app does not read DWG and will not bundle the commercial ODA SDK.
 - **AI spec-sheet reader: built.** It covers library hardware (manufacturer PDFs, scans and
   photos to a drilling pattern plus item data) and full custom pieces (a customer's spec or
   drawing to an editable part). Every value cites its source, unread values stay blank, and

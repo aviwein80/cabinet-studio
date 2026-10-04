@@ -46,6 +46,17 @@ describe('labels', () => {
     expect(rails.every((l) => !l.spot.fits && l.notes.some((n) => /does not fit/.test(n)))).toBe(true)
   })
 
+  it('PDFs are byte-identical between runs and carry the job date, not the clock', () => {
+    const stamp = '2026-02-03T04:05:06.000Z'
+    const jj = { ...j, updatedAt: stamp }
+    const a = sheetMapPdf(jj, out, d.library)
+    const b = sheetMapPdf(jj, out, d.library)
+    expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true)
+    expect(Buffer.from(labelsPdf(out, '100x70', 'mm', stamp)).equals(Buffer.from(labelsPdf(out, '100x70', 'mm', stamp)))).toBe(true)
+    const text = new TextDecoder('latin1').decode(a)
+    expect(text).toContain("/CreationDate (D:20260203040506+00'00')")
+  })
+
   it('renders label and sheet-map PDFs and ZPL', () => {
     const pdf = labelsPdf(out, '100x70')
     expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe('%PDF-')

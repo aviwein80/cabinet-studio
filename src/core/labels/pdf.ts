@@ -101,10 +101,32 @@ function miniSheet(doc: jsPDF, out: JobOutput, l: LabelRecord, x: number, y: num
   }
 }
 
-export function labelsPdf(out: JobOutput, size: '100x70' | '100x80', units: UnitSystem = 'mm'): Uint8Array {
+/**
+ * Same job in, same PDF bytes out: the creation date is the job's own date (not the clock) and
+ * the file id is derived from it, so re-running a job gives byte-identical files.
+ */
+function pinPdf(doc: jsPDF, stamp: string | undefined, key: string) {
+  let d = stamp ? new Date(stamp) : new Date(NaN)
+  if (!Number.isFinite(d.getTime()) || d.getUTCFullYear() < 1970 || d.getUTCFullYear() > 2037) d = new Date(Date.UTC(2026, 0, 1))
+  // Written in UTC as text, so the shop computer's time zone does not change the file.
+  const two = (n: number) => String(n).padStart(2, '0')
+  doc.setCreationDate(`D:${d.getUTCFullYear()}${two(d.getUTCMonth() + 1)}${two(d.getUTCDate())}${two(d.getUTCHours())}${two(d.getUTCMinutes())}${two(d.getUTCSeconds())}+00'00'`)
+  let h = 0x811c9dc5
+  const src = `${key}|${stamp ?? ''}`
+  const words: string[] = []
+  for (let k = 0; k < 4; k++) {
+    for (let i = 0; i < src.length; i++) h = Math.imul(h ^ src.charCodeAt(i), 0x01000193)
+    h = Math.imul(h ^ k, 0x01000193)
+    words.push((h >>> 0).toString(16).padStart(8, '0'))
+  }
+  doc.setFileId(words.join('').toUpperCase())
+}
+
+export function labelsPdf(out: JobOutput, size: '100x70' | '100x80', units: UnitSystem = 'mm', stamp?: string): Uint8Array {
   const { w: W, h: H } = labelDims(size)
   const doc = new jsPDF({ unit: 'mm', format: [W, H], orientation: 'landscape', compress: true })
   doc.setProperties({ title: 'Part labels', creator: 'Cabinet Studio' })
+  pinPdf(doc, stamp, 'labels')
   let first = true
   const bySheet = new Map<number, LabelRecord[]>()
   for (const l of out.labels) bySheet.set(l.sheetIndex, [...(bySheet.get(l.sheetIndex) ?? []), l])
@@ -211,6 +233,7 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
 export function sheetMapPdf(job: Job, out: JobOutput, lib: Library, units: UnitSystem = 'mm'): Uint8Array {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape', compress: true })
   doc.setProperties({ title: `Sheet maps ${job.number}`, creator: 'Cabinet Studio' })
+  pinPdf(doc, job.updatedAt, `sheets|${job.id}`)
   const byUid = new Map(out.instances.map((i) => [i.uid, i]))
   out.programs.forEach((prog, idx) => {
     if (idx > 0) doc.addPage('a4', 'landscape')

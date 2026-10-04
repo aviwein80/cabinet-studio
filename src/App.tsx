@@ -5,6 +5,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { backend } from './app/backend'
 import { useStore, type Route } from './app/store'
+import { featuresOf } from './core/features'
+import type { FeatureFlags } from './core/types'
 import { CabinetEditorPage } from './pages/CabinetEditor'
 import { BatchPage } from './pages/BatchPage'
 import { JobPage } from './pages/JobPage'
@@ -15,11 +17,11 @@ import { PartDesignerPage } from './pages/PartDesigner'
 import { PartsPage } from './pages/PartsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
-const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page'][] }[] = [
+const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page'][]; flag?: keyof FeatureFlags }[] = [
   { label: 'Jobs', icon: FolderKanban, route: { page: 'jobs' }, match: ['jobs', 'job', 'cabinet'] },
   { label: 'Custom parts', icon: PenTool, route: { page: 'parts' }, match: ['parts', 'part'] },
   { label: 'Library', icon: LibraryIcon, route: { page: 'library' }, match: ['library', 'template'] },
-  { label: 'Batch runs', icon: Inbox, route: { page: 'batch' }, match: ['batch'] },
+  { label: 'Batch runs', icon: Inbox, route: { page: 'batch' }, match: ['batch'], flag: 'camBatch' },
   { label: 'Machine & tools', icon: Cpu, route: { page: 'machine' }, match: ['machine'] },
   { label: 'Settings', icon: Settings, route: { page: 'settings' }, match: ['settings'] },
 ]
@@ -61,7 +63,7 @@ export default function App() {
             </div>
           </div>
           <nav className="flex flex-1 flex-row gap-1 md:flex-col">
-            {NAV.map((n) => {
+            {NAV.filter((n) => !n.flag || featuresOf(data.settings)[n.flag]).map((n) => {
               const active = n.match.includes(route.page)
               return (
                 <button
@@ -113,7 +115,7 @@ export default function App() {
           {route.page === 'library' && <LibraryPage tab={route.tab ?? 'templates'} />}
           {route.page === 'machine' && <MachinePage />}
           {route.page === 'settings' && <SettingsPage />}
-          {route.page === 'batch' && <BatchPage />}
+          {route.page === 'batch' && (featuresOf(data.settings).camBatch ? <BatchPage /> : <div className="p-8 text-sm text-muted-foreground">Batch runs are turned off under Machine &amp; tools → Custom-part features.</div>)}
           {route.page === 'parts' && <PartsPage />}
           {route.page === 'part' && <PartDesignerPage partId={route.partId} jobId={route.jobId} />}
         </main>

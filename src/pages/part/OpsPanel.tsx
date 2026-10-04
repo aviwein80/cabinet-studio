@@ -61,9 +61,9 @@ export function OpsPanel({
     toast.success(`${made} operation${made === 1 ? '' : 's'} from “${set.name}”`, { description: left.length ? `No rule for: ${left.join(', ')}` : 'Every machinable layer matched a rule.' })
   }
   const tpOf = (id: string) => toolpaths.find((t) => t.opId === id)
-  const stateOf = (op: CamOp) => opState(op, part, tpOf(op.id)?.tool ?? null)
+  const stateOf = (op: CamOp) => opState(op, part, tpOf(op.id)?.tool ?? null, machine)
   const setOps = (ops: CamOp[]) => onChange({ ...part, ops, updatedAt: new Date().toISOString() })
-  const accept = (ids: string[]) => setOps(part.ops.map((o) => (ids.includes(o.id) ? { ...o, builtHash: opInputHash(o, part, tpOf(o.id)?.tool ?? null) } : o)))
+  const accept = (ids: string[]) => setOps(part.ops.map((o) => (ids.includes(o.id) ? { ...o, builtHash: opInputHash(o, part, tpOf(o.id)?.tool ?? null, machine) } : o)))
 
   const add = (kind: CamOpKind) => {
     let geometry = sel

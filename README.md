@@ -78,7 +78,7 @@ export checker. Tool numbers are still placeholders.
   move, copy, mirror, array, offset, fillet (including T-bone relief), trim, extend, and unite,
   subtract or intersect (arcs are kept). Snaps, typed coordinates, layers, undo, and DXF in and out.
 - **Import**: DXF (join tolerance, tangent-only join, combine, units, blocks, splines) and PDF or
-  Illustrator vectors. DXF only: DWG is skipped for now (it needs the commercial ODA SDK).
+  Illustrator vectors. DXF only: convert DWG files to DXF first with the free ODA File Converter.
 - **Machining**: profile (sides, leads, tabs, multiple passes), pocket (contour, zig-zag, spiral,
   islands, ramps), drill and peck, engrave, V-carve, saw groove and profiled sweep. **Layer rules**
   machine an imported drawing from its layer names.

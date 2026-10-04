@@ -317,10 +317,12 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TooltipTrigger>
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setPatternOpen(true)}>
-            <Drill className="size-3.5" /> Hardware
-          </Button>
-          {feat.camMachining && (
+          {feat.hardwarePatterns && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setPatternOpen(true)}>
+              <Drill className="size-3.5" /> Hardware
+            </Button>
+          )}
+          {feat.camMachining && feat.camBackplot && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setSimOpen(true)}>
               <CirclePlay className="size-3.5" /> Simulate
             </Button>

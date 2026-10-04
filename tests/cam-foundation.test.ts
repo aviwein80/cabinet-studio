@@ -97,6 +97,19 @@ describe('P0 foundations', () => {
     expect(opState(drill, { ...part, entities: part.entities.slice(0, 2) }, null)).toBe('broken')
   })
 
+  it('an op goes stale when the through depth or its material feed row changes', () => {
+    const part = { ...plateWithHoles(), materialId: 'mat-a' }
+    const op = part.ops[1]
+    const tool = resolveTool(op, machine)
+    op.builtHash = opInputHash(op, part, tool, machine)
+    expect(opState(op, part, tool, machine)).toBe('current')
+    expect(opState(op, part, tool, { ...machine, throughDepth: machine.throughDepth + 0.1 })).toBe('stale')
+    const feeds = [{ toolId: tool!.id, materialId: 'mat-a', rpm: 18000, feed: 9000, plungeFeed: 3000 }]
+    expect(opState(op, part, tool, { ...machine, feeds })).toBe('stale')
+    // a feed row for another material does not touch this part
+    expect(opState(op, part, tool, { ...machine, feeds: [{ ...feeds[0], materialId: 'mat-b' }] })).toBe('current')
+  })
+
   it('tool library v1: feeds, plunge rules, ordering by tool', () => {
     const tools = structuredClone(machine.tools)
     const r = tools.find((t) => t.type === 'router')!

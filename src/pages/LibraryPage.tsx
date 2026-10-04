@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { importLibraryBundle } from '@/core/library/import'
+import { featuresOf } from '@/core/features'
 import type { AppData, EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
 import { LibraryEditDialog, TemplateJobsButton } from './LibraryEditDialog'
 import { OffcutsTab } from './library/OffcutsTab'
@@ -124,7 +125,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             <TabsTrigger value="materials">Materials ({lib.materials.length})</TabsTrigger>
             <TabsTrigger value="edgebands">Edgebands ({lib.edgebands.length})</TabsTrigger>
             <TabsTrigger value="hardware">Hardware ({lib.hardware.length})</TabsTrigger>
-            <TabsTrigger value="patterns">Drilling patterns</TabsTrigger>
+            {featuresOf(data?.settings).hardwarePatterns && <TabsTrigger value="patterns">Drilling patterns</TabsTrigger>}
             <TabsTrigger value="rules">Machining rules</TabsTrigger>
             <TabsTrigger value="offcuts">Offcuts ({lib.offcuts?.length ?? 0})</TabsTrigger>
           </TabsList>

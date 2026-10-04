@@ -66,6 +66,56 @@ tool table, are paused.
    part (largest clear spot, away from holes and edges), following the CabinetQuest and Cabinet
    Vision "label on sheet" practice.
 
+## Custom parts (CAD/CAM)
+
+A second side of the program draws and machines parts that are not cabinet boxes: doors, arched
+panels, brackets, signs. It shares the job, materials, tool table, nesting, labels, units switch
+and MPR writer with the cabinet side. Every feature has its own switch under **Machine & tools →
+Custom-part features**. MPR output for custom parts is **off by default** and goes through the same
+export checker. Tool numbers are still placeholders.
+
+- **Part designer** (Parts page): lines, arcs, rectangles, slots, splines and text. Edit with
+  move, copy, mirror, array, offset, fillet (including T-bone relief), trim, extend, and unite,
+  subtract or intersect (arcs are kept). Snaps, typed coordinates, layers, undo, and DXF in and out.
+- **Import**: DXF (join tolerance, tangent-only join, combine, units, blocks, splines) and PDF or
+  Illustrator vectors. DWG needs the commercial ODA SDK and is not included.
+- **Machining**: profile (sides, leads, tabs, multiple passes), pocket (contour, zig-zag, spiral,
+  islands, ramps), drill and peck, engrave, V-carve, saw groove and profiled sweep. **Layer rules**
+  machine an imported drawing from its layer names.
+- **Parametric doors**: slab, shaker, arched and cathedral, driven by variables or a door-list CSV.
+  Hinge cups and pulls are placed automatically.
+- **Native woodWOP**: each operation is written as an editable macro (`<105` contour on the drawn
+  arcs, `<102`/`<103` drilling, `<112` pocket, `<109` groove), not as a point list. Holes on face 6
+  go into a second program, run after the part is turned over.
+- **Nesting**: true-shape nesting (no-fit polygons on Clipper2) runs beside the rectangular
+  engine, and the result with fewer sheets is kept. It handles grain (only half turns when grain
+  is locked), priorities, kits kept on one sheet, small parts placed inside cut-outs and cut
+  first, an onion-skin final pass, offcuts back into stock, and label copy counters.
+- **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and a ghost tool.
+  A 2.5D heightfield of the material is shown as a shaded top view or in 3D, with depth readouts.
+  It checks for rapids into uncut material, shows pieces cut free, and has a through-cuts-only
+  view. This checks our own toolpaths, not the machine; woodWOP's simulation is still required.
+- **Drilling patterns** (Library → Drilling patterns): verified Salice and Blum patterns come
+  built from the published numbers below. Patterns can also come from manufacturer DXF (circles,
+  with depth in the layer name such as `DRILL_D12`) or CSV (`pattern,manufacturer,x,y,diameter,depth,face,units`).
+  The **PDF spec-sheet reader** drafts a pattern from the sheet's text and quotes the line and page
+  behind every number it used. Every import is a draft, and **nothing is saved until a named
+  person ticks that they checked every hole and approves it**. The part designer's **Hardware**
+  button places only verified or approved patterns.
+- **Batch runs**: drop a part-list CSV (cabinet-side parts, DXF drawings, or doors) into an inbox
+  folder. Nested MPRs, labels, sheet maps, a cut list, a BOM and a report appear in the outbox
+  without touching the UI. A list with validator errors is reported and not exported. Cancel
+  stops the current list. Use the **Batch runs** page, the desktop watcher, or the command line:
+
+  ```bash
+  npm run batch -- run examples/batch/parts.csv --out /tmp/out
+  npm run batch -- watch ./inbox --out ./outbox
+  ```
+
+  Pass `--data <cabinet-studio.json>` to use the shop's library, machine and settings. With the
+  built-in defaults, custom-part MPR output is off, so the example order is reported as blocked
+  and no programs are written. That is the intended safe default.
+
 ## Example outputs
 
 `examples/sample-job/` holds every file generated for the built-in sample kitchen, J1042: four
@@ -193,6 +243,10 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   validator.ts     pre-export checks
   labels/          label placement on parts, labels/sheet-map PDF (jsPDF), ZPL
   pipeline.ts      runJob(): expand -> nest -> programs -> validate -> labels
+  nestShape.ts     true-shape nesting (no-fit polygons, Clipper2)
+  batch.ts         part-list CSV -> orders -> runJob; batchWatch.ts inbox watcher
+  hardware/patterns.ts, patternImport.ts   drilling patterns, DXF/CSV import, PDF drafts
+src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpaths, native MPR, sim
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)
 src/pages/         Jobs, Job (cabinets / cut list / nesting / output), Cabinet editor, Library, Machine
 src/components/    3D viewer (react-three-fiber), sheet view (SVG), forms, shadcn/ui

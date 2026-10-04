@@ -1,0 +1,128 @@
+[
+ {
+  "op": "Program note",
+  "kind": "code",
+  "tool": null,
+  "moves": {
+   "rapid": 0,
+   "feed": 0,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 0,
+  "box": null,
+  "zMin": null,
+  "intents": {
+   "comment": 1
+  },
+  "warnings": [
+   "woodWOP has no program-stop macro here; the stop is written as a comment."
+  ],
+  "first": []
+ },
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 102,
+  "moves": {
+   "rapid": 4,
+   "feed": 2,
+   "arc": 4,
+   "drill": 0
+  },
+  "cutMm": 89,
+  "box": [
+   55.702,
+   114.875,
+   71,
+   135.125
+  ],
+  "zMin": -5,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 60,
+    "y": 125,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 60,
+    "y": 125,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 60,
+    "y": 125,
+    "z": -5,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 71,
+    "y": 125,
+    "z": -5,
+    "f": "lead"
+   }
+  ]
+ },
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 101,
+  "moves": {
+   "rapid": 16,
+   "feed": 20,
+   "arc": 24,
+   "drill": 0
+  },
+  "cutMm": 2199,
+  "box": [
+   -6,
+   -6,
+   406,
+   265
+  ],
+  "zMin": -19.3,
+  "intents": {
+   "contour": 4
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 60,
+    "y": 116,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 60,
+    "y": 116,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 60,
+    "y": 116,
+    "z": -19.3,
+    "f": "plunge"
+   },
+   {
+    "t": "arc",
+    "x": 69,
+    "y": 125,
+    "z": -19.3,
+    "cx": 60,
+    "cy": 125,
+    "ccw": true,
+    "f": "lead"
+   }
+  ]
+ }
+]

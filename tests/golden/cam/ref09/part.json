@@ -1,0 +1,204 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref09",
+  "name": "Zig-zag pocket at 45 degrees",
+  "version": 1,
+  "materialId": null,
+  "length": 400,
+  "width": 400,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e50",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 400
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 400
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e51",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 50,
+         "y": 50
+        },
+        "b": {
+         "x": 350,
+         "y": 50
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 350,
+         "y": 50
+        },
+        "b": {
+         "x": 350,
+         "y": 250
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 350,
+         "y": 250
+        },
+        "b": {
+         "x": 50,
+         "y": 250
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 50,
+         "y": 250
+        },
+        "b": {
+         "x": 50,
+         "y": 50
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op52",
+    "name": "Pocket",
+    "enabled": true,
+    "geometry": [
+     "e51"
+    ],
+    "toolId": "t101",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 4,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "pocket",
+    "pattern": "zigzag",
+    "stepover": 0.45,
+    "angle": 45,
+    "direction": "climb",
+    "islands": true,
+    "entry": "helix",
+    "rampAngle": 5,
+    "helixPct": 0.8,
+    "finishPass": true,
+    "stockXY": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e50"
+ }
+}

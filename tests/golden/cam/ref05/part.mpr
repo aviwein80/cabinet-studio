@@ -1,0 +1,146 @@
+[H
+VERSION="4.0 Alpha"
+OP="1"
+FM="1"
+MAT="HOMAG"
+INCH="0"
+VIEW="NOMIRROR"
+ANZ="1"
+MATERIAL="REF"
+CUSTOMER=""
+ORDER="Door with hinge cups"
+ARTICLE="Door with hinge cups"
+PARTID="Door-with-hinge-cups"
+PARTTYPE="PART"
+MPRCOUNT="1"
+MPRNUMBER="1"
+INFO1="Cabinet Studio 0.1.0"
+INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
+INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
+INFO4="Door with hinge cups"
+INFO5=""
+_BSX=450.000000
+_BSY=720.000000
+_BSZ=19.000000
+_FNX=0.000000
+_FNY=0.000000
+_RNX=0.000000
+_RNY=0.000000
+_RNZ=0.000000
+_RX=450.000000
+_RY=720.000000
+
+[001
+L="450"
+KM="Sheet length X"
+B="720"
+KM="Sheet width Y"
+D="19"
+KM="Sheet thickness Z"
+
+]1
+$E0
+KP 
+X=0.0000
+Y=360.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=0.0000
+Y=720.0000
+
+$E2
+KL 
+X=450.0000
+Y=720.0000
+
+$E3
+KL 
+X=450.0000
+Y=0.0000
+
+$E4
+KL 
+X=0.0000
+Y=0.0000
+
+$E5
+KL 
+X=0.0000
+Y=360.0000
+
+<100 \WerkStck\
+LA="L"
+BR="B"
+DI="D"
+FNX="0"
+FNY="0"
+AX="0"
+AY="0"
+
+<101 \Kommentar\
+KM="Cabinet Studio 0.1.0 - custom part Door with hinge cups REF"
+KM="Generated program. Verify in woodWOP simulation before cutting."
+KAT="Kommentar"
+MNM="Kommentar"
+
+<102 \BohrVert\
+XA="22.5"
+YA="100"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 custom D35"
+
+<102 \BohrVert\
+XA="22.5"
+YA="620"
+BM="LS"
+TI="13"
+DU="35"
+AN="1"
+MI="0"
+S_="2"
+AB="0"
+WI="0"
+F_="STANDARD"
+KO="00"
+KAT="Bohren vertikal"
+MNM="P1 custom D35"
+
+<105 \Konturfraesen\
+EA="1:0"
+MDA="TAN"
+RK="WRKL"
+EE="1:5"
+MDE="TAN_AB"
+EM="0"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P1 Profile D19.3"
+
+<101 \Kommentar\
+KM="HOMAG_PRODUCTIONMANAGER_FEEDBACK={Version:1.00,PARTID:Door-with-hinge-cups,MPRNUMBER:1,MPRCOUNT:1}"
+KAT="Kommentar"
+MNM="Kommentar"
+!

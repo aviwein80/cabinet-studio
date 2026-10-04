@@ -1,0 +1,53 @@
+[
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 8,
+   "arc": 7,
+   "drill": 0
+  },
+  "cutMm": 2179,
+  "box": [
+   -15,
+   -6,
+   406,
+   603.6
+  ],
+  "zMin": -19.3,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": -15,
+    "y": 279,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": -15,
+    "y": 279,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": -15,
+    "y": 279,
+    "z": -19.3,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": -15,
+    "y": 291,
+    "z": -19.3,
+    "f": "lead"
+   }
+  ]
+ }
+]

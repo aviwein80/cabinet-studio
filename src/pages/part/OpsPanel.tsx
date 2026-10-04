@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, type OpState } from '@/cam/doc'
-import { defaultOp, OP_LABEL } from '@/cam/ops'
+import { defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
 import type { Toolpath } from '@/cam/toolpath'
 import type { CamOp, CamOpKind, CamPart, FaceId } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
@@ -87,6 +87,17 @@ export function OpsPanel({
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="text-[11px] text-stone-400">{sel.length ? `${sel.length} selected` : 'Uses the outline / all holes when nothing is selected'}</span>
+        {part.ops.length > 1 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-[11px] text-stone-300 hover:bg-white/5"
+            onClick={() => setOps(orderByTool(part.ops, (o) => tpOf(o.id)?.tool ?? null, machine.tools.map((t) => t.number)))}
+            title="Group operations by tool, in tool-table order, to save tool changes"
+          >
+            Sort by tool
+          </Button>
+        )}
         {stale.length > 0 && (
           <Button size="sm" variant="ghost" className="ml-auto h-7 gap-1 text-[11px] text-amber-300 hover:bg-white/5 hover:text-amber-200" onClick={() => accept(stale.map((o) => o.id))}>
             <CheckCheck className="size-3.5" /> Accept all
@@ -263,6 +274,7 @@ function OpEditor({
           </div>
           {!op.levels.through && <NumField label="Depth" value={op.levels.depth} min={0} onChange={(v) => lv({ depth: v })} />}
           <NumField label="Depth per pass" value={op.levels.passDepth} min={0} onChange={(v) => lv({ passDepth: v })} hint="0 = tool stepdown" />
+          <NumField label="Number of cuts" suffix="" value={op.levels.cuts ?? 0} min={0} onChange={(v) => lv({ cuts: Math.round(v) || undefined })} hint="0 = from depth per pass" />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} />
           <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => lv({ rapidZ: v })} />
           <NumField label="Leave on floor" value={op.levels.stockZ} min={0} onChange={(v) => lv({ stockZ: v })} />
@@ -317,6 +329,7 @@ const LEADS = [
   { value: 'arc' as const, label: 'Arc' },
   { value: 'line-arc' as const, label: 'Straight + arc' },
   { value: 'ramp' as const, label: 'Ramp along path' },
+  { value: 'centre' as const, label: 'From hole centre' },
 ]
 
 function StrategyFields({ op, onChange }: { op: CamOp; onChange: (o: CamOp) => void }) {
@@ -324,14 +337,18 @@ function StrategyFields({ op, onChange }: { op: CamOp; onChange: (o: CamOp) => v
     case 'profile':
       return (
         <Group title="Strategy">
-          <SelectField label="Cutter side" value={op.side} options={[{ value: 'outside', label: 'Outside' }, { value: 'inside', label: 'Inside' }, { value: 'left', label: 'Left of path' }, { value: 'right', label: 'Right of path' }, { value: 'centre', label: 'On the line' }]} onChange={(v) => onChange({ ...op, side: v })} />
+          <SelectField label="Cutter side" value={op.side} options={[{ value: 'auto', label: 'Automatic (holes inside)' }, { value: 'outside', label: 'Outside' }, { value: 'inside', label: 'Inside' }, { value: 'left', label: 'Left of path' }, { value: 'right', label: 'Right of path' }, { value: 'centre', label: 'On the line' }]} onChange={(v) => onChange({ ...op, side: v })} />
           <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
           <SelectField label="Compensation" value={op.compensation} options={[{ value: 'cam', label: 'Computed here' }, { value: 'machine', label: 'By the machine' }]} onChange={(v) => onChange({ ...op, compensation: v })} />
           <SelectField label="Outside corners" value={op.corners} options={[{ value: 'round', label: 'Roll round' }, { value: 'straight', label: 'Sharp' }, { value: 'loop', label: 'Loop' }]} onChange={(v) => onChange({ ...op, corners: v })} />
           <NumField label="Leave on wall" value={op.stockXY} onChange={(v) => onChange({ ...op, stockXY: v })} />
           <NumField label="Wall angle" suffix="°" value={op.slope} min={0} max={45} onChange={(v) => onChange({ ...op, slope: v })} />
+          <SelectField label="Cut order" value={op.order ?? 'drawn'} options={[{ value: 'drawn', label: 'As picked' }, { value: 'inside-first', label: 'Inner shapes first' }, { value: 'nearest', label: 'Nearest next' }]} onChange={(v) => onChange({ ...op, order: v })} />
+          <NumField label="Roughing passes" suffix="" value={op.xyPasses ?? 0} min={0} max={20} onChange={(v) => onChange({ ...op, xyPasses: Math.round(v) })} />
+          {(op.xyPasses ?? 0) > 0 && <NumField label="Roughing step" value={op.xyStep ?? 3} min={0.1} onChange={(v) => onChange({ ...op, xyStep: v })} />}
           <div className="col-span-2">
             <SwitchField label="Zig-zag open shapes" checked={op.bidirectional} onChange={(v) => onChange({ ...op, bidirectional: v })} />
+            <SwitchField label="Reverse open shapes" checked={!!op.reverse} onChange={(v) => onChange({ ...op, reverse: v })} />
           </div>
         </Group>
       )
@@ -355,7 +372,14 @@ function StrategyFields({ op, onChange }: { op: CamOp; onChange: (o: CamOp) => v
       return (
         <Group title="Strategy">
           <SelectField label="Cycle" value={op.cycle} options={[{ value: 'drill', label: 'Single plunge' }, { value: 'peck', label: 'Peck' }]} onChange={(v) => onChange({ ...op, cycle: v })} />
-          {op.cycle === 'peck' && <NumField label="Peck depth" value={op.peck} min={0.5} onChange={(v) => onChange({ ...op, peck: v })} />}
+          {op.cycle === 'peck' && (
+            <>
+              <NumField label="First peck" value={op.peck} min={0.5} onChange={(v) => onChange({ ...op, peck: v })} />
+              <NumField label="Each next peck" suffix="%" value={Math.round((op.peckFactor ?? 1) * 100)} min={10} max={100} onChange={(v) => onChange({ ...op, peckFactor: v / 100 })} />
+              <NumField label="Smallest peck" value={op.minPeck ?? 1} min={0.1} onChange={(v) => onChange({ ...op, minPeck: v })} />
+              <SelectField label="Retract" value={op.retract ?? 'full'} options={[{ value: 'full', label: 'Clear the hole' }, { value: 'partial', label: 'Lift 1 mm' }]} onChange={(v) => onChange({ ...op, retract: v })} />
+            </>
+          )}
           <NumField label="Dwell" suffix="s" value={op.dwell} min={0} step={0.1} onChange={(v) => onChange({ ...op, dwell: v })} />
           <SelectField label="Depth to" value={op.depthRef} options={[{ value: 'tip', label: 'Drill tip' }, { value: 'shoulder', label: 'Full diameter' }]} onChange={(v) => onChange({ ...op, depthRef: v })} />
           <SelectField label="Holes" value={op.select.mode} options={[{ value: 'all', label: 'All picked' }, { value: 'diameter', label: 'One diameter' }, { value: 'range', label: 'Diameter range' }]} onChange={(v) => onChange({ ...op, select: { ...op.select, mode: v } })} />

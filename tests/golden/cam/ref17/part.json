@@ -1,0 +1,174 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref17",
+  "name": "Deep peck drilling",
+  "version": 1,
+  "materialId": null,
+  "length": 300,
+  "width": 200,
+  "thickness": 38,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e84",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 300,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 300,
+         "y": 0
+        },
+        "b": {
+         "x": 300,
+         "y": 200
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 300,
+         "y": 200
+        },
+        "b": {
+         "x": 0,
+         "y": 200
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 200
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e85",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 100,
+      "y": 100
+     },
+     "r": 4
+    },
+    "face": 1
+   },
+   {
+    "id": "e86",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 200,
+      "y": 100
+     },
+     "r": 4
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op87",
+    "name": "Drill",
+    "enabled": true,
+    "geometry": [
+     "e85",
+     "e86"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 30,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "drill",
+    "cycle": "peck",
+    "peck": 10,
+    "dwell": 0,
+    "select": {
+     "mode": "all"
+    },
+    "depthRef": "tip",
+    "peckFactor": 0.7,
+    "minPeck": 3,
+    "retract": "full"
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e84"
+ }
+}

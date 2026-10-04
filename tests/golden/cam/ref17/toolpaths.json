@@ -1,0 +1,52 @@
+[
+ {
+  "op": "Drill",
+  "kind": "drill",
+  "tool": null,
+  "moves": {
+   "rapid": 16,
+   "feed": 12,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 301,
+  "box": [
+   100,
+   100,
+   200,
+   100
+  ],
+  "zMin": -30,
+  "intents": {
+   "vdrill": 2
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 100,
+    "y": 100,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 100,
+    "y": 100,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 100,
+    "y": 100,
+    "z": -10,
+    "f": "plunge"
+   },
+   {
+    "t": "rapid",
+    "x": 100,
+    "y": 100,
+    "z": 3
+   }
+  ]
+ }
+]

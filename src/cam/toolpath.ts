@@ -11,6 +11,7 @@ import {
   add,
   arc,
   area,
+  endOf,
   boxOf,
   type Contour,
   contourLength,
@@ -209,6 +210,10 @@ function totalDepth(op: CamOp, ctx: GenContext) {
   return op.levels.through ? ctx.part.thickness + ctx.machine.throughDepth : Math.max(0, op.levels.depth - op.levels.stockZ)
 }
 
+function depthsFor(op: CamOp, tool: Tool | null, total: number) {
+  return op.levels.cuts && op.levels.cuts > 0 ? passDepths(total, total / Math.round(op.levels.cuts)) : passDepths(total, maxPass(op, tool))
+}
+
 function maxPass(op: CamOp, tool: Tool | null) {
   return op.levels.passDepth > 0 ? op.levels.passDepth : tool?.stepdown && tool.stepdown > 0 ? tool.stepdown : (tool?.maxDepth ?? 0)
 }
@@ -260,18 +265,20 @@ function genProfile(op: ProfileOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const tool = tp.tool
   const r = (tool?.diameter ?? 0) / 2
   const D = totalDepth(op, ctx)
-  const depths = passDepths(D, maxPass(op, tool))
+  const depths = depthsFor(op, tool, D)
   if (!tool) tp.warnings.push('No router selected or available for this profile.')
   if (tool && D > tool.maxDepth + 1e-9) tp.warnings.push(`Depth ${D} mm exceeds T${tool.number} max depth ${tool.maxDepth} mm.`)
   if (op.slope) tp.warnings.push('Sloped walls are previewed vertical; the slope is written as a note only.')
   if (op.corners === 'loop') tp.warnings.push('Looped corners are generated as rolled (round) corners.')
 
-  for (const { contours } of geometryOf(op, ctx.part)) {
-    for (const c0 of contours) {
-      let g = c0
+  const picked = geometryOf(op, ctx.part).flatMap((x) => x.contours)
+  const nested = (c: Contour) => picked.filter((o) => o !== c && o.closed && c.segs.length && pointInContour(o, startOf(c)) && Math.abs(area(o)) > Math.abs(area(c))).length
+  for (const c0 of orderContours(picked, op.order ?? 'drawn')) {
+    {
+      let g = op.reverse && !c0.closed ? reverse(c0) : c0
       let side: 'L' | 'R' | 'C'
       if (g.closed) {
-        const outside = op.side === 'outside' || op.side === 'left'
+        const outside = op.side === 'auto' ? nested(g) % 2 === 0 : op.side === 'outside' || op.side === 'left'
         // climb with a CW spindle keeps the material on the right of travel
         const wantCw = outside ? op.direction === 'climb' : op.direction !== 'climb'
         const isCw = area(g) < 0
@@ -280,30 +287,38 @@ function genProfile(op: ProfileOp, ctx: GenContext, tp: Toolpath, b: Builder) {
         g = startAtLength(g, op.start !== undefined ? op.start * contourLength(g) : defaultStart(g))
       } else {
         side = op.side === 'left' || op.side === 'outside' ? 'L' : op.side === 'right' || op.side === 'inside' ? 'R' : 'C'
+        if (op.side === 'auto') side = 'C'
         if (op.direction === 'conventional' && side !== 'C') {
           g = reverse(g)
           side = side === 'L' ? 'R' : 'L'
         }
       }
-      const o = r + op.stockXY
-      let centres: Contour[]
-      if (side === 'C' || o <= 1e-9) centres = [g]
-      else if (g.closed) {
+      const final = r + op.stockXY
+      const rough = side === 'C' ? 0 : Math.max(0, Math.round(op.xyPasses ?? 0))
+      const xyStep = Math.max(0.1, op.xyStep ?? r)
+      const ringsAt = (o: number): Contour[] | null => {
+        if (side === 'C' || o <= 1e-9) return [g]
+        if (!g.closed) return [offsetChain(g, side === 'L' ? o : -o)]
         const outward = side === 'L' ? area(g) < 0 : area(g) > 0
         const res = offset([g], outward ? o : -o, op.corners === 'straight' ? 'miter' : 'round')
-        if (!res.length) {
-          tp.warnings.push(`Tool D${tool?.diameter} does not fit inside a ${op.side} contour.`)
-          continue
-        }
-        centres = res.map((cc) => {
-          const oriented = area(cc) < 0 === area(g) < 0 ? cc : reverse(cc)
-          return rotateToNearest(oriented, startOf(g))
-        })
-      } else centres = [offsetChain(g, side === 'L' ? o : -o)]
+        if (!res.length) return null
+        return res.map((cc) => rotateToNearest(area(cc) < 0 === area(g) < 0 ? cc : reverse(cc), startOf(g)))
+      }
+      const centres = ringsAt(final)
+      if (!centres) {
+        tp.warnings.push(`Tool D${tool?.diameter} does not fit inside a ${op.side} contour.`)
+        continue
+      }
+      const roughing: Contour[] = []
+      for (let k = rough; k >= 1; k--) roughing.push(...(ringsAt(final + k * xyStep) ?? []))
 
       const tagRanges = tagIntervals(op, centres[0])
       const tagTop = -(D - op.tags.height)
 
+      for (const cp of roughing) {
+        depths.forEach((d, pi) => emitProfilePass(op, cp, side, r, -d, pi === 0 ? 0 : -depths[pi - 1], null, b))
+        b.rapid(b.x, b.y, op.levels.safeZ)
+      }
       for (const cp of centres) {
         if (!cp.segs.length) continue
         depths.forEach((d, pi) => {
@@ -342,6 +357,34 @@ function genProfile(op: ProfileOp, ctx: GenContext, tp: Toolpath, b: Builder) {
       })
     }
   }
+}
+
+/** Centre of a contour made only of arcs on one circle (a drawn hole), else null. */
+function circleCentre(c: Contour): P | null {
+  if (!c.closed || !c.segs.length || c.segs.some((s) => s.k !== 'A')) return null
+  const s0 = c.segs[0] as Extract<Seg, { k: 'A' }>
+  return c.segs.every((s) => s.k === 'A' && dist(s.c, s0.c) < 1e-6) ? s0.c : null
+}
+
+/** Shapes inside other shapes first (smallest first), or nearest-next from the origin. */
+export function orderContours(cs: Contour[], order: 'drawn' | 'inside-first' | 'nearest'): Contour[] {
+  if (order === 'drawn' || cs.length < 2) return cs
+  if (order === 'inside-first') {
+    const depthOf = (c: Contour) => cs.filter((o) => o !== c && o.closed && c.segs.length && pointInContour(o, startOf(c)) && Math.abs(area(o)) > Math.abs(area(c))).length
+    const info = cs.map((c, i) => ({ c, i, depth: depthOf(c), a: c.closed ? Math.abs(area(c)) : 0 }))
+    return info.sort((x, y) => y.depth - x.depth || x.a - y.a || x.i - y.i).map((x) => x.c)
+  }
+  const todo = [...cs]
+  const out: Contour[] = []
+  let at: P = { x: 0, y: 0 }
+  while (todo.length) {
+    let bi = 0
+    for (let i = 1; i < todo.length; i++) if (dist(closestOnContour(todo[i], at).p, at) < dist(closestOnContour(todo[bi], at).p, at)) bi = i
+    const c = todo.splice(bi, 1)[0]
+    out.push(c)
+    at = c.closed ? startOf(c) : endOf(c)
+  }
+  return out
 }
 
 function tagIntervals(op: ProfileOp, c: Contour): [number, number][] {
@@ -404,7 +447,13 @@ function emitProfilePass(
   const leadIn = op.leads.in
   let entry: P = S
   const leadSegs: Seg[] = []
-  if (c.closed || side !== 'C') {
+  if (leadIn === 'centre') {
+    const centre = circleCentre(c)
+    if (centre) {
+      entry = centre
+      leadSegs.push(line(centre, S))
+    }
+  } else if (c.closed || side !== 'C') {
     if (leadIn === 'arc' || leadIn === 'line-arc') {
       const C = add(S, mul(free(t0), R))
       const B = add(C, mul(t0, -R))
@@ -521,7 +570,7 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   }
   const r = tool.diameter / 2
   const D = totalDepth(op, ctx)
-  const depths = passDepths(D, maxPass(op, tool))
+  const depths = depthsFor(op, tool, D)
   const step = Math.max(0.05, op.stepover * tool.diameter)
   let entry = op.entry
   if (entry === 'plunge' && tool.centreCutting === false) {
@@ -538,12 +587,13 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
     return
   }
   const levels: Contour[][] = [first]
-  for (let i = 0; i < 2000; i++) {
-    const next = offset(levels[levels.length - 1], -step)
+  for (let i = 1; i < 2000; i++) {
+    const next = offset(region, -(r + op.stockXY + i * step))
     if (!next.length) break
     levels.push(next)
   }
   const orient = (c: Contour) => (op.direction === 'climb' ? c : reverse(c))
+  const slack = offset(first, 0.01)
 
   const circ = region.length === 1 && region[0].segs.every((s) => s.k === 'A') && new Set(region[0].segs.map((s) => radius(s as never).toFixed(6))).size === 1
 
@@ -554,19 +604,19 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
     if (op.pattern === 'zigzag') paths = zigzag(first, step, op.angle)
     else if (op.pattern === 'spiral' && circ) paths = [spiralCircle(region[0], r + op.stockXY, step, op.direction)]
     else paths = [...levels].reverse().flat().map(orient)
-    if ((op.pattern === 'zigzag' || (op.pattern === 'spiral' && circ)) && op.finishPass) paths.push(...first.map(orient))
+    if (op.pattern === 'zigzag' && op.finishPass) paths.push(...first.map(orient))
     let started = false
     for (let i = 0; i < paths.length; i++) {
       let c = paths[i]
       if (started) c = rotateToNearest(c, { x: b.x, y: b.y })
       const S = startOf(c)
-      const near = started && Math.hypot(S.x - b.x, S.y - b.y) <= step * 1.6 + 1e-6 && linkInside(first, { x: b.x, y: b.y }, S)
+      const near = started && Math.hypot(S.x - b.x, S.y - b.y) <= step * 1.6 + 1e-6 && linkInside(slack, { x: b.x, y: b.y }, S)
       if (near) b.feed(S.x, S.y, z)
       else {
         b.rapid(b.x, b.y, op.levels.rapidZ)
         b.rapid(S.x, S.y, op.levels.safeZ)
         b.rapid(S.x, S.y, Math.max(prevZ, 0) + op.levels.rapidZ)
-        enterAt(entry, c, S, prevZ, z, op, r, first, b, tp)
+        enterAt(entry, c, S, prevZ, z, op, r, slack, b, tp)
       }
       started = true
       for (const s of c.segs) b.seg(s, z)
@@ -610,18 +660,20 @@ function linkInside(region: Contour[], a: P, b: P) {
 function enterAt(entry: PocketOp['entry'], c: Contour, S: P, prevZ: number, z: number, op: PocketOp, r: number, region: Contour[], b: Builder, tp: Toolpath) {
   if (entry === 'helix') {
     const h = Math.max(0.2, op.helixPct * r)
-    const C = { x: S.x - h, y: S.y }
-    const fits = [0, 1, 2, 3, 4, 5, 6, 7].every((k) => {
-      const p = { x: C.x + h * Math.cos((k * Math.PI) / 4), y: C.y + h * Math.sin((k * Math.PI) / 4) }
+    const inRegion = (p: P) => {
       let inside = false
       for (const rc of region) if (pointInContour(rc, p)) inside = !inside
       return inside
-    })
-    if (fits) {
+    }
+    const t = c.segs.length ? tangentAt(c.segs[0], 0) : { x: 1, y: 0 }
+    // The start sits on the outer ring, so the circle is tested slightly shrunk to accept tangency.
+    const fitsAt = (C: P) => Array.from({ length: 16 }, (_, k) => (k * Math.PI) / 8).every((a) => inRegion({ x: C.x + (h - 0.01) * Math.cos(a), y: C.y + (h - 0.01) * Math.sin(a) }))
+    const C = [left(t), right(t), t].map((n) => add(S, mul(n, h))).find(fitsAt)
+    if (C) {
       const pitch = Math.max(0.5, 2 * Math.PI * h * Math.tan((Math.max(1, op.rampAngle) * Math.PI) / 180))
       const turns = Math.max(1, Math.ceil(Math.abs(z - prevZ) / pitch))
       b.feed(S.x, S.y, prevZ, 'plunge')
-      const W = { x: C.x - h, y: C.y }
+      const W = sub(mul(C, 2), S)
       for (let i = 0; i < turns; i++) {
         const za = prevZ + ((z - prevZ) * (i + 0.5)) / turns
         const zb = prevZ + ((z - prevZ) * (i + 1)) / turns
@@ -702,18 +754,21 @@ function spiralCircle(c: Contour, inset: number, step: number, dir: PocketOp['di
   const C = s0.c
   const Rf = radius(s0) - inset
   const segs: Seg[] = []
+  if (Rf <= 1e-6) return { segs, closed: false }
+  // Half-turns alternate sides of the centre; each one grows the radius by half a stepover.
   let rr = 0
-  let p = { ...C }
-  let up = true
+  let side = 1
   while (rr < Rf - 1e-9) {
     const nr = Math.min(Rf, rr + step / 2)
-    const centre = up ? { x: p.x + nr, y: C.y } : { x: p.x - nr, y: C.y }
-    const end = { x: centre.x + (up ? nr : -nr), y: C.y }
-    if (dist(p, end) > 1e-9) segs.push(arc(p, end, centre, true))
-    p = end
-    rr = Math.abs(end.x - C.x)
-    up = !up
+    const a = { x: C.x + side * rr, y: C.y }
+    const e = { x: C.x - side * nr, y: C.y }
+    if (dist(a, e) > 1e-9) segs.push(arc(a, e, { x: (a.x + e.x) / 2, y: C.y }, true))
+    rr = nr
+    side = -side
   }
+  const last = segs.length ? segs[segs.length - 1].b : { x: C.x + Rf, y: C.y }
+  const opp = { x: 2 * C.x - last.x, y: C.y }
+  segs.push(arc(last, opp, C, true), arc(opp, last, C, true))
   const out: Contour = { segs, closed: false }
   return dir === 'climb' ? out : { segs: out.segs.map((s) => (s.k === 'A' ? { ...s, ccw: false, c: { x: s.c.x, y: 2 * C.y - s.c.y }, a: { x: s.a.x, y: 2 * C.y - s.a.y }, b: { x: s.b.x, y: 2 * C.y - s.b.y } } : s)), closed: false }
 }
@@ -787,7 +842,19 @@ function genDrill(op: DrillOp, ctx: GenContext, tp: Toolpath, b: Builder) {
         if (op.depthRef === 'shoulder' && tool?.shape === 'drill') depth += d / 2 / Math.tan((59 * Math.PI) / 180)
         if (tool && depth > tool.maxDepth + 1e-9) tp.warnings.push(`Hole D${d} depth ${depth} mm exceeds T${tool.number} max depth.`)
         b.rapid(h.x, h.y, op.levels.safeZ)
-        b.drill(h.x, h.y, -depth, op.levels.rapidZ, op.cycle === 'peck' ? op.peck : 0, op.dwell)
+        if (op.cycle === 'peck' && (op.peckFactor ?? 1) < 1) {
+          b.rapid(h.x, h.y, op.levels.rapidZ)
+          let at = 0
+          let peck = Math.max(0.1, op.peck)
+          while (at < depth - 1e-9) {
+            const next = Math.min(depth, at + peck)
+            b.feed(h.x, h.y, -next, 'plunge')
+            at = next
+            if (at < depth - 1e-9) b.rapid(h.x, h.y, op.retract === 'partial' ? -at + 1 : op.levels.rapidZ)
+            peck = Math.max(op.minPeck ?? 1, peck * (op.peckFactor ?? 1))
+          }
+          b.rapid(h.x, h.y, op.levels.rapidZ)
+        } else b.drill(h.x, h.y, -depth, op.levels.rapidZ, op.cycle === 'peck' ? op.peck : 0, op.dwell)
         tp.intents.push({ k: 'vdrill', x: h.x, y: h.y, d, depth: Math.round(depth * 1000) / 1000, through, tool, label: op.name })
       } else {
         const fp = faceToPart(face, h.x, part)!
@@ -811,7 +878,7 @@ function genDrill(op: DrillOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 
 function genEngrave(op: CamOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const D = totalDepth(op, ctx)
-  const depths = passDepths(D, maxPass(op, tp.tool))
+  const depths = depthsFor(op, tp.tool, D)
   for (const { contours } of geometryOf(op, ctx.part))
     for (const c of contours) {
       if (!c.segs.length) continue
@@ -912,14 +979,13 @@ function genSweep(op: SweepOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const r = tool.diameter / 2
   const maxInset = Math.max(...op.section.map((s) => s.inset))
   const sign = op.side === 'inside' ? -1 : 1
-  const mp = maxPass(op, tool)
   for (let wc = r; wc <= maxInset + r + 1e-9; wc += Math.max(0.1, op.step)) {
     let depth = Infinity
     for (let k = 0; k <= 8; k++) depth = Math.min(depth, sectionDepth(op.section, wc - r + (2 * r * k) / 8))
     if (depth <= 0.01) continue
     const rings = offset(guide, sign * wc)
     for (const c of rings) {
-      const ds = passDepths(depth, mp)
+      const ds = depthsFor(op, tool, depth)
       for (const d of ds) {
         const S = startOf(c)
         b.rapid(S.x, S.y, op.levels.safeZ)
@@ -975,6 +1041,9 @@ export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
     }
   tp.stats = stats(b.moves, feeds.feed)
   tp.moves = b.moves
+  const seen = new Map<string, number>()
+  for (const w of tp.warnings) seen.set(w, (seen.get(w) ?? 0) + 1)
+  tp.warnings = [...seen].map(([w, n]) => (n > 1 ? `${w} (${n} times)` : w))
   return tp
 }
 

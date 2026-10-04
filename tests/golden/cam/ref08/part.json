@@ -1,0 +1,229 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref08",
+  "name": "Free-form pocket with an island",
+  "version": 1,
+  "materialId": null,
+  "length": 500,
+  "width": 400,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e46",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 500,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 500,
+         "y": 0
+        },
+        "b": {
+         "x": 500,
+         "y": 400
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 500,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 400
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e47",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 80,
+         "y": 80
+        },
+        "b": {
+         "x": 420,
+         "y": 60
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 420,
+         "y": 60
+        },
+        "b": {
+         "x": 440,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 440,
+         "y": 300
+        },
+        "b": {
+         "x": 250,
+         "y": 340
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 250,
+         "y": 340
+        },
+        "b": {
+         "x": 60,
+         "y": 280
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 60,
+         "y": 280
+        },
+        "b": {
+         "x": 80,
+         "y": 80
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e48",
+    "layer": "machining",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 250,
+      "y": 200
+     },
+     "r": 40
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op49",
+    "name": "Pocket",
+    "enabled": true,
+    "geometry": [
+     "e47",
+     "e48"
+    ],
+    "toolId": "t102",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "pocket",
+    "pattern": "offset",
+    "stepover": 0.45,
+    "angle": 0,
+    "direction": "climb",
+    "islands": true,
+    "entry": "helix",
+    "rampAngle": 5,
+    "helixPct": 0.8,
+    "finishPass": true,
+    "stockXY": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e46"
+ }
+}

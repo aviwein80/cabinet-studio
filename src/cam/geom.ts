@@ -123,7 +123,7 @@ export function tessellateSeg(s: Seg, tol = TOL.chord): P[] {
 export function toPoints(c: Contour, tol = TOL.chord): P[] {
   if (!c.segs.length) return []
   const out: P[] = [c.segs[0].a]
-  for (const s of c.segs) out.push(...tessellateSeg(s, tol))
+  for (const s of c.segs) for (const q of tessellateSeg(s, tol)) out.push(q)
   if (c.closed && out.length > 1 && near(out[0], out[out.length - 1], 1e-9)) out.pop()
   return out
 }
@@ -512,9 +512,10 @@ export function fitPoints(input: P[], closed: boolean, tol = TOL.fit): Seg[] {
         best = i
       }
     }
-    const rot = [...p.slice(best), ...p.slice(0, best)]
+    const rot = p.slice(best).concat(p.slice(0, best))
+    rot.push(rot[0])
     p.length = 0
-    p.push(...rot, rot[0])
+    for (const q of rot) p.push(q)
   }
   if (p.length < 2) return []
   const n = p.length - 1

@@ -91,9 +91,11 @@ export interface Levels {
   stockZ: number
   /** Depth per pass; 0 = the tool's stepdown (or one pass). */
   passDepth: number
+  /** Number of equal cuts; when set it wins over `passDepth`. */
+  cuts?: number
 }
 
-export type LeadType = 'none' | 'line' | 'arc' | 'line-arc' | 'ramp'
+export type LeadType = 'none' | 'line' | 'arc' | 'line-arc' | 'ramp' | 'centre'
 export interface Leads {
   in: LeadType
   out: LeadType
@@ -118,7 +120,8 @@ export interface Tags {
   at: number[]
 }
 
-export type ProfileSide = 'outside' | 'inside' | 'left' | 'right' | 'centre'
+/** 'auto' = shapes inside other picked shapes are cut on the inside, the rest on the outside. */
+export type ProfileSide = 'outside' | 'inside' | 'left' | 'right' | 'centre' | 'auto'
 export type Direction = 'climb' | 'conventional'
 
 interface OpBase {
@@ -154,6 +157,13 @@ export interface ProfileOp extends OpBase {
   start?: number
   /** Wall angle in degrees from vertical (0 = vertical). */
   slope: number
+  /** Machine the picked shapes in drawing order, holes and inner shapes first, or nearest next. */
+  order?: 'drawn' | 'inside-first' | 'nearest'
+  /** Extra roughing passes outside the final wall, `xyStep` apart. */
+  xyPasses?: number
+  xyStep?: number
+  /** Run open shapes the other way. */
+  reverse?: boolean
 }
 
 export interface PocketOp extends OpBase {
@@ -176,6 +186,11 @@ export interface DrillOp extends OpBase {
   kind: 'drill'
   cycle: 'drill' | 'peck'
   peck: number
+  /** Each peck is this fraction of the one before (1 = equal pecks), never below `minPeck`. */
+  peckFactor?: number
+  minPeck?: number
+  /** Full = back to the rapid height after every peck; partial = lift 1 mm to break the chip. */
+  retract?: 'full' | 'partial'
   dwell: number
   select: { mode: 'all' | 'diameter' | 'range'; diameter?: number; min?: number; max?: number }
   depthRef: 'tip' | 'shoulder'

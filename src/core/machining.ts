@@ -154,7 +154,7 @@ export function findDrill(machine: MachineProfile, diameter: number, depth: numb
 }
 
 export function findPocketTool(machine: MachineProfile, width: number, depth: number) {
-  const fits = machine.tools.filter((t) => t.type === 'router' && t.diameter <= width + 1e-9 && t.maxDepth + 1e-9 >= depth)
+  const fits = machine.tools.filter((t) => t.type === 'router' && t.shape !== 'v' && t.diameter <= width + 1e-9 && t.maxDepth + 1e-9 >= depth)
   fits.sort((a, b) => b.diameter - a.diameter || a.number - b.number)
   return fits[0] ?? null
 }

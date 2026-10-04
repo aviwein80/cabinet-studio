@@ -101,7 +101,7 @@ describe('P0 foundations', () => {
     const tools = structuredClone(machine.tools)
     const r = tools.find((t) => t.type === 'router')!
     Object.assign(r, { feedMode: 'calculated', rpm: 18000, flutes: 2, feedPerTooth: 0.15, centreCutting: false })
-    const m = { ...machine, tools, feeds: [] }
+    const m: typeof machine = { ...machine, tools, feeds: [] }
     const op = defaultOp('pocket', [], { toolId: r.id })
     expect(feedsFor(op, r, null, m)).toMatchObject({ feed: 5400, source: 'calculated' })
     m.feeds = [{ toolId: r.id, materialId: 'mat-x', rpm: 16000, feed: 4200, plungeFeed: 1500 }]

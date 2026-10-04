@@ -1,0 +1,131 @@
+[H
+VERSION="4.0 Alpha"
+OP="1"
+FM="1"
+MAT="HOMAG"
+INCH="0"
+VIEW="NOMIRROR"
+ANZ="1"
+MATERIAL="REF"
+CUSTOMER=""
+ORDER="Rounded rectangular recess"
+ARTICLE="Rounded rectangular recess"
+PARTID="Rounded-rectangular-recess"
+PARTTYPE="PART"
+MPRCOUNT="1"
+MPRNUMBER="1"
+INFO1="Cabinet Studio 0.1.0"
+INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
+INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
+INFO4="Rounded rectangular recess"
+INFO5=""
+_BSX=400.000000
+_BSY=300.000000
+_BSZ=19.000000
+_FNX=0.000000
+_FNY=0.000000
+_RNX=0.000000
+_RNY=0.000000
+_RNZ=0.000000
+_RX=400.000000
+_RY=300.000000
+
+[001
+L="400"
+KM="Sheet length X"
+B="300"
+KM="Sheet width Y"
+D="19"
+KM="Sheet thickness Z"
+
+]1
+$E0
+KP 
+X=200.0000
+Y=300.0000
+Z=0.0000
+KO=00
+
+$E1
+KL 
+X=400.0000
+Y=300.0000
+
+$E2
+KL 
+X=400.0000
+Y=0.0000
+
+$E3
+KL 
+X=0.0000
+Y=0.0000
+
+$E4
+KL 
+X=0.0000
+Y=300.0000
+
+$E5
+KL 
+X=200.0000
+Y=300.0000
+
+<100 \WerkStck\
+LA="L"
+BR="B"
+DI="D"
+FNX="0"
+FNY="0"
+AX="0"
+AY="0"
+
+<101 \Kommentar\
+KM="Cabinet Studio 0.1.0 - custom part Rounded rectangular recess REF"
+KM="Generated program. Verify in woodWOP simulation before cutting."
+KAT="Kommentar"
+MNM="Kommentar"
+
+<112 \Tasche\
+XA="200"
+YA="150"
+LA="200"
+BR="150"
+RD="10"
+WI="0"
+TI="8"
+ZT="0"
+XY="45"
+DS="1"
+T_="101"
+F_="STANDARD"
+KO="00"
+KAT="Tasche"
+MNM="P1 Pocket"
+
+<105 \Konturfraesen\
+EA="1:0"
+MDA="TAN"
+RK="WRKL"
+EE="1:5"
+MDE="TAN_AB"
+EM="0"
+RI="1"
+TNO="101"
+SM="0"
+S_="STANDARD"
+F_="STANDARD"
+AB="0"
+AF="0"
+ZA="-0.3"
+STUFEN="0"
+ZSTART="0"
+ANZZST="0"
+KAT="Fraesen"
+MNM="P1 Profile D19.3"
+
+<101 \Kommentar\
+KM="HOMAG_PRODUCTIONMANAGER_FEEDBACK={Version:1.00,PARTID:Rounded-rectangular-recess,MPRNUMBER:1,MPRCOUNT:1}"
+KAT="Kommentar"
+MNM="Kommentar"
+!

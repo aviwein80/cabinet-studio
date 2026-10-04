@@ -1,0 +1,313 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref07",
+  "name": "Rounded rectangular recess",
+  "version": 1,
+  "materialId": null,
+  "length": 400,
+  "width": 300,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e42",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e43",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 110,
+         "y": 75
+        },
+        "b": {
+         "x": 290,
+         "y": 75
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 290,
+         "y": 75
+        },
+        "b": {
+         "x": 300,
+         "y": 85
+        },
+        "c": {
+         "x": 290,
+         "y": 85
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 300,
+         "y": 85
+        },
+        "b": {
+         "x": 300,
+         "y": 215
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 300,
+         "y": 215
+        },
+        "b": {
+         "x": 290,
+         "y": 225
+        },
+        "c": {
+         "x": 290,
+         "y": 215
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 290,
+         "y": 225
+        },
+        "b": {
+         "x": 110,
+         "y": 225
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 110,
+         "y": 225
+        },
+        "b": {
+         "x": 100,
+         "y": 215
+        },
+        "c": {
+         "x": 110,
+         "y": 215
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 100,
+         "y": 215
+        },
+        "b": {
+         "x": 100,
+         "y": 85
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 100,
+         "y": 85
+        },
+        "b": {
+         "x": 110,
+         "y": 75
+        },
+        "c": {
+         "x": 110,
+         "y": 85
+        },
+        "ccw": true
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op44",
+    "name": "Pocket",
+    "enabled": true,
+    "geometry": [
+     "e43"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 8,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "pocket",
+    "pattern": "offset",
+    "stepover": 0.45,
+    "angle": 0,
+    "direction": "climb",
+    "islands": true,
+    "entry": "helix",
+    "rampAngle": 5,
+    "helixPct": 0.8,
+    "finishPass": true,
+    "stockXY": 0
+   },
+   {
+    "id": "op45",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e42"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": true,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "outside",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e42"
+ }
+}

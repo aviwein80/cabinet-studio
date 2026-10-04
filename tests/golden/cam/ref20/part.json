@@ -1,0 +1,432 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref20",
+  "name": "Bracket with relieved slot, holes and operator note",
+  "version": 1,
+  "materialId": null,
+  "length": 400,
+  "width": 250,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e95",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 250
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 250
+        },
+        "b": {
+         "x": 0,
+         "y": 250
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 250
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e96",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "closed": true,
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 150,
+         "y": 75
+        },
+        "b": {
+         "x": 238,
+         "y": 75
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 238,
+         "y": 75
+        },
+        "b": {
+         "x": 250,
+         "y": 75
+        },
+        "c": {
+         "x": 243.99999999999915,
+         "y": 75.0000000000001
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 250,
+         "y": 75
+        },
+        "b": {
+         "x": 250,
+         "y": 163
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 250,
+         "y": 163
+        },
+        "b": {
+         "x": 250,
+         "y": 175
+        },
+        "c": {
+         "x": 250.00000000000298,
+         "y": 169.0000000000004
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 250,
+         "y": 175
+        },
+        "b": {
+         "x": 162,
+         "y": 175
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 162,
+         "y": 175
+        },
+        "b": {
+         "x": 150,
+         "y": 175
+        },
+        "c": {
+         "x": 155.99999999999977,
+         "y": 175.00000000000063
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 150,
+         "y": 175
+        },
+        "b": {
+         "x": 150,
+         "y": 87
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 150,
+         "y": 87
+        },
+        "b": {
+         "x": 150,
+         "y": 75
+        },
+        "c": {
+         "x": 149.99999999999974,
+         "y": 81.00000000000031
+        },
+        "ccw": true
+       }
+      ]
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e97",
+    "layer": "machining",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 60,
+      "y": 125
+     },
+     "r": 15
+    },
+    "face": 1
+   },
+   {
+    "id": "e98",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "closed": true,
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 310,
+         "y": 80
+        },
+        "b": {
+         "x": 310,
+         "y": 170
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 310,
+         "y": 170
+        },
+        "b": {
+         "x": 290,
+         "y": 170
+        },
+        "c": {
+         "x": 300,
+         "y": 170
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 290,
+         "y": 170
+        },
+        "b": {
+         "x": 290,
+         "y": 80
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 290,
+         "y": 80
+        },
+        "b": {
+         "x": 310,
+         "y": 80
+        },
+        "c": {
+         "x": 300,
+         "y": 80
+        },
+        "ccw": true
+       }
+      ]
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op99",
+    "name": "Program note",
+    "enabled": true,
+    "geometry": [],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "code",
+    "text": "Check hold-down before cutting the bracket",
+    "stop": true
+   },
+   {
+    "id": "op100",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e97"
+    ],
+    "toolId": "t102",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 5,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "inside",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "centre",
+     "out": "none",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 1,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0
+   },
+   {
+    "id": "op101",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e95",
+     "e96",
+     "e97",
+     "e98"
+    ],
+    "toolId": "t101",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": true,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "auto",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0,
+    "order": "inside-first"
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e95"
+ }
+}

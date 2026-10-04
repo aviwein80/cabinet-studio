@@ -1,0 +1,267 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref19",
+  "name": "Open shapes left, right and on the line",
+  "version": 1,
+  "materialId": null,
+  "length": 500,
+  "width": 300,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e90",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 500,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 500,
+         "y": 0
+        },
+        "b": {
+         "x": 500,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 500,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e91",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 50,
+         "y": 50
+        },
+        "b": {
+         "x": 450,
+         "y": 50
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 450,
+         "y": 50
+        },
+        "b": {
+         "x": 450,
+         "y": 250
+        }
+       }
+      ],
+      "closed": false
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e92",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 50,
+         "y": 250
+        },
+        "b": {
+         "x": 300,
+         "y": 250
+        }
+       }
+      ],
+      "closed": false
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op93",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e91"
+    ],
+    "toolId": "t103",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 9,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 3
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "left",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "none",
+     "out": "none",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 0,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": true,
+    "slope": 0
+   },
+   {
+    "id": "op94",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e92"
+    ],
+    "toolId": "t103",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 4,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "centre",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0,
+    "reverse": true
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e90"
+ }
+}

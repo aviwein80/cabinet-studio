@@ -1,0 +1,202 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref11",
+  "name": "Open line engraving",
+  "version": 1,
+  "materialId": null,
+  "length": 400,
+  "width": 200,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e56",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 200
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 200
+        },
+        "b": {
+         "x": 0,
+         "y": 200
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 200
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e57",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 20,
+         "y": 20
+        },
+        "b": {
+         "x": 380,
+         "y": 20
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 380,
+         "y": 20
+        },
+        "b": {
+         "x": 380,
+         "y": 180
+        }
+       }
+      ],
+      "closed": false
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e58",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "closed": false,
+      "segs": [
+       {
+        "k": "A",
+        "a": {
+         "x": 50,
+         "y": 100
+        },
+        "b": {
+         "x": 150,
+         "y": 100
+        },
+        "c": {
+         "x": 100,
+         "y": 100
+        },
+        "ccw": false
+       }
+      ]
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op59",
+    "name": "Engrave",
+    "enabled": true,
+    "geometry": [
+     "e57",
+     "e58"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 1.5,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "engrave"
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e56"
+ }
+}

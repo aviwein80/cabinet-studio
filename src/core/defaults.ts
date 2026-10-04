@@ -156,6 +156,7 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
     { id: 't101', number: 101, type: 'router', name: 'Compression cutter Z2 12 mm (cut-out)', diameter: 12, maxDepth: 42 },
     { id: 't102', number: 102, type: 'router', name: 'Spiral cutter 8 mm', diameter: 8, maxDepth: 30 },
     { id: 't103', number: 103, type: 'router', name: 'Spiral cutter 6 mm (grooves)', diameter: 6, maxDepth: 20 },
+    { id: 't104', number: 104, type: 'router', name: 'V-bit 90° 12.7 mm (placeholder)', diameter: 12.7, maxDepth: 12, shape: 'v', angle: 90, centreCutting: true },
     { id: 't201', number: 201, type: 'drill-vertical', name: 'Dowel drill 5 mm', diameter: 5, maxDepth: 35 },
     { id: 't202', number: 202, type: 'drill-vertical', name: 'Dowel drill 7 mm', diameter: 7, maxDepth: 35 },
     { id: 't203', number: 203, type: 'drill-vertical', name: 'Dowel drill 8 mm', diameter: 8, maxDepth: 35 },

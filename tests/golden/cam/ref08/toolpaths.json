@@ -1,0 +1,54 @@
+[
+ {
+  "op": "Pocket",
+  "kind": "pocket",
+  "tool": 102,
+  "moves": {
+   "rapid": 127,
+   "feed": 168,
+   "arc": 475,
+   "drill": 0
+  },
+  "cutMm": 26710,
+  "box": [
+   64.303,
+   64.222,
+   435.721,
+   335.87
+  ],
+  "zMin": -6,
+  "intents": {
+   "contour": 43
+  },
+  "warnings": [
+   "Free-form pocket is written to woodWOP as contour-milling passes on the offset rings (each one editable)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 3
+   },
+   {
+    "t": "rapid",
+    "x": 350.589,
+    "y": 142.227,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 350.589,
+    "y": 142.227,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 350.589,
+    "y": 142.227,
+    "z": 0,
+    "f": "plunge"
+   }
+  ]
+ }
+]

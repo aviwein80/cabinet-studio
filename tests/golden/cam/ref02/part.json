@@ -1,0 +1,226 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref02",
+  "name": "Rounded panel with holding tabs",
+  "version": 1,
+  "materialId": null,
+  "length": 600,
+  "width": 400,
+  "thickness": 18,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e8",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 50,
+         "y": 0
+        },
+        "b": {
+         "x": 550,
+         "y": 0
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 550,
+         "y": 0
+        },
+        "b": {
+         "x": 600,
+         "y": 50
+        },
+        "c": {
+         "x": 550,
+         "y": 50
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 600,
+         "y": 50
+        },
+        "b": {
+         "x": 600,
+         "y": 350
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 600,
+         "y": 350
+        },
+        "b": {
+         "x": 550,
+         "y": 400
+        },
+        "c": {
+         "x": 550,
+         "y": 350
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 550,
+         "y": 400
+        },
+        "b": {
+         "x": 50,
+         "y": 400
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 50,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 350
+        },
+        "c": {
+         "x": 50,
+         "y": 350
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 350
+        },
+        "b": {
+         "x": 0,
+         "y": 50
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 0,
+         "y": 50
+        },
+        "b": {
+         "x": 50,
+         "y": 0
+        },
+        "c": {
+         "x": 50,
+         "y": 50
+        },
+        "ccw": true
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op9",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e8"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": true,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "outside",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "auto",
+     "count": 4,
+     "length": 15,
+     "height": 3,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e8"
+ }
+}

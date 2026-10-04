@@ -1,0 +1,107 @@
+[
+ {
+  "op": "Drill",
+  "kind": "drill",
+  "tool": null,
+  "moves": {
+   "rapid": 24,
+   "feed": 16,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 640,
+  "box": [
+   -10,
+   -10,
+   610,
+   310
+  ],
+  "zMin": -9.5,
+  "intents": {
+   "hdrill": 8
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 50,
+    "y": -10,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 50,
+    "y": -10,
+    "z": -9.5
+   },
+   {
+    "t": "feed",
+    "x": 50,
+    "y": 30,
+    "z": -9.5,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 50,
+    "y": -10,
+    "z": -9.5,
+    "f": "lead"
+   }
+  ]
+ },
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 7,
+   "arc": 6,
+   "drill": 0
+  },
+  "cutMm": 1890,
+  "box": [
+   -6,
+   -6,
+   606,
+   315
+  ],
+  "zMin": -19.3,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 291,
+    "y": 315,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 291,
+    "y": 315,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 291,
+    "y": 315,
+    "z": -19.3,
+    "f": "plunge"
+   },
+   {
+    "t": "arc",
+    "x": 300,
+    "y": 306,
+    "z": -19.3,
+    "cx": 299.99999999994424,
+    "cy": 314.99999999794966,
+    "ccw": true,
+    "f": "lead"
+   }
+  ]
+ }
+]

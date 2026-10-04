@@ -1,0 +1,210 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref15",
+  "name": "Raised panel sweep",
+  "version": 1,
+  "materialId": null,
+  "length": 400,
+  "width": 600,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e70",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 600
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 600
+        },
+        "b": {
+         "x": 0,
+         "y": 600
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 600
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e71",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 60,
+         "y": 60
+        },
+        "b": {
+         "x": 340,
+         "y": 60
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 340,
+         "y": 60
+        },
+        "b": {
+         "x": 340,
+         "y": 540
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 340,
+         "y": 540
+        },
+        "b": {
+         "x": 60,
+         "y": 540
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 60,
+         "y": 540
+        },
+        "b": {
+         "x": 60,
+         "y": 60
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op72",
+    "name": "Profiled sweep",
+    "enabled": true,
+    "geometry": [
+     "e71"
+    ],
+    "toolId": "t102",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "sweep",
+    "side": "inside",
+    "step": 3,
+    "section": [
+     {
+      "inset": 0,
+      "depth": 10
+     },
+     {
+      "inset": 30,
+      "depth": 3
+     },
+     {
+      "inset": 32,
+      "depth": 0
+     }
+    ]
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e70"
+ }
+}

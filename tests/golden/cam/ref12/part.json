@@ -1,0 +1,152 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref12",
+  "name": "Text engraving",
+  "version": 1,
+  "materialId": null,
+  "length": 400,
+  "width": 150,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e60",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 0
+        },
+        "b": {
+         "x": 400,
+         "y": 150
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 400,
+         "y": 150
+        },
+        "b": {
+         "x": 0,
+         "y": 150
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 150
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e61",
+    "layer": "text",
+    "g": {
+     "t": "text",
+     "at": {
+      "x": 30,
+      "y": 50
+     },
+     "text": "CABINET 12",
+     "height": 40,
+     "angle": 0
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op62",
+    "name": "Engrave",
+    "enabled": true,
+    "geometry": [
+     "e61"
+    ],
+    "toolId": "t103",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 1,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "engrave"
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e60"
+ }
+}

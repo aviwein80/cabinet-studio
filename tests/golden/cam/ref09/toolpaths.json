@@ -1,0 +1,55 @@
+[
+ {
+  "op": "Pocket",
+  "kind": "pocket",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 131,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 11458,
+  "box": [
+   56,
+   56,
+   344,
+   244
+  ],
+  "zMin": -4,
+  "intents": {
+   "contour": 18
+  },
+  "warnings": [
+   "Helix does not fit at a pocket start; ramped instead.",
+   "Free-form pocket is written to woodWOP as contour-milling passes on the offset rings (each one editable)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 3
+   },
+   {
+    "t": "rapid",
+    "x": 340.182,
+    "y": 56,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 340.182,
+    "y": 56,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 340.182,
+    "y": 56,
+    "z": 0,
+    "f": "plunge"
+   }
+  ]
+ }
+]

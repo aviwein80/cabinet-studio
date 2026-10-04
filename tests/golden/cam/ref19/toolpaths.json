@@ -1,0 +1,104 @@
+[
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 103,
+  "moves": {
+   "rapid": 10,
+   "feed": 9,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 1809,
+  "box": [
+   50,
+   53,
+   447,
+   250
+  ],
+  "zMin": -9,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 50,
+    "y": 53,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 50,
+    "y": 53,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 50,
+    "y": 53,
+    "z": -3,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 447,
+    "y": 53,
+    "z": -3,
+    "f": "cut"
+   }
+  ]
+ },
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 103,
+  "moves": {
+   "rapid": 4,
+   "feed": 2,
+   "arc": 1,
+   "drill": 0
+  },
+  "cutMm": 264,
+  "box": [
+   45.5,
+   245.5,
+   300,
+   250
+  ],
+  "zMin": -4,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 300,
+    "y": 250,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 300,
+    "y": 250,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 300,
+    "y": 250,
+    "z": -4,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 50,
+    "y": 250,
+    "z": -4,
+    "f": "cut"
+   }
+  ]
+ }
+]

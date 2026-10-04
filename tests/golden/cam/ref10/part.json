@@ -1,0 +1,160 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref10",
+  "name": "Spiral circular pocket",
+  "version": 1,
+  "materialId": null,
+  "length": 300,
+  "width": 300,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e53",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 300,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 300,
+         "y": 0
+        },
+        "b": {
+         "x": 300,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 300,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e54",
+    "layer": "machining",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 150,
+      "y": 150
+     },
+     "r": 60
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op55",
+    "name": "Pocket",
+    "enabled": true,
+    "geometry": [
+     "e54"
+    ],
+    "toolId": "t102",
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 10,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 5
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "pocket",
+    "pattern": "spiral",
+    "stepover": 0.45,
+    "angle": 0,
+    "direction": "climb",
+    "islands": true,
+    "entry": "helix",
+    "rampAngle": 5,
+    "helixPct": 0.8,
+    "finishPass": true,
+    "stockXY": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e53"
+ }
+}

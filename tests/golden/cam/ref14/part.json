@@ -1,0 +1,186 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref14",
+  "name": "Back panel saw grooves",
+  "version": 1,
+  "materialId": null,
+  "length": 600,
+  "width": 400,
+  "thickness": 18,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e66",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 600,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 600,
+         "y": 0
+        },
+        "b": {
+         "x": 600,
+         "y": 400
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 600,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 400
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 400
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e67",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 20
+        },
+        "b": {
+         "x": 600,
+         "y": 20
+        }
+       }
+      ],
+      "closed": false
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e68",
+    "layer": "machining",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 380
+        },
+        "b": {
+         "x": 600,
+         "y": 380
+        }
+       }
+      ],
+      "closed": false
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op69",
+    "name": "Saw groove",
+    "enabled": true,
+    "geometry": [
+     "e67",
+     "e68"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 8,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "saw"
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e66"
+ }
+}

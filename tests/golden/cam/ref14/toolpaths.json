@@ -1,0 +1,53 @@
+[
+ {
+  "op": "Saw groove",
+  "kind": "saw",
+  "tool": 140,
+  "moves": {
+   "rapid": 4,
+   "feed": 4,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 1256,
+  "box": [
+   0,
+   20,
+   600,
+   380
+  ],
+  "zMin": -8,
+  "intents": {
+   "saw": 2
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 20,
+    "z": 20
+   },
+   {
+    "t": "feed",
+    "x": 0,
+    "y": 20,
+    "z": -8,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 600,
+    "y": 20,
+    "z": -8,
+    "f": "cut"
+   },
+   {
+    "t": "rapid",
+    "x": 600,
+    "y": 20,
+    "z": 20
+   }
+  ]
+ }
+]

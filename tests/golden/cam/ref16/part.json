@@ -1,0 +1,300 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref16",
+  "name": "Edge drilling on four faces",
+  "version": 1,
+  "materialId": null,
+  "length": 600,
+  "width": 300,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e73",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 600,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 600,
+         "y": 0
+        },
+        "b": {
+         "x": 600,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 600,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 300
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 300
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e74",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 50,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 2
+   },
+   {
+    "id": "e75",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 550,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 2
+   },
+   {
+    "id": "e76",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 50,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 3
+   },
+   {
+    "id": "e77",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 250,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 3
+   },
+   {
+    "id": "e78",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 50,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 4
+   },
+   {
+    "id": "e79",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 550,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 4
+   },
+   {
+    "id": "e80",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 50,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 5
+   },
+   {
+    "id": "e81",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 250,
+      "y": 9.5
+     },
+     "r": 4
+    },
+    "face": 5
+   }
+  ],
+  "ops": [
+   {
+    "id": "op82",
+    "name": "Drill",
+    "enabled": true,
+    "geometry": [
+     "e74",
+     "e75",
+     "e76",
+     "e77",
+     "e78",
+     "e79",
+     "e80",
+     "e81"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 30,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "drill",
+    "cycle": "drill",
+    "peck": 5,
+    "dwell": 0,
+    "select": {
+     "mode": "all"
+    },
+    "depthRef": "tip"
+   },
+   {
+    "id": "op83",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e73"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": true,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "outside",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e73"
+ }
+}

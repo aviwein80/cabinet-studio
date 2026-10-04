@@ -1,0 +1,229 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref18",
+  "name": "Thick top in three cuts with roughing",
+  "version": 1,
+  "materialId": null,
+  "length": 700,
+  "width": 500,
+  "thickness": 38,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e88",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 20,
+         "y": 0
+        },
+        "b": {
+         "x": 680,
+         "y": 0
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 680,
+         "y": 0
+        },
+        "b": {
+         "x": 700,
+         "y": 20
+        },
+        "c": {
+         "x": 680,
+         "y": 20
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 700,
+         "y": 20
+        },
+        "b": {
+         "x": 700,
+         "y": 480
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 700,
+         "y": 480
+        },
+        "b": {
+         "x": 680,
+         "y": 500
+        },
+        "c": {
+         "x": 680,
+         "y": 480
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 680,
+         "y": 500
+        },
+        "b": {
+         "x": 20,
+         "y": 500
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 20,
+         "y": 500
+        },
+        "b": {
+         "x": 0,
+         "y": 480
+        },
+        "c": {
+         "x": 20,
+         "y": 480
+        },
+        "ccw": true
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 480
+        },
+        "b": {
+         "x": 0,
+         "y": 20
+        }
+       },
+       {
+        "k": "A",
+        "a": {
+         "x": 0,
+         "y": 20
+        },
+        "b": {
+         "x": 20,
+         "y": 0
+        },
+        "c": {
+         "x": 20,
+         "y": 20
+        },
+        "ccw": true
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op89",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e88"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": true,
+     "stockZ": 0,
+     "passDepth": 0,
+     "cuts": 3
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "outside",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0,
+    "xyPasses": 2,
+    "xyStep": 2
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e88"
+ }
+}

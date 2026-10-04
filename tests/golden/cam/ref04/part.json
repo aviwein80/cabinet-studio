@@ -1,0 +1,468 @@
+{
+ "format": "cabinet-studio-part",
+ "version": 1,
+ "part": {
+  "id": "ref04",
+  "name": "Adjustable shelf side with 32 mm rows",
+  "version": 1,
+  "materialId": null,
+  "length": 720,
+  "width": 560,
+  "thickness": 19,
+  "grain": "none",
+  "qty": 1,
+  "layers": [
+   {
+    "id": "outline",
+    "name": "Outline",
+    "color": "#e2e8f0",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "machining",
+    "name": "Machining",
+    "color": "#38bdf8",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "holes",
+    "name": "Holes",
+    "color": "#f59e0b",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "text",
+    "name": "Text",
+    "color": "#a78bfa",
+    "visible": true,
+    "locked": false
+   },
+   {
+    "id": "construction",
+    "name": "Construction",
+    "color": "#64748b",
+    "visible": true,
+    "locked": false,
+    "construction": true
+   }
+  ],
+  "entities": [
+   {
+    "id": "e12",
+    "layer": "outline",
+    "g": {
+     "t": "contour",
+     "c": {
+      "segs": [
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 0
+        },
+        "b": {
+         "x": 720,
+         "y": 0
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 720,
+         "y": 0
+        },
+        "b": {
+         "x": 720,
+         "y": 560
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 720,
+         "y": 560
+        },
+        "b": {
+         "x": 0,
+         "y": 560
+        }
+       },
+       {
+        "k": "L",
+        "a": {
+         "x": 0,
+         "y": 560
+        },
+        "b": {
+         "x": 0,
+         "y": 0
+        }
+       }
+      ],
+      "closed": true
+     }
+    },
+    "face": 1
+   },
+   {
+    "id": "e13",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 100,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e14",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 132,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e15",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 164,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e16",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 196,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e17",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 228,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e18",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 260,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e19",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 292,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e20",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 324,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e21",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 356,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e22",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 388,
+      "y": 37
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e23",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 100,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e24",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 132,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e25",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 164,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e26",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 196,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e27",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 228,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e28",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 260,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e29",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 292,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e30",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 324,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e31",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 356,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   },
+   {
+    "id": "e32",
+    "layer": "holes",
+    "g": {
+     "t": "circle",
+     "c": {
+      "x": 388,
+      "y": 523
+     },
+     "r": 2.5
+    },
+    "face": 1
+   }
+  ],
+  "ops": [
+   {
+    "id": "op33",
+    "name": "Drill",
+    "enabled": true,
+    "geometry": [
+     "e13",
+     "e14",
+     "e15",
+     "e16",
+     "e17",
+     "e18",
+     "e19",
+     "e20",
+     "e21",
+     "e22",
+     "e23",
+     "e24",
+     "e25",
+     "e26",
+     "e27",
+     "e28",
+     "e29",
+     "e30",
+     "e31",
+     "e32"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 12,
+     "through": false,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "drill",
+    "cycle": "drill",
+    "peck": 5,
+    "dwell": 0,
+    "select": {
+     "mode": "all"
+    },
+    "depthRef": "tip"
+   },
+   {
+    "id": "op34",
+    "name": "Profile",
+    "enabled": true,
+    "geometry": [
+     "e12"
+    ],
+    "toolId": null,
+    "levels": {
+     "safeZ": 20,
+     "rapidZ": 3,
+     "depth": 6,
+     "through": true,
+     "stockZ": 0,
+     "passDepth": 0
+    },
+    "feeds": {},
+    "face": 1,
+    "kind": "profile",
+    "side": "outside",
+    "direction": "climb",
+    "compensation": "cam",
+    "corners": "round",
+    "stockXY": 0,
+    "leads": {
+     "in": "arc",
+     "out": "arc",
+     "length": 2,
+     "radius": 1.5,
+     "rampAngle": 5,
+     "overlap": 2,
+     "feedPct": 50
+    },
+    "tags": {
+     "mode": "none",
+     "count": 4,
+     "length": 12,
+     "height": 2,
+     "shape": "flat",
+     "rampAngle": 30,
+     "at": []
+    },
+    "bidirectional": false,
+    "slope": 0
+   }
+  ],
+  "variables": [],
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "outlineId": "e12"
+ }
+}

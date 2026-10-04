@@ -139,6 +139,8 @@ interface OpBase {
   /** Hash of the inputs when the toolpath was last regenerated; differs = stale. */
   builtHash?: string
   recipeId?: string
+  /** Layer rule that made this op; applying the rules again replaces it. Absent = made by hand. */
+  auto?: string
 }
 
 export interface ProfileOp extends OpBase {

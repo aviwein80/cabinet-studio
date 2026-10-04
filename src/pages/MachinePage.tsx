@@ -25,6 +25,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camCad', 'Part designer', 'Draw and edit shaped parts.'],
   ['camImport', 'Drawing import and export', 'DXF in and out, PDF/AI vectors in.'],
   ['camMachining', 'Machining operations', 'Profile, pocket, drill, engrave, V-carve, sweep, saw.'],
+  ['camRules', 'Machining rules', 'Layer names in imported drawings choose the operations.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
 ]
 

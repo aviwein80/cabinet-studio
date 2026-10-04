@@ -1,7 +1,9 @@
-import { FileUp, Loader2, TriangleAlert } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { FileUp, Loader2, TriangleAlert, Wand2 } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useStore } from '@/app/store'
 import { DEFAULT_DXF_OPTIONS, type DxfImportOptions, importDxf, importedPart } from '@/cam/dxf'
 import { loadPdfLib, pdfVectors } from '@/cam/pdfVectors'
+import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import type { CamPart } from '@/cam/types'
 import { NumField, SelectField, SwitchField } from '@/components/fields'
 import { PartThumb } from '@/components/PartList'
@@ -9,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { featuresOf } from '@/core/features'
 import type { Material, UnitSystem } from '@/core/types'
 import { formatLength } from '@/core/units'
 
@@ -36,6 +39,12 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
   const [preview, setPreview] = useState<Preview | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const lib = useStore((st) => st.data?.library)
+  const rulesOn = useStore((st) => featuresOf(st.data?.settings).camRules && featuresOf(st.data?.settings).camMachining)
+  const sets = lib ? ruleSetsOf(lib) : []
+  const [ruleSetId, setRuleSetId] = useState<string>('__default__')
+  const chosenSet = rulesOn ? (ruleSetId === '__default__' ? sets[0] : sets.find((x) => x.id === ruleSetId)) : undefined
+  const applied = useMemo(() => (preview && chosenSet && lib ? applyRules(preview.part, chosenSet, recipesOf(lib)) : null), [preview, chosenSet, lib])
 
   const build = async (l: Loaded, o: DxfImportOptions, outline: string, t: number) => {
     setBusy(true)
@@ -122,6 +131,31 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
             )}
             {preview && preview.layers.length > 0 && <div className="text-[11px] text-muted-foreground">Layers: {preview.layers.join(', ')}</div>}
             {error && <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800">{error}</div>}
+            {applied && (
+              <div className="rounded-md border bg-stone-50 p-2 text-xs">
+                <div className="mb-1 flex items-center gap-1.5 font-medium">
+                  <Wand2 className="size-3.5" /> {applied.part.ops.length} operation{applied.part.ops.length === 1 ? '' : 's'} from “{chosenSet?.name}”
+                </div>
+                <ul className="flex flex-col gap-0.5 text-muted-foreground">
+                  {applied.report.map((r) => (
+                    <li key={r.ruleId + r.layer}>
+                      <span className="font-mono text-foreground">{r.layer}</span> → {r.recipe}
+                      {r.depth !== undefined && ` at ${formatLength(r.depth, units)}`} ({r.shapes} shape{r.shapes === 1 ? '' : 's'})
+                    </li>
+                  ))}
+                  {applied.unmatched.map((u) => (
+                    <li key={u.layer} className="text-amber-800">
+                      <span className="font-mono">{u.layer}</span>: no rule, {u.shapes} shape{u.shapes === 1 ? '' : 's'} left unmachined
+                    </li>
+                  ))}
+                  {applied.missingRecipes.map((m) => (
+                    <li key={m} className="text-red-700">
+                      A rule points at a deleted recipe ({m}).
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {preview?.warnings.map((w, i) => (
               <div key={i} className="flex gap-1.5 text-xs text-amber-800">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> {w}
@@ -175,6 +209,15 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
               }}
             />
             <NumField label="Thickness" value={thickness} min={1} onChange={(v) => (setThickness(v), update(opts, outlineLayer, v))} />
+            {rulesOn && (
+              <SelectField
+                label="Machining rules"
+                value={ruleSetId}
+                options={[{ value: '__default__', label: sets[0] ? `${sets[0].name}` : 'Default' }, ...sets.slice(1).map((x) => ({ value: x.id, label: x.name })), { value: '__none__', label: 'None: machine by hand' }]}
+                onChange={setRuleSetId}
+                hint="Layer names pick the operations. Edit the table under Library → Machining rules."
+              />
+            )}
           </div>
         </div>
         <DialogFooter>
@@ -186,7 +229,8 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
             onClick={() => {
               if (!preview) return
               const m = materials.find((x) => x.id === materialId)
-              onImport({ ...preview.part, materialId: materialId || null, grain: m ? (m.grain ? 'length' : 'none') : preview.part.grain })
+              const base = applied ? applied.part : preview.part
+              onImport({ ...base, materialId: materialId || null, grain: m ? (m.grain ? 'length' : 'none') : base.grain })
               onOpenChange(false)
               setPreview(null)
               setLoaded(null)

@@ -1,12 +1,15 @@
-import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, type OpState } from '@/cam/doc'
 import { defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
+import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import type { Toolpath } from '@/cam/toolpath'
 import type { CamOp, CamOpKind, CamPart, FaceId } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { featuresOf } from '@/core/features'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { MachineProfile } from '@/core/types'
@@ -45,6 +48,18 @@ export function OpsPanel({
   onChange: (p: CamPart) => void
 }) {
   const units = useStore((s) => s.data?.settings.units ?? 'mm')
+  const lib = useStore((s) => s.data?.library)
+  const rulesOn = useStore((s) => featuresOf(s.data?.settings).camRules)
+  const runRules = (setId: string) => {
+    if (!lib) return
+    const set = ruleSetsOf(lib).find((x) => x.id === setId)
+    if (!set) return
+    const r = applyRules(part, set, recipesOf(lib))
+    onChange(r.part)
+    const made = r.part.ops.filter((o) => o.auto).length
+    const left = r.unmatched.map((u) => u.layer)
+    toast.success(`${made} operation${made === 1 ? '' : 's'} from “${set.name}”`, { description: left.length ? `No rule for: ${left.join(', ')}` : 'Every machinable layer matched a rule.' })
+  }
   const tpOf = (id: string) => toolpaths.find((t) => t.opId === id)
   const stateOf = (op: CamOp) => opState(op, part, tpOf(op.id)?.tool ?? null)
   const setOps = (ops: CamOp[]) => onChange({ ...part, ops, updatedAt: new Date().toISOString() })
@@ -84,6 +99,17 @@ export function OpsPanel({
                 {OP_LABEL[k]}
               </DropdownMenuItem>
             ))}
+            {rulesOn && lib && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[11px] text-muted-foreground">From layer names</DropdownMenuLabel>
+                {ruleSetsOf(lib).map((rs) => (
+                  <DropdownMenuItem key={rs.id} onSelect={() => runRules(rs.id)}>
+                    <Wand2 /> Apply “{rs.name}”
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="text-[11px] text-stone-400">{sel.length ? `${sel.length} selected` : 'Uses the outline / all holes when nothing is selected'}</span>

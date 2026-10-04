@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { importLibraryBundle } from '@/core/library/import'
 import type { AppData, EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
 import { LibraryEditDialog, TemplateJobsButton } from './LibraryEditDialog'
+import { RulesTab } from './library/RulesTab'
 
 const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'other']
 
@@ -121,8 +122,9 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             <TabsTrigger value="materials">Materials ({lib.materials.length})</TabsTrigger>
             <TabsTrigger value="edgebands">Edgebands ({lib.edgebands.length})</TabsTrigger>
             <TabsTrigger value="hardware">Hardware ({lib.hardware.length})</TabsTrigger>
+            <TabsTrigger value="rules">Machining rules</TabsTrigger>
           </TabsList>
-          {tab !== 'templates' && (
+          {(tab === 'materials' || tab === 'edgebands' || tab === 'hardware') && (
             <Button size="sm" onClick={add}>
               <Plus /> Add row
             </Button>
@@ -206,14 +208,17 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             Plate H on the Salice plate is 3 mm. That height is a label: it does not move holes. Setback, screw spacing and hole size do — change those with Edit. Code and name are labels too. Jobs keep the id, so a rename does not retarget them.
           </p>
         </TabsContent>
+        <TabsContent value="rules" className="min-h-0 flex-1 overflow-auto p-5">
+          <RulesTab />
+        </TabsContent>
       </Tabs>
-      {editing && tab !== 'templates' && (
+      {editing && (tab === 'materials' || tab === 'edgebands' || tab === 'hardware') && (
         <LibraryEditDialog item={editing} kind={tab === 'materials' ? 'material' : tab === 'edgebands' ? 'edgeband' : 'hardware'} onClose={() => setEditing(null)} />
       )}
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        kinds={tab === 'templates' ? ['templates', 'materials', 'edgebands', 'hardware'] : [tab, ...(['materials', 'edgebands', 'hardware', 'templates'] as const).filter((k) => k !== tab)]}
+        kinds={tab === 'templates' || tab === 'rules' ? ['templates', 'materials', 'edgebands', 'hardware'] : [tab, ...(['materials', 'edgebands', 'hardware', 'templates'] as const).filter((k) => k !== tab)]}
         onApplied={(k) => k !== 'tools' && go({ page: 'library', tab: k })}
       />
     </div>

@@ -460,9 +460,9 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
       back.drill([xL + sideT + insideW - BLUM.hookFromEnd, y1, boxZ0 + BLUM.hookFromBottom], BLUM.hookDiameter, BLUM.hookDepth, 'slide')
       parts.push(left, right, sub, back, bottomPanel)
 
-      const screwZ = r3(z0 + BLUM.line)
+      const screwZ = r3(z0 + runner.line)
       for (const { b, faceX } of sides) {
-        for (const y of runner.holes) b.drill([faceX, y, screwZ], BLUM.holeDiameter, BLUM.holeDepth, 'slide')
+        for (const y of runner.holes) b.drill([faceX, y, screwZ], runner.diameter, runner.depth, 'slide')
       }
     }
     addHw(runner.code, drawerCount)
@@ -494,8 +494,7 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
 
         const side = sp.hinge === 'left' ? sides[0] : sides[1]
         for (const zc of plateCentres) {
-          side.b.drill([side.faceX, plate.setback, zc - plate.spacing / 2], plate.diameter, plate.depth, 'mounting-plate')
-          side.b.drill([side.faceX, plate.setback, zc + plate.spacing / 2], plate.diameter, plate.depth, 'mounting-plate')
+          for (const h of plate.holes) side.b.drill([side.faceX, h.from, zc + h.along], h.diameter, h.depth, 'mounting-plate')
         }
         addHw(hingeCode(lib), plateCentres.length)
         addHw(plate.code, plateCentres.length)

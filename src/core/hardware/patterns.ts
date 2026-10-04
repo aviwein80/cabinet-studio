@@ -12,7 +12,7 @@ import { makeEntity } from '@/cam/doc'
 import { pt } from '@/cam/geom'
 import type { CamPart, FaceId, HardwarePattern, PatternHole } from '@/cam/types'
 import type { Library } from '../types'
-import { HINGE_ID, PLATE_ID, SLIDE_IDS } from './resolve'
+import { HINGE_ID, PLATE_ID, SLIDE_IDS } from './ids'
 import { BLUM, SALICE, TANDEM } from './specs'
 
 const SALICE_SHEET = 'https://www.salice.com/downloads/2349/2759/Salice-SilentiaPlus-Series700-110-standard-USA.pdf'
@@ -73,10 +73,46 @@ export function builtInPatterns(): HardwarePattern[] {
   ]
 }
 
-/** Built-ins first, then the library's own (approved or withdrawn) patterns. */
+const same = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-9)
+
+/**
+ * A built-in pattern with the library item's own numbers applied (the Library edit form changes
+ * plate, slide and cup values). If they differ from the published sheet it is no longer
+ * "verified" but approved by that edit.
+ */
+export function itemPattern(lib: Library, base: HardwarePattern): HardwarePattern {
+  const row = base.hardwareId ? lib.hardware.find((h) => h.id === base.hardwareId) : undefined
+  if (!row) return base
+  let holes = base.holes
+  if (row.category === 'mounting-plate') {
+    const s = row.plateSpacing ?? Math.abs(base.holes[1].x - base.holes[0].x)
+    holes = [-1, 1].map((k) => ({ x: (k * s) / 2, y: row.plateSetback ?? base.holes[0].y, diameter: row.holeDiameter ?? base.holes[0].diameter, depth: row.holeDepth ?? base.holes[0].depth, face: 1 as FaceId }))
+  } else if (row.category === 'slide') {
+    const xs = row.slideHoles ?? base.holes.map((h) => h.x)
+    holes = xs.map((x) => ({ x, y: base.holes[0].y, diameter: row.holeDiameter ?? base.holes[0].diameter, depth: row.holeDepth ?? base.holes[0].depth, face: 1 as FaceId }))
+  } else if (row.category === 'hinge') {
+    holes = [{ ...base.holes[0], y: row.cupCentre ?? base.holes[0].y, diameter: row.cupDiameter ?? base.holes[0].diameter, depth: row.cupDepth ?? base.holes[0].depth }]
+  }
+  const flat = (hs: PatternHole[]) => hs.flatMap((h) => [h.x, h.y, h.diameter, h.depth])
+  if (same(flat(holes), flat(base.holes))) return base
+  return { ...base, holes, status: 'approved', reviewedBy: `Library item ${row.code}`, notes: [base.notes, 'Numbers changed in the library item; no longer the published values.'].filter(Boolean).join(' ') }
+}
+
+/** Built-ins first (with library item edits applied), then the library's own patterns. */
 export function patternsOf(lib: Library): HardwarePattern[] {
   const own = lib.patterns ?? []
-  return [...builtInPatterns().filter((b) => !own.some((p) => p.id === b.id)), ...own]
+  return [...builtInPatterns().filter((b) => !own.some((p) => p.id === b.id)).map((b) => itemPattern(lib, b)), ...own]
+}
+
+/**
+ * The pattern that bores a library hardware item: the newest approved library pattern linked to
+ * it, otherwise the built-in pattern with the item's numbers.
+ */
+export function boringPattern(lib: Library, hardwareId: string): HardwarePattern | undefined {
+  const own = (lib.patterns ?? []).filter((p) => p.hardwareId === hardwareId && isUsable(p) && p.holes.length).sort((a, b) => (b.reviewedAt ?? '').localeCompare(a.reviewedAt ?? ''))
+  if (own[0]) return own[0]
+  const base = builtInPatterns().find((p) => p.hardwareId === hardwareId)
+  return base ? itemPattern(lib, base) : undefined
 }
 
 export const isUsable = (p: HardwarePattern) => p.status === 'verified' || p.status === 'approved'

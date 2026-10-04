@@ -108,3 +108,40 @@ describe('library edit propagation', () => {
     expect(plateYs(shop.library, cab.pin).some((y) => Math.abs(y - 50) < 0.1)).toBe(true)
   })
 })
+
+describe('cabinet boring from the pattern library', () => {
+  const sideDrills = (lib: Library, p = BASE_PARAMS) => {
+    const g = generateCarcass(p, lib)
+    const side = g.parts.find((q) => q.key === 'side-left')!
+    return side.ops.filter((o): o is DrillOp => o.kind === 'drill')
+  }
+  const approved = (id: string, hardwareId: string, holes: { x: number; y: number; diameter: number; depth: number }[]) => ({
+    id, name: id, manufacturer: 'Test', hardwareId, anchor: 'edge-start' as const, status: 'approved' as const, source: 'pdf-draft' as const,
+    reviewedBy: 'Avi', reviewedAt: '2026-10-04T12:00:00.000Z', provenance: [{ quote: 'x' }], holes: holes.map((h) => ({ ...h, face: 1 as const })),
+  })
+
+  it('an approved pattern linked to the plate replaces the built-in plate screws', () => {
+    const lib = defaultLibrary()
+    expect(sideDrills(lib).some((o) => o.purpose === 'mounting-plate' && o.depth === 11)).toBe(true)
+    lib.patterns = [approved('pat-plate-3', 'hw-plate', [-20, 0, 20].map((x) => ({ x, y: 40, diameter: 4, depth: 10 })))]
+    const after = sideDrills(lib)
+    const plate = after.filter((o) => o.purpose === 'mounting-plate')
+    expect(plate.length).toBeGreaterThan(0)
+    expect(plate.length % 3).toBe(0)
+    expect(plate.every((o) => o.diameter === 4 && o.depth === 10)).toBe(true)
+  })
+
+  it('an approved runner pattern moves the slide screws; drafts are ignored', () => {
+    const p = structuredClone(BASE_PARAMS)
+    p.doors.count = 0
+    p.shelves.count = 0
+    p.drawers = { count: 1, frontHeight: 150, slide: 21 }
+    const lib = defaultLibrary()
+    const base = sideDrills(lib, p).filter((o) => o.diameter === 5)
+    lib.patterns = [{ ...approved('pat-td21-draft', 'hw-td-21', [{ x: 50, y: 37, diameter: 5, depth: 13 }]), status: 'draft' }]
+    expect(sideDrills(lib, p).filter((o) => o.diameter === 5)).toEqual(base)
+    lib.patterns = [approved('pat-td21', 'hw-td-21', [100, 300].map((x) => ({ x, y: 37, diameter: 5, depth: 13 })))]
+    const after = sideDrills(lib, p).filter((o) => o.diameter === 5 && o.depth === 13)
+    expect(after.length).toBe(2)
+  })
+})

@@ -14,12 +14,13 @@ const ON_WALL = 40
 
 /** Closest wall whose footprint edge is within 40 mm. A corner tie prefers back, then front, then left. */
 export function cabinetOnWall(fp: { x: number; y: number; w: number; d: number }, room: Room): WallId | null {
-  const hits: { wall: WallId; gap: number }[] = [
+  const candidates: { wall: WallId; gap: number }[] = [
     { wall: 'back', gap: Math.abs(fp.y + fp.d - room.depth) },
     { wall: 'front', gap: Math.abs(fp.y) },
     { wall: 'left', gap: Math.abs(fp.x) },
     { wall: 'right', gap: Math.abs(fp.x + fp.w - room.width) },
-  ].filter((h) => h.gap <= ON_WALL)
+  ]
+  const hits = candidates.filter((h) => h.gap <= ON_WALL)
   hits.sort((a, b) => a.gap - b.gap)
   return hits[0]?.wall ?? null
 }

@@ -271,7 +271,7 @@ function LenInput({ value, units, onChange, label }: { value: number; units: Uni
       placeholder="needed"
       onChange={(e) => setText(e.target.value)}
       onBlur={() => onChange(parsed ?? NaN)}
-      className="h-7 w-20 px-1.5 text-xs tabular-nums"
+      className="h-7 w-[4.5rem] px-1.5 text-xs tabular-nums"
     />
   )
 }
@@ -296,14 +296,14 @@ function ReviewDialog({ draft, editable, units, onClose, onApprove, onChange }: 
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {editable ? 'Review drilling pattern' : p.name} <StatusBadge p={p} />
           </DialogTitle>
           <DialogDescription>{editable ? 'Check every number against the source before approving. Empty or red cells must be filled in.' : `${SOURCE[p.source]} pattern. Copy it to make a changed version.`}</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 md:grid-cols-[1fr_280px]">
+        <div className="grid gap-4 md:grid-cols-[1fr_240px]">
           <div className="flex min-w-0 flex-col gap-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
@@ -355,7 +355,7 @@ function ReviewDialog({ draft, editable, units, onClose, onApprove, onChange }: 
                       ))}
                       <td className="px-2 py-1">
                         <Select value={String(h.face)} disabled={!editable} onValueChange={(v) => hole(i, { face: Number(v) as FaceId })}>
-                          <SelectTrigger size="sm" className="h-7 w-32 text-xs" aria-label={`Hole ${i + 1} face`}>
+                          <SelectTrigger size="sm" className="h-7 w-28 text-xs" aria-label={`Hole ${i + 1} face`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -436,7 +436,7 @@ function ReviewDialog({ draft, editable, units, onClose, onApprove, onChange }: 
         )}
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            {editable ? 'Keep as draft' : 'Close'}
+            {editable ? 'Close (stays in the review queue)' : 'Close'}
           </Button>
           {editable && (
             <Button disabled={issues.length > 0 || !reviewer.trim() || !checked} onClick={tryApprove} className="gap-1.5">

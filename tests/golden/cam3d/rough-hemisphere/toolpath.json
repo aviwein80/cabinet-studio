@@ -8,9 +8,9 @@
     "arc": 354,
     "drill": 0,
     "poly": 76,
-    "points": 11183
+    "points": 11219
   },
-  "cutMm": 15784,
+  "cutMm": 15796,
   "box": [
     -6,
     -6,
@@ -22,5 +22,5 @@
   "warnings": [
     "For woodWOP, Z-level roughing is written as contour-milling passes level by level; the machine makes its own approach for each pass instead of the helix or ramp shown here."
   ],
-  "hash": "c3469c43"
+  "hash": "ddf58d31"
 }

@@ -1298,7 +1298,16 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
 function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const m = model3d(op, ctx, tp)
   if (!m) return
-  const region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed))
+  const mb = meshBounds(m.placed)
+  let region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, mb)
+  // no boundary drawn and the model does not cover the panel (a part standing on its own): the
+  // stock round the model is roughed too, down to the model's lowest point
+  const { length: L, width: W } = ctx.part
+  const COVER = 0.01
+  if (region.fromModel && (mb.min[0] > COVER || mb.min[1] > COVER || mb.max[0] < L - COVER || mb.max[1] < W - COVER)) {
+    region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, { min: [Math.min(0, mb.min[0]), Math.min(0, mb.min[1]), mb.min[2]], max: [Math.max(L, mb.max[0]), Math.max(W, mb.max[1]), mb.max[2]] })
+    tp.warnings.push(`The model does not cover the whole panel: the panel round it is roughed down to the model's lowest point (${(mb.min[2] + Math.max(0, op.stockZ)).toFixed(2)} mm). Draw a boundary to rough less.`)
+  }
   const adaptive = op.pattern === 'adaptive'
   const r = zLevelRough(adaptive ? { ...op, adaptive: op.adaptive ?? DEFAULT_ADAPTIVE } : op, m.placed, m.cutter, region, ctx.part, tp.tool!, ctx.work)
   tp.warnings.push(...r.warnings)

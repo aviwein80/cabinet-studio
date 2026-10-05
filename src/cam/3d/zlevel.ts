@@ -124,11 +124,37 @@ export function zLevelRough(op: Rough3dOp, mesh: Mesh, cutter: Cutter3D, region:
   let trimmed = 0
   /** A path checked every `ds`: the parts where the tool would touch the model are cut out. */
   const checked = (p: Path, z: number): Path[] => {
-    const pts = p.closed ? [...p.pts, p.pts[0]] : p.pts
-    const ok = pts.map((q) => safe(q.x, q.y, z))
-    const segOk = pts.slice(1).map((b, i) => ok[i] && ok[i + 1] && segSafe(pts[i], b, z))
-    if (segOk.every(Boolean)) return [p]
+    const pts0 = p.closed ? [...p.pts, p.pts[0]] : p.pts
+    const ok0 = pts0.map((q) => safe(q.x, q.y, z))
+    const segOk0 = pts0.slice(1).map((b, i) => ok0[i] && ok0[i + 1] && segSafe(pts0[i], b, z))
+    if (segOk0.every(Boolean)) return [p]
     trimmed++
+    // a piece that fails is split every `ds`, so only the part that touches is cut out (a long
+    // zig-zag line is one piece: one bad spot must not lose the whole line)
+    const pts: P[] = [pts0[0]]
+    const segOk: boolean[] = []
+    /** The original piece each short piece came from (points along one piece are not repeated). */
+    const from: number[] = []
+    segOk0.forEach((good, i) => {
+      const a = pts0[i]
+      const b = pts0[i + 1]
+      if (good) {
+        pts.push(b)
+        segOk.push(true)
+        from.push(i)
+        return
+      }
+      const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / ds))
+      let prev = ok0[i]
+      for (let j = 1; j <= n; j++) {
+        const q = j === n ? b : { x: a.x + ((b.x - a.x) * j) / n, y: a.y + ((b.y - a.y) * j) / n }
+        const qOk = j === n ? ok0[i + 1] : safe(q.x, q.y, z)
+        pts.push(q)
+        segOk.push(prev && qOk)
+        from.push(i)
+        prev = qOk
+      }
+    })
     const out: Path[] = []
     let cur: P[] = []
     const flush = () => {
@@ -142,6 +168,7 @@ export function zLevelRough(op: Rough3dOp, mesh: Mesh, cutter: Cutter3D, region:
       const i = (start + c) % n
       if (segOk[i]) {
         if (!cur.length) cur.push(pts[i])
+        else if (cur.length >= 2 && from[(i + n - 1) % n] === from[i] && segOk[(i + n - 1) % n]) cur.pop()
         cur.push(pts[i + 1])
       } else flush()
     }

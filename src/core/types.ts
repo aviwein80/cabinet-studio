@@ -531,6 +531,12 @@ export interface FeatureFlags {
   cam3d: boolean
   /** Adaptive clearing and rest machining options on pockets (screens only). */
   camAdaptive: boolean
+  /**
+   * Solid models (STEP, IGES, BREP): import, face picking and colours, feature recognition to
+   * layers, assemblies split into parts, machining picked faces (screens only; output goes through
+   * the custom-part MPR switch).
+   */
+  camSolids: boolean
 }
 
 export interface Library {

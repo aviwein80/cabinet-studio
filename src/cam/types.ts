@@ -41,7 +41,15 @@ export interface Entity {
   depth?: number
   /** Free tag used by hardware insertion and parametric rebuilds. */
   tag?: string
+  /**
+   * Made from faces of a solid (feature recognition, or machining picked faces directly). The
+   * shape follows the solid: when the model's data changes, it is made again from these faces.
+   */
+  solid?: { modelId: string; faces: number[]; blob: string; role: SolidRole }
 }
+
+/** What a shape made from solid faces stands for. */
+export type SolidRole = 'outline' | 'cutout' | 'pocket' | 'island' | 'hole' | 'edge' | 'profile' | 'saw'
 
 export interface Variable {
   name: string
@@ -60,6 +68,11 @@ export type UpAxis = '+z' | '-z' | '+y' | '-y' | '+x' | '-x'
  * and its top on `at[2]` (0 = flush with face 1; negative = below it).
  */
 export interface ModelPlacement {
+  /**
+   * Turn applied before everything else: a 3 x 3 rotation (row by row) that lays a solid flat in
+   * the part's frame (set by feature recognition). Absent = none.
+   */
+  frame?: number[]
   up: UpAxis
   rotZ: number
   scale: number
@@ -70,11 +83,15 @@ export interface ModelPlacement {
 /**
  * A 3D model on the part. The mesh itself is not stored in the part (or the shop file): it is a
  * compressed file in the blob store, named by the SHA-256 hash in `blob`.
+ *
+ * Solids (STEP, IGES, BREP; `kind: 'solid'`): `blob` holds the faces with their ids, colours and
+ * surface types (see `src/cam/solid/encode.ts`); `file` the file as read, kept so it can be read
+ * again. Face colours and layers set in the app are kept here by face id.
  */
 export interface ModelRef {
   id: string
   name: string
-  kind: 'mesh'
+  kind: 'mesh' | 'solid'
   /** SHA-256 of the stored mesh: also the cache key and the associativity input. */
   blob: string
   /** File the model came from. */
@@ -85,17 +102,27 @@ export interface ModelRef {
   layer: string
   visible: boolean
   triangles: number
-  /** Size of the stored mesh in mm (before placement). */
+  /** Size of the stored mesh in mm (before placement; after the `frame` turn when there is one). */
   size: [number, number, number]
   /** Blob of the mesh as first imported, kept when the model is simplified or trimmed. */
   original?: string
   report?: Omit<MeshReport, 'warnings'> & { warnings?: string[] }
+  /** Solids: blob of the original file. */
+  file?: string
+  /** Solids: number of faces (ids as in the file). */
+  faces?: number
+  /** Solids: file format and schema, e.g. "STEP AP214". */
+  format?: string
+  /** Solids: face colours set in the app (face id -> #rrggbb); they win over the file's colours. */
+  faceColors?: Record<string, string>
+  /** Solids: faces sent to layers (face id -> layer id). */
+  faceLayers?: Record<string, string>
 }
 
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2
+  version: 1 | 2 | 3
   materialId: string | null
   length: number
   width: number

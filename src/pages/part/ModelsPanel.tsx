@@ -164,7 +164,14 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
         </Button>
       </div>
       <div className="flex flex-wrap gap-1">
-        <Badge variant="outline">{model.triangles.toLocaleString('en')} facets</Badge>
+        {model.kind === 'solid' ? (
+          <>
+            <Badge variant="outline">{model.format ?? 'Solid'}</Badge>
+            <Badge variant="outline">{(model.faces ?? 0).toLocaleString('en')} faces</Badge>
+          </>
+        ) : (
+          <Badge variant="outline">{model.triangles.toLocaleString('en')} facets</Badge>
+        )}
         {rep && <Badge variant="outline">{rep.openEdges ? `${rep.openEdges} open edges` : 'closed'}</Badge>}
         {model.original && <Badge variant="outline">simplified</Badge>}
       </div>
@@ -231,6 +238,7 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
           </Button>
         </Group>
 
+        {model.kind !== 'solid' && (
         <Group title="Simplify">
           <Select value={simp.mode} onValueChange={(v) => setSimp({ mode: v as 'percent' | 'tolerance', value: v === 'percent' ? 10 : 0.02 })}>
             <SelectTrigger size="sm" aria-label="Simplify by">
@@ -250,6 +258,7 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
             Simplify
           </Button>
         </Group>
+        )}
 
         <div className="flex flex-wrap gap-1.5">
           <Button size="xs" variant="secondary" onClick={() => void outline(false)}>
@@ -261,9 +270,11 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
           <Button size="xs" variant="secondary" onClick={() => void edges()}>
             Edges to polylines
           </Button>
-          <Button size="xs" variant="secondary" onClick={() => void dropUnderside()}>
-            Remove underside facets
-          </Button>
+          {model.kind !== 'solid' && (
+            <Button size="xs" variant="secondary" onClick={() => void dropUnderside()}>
+              Remove underside facets
+            </Button>
+          )}
           {model.original && (
             <Button size="xs" variant="ghost" onClick={() => setModel((m) => ({ ...m, blob: m.original!, original: undefined, triangles: m.report?.kept ?? m.triangles }))}>
               Back to the original

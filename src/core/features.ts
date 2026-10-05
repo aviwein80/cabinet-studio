@@ -15,6 +15,7 @@ export const DEFAULT_FEATURES: FeatureFlags = {
   cam3dMprOutput: false,
   cam3d: true,
   camAdaptive: true,
+  camSolids: true,
 }
 
 export const featuresOf = (s: Pick<ShopSettings, 'features'> | undefined): FeatureFlags => ({ ...DEFAULT_FEATURES, ...(s?.features ?? {}) })

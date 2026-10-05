@@ -1,0 +1,49 @@
+{
+ "cutouts": [],
+ "holes": [
+  {
+   "d": 35.0,
+   "depth": 13.0,
+   "face": 6,
+   "floor": "flat",
+   "through": false,
+   "x": 22.5,
+   "y": 100.0
+  },
+  {
+   "d": 35.0,
+   "depth": 13.0,
+   "face": 6,
+   "floor": "flat",
+   "through": false,
+   "x": 22.5,
+   "y": 600.0
+  },
+  {
+   "d": 5.0,
+   "depth": 19.0,
+   "face": 1,
+   "floor": "none",
+   "through": true,
+   "x": 360.0,
+   "y": 350.0
+  }
+ ],
+ "length": 700.0,
+ "name": "Arched door",
+ "note": "built with x across the door (400) and y up the door (700); the part frame puts the longer side along X",
+ "outline": {
+  "archRadius": 250.0,
+  "area": 267955.9511251008
+ },
+ "pockets": [
+  {
+   "archRadius": 180.0,
+   "area": 141131.98798225026,
+   "depth": 6.0
+  }
+ ],
+ "schema": "AP203",
+ "thickness": 19.0,
+ "width": 400.0
+}

@@ -36,12 +36,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.4b Stock simulation (SIM-02) | **Done** (October 2026) | See below. |
 | M2.4c Collision checking (SIM-03, NEW-13 shared model) | **Done** (October 2026) | See below. |
 | M2.4d Cut-free pieces (SIM-05), screenshots, docs | **Done** (October 2026) | See below. M2.4 complete. |
-| M2.5 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.5a Solid import: reader choice, lazy WASM, face ids and types, packaging | **Done** (October 2026) | See below. |
+| M2.5b - M2.5e | In progress | Feature recognition; assemblies, faces and face machining; 3D wires and surfaces; screenshots and docs. |
+| M2.6 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -545,9 +547,63 @@ Where there is no offcut, what drops is cell for cell what the Stage 1 `looseMas
 - **Cut-free pieces** need a part outline to tell the part from offcuts; without one, the largest
   island is the part.
 
-## Next run: M2.5 solid models
+## M2.5 split
 
-- **STEP via OpenCascade WASM, feature recognition (CAD-14, CAD-16, NEW-19, SOL-01..04)** as in the prompt.
+M2.5 is done in named parts: **M2.5a** reader choice, lazy WebAssembly loading, solid import with
+face ids, colours, names and exact face types, the document format, Electron `app://` packaging;
+**M2.5b** feature recognition onto layers that the Stage 1 rules machine, checked MPR;
+**M2.5c** assemblies split into parts, faces to layers / colours / grain, machining picked faces;
+**M2.5d** 3D wires and surfaces; **M2.5e** packaged-app check, screenshots and docs.
+
+## M2.5a solid import: what was built
+
+**Reader choice (OpenCascade as WebAssembly).** Measured here (spikes in this run):
+
+| Candidate | Size | Face-level data | Colours, names, assemblies | IGES | Verdict |
+|---|---|---|---|---|---|
+| `occt-import-js` 0.0.23 (LGPL-2.1) | 7.6 MB `.wasm` + 97 kB script | Every face as its own run of triangles, corners exactly on the true surface (hole radius error 1e-14 mm), so face types and parameters are recovered exactly in our code | Yes (STEP and IGES colour per face and per body, product names, assembly tree) | Yes | **Chosen** |
+| `replicad-opencascadejs` 1.1.0 (LGPL-2.1) | 23 MB `.wasm` | Full B-rep (face types, adjacency, modelling) | **No** XDE STEP reader in this build (no colours or names on import) | **No** | Kept as the option for B-rep modelling later (Stage 3 curve-driven finishing), not needed now |
+| `opencascade.js` 1.1.1 (LGPL-2.1) | 67 MB package | Full | Full | Yes | Last release 2023; too big; custom builds need its own toolchain |
+
+So: occt-import-js reads the file; face types (plane, cylinder, cone, sphere, other), their exact
+parameters, adjacency and boundary loops are worked out in our own TypeScript
+(`src/cam/solid/classify.ts`) by least-squares fits to the exact surface points (the reader's
+normals are only good to about 1e-4, so they are used as a first guess only). Measured fit on the
+fixtures: planes and cylinders within 1e-11 mm (STEP, BREP), 4e-6 mm on IGES (it stores holes as
+surfaces of revolution); the drill point comes out at 118.000000000°.
+
+| Spec ID | What | Where |
+|---|---|---|
+| CAD-14 | STEP (AP203, AP214, AP242), IGES and BREP read in the background worker; face ids (1, 2, 3 ... in the file's order, kept when bodies are left out), face and body colours, product names, assembly path; user-defined properties and the file's unit read from the STEP text (our own ISO 10303-21 reader); IGES unit from its global section; a unit can be forced; bad files give a plain error | `src/cam/solid/convert.ts`, `step21.ts`, `classify.ts` |
+| Storage | Solids are blobs like meshes ("CSS1": faces + float64 corners), plus the original file as a second blob; part files carry both. Any code that loads a mesh gets the solid as a mesh with one facet group per face, so 3D strategies and the simulator work on solids too | `src/cam/solid/encode.ts`, `src/cam/model/blobs.ts` |
+| Format | `CAM_FILE_VERSION` 3: `ModelRef.kind: 'solid'` (+ face colours and layers by face id), `Entity.solid` (shapes made from faces), `ModelPlacement.frame` (a 3 x 3 turn). An older app refuses a v3 part instead of reading a solid as a mesh. v1 and v2 parts migrate with every field kept | `src/cam/doc.ts`, `src/cam/types.ts` |
+| WASM loading | The two library files are copied unmodified into `vendor/occt-import-js/` (served by the dev server, copied by the build: `vite.config.ts`). The solid worker (one, kept alive) loads them on the first solid read with a dynamic `import()` and the AMD `define` hook: no `eval`, works under the production CSP. Nothing at start-up | `src/cam/solid/occt.ts`, `solidCompute()` in `src/cam/worker/client.ts` |
+| Electron | The built app is now served as `app://bundle/...` (privileged standard scheme): fetch, workers and `.wasm` (served as `application/wasm`) work like a web origin. `dist/vendor/**` is unpacked from the archive (`asarUnpack`), so the LGPL files can be seen and replaced. This finishes the `app://` item deferred from M2.1 | `electron/main.ts`, `package.json` |
+| Notices | `THIRD_PARTY_NOTICES.md` (component, source links, how to replace the files, full LGPL-2.1 text) is shipped in `dist/`; the licence texts ship next to the library; Settings → About lists the third-party parts and opens the notices and the LGPL text | `src/components/AboutSection.tsx` |
+| Screens | The 3D model import takes STEP / IGES / BREP: format, schema, unit, bodies (pick which), face types, properties, warnings; faces drawn in their colours in the 3D view | `ModelImportDialog.tsx`, `Model3DView.tsx`, `solidData.ts` |
+| Switch | "Solid models" (`camSolids`, screens, on). Machine output still goes through the custom-part MPR switch (off) | `src/core/features.ts`, Machine page |
+
+Fixtures (`tests/fixtures/solid/`, made by `scripts/fixtures/make_solid_fixtures.py` with the
+OpenCascade Python bindings as a dev-only tool, never shipped): cabinet side with holes (STEP
+AP214, standing up as in a cabinet, a coloured inside face, properties), shaped door (STEP AP203,
+turned 30° and offset; the same door as BREP), 5-part assembly (STEP AP242, two instances of one
+side), shelf in inches (IGES). Each has a `.truth.json` written from the construction numbers only.
+
+### Acceptance so far
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| STEP fixtures load with face ids | `tests/cam-solid-import.test.ts` | Side 106 faces, door 16, assembly 72 over 5 bodies; ids 1..N in file order; the coloured face found |
+| Exact face types | same | Side: 56 flat, 48 round, 2 conical, worst fit 1e-11 mm; every hole radius exact to 1e-9 mm |
+| IGES, BREP, units | same | IGES in inches read as 304.8 x 254 x 19.05 mm; holes within 0.0001 mm; BREP door = STEP door |
+| Bad files | same | Empty, wrong type, cut short, no solids, noise, wrong extension: each a plain `SolidReadError` |
+| Volume | same | Mesh of the side within 0.02 % of the volume from the design numbers (chord of round walls) |
+| Lazy loading, not in the start-up bundle | same (source scan), browser and Electron checks | Nothing imports the library; start-up bundle +0.2 kB; no `vendor/` request at start-up; first read in the browser preview 1.4 s (cold, cabinet side), Electron (Linux, `app://`) 0.96 s (door) |
+| Speed (STEP part ~50+ faces < 3 s warm, cold < 5 s) | same | Node: reader start 42 ms, first read of the 106-face side 0.8 s, warm 0.56 s |
+
+## Next: M2.5b feature recognition
+
+- SOL-01..04, CAD-16, NEW-19 as in the prompt (M2.5b-e above).
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -565,3 +621,4 @@ Where there is no offcut, what drops is cell for cell what the Stage 1 `looseMas
 - **Run 5 (M2.4b)**: stock simulation on the stock-model interface. See `git log`.
 - **Run 5 (M2.4c)**: collision checking, export checker, flags when 3D operations are calculated. See `git log`.
 - **Run 5 (M2.4d)**: cut-free pieces, screenshots, docs. M2.4 complete. See `git log`.
+- **Run 6 (M2.5a)**: solid import, reader choice, lazy WebAssembly, `app://`. See `git log`.

@@ -1,0 +1,51 @@
+{
+ "name": "Base cabinet 600",
+ "parts": [
+  {
+   "holes": 10,
+   "length": 720.0,
+   "name": "Side",
+   "properties": {
+    "Edge": "Front",
+    "Material": "Maple ply 19"
+   },
+   "qty": 2,
+   "thickness": 19.0,
+   "width": 560.0
+  },
+  {
+   "holes": 1,
+   "length": 560.0,
+   "name": "Bottom",
+   "properties": {
+    "Material": "Maple ply 19"
+   },
+   "qty": 1,
+   "thickness": 19.0,
+   "width": 562.0
+  },
+  {
+   "holes": 0,
+   "length": 562.0,
+   "name": "Top rail",
+   "properties": {
+    "Material": "Maple ply 19"
+   },
+   "qty": 1,
+   "thickness": 19.0,
+   "width": 100.0
+  },
+  {
+   "holes": 0,
+   "length": 701.0,
+   "name": "Back",
+   "properties": {
+    "Material": "MDF 6"
+   },
+   "qty": 1,
+   "thickness": 6.0,
+   "width": 562.0
+  }
+ ],
+ "schema": "AP242"
+}

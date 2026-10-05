@@ -1,0 +1,372 @@
+{
+ "cutouts": [
+  {
+   "area": 4714.15926535898,
+   "box": [
+    300.0,
+    250.0,
+    420.0,
+    290.0
+   ]
+  }
+ ],
+ "faceColors": {
+  "#cc3333": "face 1 (the inside face)"
+ },
+ "holes": [
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 200.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 232.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 264.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 296.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 328.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 360.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 392.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 424.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 456.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 488.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 520.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 552.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 584.0,
+   "y": 37.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 200.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 232.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 264.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 296.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 328.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 360.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 392.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 424.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 456.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 488.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 520.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 552.0,
+   "y": 523.0
+  },
+  {
+   "d": 5.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 584.0,
+   "y": 523.0
+  },
+  {
+   "d": 8.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "cone",
+   "through": false,
+   "tipAngle": 118.0,
+   "tipDepth": 15.403442476110241,
+   "x": 150.0,
+   "y": 300.0
+  },
+  {
+   "d": 8.0,
+   "depth": 13.0,
+   "face": 1,
+   "floor": "cone",
+   "through": false,
+   "tipAngle": 118.0,
+   "tipDepth": 15.403442476110241,
+   "x": 650.0,
+   "y": 300.0
+  },
+  {
+   "d": 8.0,
+   "depth": 19.0,
+   "face": 1,
+   "floor": "none",
+   "through": true,
+   "x": 40.0,
+   "y": 180.0
+  },
+  {
+   "d": 8.0,
+   "depth": 19.0,
+   "face": 1,
+   "floor": "none",
+   "through": true,
+   "x": 40.0,
+   "y": 420.0
+  }
+ ],
+ "length": 720.0,
+ "name": "Cabinet side",
+ "outline": {
+  "area": 395700.0,
+  "vertices": [
+   [
+    100.0,
+    0
+   ],
+   [
+    720.0,
+    0
+   ],
+   [
+    720.0,
+    560.0
+   ],
+   [
+    0,
+    560.0
+   ],
+   [
+    0,
+    75.0
+   ],
+   [
+    100.0,
+    75.0
+   ]
+  ]
+ },
+ "pockets": [
+  {
+   "area": 4323.183072403543,
+   "box": [
+    26.75,
+    534.75,
+    693.25,
+    541.25
+   ],
+   "depth": 9.5
+  },
+  {
+   "area": 792.2743338823082,
+   "box": [
+    300.0,
+    100.0,
+    340.0,
+    120.0
+   ],
+   "depth": 3.0
+  },
+  {
+   "area": 3969.0973355292326,
+   "box": [
+    480.0,
+    150.0,
+    560.0,
+    200.0
+   ],
+   "depth": 4.0
+  },
+  {
+   "area": 586.2654824574367,
+   "box": [
+    505.0,
+    165.0,
+    535.0,
+    185.0
+   ],
+   "depth": 10.0
+  }
+ ],
+ "properties": {
+  "Grain": "Length",
+  "Material": "Maple ply 19"
+ },
+ "schema": "AP214",
+ "thickness": 19.0,
+ "width": 560.0
+}

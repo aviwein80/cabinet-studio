@@ -8,8 +8,13 @@ import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, p
 import type { MachineProfile } from '@/core/types'
 import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
 
-/** Part document version. 2 (Stage 2): optional 3D models (`models`) and `workVolume`. */
-export const CAM_FILE_VERSION = 2
+/**
+ * Part document version. 2 (Stage 2): optional 3D models (`models`) and `workVolume`.
+ * 3 (M2.5): solid models (`kind: 'solid'`, face colours and layers), shapes made from solid faces
+ * (`Entity.solid`) and the placement turn (`ModelPlacement.frame`). An older app refuses a v3 part
+ * instead of reading a solid as a mesh.
+ */
+export const CAM_FILE_VERSION = 3
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -236,6 +241,8 @@ export function serializePart(part: CamPart): string {
 const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, unknown>> = {
   // v1 -> v2: 3D models and the fitted work volume are new optional fields.
   1: (p) => ({ ...p, version: 2 }),
+  // v2 -> v3: solids, solid-face shapes and the placement turn are new optional fields.
+  2: (p) => ({ ...p, version: 3 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */

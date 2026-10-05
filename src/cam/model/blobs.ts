@@ -7,6 +7,7 @@
  * the browser preview keeps them in IndexedDB; tests use memory.
  */
 import type { Mesh } from '../mesh/types'
+import { decodeSolid, isSolidBlob, solidMesh } from '../solid/encode'
 
 export interface BlobStore {
   has(hash: string): Promise<boolean>
@@ -89,6 +90,8 @@ export function encodeMesh(m: Mesh): Uint8Array {
 }
 
 export function decodeMesh(buf: Uint8Array): Mesh {
+  // a solid is also a mesh (one facet group per face)
+  if (isSolidBlob(buf)) return solidMesh(decodeSolid(buf))
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
   if (buf.length < 16 || dv.getUint32(0, true) !== MAGIC) throw new Error('Stored model data is not a Cabinet Studio mesh.')
   const nv = dv.getUint32(4, true)
@@ -146,17 +149,18 @@ export async function getMesh(store: BlobStore, hash: string): Promise<Mesh> {
 // ---------------------------------------------------------------------------------------------
 
 /** Hashes a part (or any JSON-able data holding parts) refers to. */
-export function blobRefs(part: { models?: { blob: string; original?: string }[] }): string[] {
+export function blobRefs(part: { models?: { blob: string; original?: string; file?: string }[] }): string[] {
   const out = new Set<string>()
   for (const m of part.models ?? []) {
     out.add(m.blob)
     if (m.original) out.add(m.original)
+    if (m.file) out.add(m.file)
   }
   return [...out].filter(isBlobHash).sort()
 }
 
 /** Gzip + base64 copies of the part's blobs, for writing into a part file. */
-export async function exportBlobs(part: { models?: { blob: string; original?: string }[] }, store: BlobStore): Promise<Record<string, string>> {
+export async function exportBlobs(part: { models?: { blob: string; original?: string; file?: string }[] }, store: BlobStore): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
   for (const h of blobRefs(part)) {
     const gz = await store.get(h)

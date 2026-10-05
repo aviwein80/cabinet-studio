@@ -134,3 +134,19 @@ export function compute(): ComputeClient {
   )
   return shared
 }
+
+let solid: ComputeClient | null = null
+
+/**
+ * The worker that reads solid files. One worker, kept alive, so the OpenCascade reader loads (and
+ * compiles its WebAssembly) once, on the first solid read, never at start-up.
+ */
+export function solidCompute(): ComputeClient {
+  solid ??= new ComputeClient(() => new Worker(new URL('./compute.worker.ts', import.meta.url), { type: 'module', name: 'solid' }) as unknown as WorkerLike, 1, 1000)
+  return solid
+}
+
+/** Absolute URL of the folder holding the OpenCascade reader files (next to the app's page). */
+export function occtVendorUrl(): string | undefined {
+  return typeof document !== 'undefined' ? new URL('vendor/occt-import-js/', document.baseURI).href : undefined
+}

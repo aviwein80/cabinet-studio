@@ -17,6 +17,10 @@ import type { CamPart, ModelPlacement, UpAxis } from '../types'
 import { generateOp, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
 import { type Collision, partCollisions } from '../collision/collision'
+import { readSolid, type SolidReadOptions } from '../solid/convert'
+import { decodeSolid, encodeSolid } from '../solid/encode'
+import { occt } from '../solid/occt'
+import type { SolidData } from '../solid/types'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -42,6 +46,12 @@ export interface TaskMap {
   'mesh.size': { in: { mesh: Mesh; place: ModelPlacement }; out: [number, number, number] }
   'blob.pack': { in: { mesh: Mesh }; out: Packed }
   'blob.unpack': { in: { gz: Uint8Array; hash: string }; out: Mesh }
+  /** Read a STEP / IGES / BREP file. `vendor`: URL of the folder with the OpenCascade reader files. */
+  'solid.import': { in: { bytes: Uint8Array; name: string; vendor?: string } & SolidReadOptions; out: SolidData }
+  'solid.pack': { in: { solid: SolidData }; out: Packed }
+  'blob.unpackSolid': { in: { gz: Uint8Array; hash: string }; out: SolidData }
+  /** Store any bytes (the original file of a solid). */
+  'blob.packBytes': { in: { bytes: Uint8Array }; out: Packed }
   /** Toolpaths of the given (3D) operations; meshes by blob hash. */
   'cam.generate': { in: { part: CamPart; machine: MachineProfile; opIds: string[]; meshes: Record<string, Mesh> }; out: Toolpath[] }
   /** Collision check of toolpaths on a panel (operations numbered in program order). */
@@ -91,6 +101,23 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     return ops.map((op, i) => generateOp(op, { part, machine, meshes: map, work: { isCancelled: work.isCancelled, progress: (f, n) => work.progress?.((i + f) / ops.length, n) } }))
   },
   'sim.collide': ({ panel, toolpaths, machine }, work) => partCollisions(panel, toolpaths, machine, work).found,
+  async 'solid.import'({ bytes, name, vendor, ...opt }, work) {
+    work.progress?.(0, 'Loading the solid-model reader')
+    const reader = await occt(vendor)
+    return readSolid(reader, bytes, name, opt, work)
+  },
+  async 'solid.pack'({ solid }) {
+    const raw = encodeSolid(solid)
+    return { hash: await sha256Hex(raw), gz: await gzip(raw) }
+  },
+  async 'blob.unpackSolid'({ gz, hash }) {
+    const raw = await gunzip(gz)
+    if ((await sha256Hex(raw)) !== hash) throw new Error(`Solid model data ${hash.slice(0, 12)}… is damaged (checksum mismatch).`)
+    return decodeSolid(raw)
+  },
+  async 'blob.packBytes'({ bytes }) {
+    return { hash: await sha256Hex(bytes), gz: await gzip(bytes) }
+  },
   async 'blob.unpack'({ gz, hash }) {
     const raw = await gunzip(gz)
     if ((await sha256Hex(raw)) !== hash) throw new Error(`3D model data ${hash.slice(0, 12)}… is damaged (checksum mismatch).`)

@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { type AiKeyStatus, backend } from "@/app/backend";
 import { useStore } from "@/app/store";
+import { AboutSection } from "@/components/AboutSection";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ export function SettingsPage() {
             Sending a sheet uploads its page images to that provider.
           </p>
         </section>
+        <AboutSection />
       </div>
     </div>
   );

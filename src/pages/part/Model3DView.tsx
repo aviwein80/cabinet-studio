@@ -7,6 +7,7 @@ import { toPoints } from '@/cam/geom'
 import { placeMesh } from '@/cam/mesh/place'
 import type { CamPart, ModelRef } from '@/cam/types'
 import { useModelMesh } from './modelData'
+import { faceColorMap, useModelSolid } from './solidData'
 
 /**
  * 3D view of the part: the work volume as translucent stock, placed 3D models, and the face-1
@@ -68,23 +69,45 @@ function View({ part }: { part: CamPart }) {
   )
 }
 
+const MODEL_COLOR = '#d6c3f5'
+
 function ModelMesh({ model }: { model: ModelRef }) {
   const { mesh, error } = useModelMesh(model.blob)
+  const { solid } = useModelSolid(model.blob, model.kind === 'solid')
+  const colors = useMemo(() => (solid ? faceColorMap(solid, model.faceColors) : null), [solid, model.faceColors])
   const geo = useMemo(() => {
     if (!mesh) return null
     const placed = placeMesh(mesh, model.place)
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(placed.positions, 3))
     g.setIndex(new THREE.BufferAttribute(placed.indices, 1))
+    if (colors && placed.groups) {
+      // solids: each face in its colour (faces have their own vertices, so per-vertex colours work)
+      const rgb = new Float32Array(placed.positions.length)
+      const base = new THREE.Color(MODEL_COLOR)
+      const c = new THREE.Color()
+      for (let t = 0; t < placed.groups.length; t++) {
+        const hex = colors.get(placed.groups[t])
+        const col = hex ? c.set(hex) : base
+        for (let k = 0; k < 3; k++) {
+          const v = placed.indices[t * 3 + k]
+          rgb[v * 3] = col.r
+          rgb[v * 3 + 1] = col.g
+          rgb[v * 3 + 2] = col.b
+        }
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(rgb, 3))
+    }
     g.computeVertexNormals()
     return g
-  }, [mesh, model.place])
+  }, [mesh, model.place, colors])
   useEffect(() => () => geo?.dispose(), [geo])
   if (error) console.warn(error)
   if (!geo) return null
+  const colored = !!geo.getAttribute('color')
   return (
     <mesh geometry={geo}>
-      <meshStandardMaterial color="#d6c3f5" roughness={0.65} metalness={0.05} side={THREE.DoubleSide} flatShading={false} />
+      <meshStandardMaterial color={colored ? '#ffffff' : MODEL_COLOR} vertexColors={colored} roughness={0.65} metalness={0.05} side={THREE.DoubleSide} flatShading={false} />
     </mesh>
   )
 }

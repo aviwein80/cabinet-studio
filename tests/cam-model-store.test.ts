@@ -91,14 +91,18 @@ describe('M2.1 part format version 2', () => {
     }
   })
 
-  it('new parts are version 2; newer files are refused; shop files migrate job and library parts', () => {
-    expect(newPart().version).toBe(2)
-    expect(JSON.parse(serializePart(newPart())).version).toBe(2)
-    expect(() => parsePart(JSON.stringify({ format: 'cabinet-studio-part', version: 3, part: newPart() }))).toThrow(/newer/)
+  it('new parts are the current version (3 since M2.5); newer files are refused; shop files migrate job and library parts', () => {
+    expect(CAM_FILE_VERSION).toBe(3)
+    expect(newPart().version).toBe(3)
+    expect(JSON.parse(serializePart(newPart())).version).toBe(3)
+    expect(() => parsePart(JSON.stringify({ format: 'cabinet-studio-part', version: 4, part: newPart() }))).toThrow(/newer/)
     expect(() => migratePart({ version: 9 })).toThrow(/newer/)
     const old = { ...newPart({ name: 'old' }), version: 1 as const }
     const data = normalizeData({ jobs: [{ id: 'j', number: 'J1', name: '', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [old] }], library: { ...normalizeData(null).library, partLibrary: [old] } } as Partial<AppData>)
-    expect(data.jobs[0].camParts![0].version).toBe(2)
-    expect(data.library.partLibrary![0].version).toBe(2)
+    expect(data.jobs[0].camParts![0].version).toBe(3)
+    expect(data.library.partLibrary![0].version).toBe(3)
+    // a version 2 part (with a mesh model) moves to 3 with every field kept
+    const v2 = { ...newPart({ name: 'v2' }), version: 2 as const, models: [{ id: 'm', name: 'M', kind: 'mesh' as const, blob: 'b', source: 's.stl', units: 'mm' as const, place: { ...DEFAULT_PLACEMENT }, layer: 'models', visible: true, triangles: 2, size: [1, 1, 1] as [number, number, number] }] }
+    expect(migratePart(v2)).toEqual({ ...v2, version: 3 })
   })
 })

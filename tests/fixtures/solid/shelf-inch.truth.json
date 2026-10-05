@@ -1,0 +1,31 @@
+{
+ "cutouts": [],
+ "holes": [
+  {
+   "d": 6.35,
+   "depth": 12.7,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 50.8,
+   "y": 50.8
+  },
+  {
+   "d": 6.35,
+   "depth": 19.05,
+   "face": 1,
+   "floor": "none",
+   "through": true,
+   "x": 254.0,
+   "y": 203.2
+  }
+ ],
+ "length": 304.8,
+ "name": "Shelf",
+ "outline": {
+  "area": 77419.2
+ },
+ "pockets": [],
+ "thickness": 19.05,
+ "width": 254.0
+}

@@ -41,8 +41,12 @@ function oriented(mesh: Mesh, p: ModelPlacement): Float32Array {
   const k = p.scale > 0 ? p.scale : 1
   const src = mesh.positions
   const out = new Float32Array(src.length)
+  const f = p.frame && p.frame.length === 9 ? p.frame : null
   for (let i = 0; i < src.length; i += 3) {
-    const [x, y, z] = m(src[i], src[i + 1], src[i + 2])
+    const sx = src[i]
+    const sy = src[i + 1]
+    const sz = src[i + 2]
+    const [x, y, z] = f ? m(f[0] * sx + f[1] * sy + f[2] * sz, f[3] * sx + f[4] * sy + f[5] * sz, f[6] * sx + f[7] * sy + f[8] * sz) : m(sx, sy, sz)
     const xr = (x * c - y * s) * k
     out[i] = p.mirror ? -xr : xr
     out[i + 1] = (x * s + y * c) * k
@@ -87,14 +91,15 @@ export function placedBounds(model: Pick<ModelRef, 'place'>, size: [number, numb
 }
 
 /**
- * Footprint of a placed model from its stored size alone (no mesh needed): exact when the turn
+ * Footprint of a placed model from its stored size alone (no mesh needed; `size` is measured
+ * after the placement's `frame` turn): exact when the turn
  * about Z is a multiple of 90 degrees, otherwise the box around the turned bounding box.
  */
 export function modelFootprint(model: Pick<ModelRef, 'place' | 'size'>): { x: number; y: number; dx: number; dy: number; top: number; bottom: number } {
   const [sx, sy, sz] = model.size
   const corners: number[] = []
   for (let i = 0; i < 8; i++) corners.push(i & 1 ? sx : 0, i & 2 ? sy : 0, i & 4 ? sz : 0)
-  const b = meshBounds({ positions: oriented({ positions: Float32Array.from(corners), indices: new Uint32Array(0) }, model.place) })
+  const b = meshBounds({ positions: oriented({ positions: Float32Array.from(corners), indices: new Uint32Array(0) }, { ...model.place, frame: undefined }) })
   const [x, y, z] = model.place.at
   return { x, y, dx: b.max[0] - b.min[0], dy: b.max[1] - b.min[1], top: z, bottom: z - (b.max[2] - b.min[2]) }
 }

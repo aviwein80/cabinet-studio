@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { Worker } from 'node:worker_threads'
@@ -23,6 +23,50 @@ const blobFile = (hash: string) => {
 const BLOB_KEEP_MS = 30 * 24 * 60 * 60 * 1000
 
 let lastBackup = 0
+
+// ---------------------------------------------------------------------------------------------
+// The built app is served as app://bundle/... (not file://), so the page, its workers and the
+// WebAssembly libraries all load like a normal web origin: fetch works and .wasm files get the
+// right type. Files come from dist/ inside the app (the vendor libraries are unpacked next to the
+// archive so they can be replaced; reading through the archive path finds them there).
+// ---------------------------------------------------------------------------------------------
+
+protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }])
+
+const APP_URL = 'app://bundle/index.html'
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json',
+  '.wasm': 'application/wasm',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.txt': 'text/plain; charset=utf-8',
+  '.map': 'application/json',
+}
+
+function serveApp() {
+  const root = path.join(__dirname, '..', 'dist')
+  protocol.handle('app', (req) => {
+    const url = new URL(req.url)
+    const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '') || 'index.html'
+    const file = path.normalize(path.join(root, rel))
+    if (url.host !== 'bundle' || !file.startsWith(root + path.sep)) return new Response('Not found', { status: 404 })
+    try {
+      const data = fs.readFileSync(file)
+      return new Response(data, { headers: { 'Content-Type': MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream' } })
+    } catch {
+      return new Response('Not found', { status: 404 })
+    }
+  })
+}
 
 function writeAtomic(file: string, contents: string | Uint8Array) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
@@ -201,7 +245,7 @@ function createWindow() {
     return { action: 'deny' }
   })
   if (DEV_URL) win.loadURL(DEV_URL)
-  else win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+  else win.loadURL(APP_URL)
 }
 
 app.whenReady().then(() => {
@@ -214,6 +258,7 @@ app.whenReady().then(() => {
     ]),
   )
   registerIpc()
+  serveApp()
   try {
     collectBlobs({ blobs: blobDir(), dataFile: dataFile(), backups: backupDir() }, BLOB_KEEP_MS)
   } catch {

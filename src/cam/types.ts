@@ -335,9 +335,10 @@ export interface Finish3dOp extends OpBase {
   kind: 'finish3d'
   /**
    * Parallel: straight passes dropped onto the surface. Waterline: passes at constant heights
-   * around the model. Projection: drawn shapes and text dropped onto the surface.
+   * around the model. Projection: drawn shapes and text dropped onto the surface. Pencil: along
+   * the valleys and inside corners, where the tool touches two surfaces at once.
    */
-  strategy: 'parallel' | 'waterline' | 'projection'
+  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil'
   surface: Surface3D
   /** Distance between passes, mm (parallel passes, and the shallow-area fill of waterline). */
   stepover: number
@@ -355,6 +356,13 @@ export interface Finish3dOp extends OpBase {
   slope: { min: number; max: number }
   /** Leave flat areas (slope under 0.5°) for a flat-area pass. */
   skipFlats: boolean
+  /** Pencil: valleys sharper than this (degrees between the two surfaces) get a pass (default 5). */
+  pencilAngle?: number
+  /**
+   * 3D rest machining: cut only where earlier operations (ids; empty = every earlier milling
+   * operation) left more than `minThickness` mm on the model, as their toolpaths simulate.
+   */
+  rest?: { from: string[]; minThickness: number }
 }
 
 /**
@@ -370,11 +378,16 @@ export interface Rough3dOp extends OpBase {
   stepdown: number
   /** Distance between passes as a fraction of the tool diameter. */
   stepover: number
-  /** Offset rings from the inside out, or back-and-forth lines (plus a pass along the walls). */
-  pattern: 'offset' | 'zigzag'
+  /**
+   * Offset rings from the inside out, or back-and-forth lines (plus a pass along the walls), or
+   * adaptive clearing (a steady width of cut).
+   */
+  pattern: 'offset' | 'zigzag' | 'adaptive'
   /** Zig-zag line angle in degrees from +X. */
   angle: number
   direction: Direction
+  /** Adaptive clearing settings (pattern 'adaptive'). */
+  adaptive?: AdaptiveSettings
   /** How the tool goes down into each new area. */
   entry: 'helix' | 'ramp' | 'plunge'
   /** Ramp and helix angle, degrees. */

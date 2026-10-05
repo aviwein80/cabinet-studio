@@ -107,6 +107,7 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       }
       // projection: on the surface until a depth is set
       if ((extra as { strategy?: string }).strategy === 'projection') Object.assign(op, { name: '3D finishing (projection)' })
+      if ((extra as { strategy?: string }).strategy === 'pencil') Object.assign(op, { name: '3D finishing (pencil)' })
       break
     case 'rough3d':
       // PLACEHOLDER cutting values until the shop supplies its own
@@ -135,6 +136,7 @@ export function toTemplate(op: CamOp): OpTemplate {
   const { id: _id, geometry: _g, builtHash: _h, ...rest } = op
   // operation ids mean nothing in another part: rest machining then follows every earlier operation
   if (rest.kind === 'pocket' && rest.rest) return { ...rest, rest: { ...rest.rest, from: [] } } as OpTemplate
+  if (rest.kind === 'finish3d' && rest.rest) return { ...rest, rest: { ...rest.rest, from: [] } } as OpTemplate
   return rest as OpTemplate
 }
 export function fromTemplate(t: OpTemplate, geometry: string[]): CamOp {
@@ -167,8 +169,9 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     case 'code':
       return null
     case 'finish3d': {
-      // projection follows drawn shapes like engraving: smallest ball-nose first, then smallest V
-      if (op.strategy === 'projection') {
+      // projection follows drawn shapes like engraving, pencil gets into the valleys: smallest
+      // ball-nose first, then smallest V
+      if (op.strategy === 'projection' || op.strategy === 'pencil') {
         const fine = routers(machine).filter((t) => t.shape === 'ball' || t.shape === 'v')
         return fine.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || a.diameter - b.diameter || a.number - b.number)[0] ?? null
       }

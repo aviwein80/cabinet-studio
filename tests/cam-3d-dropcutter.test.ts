@@ -145,6 +145,35 @@ describe('M2.2b drop-cutter: the fast clearance test', () => {
   }, 60_000)
 })
 
+describe('M2.3c drop-cutter: the contact point', () => {
+  it('lies on the model and on the tool surface, for every shape', () => {
+    const r = rng(17)
+    const f = (x: number, y: number) => -6 + 2 * Math.sin(x / 5) * Math.cos(y / 7) + (x > 20 && x < 24 ? 3 : 0)
+    const m = meshOf(relief(40, 40, 40, 40, f))
+    const p = m.positions
+    for (const c of ALL) {
+      const d = new DropCutter(m, c)
+      for (let i = 0; i < 200; i++) {
+        const x = 5 + r() * 30
+        const y = 5 + r() * 30
+        expect(d.drop(x, y)).toBe(true)
+        // on the facet it touched
+        const t = d.hitTri * 3
+        const [a, b, cc] = [0, 1, 2].map((k) => [p[m.indices[t + k] * 3], p[m.indices[t + k] * 3 + 1], p[m.indices[t + k] * 3 + 2]])
+        const nx = (b[1] - a[1]) * (cc[2] - a[2]) - (b[2] - a[2]) * (cc[1] - a[1])
+        const ny = (b[2] - a[2]) * (cc[0] - a[0]) - (b[0] - a[0]) * (cc[2] - a[2])
+        const nz = (b[0] - a[0]) * (cc[1] - a[1]) - (b[1] - a[1]) * (cc[0] - a[0])
+        const l = Math.hypot(nx, ny, nz)
+        expect(Math.abs(((d.hitX - a[0]) * nx + (d.hitY - a[1]) * ny + (d.hitZ - a[2]) * nz) / l)).toBeLessThan(1e-6)
+        // on the cutter: its height above the tip at that distance from the axis
+        const dist = Math.hypot(d.hitX - x, d.hitY - y)
+        expect(dist).toBeLessThanOrEqual(c.R + 1e-9)
+        expect(d.hitZ - d.z).toBeCloseTo(profileHeight(c, dist), 6)
+      }
+    }
+  })
+})
+
 describe('M2.2a cutters from the tool table', () => {
   it('maps tool shapes; V cutters cannot grow for stock to leave', () => {
     const t = (n: number) => PLACEHOLDER_MACHINE.tools.find((x) => x.number === n)!

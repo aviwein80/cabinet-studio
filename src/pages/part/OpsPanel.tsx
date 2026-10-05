@@ -1,11 +1,12 @@
 import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
-import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, type OpState } from '@/cam/doc'
+import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
 import { DEFAULT_ADAPTIVE, defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
+import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
-import type { CamOp, CamOpKind, CamPart, FaceId, Surface3D } from '@/cam/types'
+import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, FaceId, Surface3D } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -116,6 +117,7 @@ export function OpsPanel({
                 <DropdownMenuItem onSelect={() => add('finish3d')}>{OP_LABEL.finish3d} (parallel)</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'waterline' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (waterline)</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'projection' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (projection)</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'pencil' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (pencil)</DropdownMenuItem>
               </>
             )}
             {rulesOn && lib && (
@@ -172,13 +174,15 @@ export function OpsPanel({
                         ? `3D waterline, every ${formatLength(op.stepdown ?? 1, units)} down`
                         : op.strategy === 'projection'
                           ? `3D projection, ${op.levels.depth > 0 ? `${formatLength(op.levels.depth, units)} below the surface` : 'on the surface'}`
-                          : `3D, every ${formatLength(op.stepover, units)}`
+                          : op.strategy === 'pencil'
+                            ? `3D pencil, valleys over ${op.pencilAngle ?? PENCIL_MIN_ANGLE}°`
+                            : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
                         : op.levels.through
                           ? 'through'
                           : formatLength(op.levels.depth, units)}
-                  {op.kind === 'pocket' && op.rest ? ' · rest' : op.kind === 'pocket' && op.pattern === 'adaptive' ? ' · adaptive' : ''}
+                  {(op.kind === 'pocket' || op.kind === 'finish3d') && op.rest && !(op.kind === 'finish3d' && op.strategy === 'projection') ? ' · rest' : (op.kind === 'pocket' || op.kind === 'rough3d') && op.pattern === 'adaptive' ? ' · adaptive' : ''}
                   {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : null}
                 </div>
               </div>
@@ -314,7 +318,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && op.strategy === 'projection' ? 'Pick automatically (smallest ball-nose first)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -436,6 +440,20 @@ function SurfaceGroup({ op, part, onSurface, walls, pattern }: { op: CamOp & { s
   )
 }
 
+/** Adaptive clearing settings (pockets and Z-level roughing). */
+function AdaptiveFields({ ad, onAd, rampAngle, onRamp }: { ad: AdaptiveSettings; onAd: (patch: Partial<AdaptiveSettings>) => void; rampAngle: number; onRamp: (v: number) => void }) {
+  return (
+    <>
+      <NumField label="Width of cut" suffix="%" value={Math.round(ad.width * 1000) / 10} min={2} max={60} step={1} onChange={(v) => onAd({ width: v / 100, angle: undefined })} hint={`Of the tool diameter · ${(Math.acos(Math.max(-1, 1 - 2 * ad.width)) * 180 / Math.PI).toFixed(0)}° engagement · placeholder default`} />
+      <NumField label="Or engagement angle" suffix="°" value={ad.angle ?? 0} min={0} max={180} onChange={(v) => onAd({ angle: v > 0 ? v : undefined, ...(v > 0 ? { width: (1 - Math.cos((v * Math.PI) / 180)) / 2 } : {}) })} hint="0 = use the width" />
+      <NumField label="Smoothing radius" value={ad.smoothing} min={0} step={0.5} onChange={(v) => onAd({ smoothing: v })} hint="Smallest turn of the path; 0 = turn freely" />
+      <NumField label="Lift for moves back" value={ad.lift} min={0} step={0.1} onChange={(v) => onAd({ lift: v })} hint="Through cleared area only" />
+      <NumField label="Adaptive feed up to" suffix="×" value={ad.feedBoost} min={1} max={3} step={0.1} onChange={(v) => onAd({ feedBoost: Math.max(1, v) })} hint="Lighter cuts and moves back run faster; 1 = off" />
+      <NumField label="Helix angle" suffix="°" value={rampAngle} min={1} max={45} onChange={onRamp} hint="Entries are always helixes" />
+    </>
+  )
+}
+
 function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
   const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
   switch (op.kind) {
@@ -450,6 +468,7 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
             { value: 'parallel', label: 'Parallel: straight passes over the surface' },
             { value: 'waterline', label: 'Waterline: passes at constant heights' },
             { value: 'projection', label: 'Projection: drawn shapes and text onto the surface' },
+            { value: 'pencil', label: 'Pencil: along valleys and inside corners' },
           ]}
           onChange={(v) => onChange({ ...op, strategy: v })}
         />
@@ -469,6 +488,41 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           </>
         )
       }
+      const rest = (adaptiveOn || op.rest) && (
+        <Group title="Rest machining">
+          <div className="col-span-2">
+            <SwitchField
+              label="Rest machining"
+              checked={!!op.rest}
+              onChange={(v) => onChange({ ...op, rest: v ? { from: [], minThickness: 0.1 } : undefined })}
+              hint="Cut only where earlier operations left material this tool can reach, worked out by simulating their toolpaths."
+            />
+          </div>
+          {op.rest && (
+            <>
+              <SelectField
+                label="Left by"
+                value={op.rest.from[0] ?? NONE}
+                options={[{ value: NONE, label: 'Every earlier operation' }, ...part.ops.slice(0, Math.max(0, part.ops.findIndex((o) => o.id === op.id))).filter((o) => REST_SOURCE_KINDS_3D.has(o.kind)).map((o) => ({ value: o.id, label: o.name }))]}
+                onChange={(v) => onChange({ ...op, rest: { ...op.rest!, from: v === NONE ? [] : [v] } })}
+              />
+              <NumField label="Leave out rest thinner than" value={op.rest.minThickness} min={0.01} step={0.05} onChange={(v) => onChange({ ...op, rest: { ...op.rest!, minThickness: v } })} hint="Measured square to the surface, over the stock to leave" />
+            </>
+          )}
+        </Group>
+      )
+      if (op.strategy === 'pencil')
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Pencil passes">
+              {strategy}
+              <NumField label="Valleys sharper than" suffix="°" value={op.pencilAngle ?? PENCIL_MIN_ANGLE} min={1} max={90} onChange={(v) => onChange({ ...op, pencilAngle: v })} hint="Angle between the two surfaces; placeholder default" />
+              <div className="self-end pb-1.5 text-[11px] text-stone-400">One pass along each valley, where the tool touches both sides.</div>
+            </Group>
+            {rest}
+          </>
+        )
       return (
         <>
           <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
@@ -494,22 +548,37 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
               )}
             </div>
           </Group>
+          {rest}
         </>
       )
     }
-    case 'rough3d':
+    case 'rough3d': {
+      const adaptive = op.pattern === 'adaptive'
+      const ad = op.adaptive ?? DEFAULT_ADAPTIVE
+      const patterns = [{ value: 'offset' as const, label: 'Follow shape' }, { value: 'zigzag' as const, label: 'Back and forth' }]
       return (
         <>
           <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} walls />
           <Group title="Levels">
             <NumField label="Leave on floors" value={op.stockZ} min={0} step={0.1} onChange={(v) => onChange({ ...op, stockZ: v })} />
             <NumField label="Step-down" value={op.stepdown} min={0.1} step={0.5} onChange={(v) => onChange({ ...op, stepdown: v })} hint="Placeholder default; set your own" />
-            <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} />
-            <SelectField label="Pattern" value={op.pattern} options={[{ value: 'offset', label: 'Follow shape' }, { value: 'zigzag', label: 'Back and forth' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
+            <SelectField
+              label="Pattern"
+              value={op.pattern}
+              options={adaptiveOn || adaptive ? [...patterns, { value: 'adaptive' as const, label: 'Adaptive (steady width of cut)' }] : patterns}
+              onChange={(v) => onChange({ ...op, pattern: v, ...(v === 'adaptive' && !op.adaptive ? { adaptive: { ...DEFAULT_ADAPTIVE } } : {}) })}
+            />
+            {!adaptive && <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} />}
             {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}
             <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
-            <SelectField label="Entry" value={op.entry} options={[{ value: 'helix', label: 'Helix' }, { value: 'ramp', label: 'Ramp' }, { value: 'plunge', label: 'Straight down' }]} onChange={(v) => onChange({ ...op, entry: v })} />
-            <NumField label="Ramp angle" suffix="°" value={op.rampAngle} min={1} max={45} onChange={(v) => onChange({ ...op, rampAngle: v })} />
+            {adaptive ? (
+              <AdaptiveFields ad={ad} onAd={(patch) => onChange({ ...op, adaptive: { ...ad, ...patch } })} rampAngle={op.rampAngle} onRamp={(v) => onChange({ ...op, rampAngle: v })} />
+            ) : (
+              <>
+                <SelectField label="Entry" value={op.entry} options={[{ value: 'helix', label: 'Helix' }, { value: 'ramp', label: 'Ramp' }, { value: 'plunge', label: 'Straight down' }]} onChange={(v) => onChange({ ...op, entry: v })} />
+                <NumField label="Ramp angle" suffix="°" value={op.rampAngle} min={1} max={45} onChange={(v) => onChange({ ...op, rampAngle: v })} />
+              </>
+            )}
             <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => onChange({ ...op, levels: { ...op.levels, safeZ: v } })} />
             <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => onChange({ ...op, levels: { ...op.levels, rapidZ: v } })} hint="Above the level just cut" />
             <div className="col-span-2">
@@ -518,6 +587,7 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           </Group>
         </>
       )
+    }
     case 'profile':
       return (
         <Group title="Strategy">
@@ -539,7 +609,6 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
     case 'pocket': {
       const adaptive = op.pattern === 'adaptive' && !op.rest
       const ad = op.adaptive ?? DEFAULT_ADAPTIVE
-      const setAd = (patch: Partial<typeof ad>) => onChange({ ...op, adaptive: { ...ad, ...patch } })
       const patterns = [{ value: 'offset' as const, label: 'Follow shape' }, { value: 'zigzag' as const, label: 'Back and forth' }, { value: 'spiral' as const, label: 'Spiral (circles)' }]
       return (
         <Group title="Strategy">
@@ -551,14 +620,7 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           />
           <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
           {adaptive ? (
-            <>
-              <NumField label="Width of cut" suffix="%" value={Math.round(ad.width * 1000) / 10} min={2} max={60} step={1} onChange={(v) => setAd({ width: v / 100, angle: undefined })} hint={`Of the tool diameter · ${(Math.acos(Math.max(-1, 1 - 2 * ad.width)) * 180 / Math.PI).toFixed(0)}° engagement · placeholder default`} />
-              <NumField label="Or engagement angle" suffix="°" value={ad.angle ?? 0} min={0} max={180} onChange={(v) => setAd({ angle: v > 0 ? v : undefined, ...(v > 0 ? { width: (1 - Math.cos((v * Math.PI) / 180)) / 2 } : {}) })} hint="0 = use the width" />
-              <NumField label="Smoothing radius" value={ad.smoothing} min={0} step={0.5} onChange={(v) => setAd({ smoothing: v })} hint="Smallest turn of the path; 0 = turn freely" />
-              <NumField label="Lift for moves back" value={ad.lift} min={0} step={0.1} onChange={(v) => setAd({ lift: v })} hint="Through cleared area only" />
-              <NumField label="Adaptive feed up to" suffix="×" value={ad.feedBoost} min={1} max={3} step={0.1} onChange={(v) => setAd({ feedBoost: Math.max(1, v) })} hint="Lighter cuts and moves back run faster; 1 = off" />
-              <NumField label="Helix angle" suffix="°" value={op.rampAngle} min={1} max={45} onChange={(v) => onChange({ ...op, rampAngle: v })} hint="Entries are always helixes" />
-            </>
+            <AdaptiveFields ad={ad} onAd={(patch) => onChange({ ...op, adaptive: { ...ad, ...patch } })} rampAngle={op.rampAngle} onRamp={(v) => onChange({ ...op, rampAngle: v })} />
           ) : (
             <>
               <NumField label="Stepover" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} />

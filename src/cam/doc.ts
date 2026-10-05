@@ -277,12 +277,25 @@ export type OpMachineInputs = Pick<MachineProfile, 'throughDepth' | 'feeds'> & P
 /** Milling operations whose toolpaths count as removed material for 2D rest machining. */
 export const REST_SOURCE_KINDS: ReadonlySet<CamOp['kind']> = new Set(['profile', 'pocket', 'engrave', 'vcarve', 'sweep'])
 
-/** The operations a rest pocket counts as already machined: picked ones, or every earlier one. */
+/** For 3D rest machining, 3D operations count as well. */
+export const REST_SOURCE_KINDS_3D: ReadonlySet<CamOp['kind']> = new Set([...REST_SOURCE_KINDS, 'finish3d', 'rough3d'])
+
+/**
+ * The operations a rest pocket (or a 3D finishing with rest machining) counts as already machined:
+ * the picked ones, or every earlier one.
+ */
 export function restSources(op: CamOp, part: CamPart): CamOp[] {
-  if (op.kind !== 'pocket' || !op.rest) return []
+  const rest = op.kind === 'pocket' ? op.rest : op.kind === 'finish3d' && op.strategy !== 'projection' ? op.rest : undefined
+  if (!rest) return []
+  const kinds = op.kind === 'pocket' ? REST_SOURCE_KINDS : REST_SOURCE_KINDS_3D
   const i = part.ops.findIndex((o) => o.id === op.id)
-  const earlier = (i < 0 ? part.ops : part.ops.slice(0, i)).filter((o) => o.enabled && o.face === 1 && REST_SOURCE_KINDS.has(o.kind))
-  return op.rest.from.length ? earlier.filter((o) => op.rest!.from.includes(o.id)) : earlier
+  const earlier = (i < 0 ? part.ops : part.ops.slice(0, i)).filter((o) => o.enabled && o.face === 1 && kinds.has(o.kind))
+  return rest.from.length ? earlier.filter((o) => rest.from.includes(o.id)) : earlier
+}
+
+/** The 3D models an op's toolpath needs: its own, and those of the earlier operations its rest machining follows. */
+export function modelsFor(op: CamOp, part: CamPart): string[] {
+  return [...new Set([op, ...restSources(op, part)].flatMap((o) => (o.kind === 'finish3d' || o.kind === 'rough3d' ? [o.surface.modelId] : [])))]
 }
 
 /**

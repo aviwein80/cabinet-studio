@@ -48,6 +48,10 @@ export class DropCutter {
   z = -Infinity
   hitTri = -1
   hitNz = 1
+  /** Where on the model the tool touches (last successful `drop`). */
+  hitX = NaN
+  hitY = NaN
+  hitZ = NaN
 
   constructor(mesh: Mesh, cutter: Cutter3D, cell?: number) {
     this.mesh = mesh
@@ -300,11 +304,14 @@ export class DropCutter {
     }
   }
 
-  private take(z: number, t: number, nz: number) {
+  private take(z: number, t: number, nz: number, cx: number, cy: number, cz: number) {
     if (z > this.z) {
       this.z = z
       this.hitTri = t
       this.hitNz = nz
+      this.hitX = cx
+      this.hitY = cy
+      this.hitZ = cz
     }
   }
 
@@ -325,7 +332,7 @@ export class DropCutter {
     const py = nh > 1e-12 ? y - (d * ny) / nh : y
     if (!insideXY(tri, o, px, py)) return
     const zPlane = (tri[o + 12] - nx * px - ny * py) / nz
-    this.take(zPlane - this.h(d), t, nz)
+    this.take(zPlane - this.h(d), t, nz, px, py, zPlane)
   }
 
   private vertex(t: number, vx: number, vy: number, vz: number, x: number, y: number) {
@@ -335,7 +342,7 @@ export class DropCutter {
     if (d2 > this.R * this.R) return
     const d = Math.sqrt(d2)
     const z = vz - this.h(d)
-    if (z > this.z) this.take(z, t, profileNz(this.cutter, d))
+    if (z > this.z) this.take(z, t, profileNz(this.cutter, d), vx, vy, vz)
   }
 
   /** Tip height with the tool touching the edge at parameter s, or -Infinity outside [lo, hi]. */
@@ -352,7 +359,7 @@ export class DropCutter {
     if (z <= this.z) return
     const dx = x0 + s * bx - x
     const dy = y0 + s * by - y
-    this.take(z, t, profileNz(this.cutter, Math.min(this.R, Math.sqrt(dx * dx + dy * dy))))
+    this.take(z, t, profileNz(this.cutter, Math.min(this.R, Math.sqrt(dx * dx + dy * dy))), x0 + s * bx, y0 + s * by, z0 + s * ez)
   }
 
   private edge(t: number, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, x: number, y: number) {

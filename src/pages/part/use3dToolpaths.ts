@@ -4,7 +4,7 @@
  * cancels an older one for the same operation.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { opInputHash } from '@/cam/doc'
+import { modelsFor, opInputHash } from '@/cam/doc'
 import type { Mesh } from '@/cam/mesh/types'
 import { feedsFor, resolveTool } from '@/cam/ops'
 import { inBackground, type Toolpath } from '@/cam/toolpath'
@@ -44,7 +44,8 @@ export function use3dToolpaths(part: CamPart, machine: MachineProfile) {
       void (async () => {
         try {
           const meshes: Record<string, Mesh> = {}
-          for (const m of part.models ?? []) if ((op.kind === 'finish3d' || op.kind === 'rough3d') && m.id === op.surface.modelId) meshes[m.blob] = await loadModelMesh(m.blob)
+          const ids = modelsFor(op, part)
+          for (const m of part.models ?? []) if (ids.includes(m.id)) meshes[m.blob] = await loadModelMesh(m.blob)
           const [tp] = await compute().run('cam.generate', { part, machine, opIds: [op.id], meshes }, { signal: abort.signal, onProgress: (fraction, note) => setBusy((b) => new Map(b).set(op.id, { fraction, note })) })
           if (running.current.get(op.id)?.abort !== abort) return
           setDone((d) => new Map(d).set(op.id, { key, tp }))

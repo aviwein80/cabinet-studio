@@ -35,6 +35,11 @@ export interface AdaptiveOptions {
   helixPct: number
   /** Raster cell, mm (default: tool radius / 40, between 0.02 and 0.1). */
   cell?: number
+  /**
+   * How far the tool centre keeps from the walls, mm (default: the tool radius, for walls that are
+   * the edge of the material; 0 when the walls already bound where the centre may go).
+   */
+  wallGap?: number
 }
 
 export type AdaptiveItem =
@@ -57,10 +62,11 @@ const DEG = Math.PI / 180
 
 /**
  * Plan one level. `material`: what the tool can reach (filled polygons); `centres`: where its
- * centre may go; `walls`: the boundary it must keep its radius from.
+ * centre may go; `walls`: the boundary it must keep its radius (or `wallGap`) from.
  */
 export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: AdaptiveOptions, work?: Work): AdaptivePlan {
   const r = o.r
+  const wg = Math.max(0, o.wallGap ?? r)
   const warnings: string[] = []
   const h = o.cell ?? Math.min(0.1, Math.max(0.02, r / 40))
   const ras = new MaterialRaster(material, h)
@@ -83,7 +89,7 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
   /** Width of cut of a step from p (where the tool stands, already cut round it) to q. */
   const load = (p: P, q: P) => {
     const L = Math.hypot(q.x - p.x, q.y - p.y)
-    if (L < 1e-9 || !W.clear(p, q, r)) return Infinity
+    if (L < 1e-9 || !W.clear(p, q, wg)) return Infinity
     return (ras.countStep(p, q, r) * cellA) / L
   }
   const rot = (d: P, a: number): P => ({ x: d.x * Math.cos(a) - d.y * Math.sin(a), y: d.x * Math.sin(a) + d.y * Math.cos(a) })
@@ -200,7 +206,7 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
   for (let j = 0; j < gny; j++)
     for (let i = 0; i < gnx; i++) {
       const p = { x: box.minX + (i + 0.5) * g, y: box.minY + (j + 0.5) * g }
-      if (inC.has(p) && W.distance(p, r + 0.01) >= r) lat[j * gnx + i] = grid.push(p) - 1
+      if (inC.has(p) && W.distance(p, wg + 0.01) >= wg) lat[j * gnx + i] = grid.push(p) - 1
     }
   const wallDist = grid.map((p) => W.distance(p, 4 * r + 1))
   const startDead = new Uint8Array(grid.length)
@@ -297,14 +303,13 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
 
   let at: P | null = null
   const linkTo = (q: P) => {
-    if (at) items.push({ k: 'link', to: q, clear: W.clear(at, q, r) && ras.countCapsule(at, q, r) === 0 })
+    if (at) items.push({ k: 'link', to: q, clear: W.clear(at, q, wg) && ras.countCapsule(at, q, r) === 0 })
   }
 
   for (let guard = 0; guard < 100000; guard++) {
-    if ((guard & 15) === 0) {
-      checkCancel(work?.isCancelled)
-      work?.progress?.(1 - ras.total() * cellA / total, 'Adaptive clearing')
-    }
+    if ((guard & 15) === 0) checkCancel(work?.isCancelled)
+    // (counting what is left reads the whole raster: not too often)
+    if ((guard & 255) === 0) work?.progress?.(1 - (ras.total() * cellA) / total, 'Adaptive clearing')
     // 1. carry on from the nearest place beside the material
     const si = findStart(at, startDead)
     if (si >= 0) {
@@ -337,7 +342,7 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
     }
     if (ei >= 0) {
       const c = grid[ei]
-      const rho = Math.min(o.helixPct * r, wallDist[ei] - r - 0.02)
+      const rho = Math.min(o.helixPct * r, wallDist[ei] - wg - 0.02)
       if (rho < 0.1 * r) {
         entryDead[ei] = 1
         continue
@@ -398,7 +403,7 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
       const d = { x: Math.cos((k * Math.PI) / 36), y: Math.sin((k * Math.PI) / 36) }
       let L = 0
       for (let t = 0.25 * r; t <= 2 * r + 1e-9; t += 0.25 * r) {
-        if (!W.clear(s, { x: s.x + d.x * t, y: s.y + d.y * t }, r)) break
+        if (!W.clear(s, { x: s.x + d.x * t, y: s.y + d.y * t }, wg)) break
         L = t
       }
       if (L <= 0) continue
@@ -425,13 +430,13 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
       return { c: best, d: bestD }
     }
     let mid = middle(s, m, r)
-    let rho = Math.min(r, mid.d - r - 0.02)
+    let rho = Math.min(r, mid.d - wg - 0.02)
     if (rho < rhoMin) return null
     // back off along the channel until the first circle lies in cleared area
     let centre = mid.c
     for (let k = 0; k < 40 && ras.countCapsule(centre, centre, rho + r) > 0; k++) {
       const c = { x: centre.x - m.x * 0.25 * r, y: centre.y - m.y * 0.25 * r }
-      if (!W.clear(centre, c, r + rho)) break
+      if (!W.clear(centre, c, wg + rho)) break
       centre = c
     }
     // loops of 12 straight moves (short moves are measured less precisely on the raster)
@@ -451,7 +456,7 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
     let tip = { x: centre.x + rho * Math.cos(phi0), y: centre.y + rho * Math.sin(phi0) }
     const L0 = Math.hypot(tip.x - s.x, tip.y - s.y)
     if (L0 > 1e-9) {
-      if (!W.clear(s, tip, r) || ras.countCapsule(s, tip, r) > 0) return null
+      if (!W.clear(s, tip, wg) || ras.countCapsule(s, tip, r) > 0) return null
       pts.push(tip)
       loads.push(0)
     }
@@ -463,9 +468,9 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
       for (const a of [0, 15, -15, 30, -30, 45, -45, 60, -60]) {
         const d: P = rot(dir, a * DEG)
         const mm = middle({ x: centre.x + d.x * pitch, y: centre.y + d.y * pitch }, d, Math.min(r, 2 * pitch + 0.5 * rho))
-        const rr = Math.min(r, mm.d - r - 0.02, rho * 1.25)
+        const rr = Math.min(r, mm.d - wg - 0.02, rho * 1.25)
         // the circle changes radius over the loop: the larger radius must clear the walls all along
-        if (rr < rhoMin || !W.clear(centre, mm.c, r + Math.max(rho, rr))) continue
+        if (rr < rhoMin || !W.clear(centre, mm.c, wg + Math.max(rho, rr))) continue
         if (ras.countCapsule(mm.c, mm.c, rr + r + pitch) === 0) continue
         step1 = { c: mm.c, d, rho: rr }
         break
@@ -505,8 +510,8 @@ export function planAdaptive(material: P[][], centres: P[][], walls: P[][], o: A
           if (pitch < 0.01 * r) break
           const d: P = step1.d
           const mm = middle({ x: centre.x + d.x * pitch, y: centre.y + d.y * pitch }, d, Math.min(r, 2 * pitch + 0.5 * rho))
-          const rr = Math.max(rhoMin, Math.min(r, mm.d - r - 0.02, rho * 1.25))
-          step1 = W.clear(centre, mm.c, r + Math.max(rho, rr)) ? { c: mm.c, d, rho: rr } : { c: centre, d, rho: Math.max(rhoMin, rho * 0.8) }
+          const rr = Math.max(rhoMin, Math.min(r, mm.d - wg - 0.02, rho * 1.25))
+          step1 = W.clear(centre, mm.c, wg + Math.max(rho, rr)) ? { c: mm.c, d, rho: rr } : { c: centre, d, rho: Math.max(rhoMin, rho * 0.8) }
           continue
         }
         ok = { pts: lp, loads: ll, tip: prev }

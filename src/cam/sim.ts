@@ -7,7 +7,8 @@
  * Horizontal (edge) drilling runs below the surface, so it is backplotted but not carved.
  */
 import type { ToolShape } from '@/core/types'
-import { RAPID_RATE, simpleMoves, type Toolpath } from './toolpath'
+import { RAPID_RATE, simpleMoves } from './moves'
+import type { Toolpath } from './toolpath'
 
 export interface V3 {
   x: number
@@ -70,7 +71,8 @@ export interface SimWarning {
 const HOME: V3 = { x: 0, y: 0, z: 50 }
 const DRILL_DWELL_S = 1.8
 
-function cutterOf(tp: Toolpath, d?: number): Cutter {
+/** The simulator's cutter for a toolpath's tool (or a drill of diameter d). */
+export function cutterOf(tp: Toolpath, d?: number): Cutter {
   const t = tp.tool
   const shape: ToolShape = t?.shape ?? (tp.kind === 'drill' ? 'drill' : tp.kind === 'vcarve' ? 'v' : tp.kind === 'saw' ? 'saw' : 'flat')
   let dia = d ?? t?.diameter ?? 0

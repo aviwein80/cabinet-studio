@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { modelsFor } from '@/cam/doc'
 import type { Mesh } from '@/cam/mesh/types'
 import { isFlatLayer, pathKey, type Toolpath } from '@/cam/toolpath'
 import { compute } from '@/cam/worker/client'
@@ -34,8 +35,8 @@ function useJob3dPaths(job: Job | undefined, data: AppData | null) {
         if (abort.signal.aborted) return
         try {
           const meshes: Record<string, Mesh> = {}
-          const model = 'surface' in op ? part.models?.find((m) => m.id === op.surface.modelId) : undefined
-          if (model) meshes[model.blob] = await loadModelMesh(model.blob)
+          const ids = modelsFor(op, part)
+          for (const m of part.models ?? []) if (ids.includes(m.id)) meshes[m.blob] = await loadModelMesh(m.blob)
           const [tp] = await compute().run('cam.generate', { part, machine: data.machine, opIds: [op.id], meshes }, { signal: abort.signal })
           done3d.set(key, tp)
           if (done3d.size > 64) done3d.delete(done3d.keys().next().value!)

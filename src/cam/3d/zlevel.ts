@@ -2,8 +2,9 @@
  * Z-level roughing (3D-01). The stock is cut in flat levels from face 1 down. At each level the
  * tool may stand wherever the tool-centre surface (with stock to leave) is at or below the level;
  * that area, inside the boundary, is cleared like a pocket: offset rings from the inside out, or
- * zig-zag lines, ending with a pass along the walls. The tool goes down into each area by helix,
- * ramp or plunge. Extra levels sit on the model's flat areas.
+ * zig-zag lines, ending with a pass along the walls, or adaptive clearing (a steady width of cut,
+ * `src/cam/adaptive`). The tool goes down into each area by helix, ramp or plunge. Extra levels sit
+ * on the model's flat areas.
  *
  * Every cutting move is checked with exact drops before it is kept: a move that would touch the
  * model (closer than the stock to leave) is cut out of the path and the tool lifts over that spot.
@@ -12,6 +13,7 @@ import { checkCancel, subWork, type Work } from '@/core/cancel'
 import type { Tool } from '@/core/types'
 import type { P } from '../geom'
 import { clipPolys, inflatePolys, polyArea } from '../kernel'
+import { planAdaptive } from '../adaptive/adaptive'
 import { type Mesh, meshBounds } from '../mesh/types'
 import type { Move } from '../toolpath'
 import type { Rough3dOp } from '../types'
@@ -32,6 +34,8 @@ export interface Rough3dResult {
   layers: Layer[]
   /** Places where the safety check cut a pass short (normally 0). */
   trimmed: number
+  /** Adaptive clearing: trochoidal move ranges (indices into `moves`). */
+  sections?: { from: number; to: number }[]
 }
 
 interface Path {
@@ -147,9 +151,11 @@ export function zLevelRough(op: Rough3dOp, mesh: Mesh, cutter: Cutter3D, region:
 
   const moves: Move[] = []
   const layers: Layer[] = []
+  const sections: { from: number; to: number }[] = []
+  let cutAny = false
   let minZ = Infinity
   let at = { x: 0, y: 0, z: clear }
-  const go = (t: 'rapid' | 'feed', x: number, y: number, z: number, f: 'cut' | 'plunge' = 'cut') => {
+  const go = (t: 'rapid' | 'feed', x: number, y: number, z: number, f: 'cut' | 'plunge' | 'lead' = 'cut') => {
     if (Math.abs(x - at.x) < 1e-9 && Math.abs(y - at.y) < 1e-9 && Math.abs(z - at.z) < 1e-9) return
     moves.push(t === 'rapid' ? { t, x, y, z } : { t, x, y, z, f })
     at = { x, y, z }
@@ -174,6 +180,10 @@ export function zLevelRough(op: Rough3dOp, mesh: Mesh, cutter: Cutter3D, region:
     const loops = grid.loops(z, tol, gougeTol).map((l) => l.pts.map((p) => ({ x: p.x, y: p.y })))
     const allowed = clipPolys('intersect', loops, work0).filter((p) => Math.abs(polyArea(p)) > 1e-4)
     if (!allowed.length) return
+    if (op.pattern === 'adaptive') {
+      adaptiveLevel(z, prevZ, allowed, li)
+      return
+    }
     const outers = allowed.filter((p) => polyArea(p) > 0)
     const compOf = (p: P) => {
       let best = -1
@@ -280,6 +290,98 @@ export function zLevelRough(op: Rough3dOp, mesh: Mesh, cutter: Cutter3D, region:
   })
   go('rapid', at.x, at.y, clear)
 
+  /**
+   * Adaptive clearing of one level: the area the tool can reach (where its centre may stand, grown
+   * by its radius, on the part) is the material; the centre stays inside where it may stand. The
+   * tool counts as a cylinder of its full radius. Every pass is checked like the other patterns
+   * before it is kept.
+   */
+  function adaptiveLevel(z: number, prevZ: number, allowed: P[][], li: number) {
+    const a = op.adaptive
+    if (!a) return
+    const width = a.angle && a.angle > 0 ? R * (1 - Math.cos((Math.min(180, a.angle) * Math.PI) / 180)) : Math.max(0.01, a.width) * 2 * R
+    // the material runs on past the edges of the panel by the corner radius: a tool whose disc
+    // only grazes an edge would leave its corner radius standing on the floor there
+    // (and a millimetre more, as strips thinner than that count as crumbs and are left)
+    const e = cutter.kind === 'torus' && cutter.rc > 0 ? cutter.rc + 1 : 0
+    const part = [{ x: -e, y: -e }, { x: stock.length + e, y: -e }, { x: stock.length + e, y: stock.width + e }, { x: -e, y: stock.width + e }]
+    const material = clipPolys('intersect', inflatePolys(allowed, R, 'round', 0.001), [part])
+    if (!material.length) return
+    const span = 0.75 / zs.length
+    // a bull-nose's helix stays within its flat bottom, so it leaves no peak in the middle
+    const flat = cutter.kind === 'torus' ? cutter.R - cutter.rc : 0
+    const helixPct = flat > 0.1 * R ? Math.min(op.helixPct, (0.95 * flat) / R) : op.helixPct
+    const plan = planAdaptive(material, allowed, allowed, { r: R, target: width, smoothing: Math.max(0, a.smoothing), climb: op.direction === 'climb', helixPct, wallGap: 0.01 }, subWork(work, 0.25 + span * li, span))
+    for (const w of plan.warnings) if (!warnings.includes(w)) warnings.push(w)
+    const comp: Region = { polys: allowed, fromModel: false }
+    const boost = Math.max(1, a.feedBoost || 1)
+    const lift = Math.max(0, a.lift)
+    // after an entry that is not safe, nothing until the next entry (that area was never opened)
+    let skip = false
+    for (const it of plan.items) {
+      if (it.k === 'helix') {
+        const ring = Array.from({ length: 24 }, (_, k) => ({ x: it.c.x + it.rho * Math.cos((k * Math.PI) / 12), y: it.c.y + it.rho * Math.sin((k * Math.PI) / 12) }))
+        skip = !ring.every((q) => safe(q.x, q.y, z)) || !safe(it.start.x, it.start.y, z)
+        if (skip) {
+          trimmed++
+          continue
+        }
+        go('rapid', at.x, at.y, clear)
+        go('rapid', it.start.x, it.start.y, clear)
+        go('rapid', it.start.x, it.start.y, prevZ + op.levels.rapidZ)
+        go('feed', it.start.x, it.start.y, prevZ, 'plunge')
+        // turns down round c, ending at the start of the first pass
+        const dz = prevZ - z
+        const pitch = Math.max(0.5, 2 * Math.PI * it.rho * rampTan)
+        const turns = Math.max(1, Math.ceil(dz / pitch))
+        const W = { x: 2 * it.c.x - it.start.x, y: 2 * it.c.y - it.start.y }
+        const ccw = true
+        for (let i = 0; i < turns; i++) {
+          moves.push({ t: 'arc', x: W.x, y: W.y, z: prevZ - (dz * (i + 0.5)) / turns, cx: it.c.x, cy: it.c.y, ccw, f: 'plunge' })
+          moves.push({ t: 'arc', x: it.start.x, y: it.start.y, z: prevZ - (dz * (i + 1)) / turns, cx: it.c.x, cy: it.c.y, ccw, f: 'plunge' })
+        }
+        moves.push({ t: 'arc', x: W.x, y: W.y, z, cx: it.c.x, cy: it.c.y, ccw, f: 'cut' })
+        moves.push({ t: 'arc', x: it.start.x, y: it.start.y, z, cx: it.c.x, cy: it.c.y, ccw, f: 'cut' })
+        at = { x: it.start.x, y: it.start.y, z }
+        minZ = Math.min(minZ, z)
+      } else if (skip) continue
+      else if (it.k === 'link') {
+        if (it.clear && segSafe(at, it.to, z + lift)) {
+          go('feed', at.x, at.y, z + lift, 'lead')
+          moves.push({ t: 'feed', x: it.to.x, y: it.to.y, z: z + lift, f: 'lead', ...(boost > 1 ? { k: boost } : {}) })
+          at = { x: it.to.x, y: it.to.y, z: z + lift }
+          go('feed', it.to.x, it.to.y, z, 'lead')
+        } else {
+          go('rapid', at.x, at.y, clear)
+          go('rapid', it.to.x, it.to.y, clear)
+          go('rapid', it.to.x, it.to.y, prevZ + op.levels.rapidZ)
+          go('feed', it.to.x, it.to.y, z, 'plunge')
+        }
+      } else {
+        const path: Path = { pts: [{ x: at.x, y: at.y }, ...it.pts], closed: false, k: -1 }
+        const pieces = checked(path, z)
+        const from = moves.length
+        if (pieces.length === 1 && pieces[0].pts.length === path.pts.length) {
+          it.pts.forEach((q, i) => {
+            const k = boost > 1 ? Math.min(boost, Math.max(1, width / Math.max(1e-9, it.load[i]))) : 1
+            moves.push({ t: 'feed', x: q.x, y: q.y, z, f: 'cut', ...(k > 1 ? { k } : {}) })
+          })
+          at = { ...it.pts[it.pts.length - 1], z }
+        } else
+          // the safety check cut the pass: what is left is cut at the plain feed, each piece entered
+          // like the other patterns
+          for (const pc of pieces) {
+            const S = pc.pts[0]
+            if (Math.hypot(S.x - at.x, S.y - at.y) > 1e-9 || Math.abs(at.z - z) > 1e-9) enter(pc, z, prevZ, comp)
+            run(pc.pts.slice(1), z)
+          }
+        if (it.trochoidal && moves.length > from) sections.push({ from, to: moves.length })
+        cutAny = true
+        minZ = Math.min(minZ, z)
+      }
+    }
+  }
+
   function enter(p: Path, z: number, prevZ: number, comp: Region) {
     const S = p.pts[0]
     go('rapid', at.x, at.y, clear)
@@ -340,8 +442,8 @@ export function zLevelRough(op: Rough3dOp, mesh: Mesh, cutter: Cutter3D, region:
     go('feed', S.x, S.y, z, 'plunge')
   }
 
-  if (!layers.length) return none('Nothing to rough inside the boundary.')
-  return { moves, warnings, minZ: Number.isFinite(minZ) ? minZ : NaN, levels: zs, layers, trimmed }
+  if (!layers.length && !cutAny) return none('Nothing to rough inside the boundary.')
+  return { moves, warnings, minZ: Number.isFinite(minZ) ? minZ : NaN, levels: zs, layers, trimmed, ...(sections.length ? { sections } : {}) }
 }
 
 /** Heights of the model's flat, upward-facing areas, with at least `minArea` of facets each. */

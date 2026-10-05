@@ -39,15 +39,18 @@ import {
   closestOnContour,
   atLength,
 } from './geom'
-import { breakAt, inflatePolys, normaliseWinding, offset, offsetChain } from './kernel'
+import { breakAt, clipPolys, inflatePolys, normaliseWinding, offset, offsetChain } from './kernel'
+import { RAPID_RATE, simpleMoves } from './moves'
 import { contourPolys, PolySet, restAt, restPieces, type SweepSource, sweptAt } from './adaptive/rest'
 import { planAdaptive } from './adaptive/adaptive'
 import { DEFAULT_ADAPTIVE, feedsFor, passDepths, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
+import { pencilFinish } from './3d/pencil'
 import { projectionFinish } from './3d/projection'
-import { centreRegion } from './3d/region'
+import { centreRegion, type Region } from './3d/region'
+import { restArea, restCentres } from './3d/rest3d'
 import { type Layer, waterlineFinish } from './3d/waterline'
 import { zLevelRough } from './3d/zlevel'
 import { placeMesh } from './mesh/place'
@@ -67,16 +70,7 @@ export type Move =
 /** A move that is not a 3D chain. */
 export type SimpleMove = Exclude<Move, { t: 'poly' }>
 
-/** Every move with 3D chains expanded into single feed moves (generated on the fly, not stored). */
-export function* simpleMoves(moves: Move[]): Generator<SimpleMove> {
-  for (const m of moves) {
-    if (m.t !== 'poly') {
-      yield m
-      continue
-    }
-    for (let i = 0; i + 2 < m.pts.length; i += 3) yield { t: 'feed', x: m.pts[i], y: m.pts[i + 1], z: m.pts[i + 2], f: m.f }
-  }
-}
+export { RAPID_RATE, simpleMoves } from './moves'
 
 export interface ContourPass {
   depth: number
@@ -129,7 +123,6 @@ export interface GenContext {
   done?: ReadonlyMap<string, Toolpath>
 }
 
-export const RAPID_RATE = 40000
 
 // ---------------------------------------------------------------------------------------------
 // Move builder
@@ -1175,8 +1168,11 @@ function genSweep(op: SweepOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 /** 3D operation kinds: they need a model's mesh. */
 export const OPS_3D: ReadonlySet<CamOp['kind']> = new Set(['finish3d', 'rough3d'])
 
-/** Adaptive clearing (a pocket with the adaptive pattern; rest machining wins over it). */
-export const isAdaptive = (op: CamOp) => op.kind === 'pocket' && op.pattern === 'adaptive' && !op.rest
+/**
+ * Adaptive clearing: a pocket with the adaptive pattern (rest machining wins over it), or Z-level
+ * roughing with it.
+ */
+export const isAdaptive = (op: CamOp) => (op.kind === 'pocket' && op.pattern === 'adaptive' && !op.rest) || (op.kind === 'rough3d' && op.pattern === 'adaptive')
 
 /**
  * Operations that can take seconds, so screens calculate them in the compute worker: 3D
@@ -1193,7 +1189,7 @@ export function inBackground(op: CamOp, part: CamPart): boolean {
  * their own switch. Everything else in 3D needs true 3D output, which stays off.
  */
 export function isFlatLayer(op: CamOp): boolean {
-  if (op.kind === 'rough3d') return true
+  if (op.kind === 'rough3d') return op.pattern !== 'adaptive'
   if (op.kind !== 'finish3d' || op.strategy !== 'waterline') return false
   return !(op.fillShallow && Math.max(op.slope.min, op.skipFlats ? 0.5 : 0) > 0)
 }
@@ -1252,6 +1248,25 @@ function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolea
 function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const m = model3d(op, ctx, tp)
   if (!m) return
+  const cutRegion = (region: Region): Region | null => {
+    if (!op.rest || op.strategy === 'projection') return region
+    // 3D rest machining: only where the earlier operations, as simulated, left material
+    const sources = restSources(op, ctx.part)
+    if (!sources.length) {
+      tp.warnings.push('Rest machining: there is no earlier milling operation to follow, so nothing is cut.')
+      return null
+    }
+    const paths = sources.map((s) => ctx.done?.get(s.id) ?? generateOp(s, { part: ctx.part, machine: ctx.machine, meshes: ctx.meshes, done: ctx.done }))
+    const cell = Math.min(0.25, Math.max(0.05, m.cutter.R / 6))
+    const min = Math.max(0.01, op.rest.minThickness)
+    const ra = restArea(m.placed, paths, ctx.part, { cutter: m.cutter, stock: Math.max(0, op.surface.stockToLeave), min, cell })
+    if (!ra.rest.length) {
+      tp.warnings.push(`Rest machining: the earlier operations left nothing thicker than ${min} mm that this tool can reach.`)
+      return null
+    }
+    tp.warnings.push(`Rest machining: ${ra.area.toFixed(0)} mm² left by the earlier operations that this tool can reach (up to ${ra.thickest.toFixed(2)} mm thick, as simulated).`)
+    return { polys: clipPolys('intersect', region.polys, restCentres(ra.rest, m.cutter.R, cell)), fromModel: false }
+  }
   if (op.strategy === 'projection') {
     // the picked shapes on face 1 are the pattern; the depth below the surface is cut like engraving
     const paths = geometryOf(op, ctx.part)
@@ -1264,7 +1279,8 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     depthWarnings(r.minZ, ctx, tp)
     return
   }
-  const region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed))
+  const region = cutRegion(centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed)))
+  if (!region) return
   if (op.strategy === 'waterline') {
     const r = waterlineFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
     tp.warnings.push(...r.warnings)
@@ -1273,7 +1289,7 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     if (isFlatLayer(op)) layerIntents(r.layers, tp, op.name, true)
     return
   }
-  const r = parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+  const r = op.strategy === 'pencil' ? pencilFinish(op, m.placed, m.cutter, region, op.levels, ctx.work) : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)
@@ -1283,10 +1299,22 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const m = model3d(op, ctx, tp)
   if (!m) return
   const region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed))
-  const r = zLevelRough(op, m.placed, m.cutter, region, ctx.part, tp.tool!, ctx.work)
+  const adaptive = op.pattern === 'adaptive'
+  const r = zLevelRough(adaptive ? { ...op, adaptive: op.adaptive ?? DEFAULT_ADAPTIVE } : op, m.placed, m.cutter, region, ctx.part, tp.tool!, ctx.work)
   tp.warnings.push(...r.warnings)
-  b.moves.push(...r.moves)
+  const off = b.moves.length
+  // (one at a time: adaptive clearing can make more moves than a call takes arguments)
+  for (const mv of r.moves) b.moves.push(mv)
   depthWarnings(r.minZ, ctx, tp)
+  if (adaptive) {
+    if (r.sections?.length) {
+      tp.sections = r.sections.map((s) => ({ kind: 'trochoidal' as const, from: s.from + off, to: s.to + off }))
+      tp.warnings.push(`${r.sections.length} narrow place(s) cleared with trochoidal loops.`)
+    }
+    if (r.trimmed) tp.warnings.push(`The safety check cut ${r.trimmed} adaptive pass(es) or entries short where the tool would touch the model; the width of cut after them may be higher than planned. Simulate it.`)
+    if (r.moves.length) tp.warnings.push('Adaptive clearing per level is not written to woodWOP yet; simulate it.')
+    return
+  }
   layerIntents(r.layers, tp, op.name, op.entry !== 'plunge')
   if (r.layers.length) tp.warnings.push('For woodWOP, Z-level roughing is written as contour-milling passes level by level; the machine makes its own approach for each pass instead of the helix or ramp shown here.')
 }

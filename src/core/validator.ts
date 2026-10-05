@@ -254,7 +254,7 @@ export function validateJob(
           ...ref,
           severity: 'error',
           code: 'CAM_ADAPTIVE_NO_OUTPUT',
-          message: `Custom part #${c.partNo} ${name}: ${c.adaptiveOps} adaptive-clearing pocket(s) cannot be written to woodWOP yet (its entry helixes, lifted moves back and steady width of cut have no contour-milling form that is confirmed). Only simulate it, or use follow-shape or back-and-forth for the program.`,
+          message: `Custom part #${c.partNo} ${name}: ${c.adaptiveOps} adaptive-clearing operation(s) (pockets or Z-level roughing) cannot be written to woodWOP yet (their entry helixes, lifted moves back and steady width of cut have no contour-milling form that is confirmed). Only simulate them, or use follow-shape or back-and-forth for the program.`,
         })
       if (c.flat3d && !c.flat3dWritten) {
         const off = !featuresOf(settings).cam3dMprOutput || !c.written

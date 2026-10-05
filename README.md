@@ -123,7 +123,9 @@ export checker. Tool numbers are still placeholders.
 - **3D roughing (Z-level)** (Machining → Add operation, when the part has a model): cuts the
   stock away in flat levels from the top of the part down, leaving a set amount on the walls and
   on the floors. Each level is cleared like a pocket (follow the shape from the inside out, or
-  back and forth), ending with a pass along the model. You set:
+  back and forth), ending with a pass along the model, or with **adaptive clearing** (a steady
+  width of cut, as in pockets; calculated in the background, simulation only, not written to
+  woodWOP). You set:
   - the step-down, step-over, direction and pattern;
   - the entry: helix, ramp, or straight down (a tool that cannot plunge gets a ramp instead);
   - extra levels on the model's flat areas, so they are left with only the floor stock;
@@ -140,6 +142,12 @@ export checker. Tool numbers are still placeholders.
     engrave below the surface (lettering on a carved or curved face), in passes like 2D
     engraving. Below the surface, protected facet groups and groups not chosen are kept clear.
     The smallest ball-nose is picked unless you choose a tool (a V-bit works too).
+  - **Pencil**: one pass along each valley and inside corner of the model, where the tool touches
+    two surfaces at once (for example where a panel's bevel meets its border). Valleys flatter
+    than a set angle are left out. The smallest ball-nose is picked unless you choose a tool.
+  - **Rest machining** (parallel, waterline and pencil): a smaller tool cuts only where the earlier
+    operations left material it can reach. The earlier toolpaths are simulated to find what they
+    left; rest thinner than a set amount is left out.
 
   You set:
   - the step-over (or step-down), stock to leave and tolerance;
@@ -155,9 +163,10 @@ export checker. Tool numbers are still placeholders.
   Z-level roughing and waterline are written as ordinary contour-milling macros, one per pass
   per level, so each one can be edited in woodWOP. The machine makes its own approach for each
   pass. The job page calculates the 3D toolpaths in the background before export.
-  - Parallel and projection finishing, and waterline with the shallow-area fill, need true 3D
-    output. The export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is confirmed with a
-    program from the machine.
+  - Parallel, projection and pencil finishing, and waterline with the shallow-area fill, need true
+    3D output. The export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is
+    confirmed with a program from the machine. Adaptive Z-level roughing is blocked as adaptive
+    clearing (`CAM_ADAPTIVE_NO_OUTPUT`).
   - With the switch off, the checker blocks the flat-layer operations too (`CAM_3D_OUTPUT_OFF`).
   - Batch runs cannot calculate 3D toolpaths yet (`CAM_3D_NOT_READY`).
 - **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and a ghost tool.

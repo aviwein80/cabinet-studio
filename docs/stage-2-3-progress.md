@@ -17,12 +17,13 @@ Read this first at the start of every run. Sources:
 | M2.2c Projection finishing, performance | **Done** (October 2026) | See below. M2.2 complete. |
 | M2.3a 2D rest machining | **Done** (October 2026) | See below. |
 | M2.3b Adaptive clearing (2D pockets) | **Done** (October 2026) | See below. Simulation only (woodWOP output blocked). |
-| M2.3c Adaptive Z-level roughing, 3D rest and pencil | **Next** | |
+| M2.3c Adaptive Z-level roughing, 3D rest and pencil | **Done** (October 2026) | See below. M2.3 complete. Simulation only (woodWOP output blocked). |
 | M2.4 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
-(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped).
+(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
+skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -297,8 +298,8 @@ calculation); a recipe made from a rest pocket follows every earlier operation i
 
 ### Limits recorded
 
-- **Rest from 3D operations is not counted** (only profile, pocket, engrave, V-carve and sweep).
-  3D rest machining is M2.3c.
+- **Rest from 3D operations is not counted** by 2D rest pockets (only profile, pocket, engrave,
+  V-carve and sweep). 3D finishing has its own rest machining (M2.3c), which counts both.
 - **woodWOP's own pocket macro**: for a rectangular earlier pocket written as `<112 Tasche`, the
   rest is worked out from our toolpath of that pocket, not from woodWOP's. Both use the same tool
   and step-over, so the corners match; a cusp woodWOP leaves between its own passes would not be
@@ -333,16 +334,73 @@ calculation); a recipe made from a rest pocket follows every earlier operation i
 - **Trochoidal loops need room**: a channel narrower than about the tool diameter plus 0.3 x the
   tool radius is left, with a warning to finish it with rest machining and a smaller tool. Nothing
   is ever cut at full width.
-- **Adaptive per Z level of 3D roughing** is M2.3c.
+- **Adaptive per Z level of 3D roughing**: done in M2.3c.
 - **woodWOP output** is a decision (see the report): each pass could become a contour-milling
   pass, but woodWOP would plunge at each start (our helix entries and lifted moves back are not
   in that form).
 
-## Next run: M2.3c
+## M2.3c adaptive Z-level roughing, 3D rest and pencil: what was built
 
-- **Adaptive clearing per Z level** in Z-level roughing.
-- **3D rest and pencil (3D-06):** material left by a larger tool; pencil pass along valleys
-  within 0.02 mm.
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-06 pencil | Finishing strategy "Pencil": one pass along each valley and inside corner, where the tool touches two surfaces at once. Found on the tool-centre surface: on a grid of exact drops, the point where the tool touches the model jumps across a valley. Each crossing is pinned to 0.001 mm by bisection (a real valley keeps its jump however short the step; a tight smooth curve does not), crossings are joined into chains, and each chain is split until its straight pieces follow the valley within half the tolerance. Heights are exact drops, refined like every other strategy. Setting: valleys sharper than N° (default 5, placeholder). Picks the smallest ball-nose | `src/cam/3d/pencil.ts`; the drop-cutter now records where it touches (`hitX`, `hitY`, `hitZ`) |
+| 3D-06 rest | "Rest machining" for parallel, waterline and pencil finishing. The earlier operations' real toolpaths (2D and 3D) are carved into a heightfield (level moves exactly, sloped moves in short steps). The surface this tool can reach is found by dropping it at every cell near where material is left. Where the stock is thicker than a set amount over that surface (square to the surface), there is rest; the rest areas, grown by the tool radius, limit where the tool centre goes. "Left by": every earlier milling operation, or one picked | `src/cam/3d/rest3d.ts`, `cutRegion` in `genFinish3d`, `restSources` and `modelsFor` in `src/cam/doc.ts` |
+| NEW-01 in 3D | Z-level roughing pattern "Adaptive": each level is planned by the pocket planner (steady width of cut, helix entries, lifted moves back, trochoidal loops, adaptive feed). The material is what the tool can reach at that level (where its centre may stand, grown by its radius, on the panel and up to its corner radius + 1 mm past the edges); the centre stays where it may stand (new planner option `wallGap`: 0.01 mm here, the tool radius for pockets, so pockets are unchanged). A bull-nose's helix stays inside its flat bottom. Every pass and entry goes through the roughing's exact-drop safety check before it is kept | `adaptiveLevel` in `src/cam/3d/zlevel.ts`, `src/cam/adaptive/adaptive.ts` |
+| Screens | Pencil in the add menu and the strategy list (valley angle); rest machining switch, "Left by" and minimum thickness for 3D finishing; adaptive pattern and its fields for Z-level roughing (shared with pockets). All calculated in the compute worker; a rest pass also gets the earlier operations' models | `OpsPanel.tsx`, `use3dToolpaths.ts`, `src/app/jobOutput.ts` |
+| Export | Pencil, and rest on parallel or pencil: true 3D, blocked (`CAM_3D_NO_OUTPUT`). Waterline with rest stays a flat layer (behind its switch, off). Adaptive Z-level roughing: blocked as adaptive clearing (`CAM_ADAPTIVE_NO_OUTPUT`, now worded for pockets or roughing); it is not a flat layer and makes no contour passes | `isFlatLayer`, `isAdaptive` in `src/cam/toolpath.ts`, `src/core/machining.ts`, `validator.ts` |
+
+Other changes: `RAPID_RATE` and `simpleMoves` moved to `src/cam/moves.ts` (no import cycle with the
+simulator); the simulator's `cutterOf` is exported; progress in the adaptive planner is counted
+less often (no change to any toolpath).
+
+### Acceptance (M2.3 criteria for 3D rest and pencil, and adaptive per level)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Pencil follows valleys on a test model within 0.02 mm | `tests/cam-3d-pencil-rest.test.ts` (analytic lines) | Raised panel, 6 mm ball (bevel 1 in 4 meeting the border): 1,908 points (moves sampled every 0.25 mm, 8 mm round the corners left out) within 0.0003 mm in plan of the line 0.369 mm outside the bevel's foot, height exact. 45° V groove: 0.0005 mm in plan and height (6 mm and 3 mm balls); diagonal groove 0.0003 mm. All the way round / along |
+| Pencil: no gouges, no false valleys | same | Exact gouge check ≤ 0.005 mm on every model. Sine and cove (radius larger than the tool): no valleys found, clear warning. Valley angle 20° leaves out the 14° bevel and keeps the 90° groove. Stock to leave 0.3 mm held to 0.001 mm |
+| 3D rest cuts only where the earlier tool left material | same | V groove after a 6 mm ball (1 mm step-over), rest with a 3 mm ball: every cut within 3.25 mm of the groove (limit 3.89 = where the 6 mm ball touches + tool radius + a cell); 653 mm of cutting against 17,684 mm for a full finish (3.7 %); exact gouge check ≤ 0.005 mm |
+| 3D rest removes the rest | same (simulated) | Thickest a 3 mm ball can still remove, square to the surface: 0.428 mm after the 6 mm ball, 0.033 mm after the rest pass |
+| Nothing to follow, nothing left | same | No earlier operation, or the same tool before: no moves and a clear warning |
+| Associativity | same | Changing the earlier operation, the minimum thickness or the valley angle marks it stale; templates follow every earlier operation |
+| Carving and model raster | same | Level moves carved exactly (0 difference from the analytic); sloped moves never below the swept tool, at most the set cusp above it; the model's top and slope per cell match exact needle drops |
+| Adaptive per level: engagement ≤ target + 10 % per move | `tests/cam-3d-adaptive.test.ts` (independent checker, material worked out by hand) | Block 40 x 30 x 12 on 100 x 80, 12 mm R2 bull-nose, target 1.8 mm: levels -3 and -12 widest 1.661 mm (92.3 %). Hemisphere with 0.5 mm stock: levels -12 and -19.5 widest 1.690 (93.9 %) and 1.680 (93.4 %) |
+| No full-width moves outside flagged trochoidal sections | same | 0 at every level checked |
+| Clears the level | same (simulated) | Block: everything more than 2.5 mm from the block is down to the floor within 0.05 mm (0.03 mm at worst, in a corner). Hemisphere: 106.5 cm³ removed, the same as offset rings (within 1 %) |
+| No gouges, feed, output | same | Sampled gouge check ≤ 0.005 mm. Feed factors between 1 and the set limit. Export blocked (`CAM_ADAPTIVE_NO_OUTPUT` once, no `CAM_3D_NO_OUTPUT`), no contour passes |
+| Performance | `tests/perf.test.ts` | 600 x 400 mm relief, 4 levels, 12 mm tool: about 37 s on its own, 50 s under the test runner (limit 90 s); in the background worker with progress. 3D rest of a 200 x 150 mm panel: 0.65 s |
+| Goldens | `tests/golden/cam3d/{pencil-raised-panel,pencil-v-diagonal,rest-v-groove,rough-hemisphere-adaptive}` | 4 new 3D digests. All Stage 1, 2D and earlier 3D goldens unchanged |
+
+### Limits recorded
+
+- **Pencil on meshes sampled on a grid**: a sharp ridge that runs across the grid becomes a row of
+  small facet valleys, and a small ball follows them (seen on a 2 mm-cell relief door with a
+  3 mm ball). Harmless (it rides the mesh) but wasted motion. Raise the valley angle, or use a
+  mesh whose facets follow the ridge, as CAD exports do. On the coarse test dome, part of the
+  ring rides up the facets' own valleys at the foot.
+- **One pencil pass per valley** (no extra offset passes either side yet).
+- **3D rest is cut with the strategy's own passes**, clipped to the rest areas. A parallel rest
+  pass links across the part between rest strips on every pass (on the screenshot door, 11 min
+  of mostly links for a 4.5 mm band round the bevel). Pencil is the efficient choice for valleys;
+  ordering rest pieces is a later improvement.
+- **3D rest accuracy**: heightfield cells of 0.25 mm (finer for tools under 3 mm). Sloped moves of
+  the earlier operations are stamped in steps that can show up to a quarter of the minimum
+  thickness more rest on slopes up to 70° (more on steeper walls): extra cutting, never less.
+  The earlier operations are calculated again inside the rest calculation (seconds, in the
+  background).
+- **3D rest is for finishing only**: Z-level roughing does not yet follow an earlier roughing.
+- **Adaptive per level treats the tool as a cylinder of its full radius**: a bull-nose leaves its
+  corner radius at walls (as every pattern does); helix centres and panel edges are handled so the
+  floor is clean (0.03 mm). It cuts a little air past the panel edges.
+- **Z-level roughing of a model that does not cover the panel** (for example a closed box
+  standing on its own) finds nothing to rough, with every pattern: the level lines are only
+  found where the model is. Found in this run; it dates from M2.2b. Models covering the panel
+  (reliefs, doors) are fine. Proposed fix: treat the panel outside the model as the floor.
+
+## Next run: M2.4
+
+- **Stock simulation and collision (SIM-02, SIM-03, SIM-05, NEW-13)** as in the prompt.
+- Proposed fix for Z-level roughing of models that do not cover the panel (see M2.3c limits).
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -355,3 +413,4 @@ calculation); a recipe made from a rest pocket follows every earlier operation i
 - **Run 4 (M2.2c)**: projection finishing, faster clearance test, browser-preview fix. See `git log`.
 - **Run 4 (M2.3a)**: 2D rest machining. See `git log`.
 - **Run 4 (M2.3b)**: adaptive clearing in pockets. See `git log`.
+- **Run 4 (M2.3c)**: adaptive Z-level roughing, 3D rest machining, pencil pass. See `git log`.

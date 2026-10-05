@@ -147,9 +147,26 @@ describe('M2.3 performance', () => {
     expect(tp.warnings.join(' ')).not.toMatch(/could not reach/)
     expect(ms).toBeLessThan(PERF_LIMIT_ADAPTIVE_MS)
   }, 120_000)
+
+  it('adaptive clearing per Z level: the 600 x 400 mm relief, 12 mm tool, 3 mm step-down (in the background)', () => {
+    const f = (x: number, y: number) => -6 + 2.5 * Math.sin(x / 23) * Math.cos(y / 17) + 1.5 * Math.exp(-((x - 300) ** 2 + (y - 200) ** 2) / 3000)
+    const mesh = buildMesh(parseStl(stlBinary(relief(600, 400, 316, 316, f))), { gapTol: 0 }).mesh
+    const b = meshBounds(mesh)
+    const part = { ...newPart({ length: 600, width: 400, thickness: 19 }), models: [{ id: 'm', name: 'relief', kind: 'mesh' as const, blob: 'r', source: 'r.stl', units: 'mm' as const, place: { ...DEFAULT_PLACEMENT, at: [0, 0, b.max[2]] as [number, number, number] }, layer: 'models', visible: true, triangles: mesh.indices.length / 3, size: [600, 400, b.max[2] - b.min[2]] as [number, number, number] }] }
+    const base = defaultOp('rough3d') as Rough3dOp
+    const op: Rough3dOp = { ...base, pattern: 'adaptive', toolId: 't107', stepdown: 3, surface: { ...base.surface, modelId: 'm' } }
+    const t0 = performance.now()
+    const tp = generateOp(op, { part, machine: PLACEHOLDER_MACHINE, meshes: new Map([['r', mesh]]) })
+    const ms = performance.now() - t0
+    log(`adaptive Z-level roughing, 12 mm bull-nose, 3 mm step-down: ${tp.moves.length.toLocaleString('en')} moves, ${Math.round(tp.stats.cut / 1000)} m of cutting, in ${Math.round(ms)} ms`)
+    expect(tp.moves.length).toBeGreaterThan(1000)
+    expect(ms).toBeLessThan(PERF_LIMIT_ADAPTIVE_3D_MS)
+  }, 240_000)
 })
 
 const PERF_LIMIT_ADAPTIVE_MS = 10_000
+// (measured about 37 s; it runs in the compute worker with progress)
+const PERF_LIMIT_ADAPTIVE_3D_MS = 90_000
 const PERF_LIMIT_WATERLINE_MS = 8000
 const PERF_LIMIT_ROUGHING_MS = 20_000
 

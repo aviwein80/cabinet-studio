@@ -1,0 +1,26 @@
+{
+ "op": "3D roughing (Z-level)",
+ "kind": "rough3d",
+ "tool": 107,
+ "moves": {
+  "rapid": 57,
+  "feed": 17556,
+  "arc": 40,
+  "drill": 0,
+  "poly": 0,
+  "points": 0
+ },
+ "cutMm": 41970,
+ "box": [
+  -5.989,
+  -5.989,
+  -19.5,
+  85.988,
+  85.981,
+  0
+ ],
+ "warnings": [
+  "Adaptive clearing per level is not written to woodWOP yet; simulate it."
+ ],
+ "hash": "21287111"
+}

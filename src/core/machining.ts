@@ -309,7 +309,8 @@ export function buildSheetProgram(
       const backHoles = paths.reduce((n, tp) => n + tp.intents.filter((it) => it.k === 'vdrill' && it.back).length, 0)
       const machining = all.filter((o) => o.kind === 'cam')
       const enabled3d = inst.cam.ops.filter((o) => o.enabled && OPS_3D.has(o.kind))
-      const ops3d = enabled3d.filter((o) => !isFlatLayer(o)).length
+      // (adaptive Z-level roughing is reported with the other adaptive clearing)
+      const ops3d = enabled3d.filter((o) => !isFlatLayer(o) && !isAdaptive(o)).length
       const adaptiveOps = inst.cam.ops.filter((o) => o.enabled && isAdaptive(o)).length
       const flat = enabled3d.filter(isFlatLayer)
       const flatIds = new Set(flat.map((o) => o.id))

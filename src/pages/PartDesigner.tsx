@@ -33,6 +33,8 @@ import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
 import { use3dToolpaths } from './part/use3dToolpaths'
+import { appendStep } from '@/cam/more25d/edits'
+import type { PathPick } from './part/OpsPanel'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
 const PARAM_LABEL: Record<keyof ToolParams, string> = {
@@ -96,6 +98,8 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [selectedOp, setSelectedOp] = useState<string | null>(null)
   const [hiddenOps, setHiddenOps] = useState<Set<string>>(new Set())
   const [nodeSeg, setNodeSeg] = useState<{ id: string; seg: number } | null>(null)
+  /** Picking points for a hand-drawn toolpath (NEW-09): which operation, the kind of step and its height. */
+  const [pathPick, setPathPickState] = useState<PathPick | null>(null)
   const [fitKey, setFitKey] = useState(0)
   const [programOpen, setProgramOpen] = useState(false)
   const [simOpen, setSimOpen] = useState(false)
@@ -154,6 +158,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
 
   const chooseTool = (id: ToolId) => {
     const t = TOOL_BY_ID[id]
+    setPathPickState(null)
     setClicks([])
     setMessage('')
     setNodeSeg(null)
@@ -169,7 +174,29 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
     if (t.params?.includes('text')) setTimeout(() => document.getElementById('param-text')?.focus(), 0)
   }
 
+  const setPathPick = (pp: PathPick | null) => {
+    setPathPickState(pp)
+    setClicks([])
+    setToolId(pp ? 'pathpick' : 'select')
+    setMessage(pp ? (pp.kind === 'arc' ? (pp.through ? 'Pick the end of the arc' : 'Pick a point the arc passes through') : `Pick where the ${pp.kind === 'feed' ? 'feed line' : 'rapid'} goes`) : '')
+  }
+
+  const pickPathPoint = (p: P) => {
+    const op = pathPick && part.ops.find((o) => o.id === pathPick.opId)
+    if (!pathPick || !op || op.kind !== 'manual') return setPathPick(null)
+    const started = op.steps.length > 0 || op.start.x !== 0 || op.start.y !== 0 || op.start.z !== 0
+    if (pathPick.kind === 'arc' && started && !pathPick.through) return setPathPick({ ...pathPick, through: p })
+    const r = appendStep(op, pathPick.kind, p, pathPick.z, pathPick.through)
+    if ('error' in r) {
+      setPathPick({ ...pathPick, through: undefined })
+      return setMessage(r.error)
+    }
+    change({ ...part, ops: part.ops.map((o) => (o.id === op.id ? r : o)) })
+    setPathPick({ ...pathPick, through: undefined })
+  }
+
   const addClick = (c: Click) => {
+    if (toolId === 'pathpick') return pickPathPoint(c.p)
     if (tool.group === 'select') return
     if (tool.pick?.includes(clicks.length) && !c.hit) {
       setMessage('Click on a shape.')
@@ -255,7 +282,8 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
         return
       }
       if (e.key === 'Escape') {
-        if (clicks.length) cancel()
+        if (pathPick) setPathPick(null)
+        else if (clicks.length) cancel()
         else {
           setToolId('select')
           setSel([])
@@ -588,6 +616,8 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
                     })
                   }
                   onChange={change}
+                  pathPick={pathPick}
+                  setPathPick={setPathPick}
                 />
               </TabsContent>
             )}

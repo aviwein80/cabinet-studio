@@ -43,13 +43,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.5e Packaged-app check, screenshots, docs | **Done** (October 2026) | See below. M2.5 complete. |
 | M2.6a Saw cuts, facing, format v4, switches | **Done** (October 2026) | See below. |
 | M2.6b Chamfers, cuts between curves, along 3D curves, Z-waves | **Done** (October 2026) | See below. |
-| M2.6c - M2.6d | In progress | Hand-drawn toolpaths and edits; aggregate edge work, screenshots, docs. |
+| M2.6c Hand-drawn toolpaths, toolpath edits | **Done** (October 2026) | See below. |
+| M2.6d | In progress | Aggregate edge work, screenshots, docs. |
 | M2.7 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -824,6 +825,36 @@ proven output.
 - **Smooth curves through points** can swing outside the polyline at sharp corners (that is what a
   curve through the points does); use straight pieces there.
 
+## M2.6c hand-drawn toolpaths and toolpath edits: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NEW-09 | Hand-drawn toolpath: pick feed lines, arcs (through a point, then the end) and rapids on the drawing (snaps apply), at a set height; undo last; edit each step's X, Y, Z in a table or remove it; start point from the first pick or a selected point. Runs of cuts at one depth are written as contour passes (a straight plunge at a run's start is woodWOP's own approach) behind the M2.6 output switch; a run that changes depth while cutting is simulated only (`CAM_NO_OUTPUT`). Rapids below face 1 are warned about (and show as collisions) | `src/cam/more25d/edits.ts` (`appendStep`, `undoStep`, `arcThrough`), `genManual`, `EditsPanel.tsx` (`ManualFields`), the designer's pick mode |
+| NEW-11 | Toolpath edits on any operation except notes and drilling: slow down in corners (sharp turns, and arcs tighter than the distance that turn at least the angle; distance each side, steps, feed % at the corner); feed % on single moves or stretches; Z point by point; moves between cuts at another height; reverse (last cut first, each the other way; native contours reversed too; refused when a new start would plunge deeper than the tool may or the tool is not centre-cutting); pocket start points (rings start at the nearest point, back-and-forth lines from the nearer end). Arcs now carry a feed factor like feed moves (simulator, times and the template post use it) | `applyEdits`, `slowCorners`, `reverseMoves` in `edits.ts`; `editToolpath`, `reverseIntents` in `src/cam/toolpath.ts`; `EditsGroup` |
+| NEW-11 survive or flagged | Point edits are anchored to the unedited toolpath (move number + where it ended, and a hash of the whole path). On every calculation they are applied as made when the path is the same; moved to the move that now ends at the same point when it changed; otherwise counted as lost: the operation shows "Edits lost", a warning says so, and the export checker refuses it (`CAM_NO_OUTPUT`) until "Keep on the new toolpath" (re-anchors) or "Clear point edits". Rule-based edits always carry over | `locate`, `reanchor` |
+| Output | Feed and rapid-height edits are not written to woodWOP (warning: its contour macro keeps one feed and makes its own moves between passes); heights edited point by point refuse output; any edited operation needs the M2.6 output switch | `isMore25d`, `editToolpath` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Golden toolpaths on 3 reference parts per op | `tests/golden/cam25d/{man01-03, edit01-03}` | Hand-drawn: square groove; lines, an arc and a rapid between two depths; a ramp (refused for output). Edits: outline slowed in its 4 rolled corners; engraving reversed with lower moves between cuts; pocket from a start point with a slower stretch and one lower point (anchored as the screen anchors them). Earlier goldens unchanged |
+| Edits survive regeneration or are flagged | `tests/cam-manual-edits.test.ts` | Same path (only the feed changed): 1 applied as made. Two passes instead of one: the point at -6 found again on the last pass, 1 moved. Depth 8: 1 lost, warning, `CAM_NO_OUTPUT` ("keep or clear them"). After "keep": applied as made again; after clearing a lost one: written again |
+| Corner slow-down | same | Square 100 x 100, 10 mm, 2 steps, 40 %: pieces 90-95 at 70 %, 95-100 and 100-105 at 40 %, 105-110 at 70 %, the rest full; outline with rolled corners: 4 corners, factors 1 / 0.75 / 0.5, longer time |
+| Reverse | same | Engraving: simulated stock identical cell for cell (0.5 mm cells), first cut the old last one, native contours reversed; refused with a non-centre-cutting tool |
+| Hand-drawn path | same and a browser check | Picks become feed / arc (centre and direction from three points) / rapid steps; undo last; two contour passes at 2 and 4 mm for the two-depth path, no export errors with both switches on, `CAM_25D_OUTPUT_OFF` without the new one |
+| Start points | same | Every depth of a ring pocket plunges in the quarter nearest the start point; back-and-forth starts nearer it than without |
+
+### Limits recorded
+
+- **Point edits are for operations calculated in the designer** (not 3D or adaptive ones, which are
+  calculated in the background); rule-based edits work on all.
+- **A moved edit goes to the move ending at the same point** (within 0.01 mm), nearest in number;
+  on a path that visits the same point several times at the same height, it can land on another
+  visit. It is then reported as moved, so it can be checked.
+- **Reverse plunges straight down** at each new start (where the old cut ended); ramp and helix
+  entries become exits.
+
 
 ## Run log
 
@@ -848,3 +879,4 @@ proven output.
 - **Run 6 (M2.5e)**: packaged-app check (Linux), screenshots, README, ROADMAP. M2.5 complete.
 - **Run 7 (M2.6a)**: saw cuts, facing, format v4, switches. See `git log`.
 - **Run 7 (M2.6b)**: chamfers, cuts between curves, along 3D curves, Z-waves. See `git log`.
+- **Run 7 (M2.6c)**: hand-drawn toolpaths and toolpath edits. See `git log`.

@@ -223,6 +223,42 @@ interface OpBase {
   recipeId?: string
   /** Layer rule that made this op; applying the rules again replaces it. Absent = made by hand. */
   auto?: string
+  /** Changes made to the calculated toolpath (NEW-11). */
+  edits?: ToolpathEdits
+}
+
+/**
+ * A move of a calculated toolpath that an edit was made on: its number in the unedited toolpath
+ * (3D chains counted point by point) and where it ended then. When the toolpath is calculated
+ * again and differs, the edit is moved to the move that now ends at the same point; if there is
+ * none, the edit is lost and the operation is flagged.
+ */
+export interface MoveAnchor {
+  i: number
+  x: number
+  y: number
+  z: number
+}
+
+/**
+ * Edits on a calculated toolpath (NEW-11). Rule-based ones (corners, rapid height, reverse, start
+ * points) always carry over to a new toolpath; point edits use anchors.
+ */
+export interface ToolpathEdits {
+  /** Slow down near corners sharper than `angle` degrees: `distance` mm each side, in `steps`, down to `percent` % of the feed at the corner. */
+  corners?: { angle: number; distance: number; steps: number; percent: number }
+  /** Feed on stretches of moves (from and to included), percent of the operation's feed. */
+  feeds?: { from: MoveAnchor; to: MoveAnchor; percent: number }[]
+  /** Heights set point by point: the move ends at `z` (mm, 0 = face 1). */
+  z?: { at: MoveAnchor; z: number }[]
+  /** Moves between cuts at this height above face 1 instead of the safe height. */
+  rapidHeight?: number
+  /** Run the toolpath backwards: the last cut first, each the other way. */
+  reverse?: boolean
+  /** Pockets: each depth starts at the point of its first pass nearest one of these. */
+  starts?: { x: number; y: number }[]
+  /** Hash of the unedited toolpath the point edits were made on. */
+  base?: string
 }
 
 export interface ProfileOp extends OpBase {
@@ -520,7 +556,23 @@ export interface CurveOp extends OpBase {
   tolerance: number
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp
+/** One step of a hand-drawn toolpath: a straight feed, a rapid, or an arc (centre given) to a point. */
+export type ManualStep =
+  | { k: 'feed'; x: number; y: number; z: number }
+  | { k: 'rapid'; x: number; y: number; z: number }
+  | { k: 'arc'; x: number; y: number; z: number; cx: number; cy: number; ccw: boolean }
+
+/**
+ * Hand-drawn toolpath (NEW-09): the tool goes to `start` (from the safe height) and then runs the
+ * steps in order, as picked on the drawing.
+ */
+export interface ManualOp extends OpBase {
+  kind: 'manual'
+  start: { x: number; y: number; z: number }
+  steps: ManualStep[]
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

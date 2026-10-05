@@ -9,6 +9,7 @@ import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
 import { entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
 import { cutFloor, planSawCuts, type SawCut } from './more25d/saw'
 import { betweenCurves, type Chain3, smooth3, zWave } from './more25d/curves'
+import { applyEdits, movesHash } from './more25d/edits'
 import {
   add,
   arc,
@@ -61,14 +62,15 @@ import { modelClearance } from './collision/model'
 import { cutterOutline, holderOf } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, ChamferOp, CurveOp, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
   | { t: 'rapid'; x: number; y: number; z: number }
   /** `k`: adaptive feed, this move runs at k times the operation's feed (absent = 1). */
   | { t: 'feed'; x: number; y: number; z: number; f: FeedKind; k?: number }
-  | { t: 'arc'; x: number; y: number; z: number; cx: number; cy: number; ccw: boolean; f: FeedKind }
+  /** `k`: feed factor as on feed moves (toolpath edits slow arcs in corners). */
+  | { t: 'arc'; x: number; y: number; z: number; cx: number; cy: number; ccw: boolean; f: FeedKind; k?: number }
   | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number }
   /** 3D chain: straight feed moves through each (x, y, z) in `pts` in turn, from the current position. */
   | { t: 'poly'; pts: Float64Array; f: FeedKind }
@@ -128,6 +130,11 @@ export interface Toolpath {
   saw?: { r: number; kerf: number; tilt: number; runout: number; placeholderBlade: boolean; cuts: SawCut[] }
   /** Depths were measured from a faced top this far below face 1 (2D-16). */
   top?: number
+  /**
+   * Toolpath edits (NEW-11): hash of the unedited toolpath (point edits are made against it), and
+   * how many point edits were applied as made, moved to the matching move, or lost.
+   */
+  edited?: { base: string; applied: number; moved: number; lost: number; reversed: boolean }
 }
 
 export interface GenContext {
@@ -240,7 +247,7 @@ function stats(moves: Move[], feed: number) {
     }
     if (m.t === 'rapid') rapid += d
     else cut += d
-    if (m.t === 'feed' && m.k && m.k !== 1) boost += d / m.k - d
+    if ((m.t === 'feed' || m.t === 'arc') && m.k && m.k !== 1) boost += d / m.k - d
     x = m.x
     y = m.y
     z = m.z
@@ -652,6 +659,8 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 
   const circ = region.length === 1 && region[0].segs.every((s) => s.k === 'A') && new Set(region[0].segs.map((s) => radius(s as never).toFixed(6))).size === 1
 
+  const starts = op.edits?.starts?.length ? op.edits.starts : null
+  if (starts && op.pattern === 'spiral' && circ) tp.warnings.push('A spiral pocket always starts at its centre: the start point is not used.')
   depths.forEach((d, pi) => {
     const z = -d
     const prevZ = pi === 0 ? 0 : -depths[pi - 1]
@@ -660,10 +669,22 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
     else if (op.pattern === 'spiral' && circ) paths = [spiralCircle(region[0], r + op.stockXY, step, op.direction)]
     else paths = [...levels].reverse().flat().map(orient)
     if (op.pattern === 'zigzag' && op.finishPass) paths.push(...first.map(orient))
+    // NEW-11 start points: back-and-forth lines run from the end nearer a start point; rings start
+    // at the point nearest one
+    if (starts && op.pattern === 'zigzag' && paths.length) {
+      const near = (q: P) => Math.min(...starts.map((s0) => dist(s0, q)))
+      const lines = paths.filter((c) => !c.closed)
+      if (lines.length && near(endOf(lines[lines.length - 1])) < near(startOf(lines[0]) ) - 1e-9) paths = [...lines.reverse().map(reverse), ...paths.filter((c) => c.closed)]
+    }
     let started = false
     for (let i = 0; i < paths.length; i++) {
       let c = paths[i]
       if (started) c = rotateToNearest(c, { x: b.x, y: b.y })
+      else if (starts && c.closed) {
+        let best = starts[0]
+        for (const s0 of starts) if (dist(closestOnContour(c, s0).p, s0) < dist(closestOnContour(c, best).p, best)) best = s0
+        c = rotateToNearest(c, best)
+      }
       const S = startOf(c)
       const near = started && Math.hypot(S.x - b.x, S.y - b.y) <= step * 1.6 + 1e-6 && linkInside(slack, { x: b.x, y: b.y }, S)
       if (near) b.feed(S.x, S.y, z)
@@ -682,6 +703,7 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   // native intents
   const rectInfo = op.islands && region.length > 1 ? null : region.length === 1 ? asRectangle(region[0]) : null
   if (rectInfo && op.pattern !== 'zigzag') {
+    if (starts) tp.warnings.push("Start points are not written to woodWOP's pocket macro (it picks its own start).")
     tp.intents.push({
       k: 'pocket-rect',
       cx: rectInfo.cx,
@@ -1482,6 +1504,107 @@ function genCurve(op: CurveOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 }
 
 /**
+ * Hand-drawn toolpath (NEW-09): to the start from the safe height, then the steps as picked. Runs of
+ * cutting steps at one depth are written to woodWOP as contour passes (a straight-down plunge at
+ * the start of a run is woodWOP's own approach); a run that changes depth while it cuts cannot be.
+ */
+function genManual(op: ManualOp, _ctx: GenContext, tp: Toolpath, b: Builder) {
+  if (!op.steps.length) {
+    tp.warnings.push('Draw the toolpath: pick feed lines, arcs and rapids on the drawing.')
+    return
+  }
+  const lv = op.levels
+  const s0 = op.start
+  b.rapid(s0.x, s0.y, lv.safeZ)
+  if (s0.z < lv.rapidZ) {
+    b.rapid(s0.x, s0.y, lv.rapidZ)
+    b.feed(s0.x, s0.y, s0.z, 'plunge')
+  } else b.rapid(s0.x, s0.y, s0.z)
+  let run: Seg[] = []
+  let runZ = NaN
+  let varying = false
+  let rapidsIn = 0
+  let bent = 0
+  const flush = () => {
+    if (run.length && runZ < -1e-9) tp.intents.push({ k: 'contour', segs: run, closed: Math.hypot(run[0].a.x - run[run.length - 1].b.x, run[0].a.y - run[run.length - 1].b.y) < 1e-6, rk: 'NOWRK', approach: 'SEN', ramp: false, tool: tp.tool, label: op.name, passes: [{ depth: Math.round(-runZ * 1e6) / 1e6, from: 0, to: run.length - 1 }] })
+    run = []
+    runZ = NaN
+  }
+  for (const st of op.steps) {
+    const from = { x: b.x, y: b.y, z: b.z }
+    if (st.k === 'rapid') {
+      flush()
+      if (st.z < -1e-9) rapidsIn++
+      b.rapid(st.x, st.y, st.z)
+      continue
+    }
+    const vertical = Math.hypot(st.x - from.x, st.y - from.y) < 1e-9
+    if (vertical) {
+      // straight down (or up) at the start or end of a run: the approach, not part of the contour
+      if (run.length) flush()
+      b.feed(st.x, st.y, st.z, st.z < from.z ? 'plunge' : 'lead')
+      continue
+    }
+    if (!run.length) runZ = from.z
+    if (Math.abs(st.z - runZ) > 1e-9 || Math.abs(from.z - runZ) > 1e-9) varying = true
+    if (st.k === 'arc') {
+      const ra = Math.hypot(from.x - st.cx, from.y - st.cy)
+      const rb = Math.hypot(st.x - st.cx, st.y - st.cy)
+      if (Math.abs(ra - rb) > 0.01 || ra < 1e-6) {
+        bent++
+        run.push(line(from, st))
+        b.feed(st.x, st.y, st.z)
+        continue
+      }
+      run.push(arc(from, { x: st.x, y: st.y }, { x: st.cx, y: st.cy }, st.ccw))
+      b.moves.push({ t: 'arc', x: st.x, y: st.y, z: st.z, cx: st.cx, cy: st.cy, ccw: st.ccw, f: 'cut' })
+      Object.assign(b, { x: st.x, y: st.y, z: st.z })
+    } else {
+      run.push(line(from, st))
+      b.feed(st.x, st.y, st.z)
+    }
+  }
+  flush()
+  b.rapid(b.x, b.y, lv.safeZ)
+  if (rapidsIn) tp.warnings.push(`${rapidsIn} rapid(s) go below face 1: rapids through material are collisions. Check in the simulation.`)
+  if (bent) tp.warnings.push(`${bent} arc(s) do not fit their centre and were cut as straight lines.`)
+  if (varying) {
+    tp.intents = []
+    tp.noOutput = 'the hand-drawn toolpath changes depth while it cuts, which woodWOP contour passes cannot carry'
+  }
+}
+
+/** Contour, pocket and saw intents of a reversed toolpath: the other way round and in reverse order. */
+function reverseIntents(intents: Intent[]): Intent[] {
+  const flip = (rk: 'WRKL' | 'WRKR' | 'NOWRK') => (rk === 'WRKL' ? 'WRKR' : rk === 'WRKR' ? 'WRKL' : rk)
+  return [...intents].reverse().map((it) => {
+    if (it.k === 'contour') {
+      const n = it.segs.length
+      return { ...it, segs: reverse({ segs: it.segs, closed: it.closed }).segs, rk: flip(it.rk), passes: it.passes.map((p) => ({ ...p, from: n - 1 - p.to, to: n - 1 - p.from })) }
+    }
+    if (it.k === 'pocket-rect') return { ...it, ccw: !it.ccw }
+    if (it.k === 'saw') return { ...it, xa: it.xe, ya: it.ye, xe: it.xa, ye: it.ya }
+    return it
+  })
+}
+
+/** Edits that change the moves (anything but pocket start points, which act while generating). */
+export const hasMoveEdits = (e: ToolpathEdits | undefined) => !!e && (!!e.corners || !!e.feeds?.length || !!e.z?.length || e.rapidHeight !== undefined || !!e.reverse)
+
+/** Apply an operation's toolpath edits (NEW-11) to its calculated toolpath. */
+function editToolpath(tp: Toolpath, op: CamOp): Toolpath {
+  const e = op.edits!
+  const base = movesHash(simpleMoves(tp.moves))
+  const r = applyEdits(tp.moves, e, op.levels, tp.tool)
+  const out: Toolpath = { ...tp, moves: r.moves, warnings: [...tp.warnings, ...r.warnings], edited: { base, applied: r.applied, moved: r.moved, lost: r.lost, reversed: r.reversed } }
+  if (r.reversed) out.intents = reverseIntents(tp.intents)
+  if (r.lost) out.noOutput = `${r.lost} toolpath edit(s) no longer match the recalculated toolpath; open the operation and keep or clear them`
+  else if (r.zEdited && !out.noOutput && out.intents.some((it) => it.k !== 'comment')) out.noOutput = 'heights were edited point by point, and the woodWOP macros cannot carry them'
+  out.stats = stats(out.moves, out.feeds.feed)
+  return out
+}
+
+/**
  * Re-set stock top (2D-16): a toolpath made for the panel below a faced top is moved down by
  * `top`, so its depths count from the faced surface.
  */
@@ -1602,10 +1725,11 @@ export function isFlatLayer(op: CamOp): boolean {
 
 /**
  * M2.6 operations that have a woodWOP form (contour passes, saw grooves) but are written only
- * behind their own switch (`cam25dMprOutput`): facing, chamfers, and saw cuts with the M2.6 settings.
+ * behind their own switch (`cam25dMprOutput`): facing, chamfers, hand-drawn toolpaths, and saw cuts
+ * with the M2.6 settings, and any operation whose toolpath was edited.
  */
 export function isMore25d(op: CamOp): boolean {
-  return op.kind === 'face' || op.kind === 'chamfer' || (op.kind === 'saw' && !!op.saw)
+  return op.kind === 'face' || op.kind === 'chamfer' || op.kind === 'manual' || (op.kind === 'saw' && !!op.saw) || (op.kind !== 'code' && (hasMoveEdits(op.edits) || !!op.edits?.starts?.length))
 }
 
 /** woodWOP's point limit per contour is not confirmed; contours longer than this get a warning. */
@@ -1768,6 +1892,11 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 // ---------------------------------------------------------------------------------------------
 
 export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
+  const tp = generateShifted(op, ctx)
+  return hasMoveEdits(op.edits) && op.kind !== 'code' ? editToolpath(tp, op) : tp
+}
+
+function generateShifted(op: CamOp, ctx: GenContext): Toolpath {
   const base = ctx.base ?? ctx.part
   const top = stockTopShift(op, base)
   if (top > 1e-9) {
@@ -1838,6 +1967,9 @@ function generateAt(op: CamOp, ctx: GenContext): Toolpath {
         break
       case 'curve':
         genCurve(op, ctx, tp, b)
+        break
+      case 'manual':
+        genManual(op, ctx, tp, b)
         break
     }
   tp.stats = stats(b.moves, feeds.feed)

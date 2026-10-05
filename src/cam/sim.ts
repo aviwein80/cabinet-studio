@@ -177,7 +177,7 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
         cutter = base
       } else if (m.t === 'arc') {
         const kind: SimKind = m.f === 'cut' ? 'cut' : m.f
-        for (const p of arcPoints(at, m)) push(p, kind)
+        for (const p of arcPoints(at, m)) push(p, kind, 0, m.k ?? 1)
       } else if (m.t === 'rapid') push({ x: m.x, y: m.y, z: m.z }, 'rapid')
       else {
         if (tp.kind === 'drill' && m.f === 'plunge' && Math.hypot(m.x - at.x, m.y - at.y) < 1e-9) {

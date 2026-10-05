@@ -17,6 +17,7 @@ import {
   MousePointer2,
   Move,
   MoveHorizontal,
+  Route,
   Ruler,
   Scaling,
   Scissors,
@@ -126,8 +127,10 @@ export interface ToolResult {
   repeat?: boolean
 }
 
-export type ToolGroup = 'select' | 'draw' | 'change' | 'area'
+/** 'pick': picking points for something other than drawing (hand-drawn toolpaths); not on the toolbar. */
+export type ToolGroup = 'select' | 'draw' | 'change' | 'area' | 'pick'
 export type ToolId =
+  | 'pathpick'
   | 'select'
   | 'nodes'
   | 'line'
@@ -498,6 +501,7 @@ export const TOOLS: ToolDef[] = [
     prompts: [],
     apply: (_c, ctx) => (ctx.sel.length < 2 ? { message: 'Select two or more closed shapes.' } : { part: booleanEntities(ctx.part, 'intersect', [ctx.sel[0]], ctx.sel.slice(1)), sel: [ctx.sel[0]] }),
   },
+  { id: 'pathpick', label: 'Pick toolpath points', group: 'pick', icon: Route, prompts: ['Pick the next point of the toolpath'], apply: () => null },
   { id: 'measure', label: 'Measure', group: 'area', icon: Ruler, key: 'd', prompts: ['First point', 'Second point'], preview: (cs, cur) => (cs.length ? [polyline([cs[0].p, cur], false)] : []), apply: () => null },
 ]
 
@@ -510,7 +514,7 @@ function rounded(a: P, b: P, r: number) {
   return rr > 1e-6 ? roundedRect(Math.min(a.x, b.x), Math.min(a.y, b.y), w, h, rr) : box(a, b)
 }
 
-export const GROUP_LABEL: Record<ToolGroup, string> = { select: 'Pick', draw: 'Draw', change: 'Change', area: 'Area' }
+export const GROUP_LABEL: Record<ToolGroup, string> = { select: 'Pick', draw: 'Draw', change: 'Change', area: 'Area', pick: 'Toolpath' }
 
 /** Run a tool step. Returns the result when the tool has all its clicks, else null. */
 export function stepTool(tool: ToolDef, clicks: Click[], ctx: ToolCtx, finish = false): ToolResult | null {

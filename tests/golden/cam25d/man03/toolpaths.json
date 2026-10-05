@@ -1,0 +1,52 @@
+[
+ {
+  "op": "Hand-drawn toolpath",
+  "kind": "manual",
+  "tool": 103,
+  "moves": {
+   "rapid": 3,
+   "feed": 3,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 383,
+  "box": [
+   30,
+   30,
+   270,
+   170
+  ],
+  "zMin": -5,
+  "intents": {},
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 30,
+    "y": 30,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 30,
+    "y": 30,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 30,
+    "y": 30,
+    "z": 0,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 270,
+    "y": 30,
+    "z": -5,
+    "f": "cut"
+   }
+  ],
+  "noOutput": "the hand-drawn toolpath changes depth while it cuts, which woodWOP contour passes cannot carry"
+ }
+]

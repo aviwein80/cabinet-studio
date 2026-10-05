@@ -1,0 +1,53 @@
+[
+ {
+  "op": "Hand-drawn toolpath",
+  "kind": "manual",
+  "tool": 103,
+  "moves": {
+   "rapid": 5,
+   "feed": 5,
+   "arc": 1,
+   "drill": 0
+  },
+  "cutMm": 300,
+  "box": [
+   40,
+   60,
+   260,
+   140
+  ],
+  "zMin": -4,
+  "intents": {
+   "contour": 2
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 40,
+    "y": 100,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 40,
+    "y": 100,
+    "z": 5
+   },
+   {
+    "t": "feed",
+    "x": 40,
+    "y": 100,
+    "z": -2,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 100,
+    "y": 100,
+    "z": -2,
+    "f": "cut"
+   }
+  ]
+ }
+]

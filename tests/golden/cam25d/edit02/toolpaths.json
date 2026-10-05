@@ -1,0 +1,63 @@
+[
+ {
+  "op": "Engrave",
+  "kind": "engrave",
+  "tool": 103,
+  "moves": {
+   "rapid": 6,
+   "feed": 6,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 738,
+  "box": [
+   20,
+   50,
+   380,
+   150
+  ],
+  "zMin": -1.5,
+  "intents": {
+   "contour": 2
+  },
+  "warnings": [
+   "woodWOP makes its own moves between passes: the rapid height edit is not written.",
+   "Reversed: each cut now starts by plunging straight down (up to 1.5 mm) where it used to finish."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 20,
+    "y": 150,
+    "z": 50
+   },
+   {
+    "t": "rapid",
+    "x": 20,
+    "y": 150,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 20,
+    "y": 150,
+    "z": -1.5,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 380,
+    "y": 150,
+    "z": -1.5,
+    "f": "cut"
+   }
+  ],
+  "edited": {
+   "base": "1e8luxq",
+   "applied": 0,
+   "moved": 0,
+   "lost": 0,
+   "reversed": true
+  }
+ }
+]

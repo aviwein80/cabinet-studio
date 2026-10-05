@@ -1,0 +1,65 @@
+[
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 23,
+   "arc": 10,
+   "drill": 0
+  },
+  "cutMm": 1490,
+  "box": [
+   -6,
+   -6,
+   406,
+   315
+  ],
+  "zMin": -19.3,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "Slowed down at 4 corner(s) to 50 % of the feed."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 191,
+    "y": 315,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 191,
+    "y": 315,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 191,
+    "y": 315,
+    "z": -19.3,
+    "f": "plunge"
+   },
+   {
+    "t": "arc",
+    "x": 200,
+    "y": 306,
+    "z": -19.3,
+    "cx": 199.99999999987895,
+    "cy": 314.9999999977688,
+    "ccw": true,
+    "f": "lead"
+   }
+  ],
+  "edited": {
+   "base": "1gnabjs",
+   "applied": 0,
+   "moved": 0,
+   "lost": 0,
+   "reversed": false
+  }
+ }
+]

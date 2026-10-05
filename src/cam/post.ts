@@ -121,7 +121,7 @@ export function runPost(template: PostTemplate, name: string, paths: Toolpath[],
       const Z = m.z + zTop
       if (m.t === 'rapid') emit('rapid', { X: m.x, Y: m.y, Z })
       else if (m.t === 'feed') emit('feed', { X: m.x, Y: m.y, Z, F: String(Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1))) })
-      else if (m.t === 'arc') emit(m.ccw ? 'arc_ccw' : 'arc_cw', { X: m.x, Y: m.y, Z, I: m.cx - x, J: m.cy - y, F: String(Math.round(tp.feeds.feed)) })
+      else if (m.t === 'arc') emit(m.ccw ? 'arc_ccw' : 'arc_cw', { X: m.x, Y: m.y, Z, I: m.cx - x, J: m.cy - y, F: String(Math.round(tp.feeds.feed * (m.k ?? 1))) })
       else emit(m.peck > 0 ? 'peck' : 'drill', { X: m.x, Y: m.y, Z, R: m.r + zTop, Q: m.peck, F: String(Math.round(tp.feeds.plunge)) })
       x = m.x
       y = m.y

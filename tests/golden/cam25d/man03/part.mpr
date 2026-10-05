@@ -1,0 +1,60 @@
+[H
+VERSION="4.0 Alpha"
+OP="1"
+FM="1"
+MAT="HOMAG"
+INCH="0"
+VIEW="NOMIRROR"
+ANZ="1"
+MATERIAL="REF"
+CUSTOMER=""
+ORDER="Ramp drawn down along a line (simulated only)"
+ARTICLE="Ramp drawn down along a line (simulated only)"
+PARTID="Ramp-drawn-down-along-a-line-simulated-only"
+PARTTYPE="PART"
+MPRCOUNT="1"
+MPRNUMBER="1"
+INFO1="Cabinet Studio 0.1.0"
+INFO2="NOT MACHINE-VALIDATED - simulate in woodWOP before cutting"
+INFO3="PLACEHOLDER TOOL TABLE - DO NOT RUN"
+INFO4="Ramp drawn down along a line (simulated only)"
+INFO5=""
+_BSX=300.000000
+_BSY=200.000000
+_BSZ=19.000000
+_FNX=0.000000
+_FNY=0.000000
+_RNX=0.000000
+_RNY=0.000000
+_RNZ=0.000000
+_RX=300.000000
+_RY=200.000000
+
+[001
+L="300"
+KM="Sheet length X"
+B="200"
+KM="Sheet width Y"
+D="19"
+KM="Sheet thickness Z"
+
+<100 \WerkStck\
+LA="L"
+BR="B"
+DI="D"
+FNX="0"
+FNY="0"
+AX="0"
+AY="0"
+
+<101 \Kommentar\
+KM="Cabinet Studio 0.1.0 - custom part Ramp drawn down along a line (simulated only)"
+KM="Generated program. Verify in woodWOP simulation before cutting."
+KAT="Kommentar"
+MNM="Kommentar"
+
+<101 \Kommentar\
+KM="HOMAG_PRODUCTIONMANAGER_FEEDBACK={Version:1.00,PARTID:Ramp-drawn-down-along-a-line-simulated-only,MPRNUMBER:1,MPRCOUNT:1}"
+KAT="Kommentar"
+MNM="Kommentar"
+!

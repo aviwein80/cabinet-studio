@@ -1,0 +1,64 @@
+[
+ {
+  "op": "Pocket",
+  "kind": "pocket",
+  "tool": 102,
+  "moves": {
+   "rapid": 4,
+   "feed": 81,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 7976,
+  "box": [
+   104,
+   84,
+   296,
+   216
+  ],
+  "zMin": -4.5,
+  "intents": {
+   "contour": 19
+  },
+  "warnings": [
+   "Helix does not fit at a pocket start; ramped instead.",
+   "Free-form pocket is written to woodWOP as contour-milling passes on the offset rings (each one editable).",
+   "Feed edits are not written to woodWOP (its contour macro keeps one feed); they show in the simulation and times."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 3
+   },
+   {
+    "t": "rapid",
+    "x": 296,
+    "y": 215.4,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 296,
+    "y": 215.4,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 296,
+    "y": 215.4,
+    "z": 0,
+    "f": "plunge"
+   }
+  ],
+  "edited": {
+   "base": "139ltzo",
+   "applied": 2,
+   "moved": 0,
+   "lost": 0,
+   "reversed": false
+  },
+  "noOutput": "heights were edited point by point, and the woodWOP macros cannot carry them"
+ }
+]

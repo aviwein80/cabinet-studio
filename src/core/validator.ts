@@ -293,7 +293,7 @@ export function validateJob(
           ...ref,
           severity: 'error',
           code: 'CAM_25D_OUTPUT_OFF',
-          message: `Custom part #${c.partNo} ${name}: ${c.more25d} facing, chamfer or saw-cut operation(s) are not written because output of the newer 2.5D operations is off (Machine > Features).`,
+          message: `Custom part #${c.partNo} ${name}: ${c.more25d} newer 2.5D operation(s) (facing, chamfers, saw-cut settings, hand-drawn or edited toolpaths) are not written because their output is off (Machine > Features).`,
         })
       if (c.sawUnwritten && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(`Custom part #${c.partNo} ${name}: ${c.sawUnwritten} saw operation(s)`) })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })

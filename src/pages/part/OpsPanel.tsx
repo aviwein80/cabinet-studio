@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
 import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
+import { ManualFields, EditsGroup } from './EditsPanel'
 import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
@@ -25,6 +26,16 @@ const STATE_STYLE: Record<OpState, { label: string; cls: string }> = {
   broken: { label: 'Missing geometry', cls: 'bg-red-500/20 text-red-300' },
 }
 
+/** Picking points on the drawing for a hand-drawn toolpath. */
+export interface PathPick {
+  opId: string
+  kind: 'feed' | 'rapid' | 'arc'
+  /** Height of the picked points, mm (0 = face 1). */
+  z: number
+  /** Arcs: the point picked first, the arc passes through it. */
+  through?: { x: number; y: number }
+}
+
 const ADDABLE: CamOpKind[] = ['profile', 'pocket', 'drill', 'engrave', 'vcarve', 'saw', 'sweep', 'code']
 
 export function OpsPanel({
@@ -38,6 +49,8 @@ export function OpsPanel({
   toggleHidden,
   onChange,
   busy,
+  pathPick,
+  setPathPick,
 }: {
   part: CamPart
   machine: MachineProfile
@@ -50,6 +63,8 @@ export function OpsPanel({
   onChange: (p: CamPart) => void
   /** Progress of 3D toolpaths being calculated in the background. */
   busy?: Map<string, { fraction: number; note?: string }>
+  pathPick?: PathPick | null
+  setPathPick?: (p: PathPick | null) => void
 }) {
   const units = useStore((s) => s.data?.settings.units ?? 'mm')
   const lib = useStore((s) => s.data?.library)
@@ -123,6 +138,7 @@ export function OpsPanel({
                 <DropdownMenuItem onSelect={() => add('curve', { mode: 'between' } as Partial<CamOp>)}>Cut between two curves</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('curve', { mode: 'follow3d' } as Partial<CamOp>)}>Cut along a 3D curve</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('curve', { mode: 'zwave' } as Partial<CamOp>)}>Z-wave along a shape</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('manual')}>{OP_LABEL.manual}</DropdownMenuItem>
               </>
             )}
             {on3d && (
@@ -205,6 +221,7 @@ export function OpsPanel({
                   {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : null}
                 </div>
               </div>
+              {tp?.edited?.lost ? <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-300">Edits lost</span> : null}
               <span className={cn('rounded px-1.5 py-0.5 text-[10px]', STATE_STYLE[st].cls)}>{STATE_STYLE[st].label}</span>
               <button aria-label="Show or hide toolpath" className="text-stone-400 hover:text-white" onClick={(e) => (e.stopPropagation(), toggleHidden(op.id))}>
                 {hiddenOps.has(op.id) ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -242,6 +259,8 @@ export function OpsPanel({
               setSelectedOp(copy.id)
             }}
             onAccept={() => accept([current.id])}
+            pathPick={pathPick ?? null}
+            setPathPick={setPathPick}
           />
         ) : (
           <div className="px-4 py-8 text-center text-xs text-stone-400">Pick an operation to edit its settings.</div>
@@ -271,6 +290,8 @@ function OpEditor({
   onDelete,
   onDuplicate,
   onAccept,
+  pathPick,
+  setPathPick,
 }: {
   op: CamOp
   part: CamPart
@@ -282,6 +303,8 @@ function OpEditor({
   onDelete: () => void
   onDuplicate: () => void
   onAccept: () => void
+  pathPick?: PathPick | null
+  setPathPick?: (p: PathPick | null) => void
 }) {
   const set = <K extends keyof CamOp>(k: K, v: CamOp[K]) => onChange({ ...op, [k]: v } as CamOp)
   const lv = (patch: Partial<CamOp['levels']>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
@@ -377,7 +400,14 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && !OPS_3D.has(op.kind) && (
+      {op.kind === 'manual' && (
+        <Group title="Heights">
+          <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} />
+          <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => lv({ rapidZ: v })} />
+        </Group>
+      )}
+
+      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -392,6 +422,8 @@ function OpEditor({
       )}
 
       <StrategyFields op={op} part={part} onChange={onChange} />
+      {op.kind === 'manual' && <ManualFields op={op} onChange={onChange} pathPick={pathPick ?? null} setPathPick={setPathPick} sel={sel} part={part} />}
+      {op.kind !== 'code' && op.kind !== 'drill' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
 
       {op.kind === 'profile' && (
         <>

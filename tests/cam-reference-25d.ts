@@ -6,6 +6,9 @@ import { makeEntity, newPart } from '../src/cam/doc'
 import { arc, circle, line, polyline, pt, rect } from '../src/cam/geom'
 import { DEFAULT_SAW, defaultOp } from '../src/cam/ops'
 import type { CamOp, CamOpKind, CamPart, Entity, FaceId, Geom } from '../src/cam/types'
+import { anchorOf, movesHash } from '../src/cam/more25d/edits'
+import { generateOp, simpleMoves } from '../src/cam/toolpath'
+import { PLACEHOLDER_MACHINE } from '../src/core/defaults'
 
 let n = 0
 const E = (g: Geom, layer = 'outline', face: FaceId = 1, extra: Partial<Entity> = {}) => makeEntity(g, layer, face, { id: `e${++n}`, ...extra })
@@ -114,4 +117,62 @@ export function curveParts(): CamPart[] {
       OP('curve', ids(es, 1), wave({ wave: { min: 1, max: 6, length: 60, shape: 'sine' }, ...lv({ depth: 0, passDepth: 2 }) })),
     ]),
   ]
+}
+
+/** Hand-drawn toolpaths (NEW-09): three reference parts. */
+export function manualParts(): CamPart[] {
+  n = 400
+  const M = (start: [number, number, number], steps: unknown[], extra: Partial<CamOp> = {}) => ({ start: { x: start[0], y: start[1], z: start[2] }, steps, toolId: 't103', ...extra }) as Partial<CamOp>
+  return [
+    part('man01', 'Square groove drawn with feed lines', [300, 200, 19], [E(C(rect(0, 0, 300, 200)))], () => [
+      OP('manual', [], M([50, 50, -3], [{ k: 'feed', x: 250, y: 50, z: -3 }, { k: 'feed', x: 250, y: 150, z: -3 }, { k: 'feed', x: 50, y: 150, z: -3 }, { k: 'feed', x: 50, y: 50, z: -3 }])),
+    ]),
+    part('man02', 'Lines, an arc and a rapid between two cuts', [300, 200, 19], [E(C(rect(0, 0, 300, 200)))], () => [
+      OP(
+        'manual',
+        [],
+        M([40, 100, 5], [
+          { k: 'feed', x: 40, y: 100, z: -2 },
+          { k: 'feed', x: 100, y: 100, z: -2 },
+          { k: 'arc', x: 160, y: 100, z: -2, cx: 130, cy: 100, ccw: false },
+          { k: 'feed', x: 160, y: 60, z: -2 },
+          { k: 'rapid', x: 160, y: 60, z: 5 },
+          { k: 'rapid', x: 220, y: 60, z: 5 },
+          { k: 'feed', x: 220, y: 60, z: -4 },
+          { k: 'feed', x: 260, y: 140, z: -4 },
+        ]),
+      ),
+    ]),
+    part('man03', 'Ramp drawn down along a line (simulated only)', [300, 200, 19], [E(C(rect(0, 0, 300, 200)))], () => [
+      OP('manual', [], M([30, 30, 0], [{ k: 'feed', x: 270, y: 30, z: -5 }, { k: 'feed', x: 270, y: 170, z: -5 }])),
+    ]),
+  ]
+}
+
+/** Toolpath edits (NEW-11): three reference parts. */
+export function editParts(): CamPart[] {
+  n = 500
+  return [
+    part('edit01', 'Outline slowed down in its corners', [400, 300, 19], [E(C(rect(0, 0, 400, 300)))], (es) => [
+      OP('profile', ids(es, 0), { edits: { corners: { angle: 45, distance: 10, steps: 2, percent: 50 } } } as Partial<CamOp>),
+    ]),
+    part('edit02', 'Engraving reversed with lower moves between cuts', [400, 200, 19], [E(C(rect(0, 0, 400, 200))), E(C(polyline([pt(20, 50), pt(380, 50)], false)), 'machining'), E(C(polyline([pt(380, 150), pt(20, 150)], false)), 'machining')], (es) => [
+      OP('engrave', ids(es, 1, 2), { ...lv({ depth: 1.5 }), edits: { reverse: true, rapidHeight: 8 } } as Partial<CamOp>),
+    ]),
+    withPointEdits(
+      part('edit03', 'Pocket from a start point, a stretch slower and one point lower', [400, 300, 19], [E(C(rect(0, 0, 400, 300))), E(C(rect(100, 80, 200, 140)), 'machining')], (es) => [
+        OP('pocket', ids(es, 1), { ...lv({ depth: 4 }), toolId: 't102', pattern: 'zigzag', edits: { starts: [{ x: 300, y: 220 }] } } as Partial<CamOp>),
+      ]),
+    ),
+  ]
+}
+
+/** Point edits made the way the screen makes them: anchored on the unedited toolpath. */
+function withPointEdits(p: CamPart): CamPart {
+  const op = p.ops[0]
+  const tp = generateOp(op, { part: p, machine: PLACEHOLDER_MACHINE })
+  const moves = [...simpleMoves(tp.moves)]
+  const base = movesHash(moves)
+  const edits = { ...op.edits, base, feeds: [{ from: anchorOf(moves, 10), to: anchorOf(moves, 14), percent: 60 }], z: [{ at: anchorOf(moves, 20), z: moves[20].z - 0.5 }] }
+  return { ...p, ops: [{ ...op, edits }] }
 }

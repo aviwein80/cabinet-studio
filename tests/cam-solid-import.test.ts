@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { newPart } from '@/cam/doc'
+import { CAM_FILE_VERSION, newPart } from '@/cam/doc'
 import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { meshVolume } from '@/cam/mesh/types'
 import { decodeMesh, MemoryBlobStore, sha256Hex, gzip } from '@/cam/model/blobs'
@@ -242,7 +242,7 @@ describe('M2.5a solid import (CAD-14)', () => {
     await store.put(file, await gzip(fileBytes))
     const model: ModelRef = { id: 's1', name: 'Arched door', kind: 'solid', blob, file, source: 'shaped-door.step', units: 'mm', place: { ...DEFAULT_PLACEMENT }, layer: 'models', visible: true, triangles: 1240, size: [400, 700, 19], faces: 16, format: 'STEP AP203', faceColors: { '3': '#ff0000' } }
     const part: CamPart = { ...newPart({ name: 'Door' }), models: [model] }
-    expect(part.version).toBe(3)
+    expect(part.version).toBe(CAM_FILE_VERSION)
     const text = await serializePartFile(part, store)
     const other = new MemoryBlobStore()
     const { part: back, missing } = await parsePartFile(text, other)

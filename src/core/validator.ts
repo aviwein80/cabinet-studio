@@ -2,7 +2,7 @@
  * Pre-export safety checks on generated sheet programs. These catch obvious mistakes; they are
  * NOT a substitute for simulating every program in woodWOP before it runs on the machine.
  */
-import { boxOf } from '@/cam/geom'
+import { boxOf, type Seg, toPoints } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
 import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type Paths64 } from 'clipper2-ts'
@@ -214,6 +214,18 @@ export function validateJob(
               add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${what}: path leaves its part and would cut a neighbour.` })
           }
           if (it.k === 'saw' && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(what) })
+          // M2.6: how far the cutter reaches past its path (facing) or the blade past the cut's ends
+          // (saw run-out) must stay off every other part on the sheet
+          if ((it.k === 'contour' && it.reach) || (it.k === 'saw' && it.runout)) {
+            const hit = sh.placements.find((other) => other.uid !== op.partUid && reachHits(it, other))
+            if (hit)
+              add({
+                ...ref,
+                severity: 'error',
+                code: 'OP_HITS_NEIGHBOUR',
+                message: it.k === 'saw' ? `${what}: the saw blade's run-out (${fmt(it.runout!)} mm past each end) cuts into part #${byUid.get(hit.uid)?.no}.` : `${what}: the cutter reaches ${fmt(it.reach!)} mm past its path and cuts into part #${byUid.get(hit.uid)?.no}.`,
+              })
+          }
           if (it.k === 'saw')
             add({ ...ref, severity: 'warning', code: 'SAW_RUNOUT', message: `${what}: saw blade run-out on a nested sheet can cut into neighbouring parts. Check in simulation.` })
           break
@@ -274,6 +286,16 @@ export function validateJob(
           code: 'CAM_COLLISION',
           message: `Custom part #${c.partNo} ${name}: the simulation found ${c.collisions.length} collision(s). ${c.collisions.slice(0, 3).join(' ')}${c.collisions.length > 3 ? ` And ${c.collisions.length - 3} more.` : ''} Open Simulate on the part to see each one.`,
         })
+      for (const b of c.blocked ?? [])
+        add({ ...ref, severity: 'error', code: 'CAM_NO_OUTPUT', message: `Custom part #${c.partNo} ${name}: "${b.name}" cannot be written to woodWOP (${b.reason}). Only simulate it, or switch it off.` })
+      if (c.more25d && !c.more25dWritten)
+        add({
+          ...ref,
+          severity: 'error',
+          code: 'CAM_25D_OUTPUT_OFF',
+          message: `Custom part #${c.partNo} ${name}: ${c.more25d} facing, chamfer or saw-cut operation(s) are not written because output of the newer 2.5D operations is off (Machine > Features).`,
+        })
+      if (c.sawUnwritten && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(`Custom part #${c.partNo} ${name}: ${c.sawUnwritten} saw operation(s)`) })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
       if (c.written && c.backHoles > 0)
         add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })
@@ -305,6 +327,46 @@ export const countBySeverity = (issues: Issue[]) => ({
 })
 
 const K = 100
+
+/** Does the reach of a facing path, or a saw cut's run-out, touch another part's footprint? */
+function reachHits(it: { k: 'contour'; segs: Seg[]; closed: boolean; reach?: number } | { k: 'saw'; xa: number; ya: number; xe: number; ye: number; runout?: number }, p: Placement): boolean {
+  const box = { x0: p.x + EPS, y0: p.y + EPS, x1: p.x + p.dx - EPS, y1: p.y + p.dy - EPS }
+  if (it.k === 'saw') {
+    const L = Math.hypot(it.xe - it.xa, it.ye - it.ya)
+    const u = L > 1e-9 ? { x: (it.xe - it.xa) / L, y: (it.ye - it.ya) / L } : { x: 0, y: 0 }
+    const s = it.runout ?? 0
+    return segmentHitsBox({ x: it.xa - u.x * s, y: it.ya - u.y * s }, { x: it.xe + u.x * s, y: it.ye + u.y * s }, box)
+  }
+  const r = it.reach ?? 0
+  const grown = { x0: box.x0 - r, y0: box.y0 - r, x1: box.x1 + r, y1: box.y1 + r }
+  const pts = toPoints({ segs: it.segs, closed: it.closed }, 0.01)
+  return pts.some((a, i) => (i + 1 < pts.length || it.closed) && segmentHitsBox(a, pts[(i + 1) % pts.length], grown))
+}
+
+/** Liang-Barsky: does the segment a-b enter the open box? */
+function segmentHitsBox(a: { x: number; y: number }, b: { x: number; y: number }, bx: { x0: number; y0: number; x1: number; y1: number }): boolean {
+  if (bx.x1 <= bx.x0 || bx.y1 <= bx.y0) return false
+  let t0 = 0
+  let t1 = 1
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  for (const [p, q] of [
+    [-dx, a.x - bx.x0],
+    [dx, bx.x1 - a.x],
+    [-dy, a.y - bx.y0],
+    [dy, bx.y1 - a.y],
+  ]) {
+    if (Math.abs(p) < 1e-12) {
+      if (q <= 0) return false
+      continue
+    }
+    const t = q / p
+    if (p < 0) t0 = Math.max(t0, t)
+    else t1 = Math.min(t1, t)
+    if (t0 > t1) return false
+  }
+  return t1 > t0
+}
 
 const isRectInst = (i: PartInstance) => {
   if (i.holes?.length) return false

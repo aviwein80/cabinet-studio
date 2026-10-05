@@ -1,0 +1,54 @@
+[
+ {
+  "op": "Saw groove",
+  "kind": "saw",
+  "tool": 140,
+  "moves": {
+   "rapid": 3,
+   "feed": 18,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 307,
+  "box": [
+   50,
+   94.226,
+   350,
+   100
+  ],
+  "zMin": -10,
+  "intents": {},
+  "warnings": [
+   "The cut stays on the drawn lines at the surface, so the floor stops 46.648 mm short of each end.",
+   "The simulator shows an angled cut as if the material above the blade were cut too (it sees the stock from above only)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 50,
+    "y": 100,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 50,
+    "y": 100,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 50,
+    "y": 100,
+    "z": 0,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 55.831,
+    "y": 98.581,
+    "z": -2.457,
+    "f": "plunge"
+   }
+  ]
+ }
+]

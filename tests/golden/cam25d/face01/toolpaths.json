@@ -1,0 +1,162 @@
+[
+ {
+  "op": "Facing",
+  "kind": "face",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 153,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 46798,
+  "box": [
+   0,
+   0,
+   600,
+   400
+  ],
+  "zMin": -1,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "The cutter reaches 6.0 mm past the facing boundary (the panel edge): on a nested sheet the export checker keeps it off neighbouring parts."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 3
+   },
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 2.7,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 2.7,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 0,
+    "y": 2.7,
+    "z": -1,
+    "f": "plunge"
+   }
+  ]
+ },
+ {
+  "op": "Pocket",
+  "kind": "pocket",
+  "tool": 102,
+  "moves": {
+   "rapid": 4,
+   "feed": 131,
+   "arc": 8,
+   "drill": 0
+  },
+  "cutMm": 8642,
+  "box": [
+   204,
+   124,
+   396,
+   276
+  ],
+  "zMin": -6,
+  "intents": {
+   "pocket-rect": 1
+  },
+  "warnings": [
+   "Depths count from the faced top, 1 mm below face 1."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 2
+   },
+   {
+    "t": "rapid",
+    "x": 320.4,
+    "y": 199.6,
+    "z": 19
+   },
+   {
+    "t": "rapid",
+    "x": 320.4,
+    "y": 199.6,
+    "z": 2
+   },
+   {
+    "t": "feed",
+    "x": 320.4,
+    "y": 199.6,
+    "z": -1,
+    "f": "plunge"
+   }
+  ]
+ },
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 7,
+   "arc": 6,
+   "drill": 0
+  },
+  "cutMm": 2089,
+  "box": [
+   -6,
+   -6,
+   606,
+   415
+  ],
+  "zMin": -19.3,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "Depths count from the faced top, 1 mm below face 1."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 291,
+    "y": 415,
+    "z": 19
+   },
+   {
+    "t": "rapid",
+    "x": 291,
+    "y": 415,
+    "z": 2
+   },
+   {
+    "t": "feed",
+    "x": 291,
+    "y": 415,
+    "z": -19.3,
+    "f": "plunge"
+   },
+   {
+    "t": "arc",
+    "x": 300,
+    "y": 406,
+    "z": -19.3,
+    "cx": 299.99999999994424,
+    "cy": 414.99999999794966,
+    "ccw": true,
+    "f": "lead"
+   }
+  ]
+ }
+]

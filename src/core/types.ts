@@ -343,6 +343,8 @@ export interface Tool {
   cornerRadius?: number
   /** Saw blade kerf. */
   kerf?: number
+  /** Saw blade diameter (run-out of saw cuts). Absent = a placeholder blade is assumed, with a warning. */
+  bladeDiameter?: number
   spindle?: 'cw' | 'ccw'
   length?: number
   notes?: string
@@ -537,6 +539,16 @@ export interface FeatureFlags {
    * the custom-part MPR switch).
    */
   camSolids: boolean
+  /**
+   * More 2.5D machining (M2.6): saw-cut settings, facing, chamfers, cuts between curves and along
+   * 3D curves, hand-drawn toolpaths, toolpath edits, edge work with a rotating aggregate (screens).
+   */
+  camMore25d: boolean
+  /**
+   * Write the M2.6 operations that have a woodWOP form (facing, chamfers, saw cuts with the new
+   * settings) to MPR. Needs `camMprOutput` too. Off until proven on the machine.
+   */
+  cam25dMprOutput: boolean
 }
 
 export interface Library {

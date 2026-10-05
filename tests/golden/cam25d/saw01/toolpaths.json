@@ -1,0 +1,56 @@
+[
+ {
+  "op": "Saw groove",
+  "kind": "saw",
+  "tool": 140,
+  "moves": {
+   "rapid": 6,
+   "feed": 32,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 1367,
+  "box": [
+   -39.192,
+   20,
+   639.192,
+   380
+  ],
+  "zMin": -8,
+  "intents": {
+   "saw": 2
+  },
+  "warnings": [
+   "1 line(s) joined to the line they continue.",
+   "Full depth to the line ends: the blade cuts 39.192 mm past each end at the surface."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": -39.192,
+    "y": 20,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": -39.192,
+    "y": 20,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": -39.192,
+    "y": 20,
+    "z": 0,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": -33.593,
+    "y": 20,
+    "z": -2.189,
+    "f": "plunge"
+   }
+  ]
+ }
+]

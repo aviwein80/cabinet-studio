@@ -1,0 +1,94 @@
+[
+ {
+  "op": "Facing",
+  "kind": "face",
+  "tool": 101,
+  "moves": {
+   "rapid": 13,
+   "feed": 187,
+   "arc": 3,
+   "drill": 0
+  },
+  "cutMm": 38624,
+  "box": [
+   0,
+   0.028,
+   500,
+   499.989
+  ],
+  "zMin": -1.5,
+  "intents": {
+   "contour": 4
+  },
+  "warnings": [
+   "The cutter reaches 6.0 mm past the facing boundary (the panel edge): on a nested sheet the export checker keeps it off neighbouring parts."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 3
+   },
+   {
+    "t": "rapid",
+    "x": 341.908,
+    "y": 17.51,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 341.908,
+    "y": 17.51,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 341.908,
+    "y": 17.51,
+    "z": -1.5,
+    "f": "plunge"
+   }
+  ]
+ },
+ {
+  "op": "Drill",
+  "kind": "drill",
+  "tool": null,
+  "moves": {
+   "rapid": 1,
+   "feed": 0,
+   "arc": 0,
+   "drill": 1
+  },
+  "cutMm": 26,
+  "box": [
+   250,
+   250,
+   250,
+   250
+  ],
+  "zMin": -10,
+  "intents": {
+   "vdrill": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 250,
+    "y": 250,
+    "z": 20
+   },
+   {
+    "t": "drill",
+    "x": 250,
+    "y": 250,
+    "z": -10,
+    "r": 3,
+    "peck": 0,
+    "dwell": 0
+   }
+  ]
+ }
+]

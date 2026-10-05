@@ -62,6 +62,7 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
   const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, {
     camOutput: featuresOf(settings).camMprOutput,
     cam3dOutput: featuresOf(settings).cam3dMprOutput,
+    cam25dOutput: featuresOf(settings).cam25dMprOutput,
     ...(opts.paths3d ? { paths3d: opts.paths3d } : {}),
     ...(ns.onionSkin > 0 ? { onionSkin: { thickness: ns.onionSkin, maxArea: ns.onionSkinMaxArea } } : {}),
   })

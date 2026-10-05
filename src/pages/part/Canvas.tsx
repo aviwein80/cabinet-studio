@@ -88,6 +88,34 @@ function toolpathPaths(tp: Toolpath) {
   return { cut, rapid, drills, start }
 }
 
+/**
+ * Saw cuts seen from above: the cut's footprint at the surface (run-outs included, kerf wide) and
+ * the blade (as long as its diameter, kerf thick) where it stands at each end of the full-depth run.
+ */
+function SawBlades({ saw }: { saw: NonNullable<Toolpath['saw']> }) {
+  const band = (a: P, b: P, w: number) => {
+    const L = Math.hypot(b.x - a.x, b.y - a.y) || 1
+    const n = { x: (-(b.y - a.y) / L) * (w / 2), y: ((b.x - a.x) / L) * (w / 2) }
+    return `M${a.x + n.x} ${a.y + n.y}L${b.x + n.x} ${b.y + n.y}L${b.x - n.x} ${b.y - n.y}L${a.x - n.x} ${a.y - n.y}Z`
+  }
+  return (
+    <g pointerEvents="none">
+      {saw.cuts.map((c, i) => {
+        const L = Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y) || Math.hypot(c.surf[1].x - c.surf[0].x, c.surf[1].y - c.surf[0].y) || 1
+        const u = { x: (c.surf[1].x - c.surf[0].x) / (Math.hypot(c.surf[1].x - c.surf[0].x, c.surf[1].y - c.surf[0].y) || 1), y: (c.surf[1].y - c.surf[0].y) / (Math.hypot(c.surf[1].x - c.surf[0].x, c.surf[1].y - c.surf[0].y) || 1) }
+        const blade = (p: P) => band({ x: p.x - u.x * saw.r, y: p.y - u.y * saw.r }, { x: p.x + u.x * saw.r, y: p.y + u.y * saw.r }, saw.kerf)
+        return (
+          <g key={i}>
+            <path d={band(c.surf[0], c.surf[1], saw.kerf)} fill="#f59e0b" fillOpacity={0.35} stroke="#f59e0b" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <path d={blade(c.a)} fill="none" stroke="#fde68a" strokeDasharray="4 3" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            {L > 1e-6 && <path d={blade(c.b)} fill="none" stroke="#fde68a" strokeDasharray="4 3" strokeWidth={1} vectorEffect="non-scaling-stroke" />}
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 function arrowsFor(c: Contour): { p: P; a: number }[] {
   const out: { p: P; a: number }[] = []
   const n = Math.min(c.segs.length, 12)
@@ -366,6 +394,7 @@ export function PartCanvas(props: CanvasProps) {
                     {drills.map((p, i) => (
                       <circle key={i} cx={p.x} cy={p.y} r={d / 2} fill="#f59e0b" fillOpacity={0.25} stroke="#f59e0b" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                     ))}
+                    {tp.saw && <SawBlades saw={tp.saw} />}
                   </g>
                 )
               })}

@@ -6,7 +6,8 @@
  *    geometry with radius correction, drilling macros, rectangular pockets, saw grooves).
  */
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
-import { entityContours, layerOf, opInputHash, restSources } from './doc'
+import { entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
+import { cutFloor, planSawCuts, type SawCut } from './more25d/saw'
 import {
   add,
   arc,
@@ -43,7 +44,7 @@ import { breakAt, clipPolys, inflatePolys, normaliseWinding, offset, offsetChain
 import { RAPID_RATE, simpleMoves } from './moves'
 import { contourPolys, PolySet, restAt, restPieces, type SweepSource, sweptAt } from './adaptive/rest'
 import { planAdaptive } from './adaptive/adaptive'
-import { DEFAULT_ADAPTIVE, feedsFor, passDepths, resolveTool } from './ops'
+import { DEFAULT_ADAPTIVE, feedsFor, passDepths, PLACEHOLDER_BLADE, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
@@ -58,7 +59,7 @@ import { modelClearance } from './collision/model'
 import { cutterOutline, holderOf } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, DrillOp, Entity, FaceId, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SweepOp, VCarveOp } from './types'
+import type { CamOp, CamPart, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -93,12 +94,15 @@ export type Intent =
       tool: Tool | null
       label: string
       passes: ContourPass[]
+      /** How far the cutter reaches past this path (facing): the export checker keeps it off neighbouring parts. */
+      reach?: number
     }
   /** `back`: drilled from face 6 in a separate program after the part is turned over (x mirrored). */
   | { k: 'vdrill'; x: number; y: number; d: number; depth: number; through: boolean; tool: Tool | null; label: string; back?: boolean }
   | { k: 'hdrill'; x: number; y: number; z: number; d: number; depth: number; dir: HDrillDir; face: FaceId; tool: Tool | null; label: string }
   | { k: 'pocket-rect'; cx: number; cy: number; len: number; wid: number; r: number; angle: number; depth: number; stepoverPct: number; ccw: boolean; tool: Tool | null; label: string }
-  | { k: 'saw'; xa: number; ya: number; xe: number; ye: number; width: number; depth: number; tool: Tool | null; label: string }
+  /** `runout`: how far the blade cuts past each end at the surface (M2.6 saw cuts); the export checker keeps it off neighbouring parts. */
+  | { k: 'saw'; xa: number; ya: number; xe: number; ye: number; width: number; depth: number; tool: Tool | null; label: string; runout?: number }
   | { k: 'comment'; text: string; stop: boolean }
 
 export interface Toolpath {
@@ -113,6 +117,15 @@ export interface Toolpath {
   stats: { cut: number; rapid: number; minutes: number }
   /** Flagged move ranges (indices into `moves`, `to` exclusive): trochoidal loops of adaptive clearing. */
   sections?: { kind: 'trochoidal'; from: number; to: number }[]
+  /**
+   * Why this operation cannot be written to woodWOP (no confirmed form); nothing of it is written
+   * and the export checker refuses the job while it is enabled. Absent = written as its intents.
+   */
+  noOutput?: string
+  /** Saw cuts (2D-11): the blade and each cut, for drawing the blade and its run-out. */
+  saw?: { r: number; kerf: number; tilt: number; runout: number; placeholderBlade: boolean; cuts: SawCut[] }
+  /** Depths were measured from a faced top this far below face 1 (2D-16). */
+  top?: number
 }
 
 export interface GenContext {
@@ -124,6 +137,8 @@ export interface GenContext {
   work?: Work
   /** Toolpaths of operations already generated, by op id (rest machining reads them). */
   done?: ReadonlyMap<string, Toolpath>
+  /** The part as drawn, when `part` is a thinner copy after a facing that re-set the stock top. */
+  base?: CamPart
 }
 
 
@@ -744,6 +759,18 @@ function genRestPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder, 
   else tp.warnings.push('Rest machining follows the toolpaths of the earlier operations: they must run first, in the order shown. In woodWOP each rest piece is its own contour-milling pass.')
 }
 
+/** Every point of a-b (checked at most 2 mm apart) is inside the region. */
+function linkWithin(region: Contour[], a: P, b: P) {
+  const n = Math.max(2, Math.ceil(dist(a, b) / 2))
+  for (let i = 1; i < n; i++) {
+    const m = { x: a.x + ((b.x - a.x) * i) / n, y: a.y + ((b.y - a.y) * i) / n }
+    let inside = false
+    for (const c of region) if (pointInContour(c, m)) inside = !inside
+    if (!inside) return false
+  }
+  return true
+}
+
 function linkInside(region: Contour[], a: P, b: P) {
   const mids = [0.25, 0.5, 0.75].map((t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }))
   return mids.every((m) => {
@@ -1096,7 +1123,8 @@ function genVCarve(op: VCarveOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   if (rings.length > 400) tp.warnings.push(`${rings.length} V-carve rings: consider a larger step.`)
 }
 
-function genSaw(op: CamOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+function genSaw(op: SawOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  if (op.saw) return genSawCuts(op, ctx, tp, b)
   const tool = tp.tool
   if (!tool) tp.warnings.push('No saw unit in the tool table.')
   const width = tool?.kerf ?? 4
@@ -1114,6 +1142,179 @@ function genSaw(op: CamOp, ctx: GenContext, tp: Toolpath, b: Builder) {
         b.rapid(s.b.x, s.b.y, op.levels.safeZ)
         tp.intents.push({ k: 'saw', xa: s.a.x, ya: s.a.y, xe: s.b.x, ye: s.b.y, width, depth: D, tool, label: op.name })
       }
+}
+
+/**
+ * Saw cuts with the M2.6 settings (2D-11): run-out from the blade, extend to clear, minimum length,
+ * joined collinear lines, kept inside the part. The moves follow the floor of each cut.
+ */
+function genSawCuts(op: SawOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const st = op.saw!
+  const tool = tp.tool
+  if (!tool) tp.warnings.push('No saw unit in the tool table.')
+  const kerf = tool?.kerf ?? 4
+  const placeholderBlade = !tool?.bladeDiameter
+  const R = (tool?.bladeDiameter ?? PLACEHOLDER_BLADE) / 2
+  if (placeholderBlade) tp.warnings.push(`${tool ? `T${tool.number} has` : 'The saw has'} no blade diameter: a PLACEHOLDER Ø${PLACEHOLDER_BLADE} mm blade is assumed for the run-out. Set the real blade on the Machine page.`)
+  if (op.levels.through) tp.warnings.push('A saw cut right through the panel: check the spoilboard allowance.')
+  const D = totalDepth(op, ctx)
+  const lines: { a: P; b: P }[] = []
+  let arcs = 0
+  for (const { contours } of geometryOf(op, ctx.part))
+    for (const c of contours)
+      for (const sg of c.segs) {
+        if (sg.k === 'L') lines.push({ a: sg.a, b: sg.b })
+        else arcs++
+      }
+  if (arcs) tp.warnings.push(`Saw cuts follow straight lines only; ${arcs} arc(s) were skipped.`)
+  const outline = toPoints(partOutline(ctx.base ?? ctx.part).contour, 0.01)
+  const plan = planSawCuts(lines, { R, depth: D, tilt: st.tilt, tiltSide: st.tiltSide, clear: st.clear, extend: Math.max(0, st.extend), minLength: Math.max(0, st.minLength), join: st.join, avoid: st.avoid, outline })
+  tp.warnings.push(...plan.warnings)
+  for (const c of plan.cuts) {
+    const pts = cutFloor(c, R, st.tilt)
+    const S = pts[0]
+    b.rapid(S.x, S.y, op.levels.safeZ)
+    b.rapid(S.x, S.y, op.levels.rapidZ)
+    b.feed(S.x, S.y, 0, 'plunge')
+    // the run-out arc down, the full-depth run, the arc up
+    const n = (pts.length - 2) / 2
+    pts.slice(1).forEach((p, i) => b.feed(p.x, p.y, p.z, i + 1 <= n ? 'plunge' : i + 1 === n + 1 ? 'cut' : 'lead'))
+    b.rapid(b.x, b.y, op.levels.safeZ)
+    if (!st.tilt) tp.intents.push({ k: 'saw', xa: c.a.x, ya: c.a.y, xe: c.b.x, ye: c.b.y, width: kerf, depth: D, tool, label: op.name, runout: Math.round(plan.runout * 1000) / 1000 })
+  }
+  tp.saw = { r: R, kerf, tilt: st.tilt, runout: plan.runout, placeholderBlade, cuts: plan.cuts }
+  if (st.tilt) {
+    tp.noOutput = `angled saw cuts (${st.tilt}°): the woodWOP form for a tilted blade is not confirmed`
+    tp.warnings.push('The simulator shows an angled cut as if the material above the blade were cut too (it sees the stock from above only).')
+  }
+}
+
+/**
+ * Facing (2D-16): back-and-forth lines (plus a pass round the edge) or rings from the outside in,
+ * over the picked closed shapes or the whole outline, `levels.depth` down in passes.
+ */
+function genFace(op: FaceOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const tool = tp.tool
+  if (!tool) {
+    tp.warnings.push('No flat router for facing.')
+    return
+  }
+  const r = tool.diameter / 2
+  const closed = geometryOf(op, ctx.part).flatMap((g) => g.contours.filter((c) => c.closed))
+  const boundary = normaliseWinding(closed.length ? closed : [partOutline(ctx.base ?? ctx.part).contour]).filter((c) => area(c) > 0)
+  if (!boundary.length) {
+    tp.warnings.push('Facing needs a closed shape (or the part outline).')
+    return
+  }
+  if (op.levels.through) tp.warnings.push('Facing never cuts through: the depth is used.')
+  const D = Math.max(0, op.levels.depth - op.levels.stockZ)
+  if (!(D > 0)) {
+    tp.warnings.push('Facing depth is 0: nothing to cut.')
+    return
+  }
+  if (D >= ctx.part.thickness - 1e-9) {
+    tp.warnings.push(`Facing ${D} mm takes the whole ${ctx.part.thickness} mm panel: nothing is cut.`)
+    return
+  }
+  const centre = Math.abs(op.overhang) > 1e-9 ? offset(boundary, op.overhang) : boundary
+  if (!centre.length) {
+    tp.warnings.push('The boundary is gone after the overhang.')
+    return
+  }
+  const depths = depthsFor(op, tool, D)
+  const step = Math.max(0.05, op.stepover * tool.diameter)
+  const orient = (c: Contour) => (op.direction === 'climb' ? (area(c) > 0 ? c : reverse(c)) : area(c) > 0 ? reverse(c) : c)
+  const rings: Contour[] = []
+  if (op.pattern === 'offset')
+    for (let i = 0; i < 4000; i++) {
+      const next = i ? offset(centre, -i * step) : centre
+      if (!next.length) break
+      rings.push(...next.map(orient))
+    }
+  const paths = op.pattern === 'offset' ? rings : [...zigzag(centre, step, op.angle), ...centre.map(orient)]
+  const ramp = tool.centreCutting === false || (tool.maxPlunge !== undefined && tool.maxPlunge > 0 && depths[0] > tool.maxPlunge + 1e-9)
+  if (ramp) tp.warnings.push(`T${tool.number} cannot plunge that deep: each pass ramps in along its first line.`)
+  const slack = offset(centre, 0.01)
+  depths.forEach((d, pi) => {
+    const z = -d
+    const prevZ = pi === 0 ? 0 : -depths[pi - 1]
+    // one woodWOP contour per stretch the tool stays down (a lone ring stays a closed contour)
+    let run: Seg[] = []
+    let pieces = 0
+    let lone = false
+    const flush = () => {
+      if (run.length) tp.intents.push({ k: 'contour', segs: run, closed: pieces === 1 && lone, rk: 'NOWRK', approach: 'SEN', ramp, tool, label: op.name, passes: [{ depth: d, from: 0, to: run.length - 1 }], reach: r })
+      run = []
+      pieces = 0
+    }
+    let started = false
+    for (const c0 of paths) {
+      const c = started && c0.closed ? rotateToNearest(c0, { x: b.x, y: b.y }) : c0
+      const S = startOf(c)
+      // stay down when the link runs inside the faced area (checked every 2 mm): it is all cut anyway
+      const near = started && Math.hypot(S.x - b.x, S.y - b.y) <= Math.max(step * 1.6, 4 * r) + 1e-6 && linkWithin(slack, { x: b.x, y: b.y }, S)
+      if (near) {
+        run.push(line({ x: b.x, y: b.y }, S))
+        b.feed(S.x, S.y, z)
+      } else {
+        flush()
+        b.rapid(b.x, b.y, op.levels.rapidZ)
+        b.rapid(S.x, S.y, op.levels.safeZ)
+        b.rapid(S.x, S.y, Math.max(prevZ, 0) + op.levels.rapidZ)
+        if (ramp) {
+          const need = Math.abs(z - prevZ) / Math.tan((5 * Math.PI) / 180)
+          b.feed(S.x, S.y, prevZ, 'plunge')
+          b.ramp(sliceByLength(c, 0, Math.min(contourLength(c), need)), prevZ, z)
+          b.feed(S.x, S.y, z, 'cut')
+        } else b.feed(S.x, S.y, z, 'plunge')
+      }
+      started = true
+      for (const sg of c.segs) b.seg(sg, z)
+      run.push(...c.segs)
+      pieces++
+      lone = c.closed
+    }
+    flush()
+    b.rapid(b.x, b.y, op.levels.safeZ)
+  })
+  tp.warnings.push(`The cutter reaches ${(r + Math.max(0, op.overhang)).toFixed(1)} mm past the facing boundary${closed.length ? '' : ' (the panel edge)'}: on a nested sheet the export checker keeps it off neighbouring parts.`)
+}
+
+/**
+ * Re-set stock top (2D-16): a toolpath made for the panel below a faced top is moved down by
+ * `top`, so its depths count from the faced surface.
+ */
+function shiftTop(tp: Toolpath, top: number): Toolpath {
+  const moves: Move[] = tp.moves.map((m) => {
+    if (m.t === 'poly') {
+      const pts = Float64Array.from(m.pts)
+      for (let i = 2; i < pts.length; i += 3) pts[i] -= top
+      return { ...m, pts }
+    }
+    if (m.t === 'drill') return { ...m, z: m.z - top, r: m.r - top }
+    return { ...m, z: m.z - top }
+  })
+  const deeper = (n: number) => Math.round((n + top) * 1e6) / 1e6
+  const intents: Intent[] = tp.intents.map((it) => {
+    switch (it.k) {
+      case 'contour':
+        return { ...it, passes: it.passes.map((p) => ({ ...p, depth: deeper(p.depth) })) }
+      case 'vdrill':
+      case 'pocket-rect':
+      case 'saw':
+        return { ...it, depth: deeper(it.depth) }
+      default:
+        return it
+    }
+  })
+  return {
+    ...tp,
+    moves,
+    intents,
+    top,
+    ...(tp.saw ? { saw: { ...tp.saw, cuts: tp.saw.cuts.map((c) => ({ ...c, depth: deeper(c.depth) })) } } : {}),
+    warnings: [...tp.warnings, `Depths count from the faced top, ${top} mm below face 1.`],
+  }
 }
 
 /** Depth of a sweep section at an inset (linear between points; deeper than the last point = 0). */
@@ -1195,6 +1396,14 @@ export function isFlatLayer(op: CamOp): boolean {
   if (op.kind === 'rough3d') return op.pattern !== 'adaptive'
   if (op.kind !== 'finish3d' || op.strategy !== 'waterline') return false
   return !(op.fillShallow && Math.max(op.slope.min, op.skipFlats ? 0.5 : 0) > 0)
+}
+
+/**
+ * M2.6 operations that have a woodWOP form (contour passes, saw grooves) but are written only
+ * behind their own switch (`cam25dMprOutput`): facing, and saw cuts with the M2.6 settings.
+ */
+export function isMore25d(op: CamOp): boolean {
+  return op.kind === 'face' || (op.kind === 'saw' && !!op.saw)
 }
 
 /** woodWOP's point limit per contour is not confirmed; contours longer than this get a warning. */
@@ -1357,6 +1566,29 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 // ---------------------------------------------------------------------------------------------
 
 export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
+  const base = ctx.base ?? ctx.part
+  const top = stockTopShift(op, base)
+  if (top > 1e-9) {
+    const rest = (op.kind === 'pocket' && !!op.rest) || isAdaptive(op)
+    if (rest) {
+      const tp = generateAt(op, ctx)
+      tp.warnings.push(`A facing before it re-set the stock top, but ${op.kind === 'pocket' && op.rest ? 'rest machining' : 'adaptive clearing'} still measures from face 1.`)
+      return tp
+    }
+    if (top >= base.thickness - 1e-9) {
+      const tp = generateAt(op, ctx)
+      tp.warnings.push('The facings before it take the whole panel: depths are measured from face 1.')
+      return tp
+    }
+    const tp = generateAt(op, { ...ctx, part: { ...base, thickness: base.thickness - top }, base })
+    const shifted = shiftTop(tp, top)
+    shifted.stats = stats(shifted.moves, shifted.feeds.feed)
+    return shifted
+  }
+  return generateAt(op, ctx)
+}
+
+function generateAt(op: CamOp, ctx: GenContext): Toolpath {
   const widthHint = op.kind === 'pocket' ? minWidth(op, ctx) : undefined
   const tool = op.kind === 'drill' ? (op.toolId ? (ctx.machine.tools.find((t) => t.id === op.toolId) ?? null) : null) : resolveTool(op, ctx.machine, { width: widthHint })
   const feeds = feedsFor(op, tool, ctx.part.materialId, ctx.machine)
@@ -1395,6 +1627,9 @@ export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
         break
       case 'rough3d':
         genRough3d(op, ctx, tp, b)
+        break
+      case 'face':
+        genFace(op, ctx, tp, b)
         break
     }
   tp.stats = stats(b.moves, feeds.feed)

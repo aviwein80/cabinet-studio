@@ -1,0 +1,54 @@
+[
+ {
+  "op": "Facing",
+  "kind": "face",
+  "tool": 102,
+  "moves": {
+   "rapid": 8,
+   "feed": 280,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 34511,
+  "box": [
+   100,
+   100,
+   400,
+   300
+  ],
+  "zMin": -2,
+  "intents": {
+   "contour": 2
+  },
+  "warnings": [
+   "The cutter reaches 4.0 mm past the facing boundary: on a nested sheet the export checker keeps it off neighbouring parts."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 0,
+    "z": 3
+   },
+   {
+    "t": "rapid",
+    "x": 100,
+    "y": 100,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 100,
+    "y": 100,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 100,
+    "y": 100,
+    "z": -1,
+    "f": "plunge"
+   }
+  ]
+ }
+]

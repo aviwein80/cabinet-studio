@@ -41,12 +41,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.5c Assemblies, faces to layers / colours / grain, machining picked faces | **Done** (October 2026) | See below. |
 | M2.5d 3D wires and surfaces | **Done** (October 2026) | See below. |
 | M2.5e Packaged-app check, screenshots, docs | **Done** (October 2026) | See below. M2.5 complete. |
-| M2.6 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.6a Saw cuts, facing, format v4, switches | **Done** (October 2026) | See below. |
+| M2.6b - M2.6d | In progress | Chamfer and curve cuts; hand-drawn toolpaths and edits; aggregate edge work, screenshots, docs. |
+| M2.7 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -739,10 +741,53 @@ Linux container. The owner's check on the shop computers is in the open question
 3. **Shop check of the packaged app** on the Windows PC and the Mac: open a STEP file once with
    the network off (the reader must load from the app's own files).
 
-## Next run: M2.6 more 2.5D machining
+## M2.6 split
 
-- 2D-11, 2D-13, 2D-15, 2D-16, NEW-09, NEW-11, 5AX-04 as in the prompt.
-- Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
+M2.6 is done in named parts: **M2.6a** saw cuts (2D-11), facing (2D-16), the document format and
+the two switches; **M2.6b** chamfers (2D-13), cuts between curves, along 3D curves and Z-waves
+(2D-15); **M2.6c** hand-drawn toolpaths (NEW-09) and toolpath edits (NEW-11); **M2.6d** edge work
+with a rotating aggregate (5AX-04), screenshots and docs.
+
+Owner decisions for this milestone (received with the M2.6 go-ahead): the saw unit and the
+rotating aggregate are **absent** on the N-200 until confirmed; ops and screens ship, the export
+checker blocks their machine output with a clear message; no saw or aggregate macro is invented as
+proven output.
+
+## M2.6a saw cuts and facing: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 2D-11 | Saw-cut settings on the saw operation (absent = the Stage 1 groove, unchanged): blade tilt 0-45° and the side it leans to; extend to clear (full depth right to the line ends, the blade running past them by its run-out) or keep the surface cut on the line; extra length; minimum length; join lines that lie on one line and touch or overlap; keep off neighbours (the blade's cut never leaves the part outline; ends pulled back and the uncut length reported). Run-out = sqrt(2Rd - d²) from the blade diameter (new tool field; without it a PLACEHOLDER 200 mm blade with a warning: larger = longer run-out, so the checks err safe). The moves follow the floor of the cut, blade arcs at both ends, so the simulator carves what the blade cuts | `src/cam/more25d/saw.ts`, `genSawCuts` in `src/cam/toolpath.ts` |
+| 2D-11 show the blade | Drawing: the cut's footprint at the surface (kerf wide, run-outs included) and the blade (diameter long) at both ends of the full-depth run. Simulator 3D: a disc standing in the cut, leaned for angled cuts | `Canvas.tsx` (`SawBlades`), `SimulateDialog.tsx` (`BladeModel`) |
+| 2D-16 | Facing: back-and-forth lines plus a pass round the edge, or rings from the outside in; whole panel or picked closed shapes; depth in passes; tool centre past the edge (0 = on it); widest flat cutter by default; ramps in when the tool cannot plunge. "Re-set the stock top": later operations on face 1 measure depths from the faced surface (they are made for the thinner panel and moved down, so through cuts still end where they did); 3D operations keep following their model; rest and adaptive pockets say they still measure from face 1 | `genFace`, `shiftTop`, `stockTopShift` in `src/cam/doc.ts` |
+| Format | `CAM_FILE_VERSION` 4 (new operation kinds, saw settings; toolpath edits come in M2.6c). v1-v3 parts migrate with every field kept; an older app refuses a v4 part | `src/cam/doc.ts` |
+| Switches | "More 2.5D machining" (`camMore25d`, screens, on); "Write facing, chamfers and saw cuts to MPR" (`cam25dMprOutput`, **off**; also needs the custom-part switch) | `src/core/features.ts`, Machine page |
+| Export checker | `MACHINE_CANNOT` for any enabled saw operation while the machine model has no saw unit, whatever the switches (before, only when grooves were written); `CAM_25D_OUTPUT_OFF` while the new switch is off; `CAM_NO_OUTPUT` for operations with no confirmed woodWOP form (angled saw cuts now; more in later parts); `OP_HITS_NEIGHBOUR` when a facing cutter's reach or a saw blade's run-out enters another part on the sheet | `src/core/validator.ts`, `src/core/machining.ts` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Golden toolpaths on 3 reference parts per op | `tests/golden/cam25d/{saw01,saw02,saw03,face01,face02,face03}` (digest + MPR) | Saw: joined grooves extended to clear; cuts kept inside with a short line and an arc left out; angled cut. Facing: whole panel then a pocket from the new top; rings in two passes; round top at 30°. All Stage 1, 2D and 3D goldens unchanged |
+| Saw output only with a saw unit; otherwise blocked clearly | `tests/cam-saw-face.test.ts` | Placeholder N-200: `MACHINE_CANNOT` ("the machine model has no saw unit") with every switch combination. Saw unit declared: `CAM_25D_OUTPUT_OFF` until the new switch is on, then one `<109 Nuten>` and no errors. Angled cut: `CAM_NO_OUTPUT` with every switch on |
+| Blade geometry | same | Run-out 39.192 mm for a 200 mm blade 8 mm deep (= sqrt(1536)); the floor of every planned cut equals R - sqrt(R² - e²) above full depth at e past the end (to 1e-9); angled 30° cut 10 mm deep: floor 5.774 mm beside the line, run-out from 11.547 mm along the blade |
+| Simulated cut | same | 8.000 mm deep along the line (0.25 mm cells); past the end, between the blade arc and the arc shifted by half the kerf (the simulator cuts with a round cutter of the kerf's width); nothing 2.5 mm past the run-out |
+| Neighbours | same | Six parts nested, run-out 39 mm, keep-off switched off: `OP_HITS_NEIGHBOUR`; switched on: no errors |
+| Facing level | same | Whole panel at -1.000 mm in every 0.5 mm cell (both patterns); passes at -1, -2, -3; centre within the overhang |
+| Re-set stock top | same | Pocket 5 mm after 2 mm of facing: cut to -7, macro depth 7; through profile still ends at -(19 + through depth); changing the facing marks the pocket stale |
+| Facing on a sheet | same | 12 mm cutter (reaches 6 mm into the 12 mm gap): clean; 40 mm cutter: `OP_HITS_NEIGHBOUR` |
+
+### Limits recorded
+
+- **woodWOP's saw macro**: the groove is written with the full-depth span as XA..XE (EM MOD0). What
+  woodWOP takes XA/XE to mean (cut length at the surface or at full depth) is not confirmed; it only
+  matters once a saw unit is fitted (decision).
+- **Angled saw cuts are simulated from above**: the heightfield cannot hold the overhang, so the
+  simulator shows the material over the leaning blade as cut.
+- **The simulator's saw is a round cutter of the kerf's width**, so at the ends of a cut it shows up
+  to half the kerf more than the blade cuts.
+- **Facing on shaped outlines** links passes along the edge only where the link stays inside the
+  faced area; elsewhere it lifts.
 
 
 ## Run log
@@ -766,3 +811,4 @@ Linux container. The owner's check on the shop computers is in the open question
 - **Run 6 (M2.5c)**: assemblies, faces to layers / colours / grain, machining picked faces. See `git log`.
 - **Run 6 (M2.5d)**: 3D wires and surfaces; face jobs moved to the worker. See `git log`.
 - **Run 6 (M2.5e)**: packaged-app check (Linux), screenshots, README, ROADMAP. M2.5 complete.
+- **Run 7 (M2.6a)**: saw cuts, facing, format v4, switches. See `git log`.

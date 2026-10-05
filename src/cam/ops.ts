@@ -5,12 +5,19 @@
 import { nanoid } from 'nanoid'
 import { cutoutTool, findDrill, squareEnd } from '@/core/machining'
 import type { MachineProfile, Tool } from '@/core/types'
-import type { AdaptiveSettings, CamOp, CamOpKind, Leads, Levels, OpTemplate, Tags } from './types'
+import type { AdaptiveSettings, CamOp, CamOpKind, Leads, Levels, OpTemplate, SawSettings, Tags } from './types'
 
 export const DEFAULT_LEVELS: Levels = { safeZ: 20, rapidZ: 3, depth: 6, through: false, stockZ: 0, passDepth: 0 }
 export const DEFAULT_LEADS: Leads = { in: 'arc', out: 'arc', length: 2, radius: 1.5, rampAngle: 5, overlap: 2, feedPct: 50 }
 /** PLACEHOLDER adaptive-clearing values until the shop supplies its own: 15 % width of cut, feed not boosted. */
 export const DEFAULT_ADAPTIVE: AdaptiveSettings = { width: 0.15, smoothing: 1, lift: 0.5, feedBoost: 1 }
+/** Saw-cut settings for a new saw cut: vertical, extended to clear, joined, kept off neighbours. */
+export const DEFAULT_SAW: SawSettings = { tilt: 0, tiltSide: 'left', clear: true, extend: 0, minLength: 0, join: true, avoid: true }
+/**
+ * PLACEHOLDER blade diameter (mm) for saw tools without one, used only to work out the run-out.
+ * A larger blade gives a longer run-out, so the neighbour check errs on the safe side.
+ */
+export const PLACEHOLDER_BLADE = 200
 export const DEFAULT_TAGS: Tags = { mode: 'none', count: 4, length: 12, height: 2, shape: 'flat', rampAngle: 30, at: [] }
 
 export const OP_LABEL: Record<CamOpKind, string> = {
@@ -24,6 +31,7 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   code: 'Program note',
   finish3d: '3D finishing',
   rough3d: '3D roughing (Z-level)',
+  face: 'Facing',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -85,6 +93,10 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       break
     case 'code':
       op = { ...base, kind, text: '', stop: false }
+      break
+    case 'face':
+      // PLACEHOLDER step-over (the pocket's 45 %) until the shop supplies its own
+      op = { ...base, kind, pattern: 'zigzag', stepover: 0.45, angle: 0, direction: 'climb', overhang: 0, resetTop: true, levels: { ...DEFAULT_LEVELS, depth: 1 } }
       break
     case 'finish3d':
       // PLACEHOLDER cutting values (10 % of a 6 mm ball) until the shop supplies its own.
@@ -158,6 +170,9 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
         .sort((a, b) => b.diameter - a.diameter || a.number - b.number)
       return fits[0] ?? null
     }
+    case 'face':
+      // the widest flat cutter
+      return routers(machine).filter(squareEnd).sort((a, b) => b.diameter - a.diameter || a.number - b.number)[0] ?? null
     case 'engrave':
       return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter)[0] ?? null
     case 'vcarve':

@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, Triang
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
-import { DEFAULT_ADAPTIVE, defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
+import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
 import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
@@ -55,6 +55,7 @@ export function OpsPanel({
   const lib = useStore((s) => s.data?.library)
   const rulesOn = useStore((s) => featuresOf(s.data?.settings).camRules)
   const on3d = useStore((s) => featuresOf(s.data?.settings).cam3d) && !!part.models?.length
+  const more25d = useStore((s) => featuresOf(s.data?.settings).camMore25d)
   const runRules = (setId: string) => {
     if (!lib) return
     const set = ruleSetsOf(lib).find((x) => x.id === setId)
@@ -76,6 +77,9 @@ export function OpsPanel({
       const outline = partOutline(part).entity
       geometry = kind === 'profile' ? (outline ? [outline.id] : []) : part.entities.filter((e) => e.g.t === 'circle' || e.g.t === 'point').map((e) => e.id)
     }
+    // a new saw cut gets the M2.6 settings when they are switched on; facing takes the whole panel
+    if (kind === 'saw' && more25d && !('saw' in extra)) extra = { ...extra, saw: { ...DEFAULT_SAW } } as Partial<CamOp>
+    if (kind === 'face') geometry = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
     let op = defaultOp(kind, kind === 'code' ? [] : geometry, extra)
     if (op.kind === 'finish3d' || op.kind === 'rough3d') {
       // boundary: the selected closed shapes (none = the whole model); projection: every selected
@@ -110,6 +114,13 @@ export function OpsPanel({
                 {OP_LABEL[k]}
               </DropdownMenuItem>
             ))}
+            {more25d && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[11px] text-muted-foreground">More 2.5D</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => add('face')}>{OP_LABEL.face}</DropdownMenuItem>
+              </>
+            )}
             {on3d && (
               <>
                 <DropdownMenuSeparator />
@@ -454,6 +465,34 @@ function AdaptiveFields({ ad, onAd, rampAngle, onRamp }: { ad: AdaptiveSettings;
   )
 }
 
+/** Saw-cut settings (2D-11). Off: the Stage 1 groove (plunge at the start of each line). */
+function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onChange: (o: CamOp) => void }) {
+  const more25d = useStore((s) => featuresOf(s.data?.settings).camMore25d)
+  const st = op.saw
+  const patch = (p: Partial<NonNullable<typeof st>>) => onChange({ ...op, saw: { ...DEFAULT_SAW, ...st, ...p } })
+  if (!st && !more25d) return null
+  return (
+    <Group title="Saw cut">
+      <div className="col-span-2">
+        <SwitchField label="Blade settings" checked={!!st} onChange={(v) => onChange({ ...op, saw: v ? { ...DEFAULT_SAW } : undefined })} hint="Run-out from the blade, extend to clear, joining, minimum length, keep off neighbours, angled cuts. Off: the blade plunges at the start of each line." />
+      </div>
+      {st && (
+        <>
+          <NumField label="Blade tilt" suffix="°" value={st.tilt} min={0} max={45} onChange={(v) => patch({ tilt: v })} hint="0 = vertical. Angled cuts are simulated only" />
+          {st.tilt > 0 && <SelectField label="Leans to" value={st.tiltSide} options={[{ value: 'left', label: 'Left of the line' }, { value: 'right', label: 'Right of the line' }]} onChange={(v) => patch({ tiltSide: v })} />}
+          <NumField label="Extra length each end" value={st.extend} min={0} onChange={(v) => patch({ extend: v })} />
+          <NumField label="Skip lines shorter than" value={st.minLength} min={0} onChange={(v) => patch({ minLength: v })} />
+          <div className="col-span-2">
+            <SwitchField label="Extend to clear" checked={st.clear} onChange={(v) => patch({ clear: v })} hint="Full depth right to the line ends (the blade runs past them at the surface). Off: the surface cut stays on the line and the floor stops short." />
+            <SwitchField label="Join lines on one line" checked={st.join} onChange={(v) => patch({ join: v })} />
+            <SwitchField label="Keep off neighbouring parts" checked={st.avoid} onChange={(v) => patch({ avoid: v })} hint="The blade never cuts outside the part outline; ends are pulled back and the uncut length is reported." />
+          </div>
+        </>
+      )}
+    </Group>
+  )
+}
+
 function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
   const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
   switch (op.kind) {
@@ -678,6 +717,22 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
               <NumField label="To" value={op.select.max ?? 10} onChange={(v) => onChange({ ...op, select: { ...op.select, max: v } })} />
             </>
           )}
+        </Group>
+      )
+    case 'saw':
+      return <SawFields op={op} onChange={onChange} />
+    case 'face':
+      return (
+        <Group title="Facing">
+          <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'offset', label: 'Rings from the outside in' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
+          <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+          <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} hint="Of the tool diameter · placeholder default" />
+          {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}
+          <NumField label="Tool centre past the edge" value={op.overhang} min={0} step={0.5} onChange={(v) => onChange({ ...op, overhang: v })} hint="0 = centre on the edge (the cutter still reaches its radius past it)" />
+          <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole panel'}</div>
+          <div className="col-span-2">
+            <SwitchField label="Re-set the stock top" checked={op.resetTop} onChange={(v) => onChange({ ...op, resetTop: v })} hint="Later operations on the top measure their depths from the faced surface (3D operations keep following their model)." />
+          </div>
         </Group>
       )
     case 'vcarve':

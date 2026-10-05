@@ -18,7 +18,7 @@ const SHAPES: { value: ToolShape; label: string }[] = [
 export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; machine: MachineProfile; onClose: () => void; update: (fn: (t: Tool) => void) => void }) {
   const holders = machine.holders ?? []
   const opt = (v: number | undefined) => (Number.isFinite(v) ? (v as number) : 0)
-  const set = (k: 'shankDiameter' | 'fluteLength' | 'gaugeLength' | 'cornerRadius' | 'angle') => (v: number) =>
+  const set = (k: 'shankDiameter' | 'fluteLength' | 'gaugeLength' | 'cornerRadius' | 'angle' | 'kerf' | 'bladeDiameter') => (v: number) =>
     update((t) => {
       if (v > 0) t[k] = v
       else delete t[k]
@@ -39,6 +39,12 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
             {tool.shape === 'bull' && <NumField label="Corner radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
             {tool.shape === 'v' && <NumField label="Included angle" suffix="°" value={opt(tool.angle)} min={0} max={180} onChange={set('angle')} />}
           </div>
+          {tool.type === 'saw' && (
+            <div className="grid grid-cols-2 gap-2">
+              <NumField label="Kerf" value={opt(tool.kerf)} min={0} step={0.1} onChange={set('kerf')} hint="Width of the cut; 0 = 4 mm" />
+              <NumField label="Blade Ø" value={opt(tool.bladeDiameter)} min={0} onChange={set('bladeDiameter')} hint="For the run-out of saw cuts; 0 = a placeholder blade" />
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
             <NumField label="Shank Ø" value={opt(tool.shankDiameter)} min={0} onChange={set('shankDiameter')} hint="Above the flutes" />
             <NumField label="Flute length" value={opt(tool.fluteLength)} min={0} onChange={set('fluteLength')} hint="Cutting length" />

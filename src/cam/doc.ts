@@ -13,8 +13,11 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * 3 (M2.5): solid models (`kind: 'solid'`, face colours and layers), shapes made from solid faces
  * (`Entity.solid`) and the placement turn (`ModelPlacement.frame`). An older app refuses a v3 part
  * instead of reading a solid as a mesh.
+ * 4 (M2.6): new operation kinds (facing, chamfer, curve cuts, hand-drawn toolpaths, edge work with
+ * an aggregate), saw-cut settings and toolpath edits. An older app refuses a v4 part instead of
+ * leaving those operations out without a word.
  */
-export const CAM_FILE_VERSION = 3
+export const CAM_FILE_VERSION = 4
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -243,6 +246,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   1: (p) => ({ ...p, version: 2 }),
   // v2 -> v3: solids, solid-face shapes and the placement turn are new optional fields.
   2: (p) => ({ ...p, version: 3 }),
+  // v3 -> v4: new operation kinds, saw settings and toolpath edits are new and optional.
+  3: (p) => ({ ...p, version: 4 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */
@@ -300,6 +305,22 @@ export function restSources(op: CamOp, part: CamPart): CamOp[] {
   return rest.from.length ? earlier.filter((o) => rest.from.includes(o.id)) : earlier
 }
 
+/** Operations that re-set the stock top do not move these: 3D operations follow their model, notes have no depth. */
+const TOP_FIXED: ReadonlySet<CamOp['kind']> = new Set(['finish3d', 'rough3d', 'code', 'face'])
+
+/**
+ * How far the stock top is below face 1 when `op` runs: the depth of every enabled facing on face
+ * 1 before it that re-sets the stock top (2D-16). 0 for operations it does not move (3D, edges,
+ * underside, notes, facing itself).
+ */
+export function stockTopShift(op: CamOp, part: CamPart): number {
+  if (op.face !== 1 || TOP_FIXED.has(op.kind)) return 0
+  const i = part.ops.findIndex((o) => o.id === op.id)
+  let shift = 0
+  for (const o of i < 0 ? part.ops : part.ops.slice(0, i)) if (o.kind === 'face' && o.enabled && o.face === 1 && o.resetTop) shift += Math.max(0, o.levels.depth)
+  return shift
+}
+
 /** The 3D models an op's toolpath needs: its own, and those of the earlier operations its rest machining follows. */
 export function modelsFor(op: CamOp, part: CamPart): string[] {
   return [...new Set([op, ...restSources(op, part)].flatMap((o) => (o.kind === 'finish3d' || o.kind === 'rough3d' ? [o.surface.modelId] : [])))]
@@ -314,6 +335,9 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   const { builtHash: _b, name: _n, note: _note, ...params } = op
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
   const deps: unknown[] = [params, geo, tool, part.thickness]
+  // a facing before it re-set the stock top
+  const top = stockTopShift(op, part)
+  if (top) deps.push({ top })
   // shapes made from solid faces: the solid's current data (a new version marks the op stale)
   const solids = geo.flatMap((e) => (typeof e === 'object' && e.solid ? [part.models?.find((m) => m.id === e.solid!.modelId)?.blob ?? null] : []))
   if (solids.length) deps.push({ solids })

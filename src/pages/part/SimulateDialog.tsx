@@ -256,7 +256,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
         {view === 'top' ? (
           <TopView sim={sim} t={t} part={part} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} outline={outline} onPieces={setPieces} />
         ) : (
-          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
+          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Button size="icon-sm" variant="ghost" aria-label="Previous operation" title="Previous operation" onClick={prevOp}>
@@ -573,7 +573,29 @@ function ZGauge({ z, thickness }: { z: number; thickness: number }) {
 
 type Outline = ReturnType<typeof cutterOutline>
 
-function View3D({ sim, t, part, base, pos, rapid, outline, r, opacity, section, spoilboard, onCarved }: Omit<ViewProps, 'r'> & { outline: Outline | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number }) {
+/** Saw blade to draw: radius, kerf, tilt and the direction of the cut the tool is on. */
+type Blade = { r: number; kerf: number; tilt: number; dir: number; lean: number }
+function bladeOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b: { x: number; y: number } } | null): Blade | null {
+  const sw = tp?.saw
+  if (!sw || !sw.cuts.length) return null
+  // the cut whose line is nearest the segment the tool is on
+  const at = seg ? { x: (seg.a.x + seg.b.x) / 2, y: (seg.a.y + seg.b.y) / 2 } : sw.cuts[0].a
+  let best = sw.cuts[0]
+  let bd = Infinity
+  for (const c of sw.cuts) {
+    const d = Math.hypot((c.a.x + c.b.x) / 2 - at.x, (c.a.y + c.b.y) / 2 - at.y)
+    if (d < bd) {
+      bd = d
+      best = c
+    }
+  }
+  const dir = Math.atan2(best.surf[1].y - best.surf[0].y, best.surf[1].x - best.surf[0].x)
+  // lean: +1 when the floor sits to the left of the cut
+  const lean = Math.sign(-Math.sin(dir) * best.floorOffset.x + Math.cos(dir) * best.floorOffset.y) || 1
+  return { r: sw.r, kerf: sw.kerf, tilt: sw.tilt, dir, lean }
+}
+
+function View3D({ sim, t, part, base, pos, rapid, outline, blade, r, opacity, section, spoilboard, onCarved }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number }) {
   const max = Math.max(part.length, part.width)
   return (
     <div className="h-[56vh] min-h-72 overflow-hidden rounded-md border border-white/10 bg-[#0e1013]">
@@ -587,11 +609,27 @@ function View3D({ sim, t, part, base, pos, rapid, outline, r, opacity, section, 
             <boxGeometry args={[part.length + 40, part.width + 40, Math.max(1, spoilboard)]} />
             <meshStandardMaterial color="#3a3f47" />
           </mesh>
-          <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} />
+          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} />}
         </group>
         <OrbitControls makeDefault />
       </Canvas>
     </div>
+  )
+}
+
+/** A saw blade standing in the cut, its lowest point at `pos`, tilted about the cut line. */
+function BladeModel({ pos, blade, rapid }: { pos: { x: number; y: number; z: number }; blade: Blade; rapid: boolean }) {
+  const tilt = (blade.tilt * Math.PI) / 180
+  // the disc (a cylinder about its Y axis) turned to stand in the vertical plane along the cut, then leaned
+  return (
+    <group position={[pos.x, pos.y, pos.z]} rotation={[0, 0, blade.dir]}>
+      <group rotation={[blade.lean * tilt, 0, 0]}>
+        <mesh position={[0, 0, blade.r]}>
+          <cylinderGeometry args={[blade.r, blade.r, blade.kerf, 64]} />
+          <meshStandardMaterial color={rapid ? '#f87171' : '#e7e5e4'} transparent opacity={0.6} metalness={0.5} roughness={0.3} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    </group>
   )
 }
 

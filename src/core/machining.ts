@@ -1,7 +1,7 @@
 import type { Seg } from '@/cam/geom'
 import { partCollisions } from '@/cam/collision/collision'
 import { partProgramOps } from '@/cam/mpr'
-import { generatePart, type Intent, isAdaptive, isFlatLayer, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
+import { generatePart, type Intent, isAdaptive, isFlatLayer, isMore25d, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
@@ -210,6 +210,13 @@ export interface SheetProgram {
     flat3dWritten?: boolean
     /** Collisions found by simulating the part's toolpaths (shank, holder, rapids, spoilboard, table). */
     collisions?: string[]
+    /** Operations with no confirmed woodWOP form (never written): name and reason. */
+    blocked?: { name: string; reason: string }[]
+    /** M2.6 operations with a woodWOP form (facing, chamfer, saw-cut settings), and whether they were written. */
+    more25d?: number
+    more25dWritten?: boolean
+    /** Enabled saw operations whose grooves were not put in the program (for the saw-unit check). */
+    sawUnwritten?: number
   }[]
 }
 
@@ -218,6 +225,8 @@ export interface ProgramOptions {
   camOutput?: boolean
   /** Also write flat-layer 3D operations (feature flag cam3dMprOutput). */
   cam3dOutput?: boolean
+  /** Also write the M2.6 operations that have a woodWOP form (feature flag cam25dMprOutput). */
+  cam25dOutput?: boolean
   /** 3D toolpaths calculated beforehand (in the compute worker), by `pathKey`. */
   paths3d?: ReadonlyMap<string, Toolpath>
   /** Small parts: the cut-out leaves `thickness` and a last pass at the end of the sheet cuts it. */
@@ -338,6 +347,12 @@ export function buildSheetProgram(
       const flat3dMissing = flat.filter((o) => !opts.paths3d?.has(pathKey(o, inst.cam!, machine))).length
       const write3d = !!opts.camOutput && !!opts.cam3dOutput
       const collisions = collisionsOf(inst.cam, paths, machine)
+      const blockedIds = new Set(paths.filter((tp) => tp.noOutput).map((tp) => tp.opId))
+      const blocked = paths.filter((tp) => tp.noOutput).map((tp) => ({ name: tp.name, reason: tp.noOutput! }))
+      const more = inst.cam.ops.filter((o) => o.enabled && isMore25d(o) && !blockedIds.has(o.id))
+      const moreIds = new Set(more.map((o) => o.id))
+      const write25d = !!opts.camOutput && !!opts.cam25dOutput
+      let sawWritten = 0
       custom.push({
         ...base,
         written: !!opts.camOutput,
@@ -348,19 +363,27 @@ export function buildSheetProgram(
         ...(adaptiveOps ? { adaptiveOps } : {}),
         ...(flat.length ? { flat3d: flat.length, flat3dMissing, flat3dWritten: write3d && !flat3dMissing } : {}),
         ...(collisions.length ? { collisions } : {}),
+        ...(blocked.length ? { blocked } : {}),
+        ...(more.length ? { more25d: more.length, more25dWritten: write25d } : {}),
       })
       for (const o of all) {
         if (o.kind === 'contour') contours.push(o)
         else if (o.kind !== 'cam' || !opts.camOutput) continue
         else if (flatIds.has(o.opId) && !(write3d && !flat3dMissing)) continue
+        else if (blockedIds.has(o.opId) || (moreIds.has(o.opId) && !write25d)) continue
         else if (o.intent.k === 'vdrill') {
           const it = o.intent
           drills.push({ ...base, kind: 'vdrill', opId: o.opId, purpose: 'custom', x: it.x, y: it.y, diameter: it.d, depth: it.depth, through: it.through, tool: it.tool })
         } else if (o.intent.k === 'hdrill') {
           const it = o.intent
           hdrills.push({ ...base, kind: 'hdrill', opId: o.opId, purpose: 'custom', x: it.x, y: it.y, z: r3(T - it.z), diameter: it.d, depth: it.depth, dir: it.dir, tool: it.tool })
-        } else camOps.push(o)
+        } else {
+          if (o.intent.k === 'saw') sawWritten++
+          camOps.push(o)
+        }
       }
+      const sawOps = inst.cam.ops.filter((o) => o.enabled && o.kind === 'saw' && o.face === 1).length
+      if (sawOps && !sawWritten) custom[custom.length - 1].sawUnwritten = sawOps
       continue
     }
     for (const op of inst.ops) {

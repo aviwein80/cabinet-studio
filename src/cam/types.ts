@@ -122,7 +122,7 @@ export interface ModelRef {
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3
+  version: 1 | 2 | 3 | 4
   materialId: string | null
   length: number
   width: number
@@ -314,6 +314,58 @@ export interface VCarveOp extends OpBase {
 
 export interface SawOp extends OpBase {
   kind: 'saw'
+  /**
+   * Saw-cut settings (2D-11). Absent = the Stage 1 groove: the blade plunges at the start of each
+   * straight line and runs to its end.
+   */
+  saw?: SawSettings
+}
+
+/**
+ * How a saw cut runs. The blade's run-out (how far its cut reaches along the line at the surface
+ * beyond the point where it is at full depth) follows from the blade diameter and the depth.
+ */
+export interface SawSettings {
+  /** Blade tilt from vertical, degrees (0 = vertical, up to 45: angled cuts). */
+  tilt: number
+  /** Side the blade leans to, seen along the cut. */
+  tiltSide: 'left' | 'right'
+  /**
+   * Extend to clear: full depth right to both ends of the line (the blade's cut at the surface
+   * runs past each end by its run-out). Off: the cut at the surface stays on the drawn line and the
+   * floor is short of each end by the run-out.
+   */
+  clear: boolean
+  /** Extra length added at each end, mm. */
+  extend: number
+  /** Lines shorter than this (after joining) are not cut, mm. */
+  minLength: number
+  /** Join straight lines that lie on one line and touch or overlap into one cut. */
+  join: boolean
+  /**
+   * Avoid cutting into neighbours: the blade's cut (at the surface, and at the floor of an angled
+   * cut) never leaves the part's outline; ends are pulled back and the part left uncut is reported.
+   */
+  avoid: boolean
+}
+
+/**
+ * Facing (2D-16): mill the top of the panel (or the picked closed shapes) down by `levels.depth`.
+ * With `resetTop`, later operations on face 1 measure their depths from the faced surface.
+ */
+export interface FaceOp extends OpBase {
+  kind: 'face'
+  /** Back-and-forth lines, or rings from the outside in. */
+  pattern: 'zigzag' | 'offset'
+  /** Distance between passes as a fraction of the tool diameter. */
+  stepover: number
+  /** Line angle in degrees from +X (back and forth). */
+  angle: number
+  direction: Direction
+  /** How far the tool centre runs past the boundary, mm (0 = centre on the edge). */
+  overhang: number
+  /** Later operations measure their depths from the faced top. */
+  resetTop: boolean
 }
 
 export interface SweepOp extends OpBase {
@@ -425,7 +477,7 @@ export interface Rough3dOp extends OpBase {
   flats: boolean
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

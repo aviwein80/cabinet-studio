@@ -1,0 +1,57 @@
+[
+ {
+  "op": "Saw groove",
+  "kind": "saw",
+  "tool": 140,
+  "moves": {
+   "rapid": 6,
+   "feed": 28,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 727,
+  "box": [
+   0,
+   150,
+   500,
+   250
+  ],
+  "zMin": -6,
+  "intents": {
+   "saw": 2
+  },
+  "warnings": [
+   "Saw cuts follow straight lines only; 1 arc(s) were skipped.",
+   "1 line(s) shorter than the minimum length 50 mm are not cut.",
+   "1 cut(s) pulled back so the blade stays inside the part: 68.235 mm of the drawn lines is not cut to full depth. Finish it with a router."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 150,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 0,
+    "y": 150,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 0,
+    "y": 150,
+    "z": 0,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 5.686,
+    "y": 150,
+    "z": -1.873,
+    "f": "plunge"
+   }
+  ]
+ }
+]

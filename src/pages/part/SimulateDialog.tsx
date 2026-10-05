@@ -1,3 +1,5 @@
+import { UnconfirmedList } from '@/components/Configure'
+import { usedUnconfirmed } from '@/core/confirm'
 import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { ChevronLeft, ChevronRight, CirclePlay, Download, Pause, Play, SkipBack, SkipForward, TriangleAlert } from 'lucide-react'
@@ -119,6 +121,8 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   }, [part.entities, part.outlineId])
   const [pieces, setPieces] = useState<{ scrap: number; offcut: number } | null>(null)
   const spoil = machineModelOf(machine).spoilboard.thickness
+  // placeholder values behind this simulation (tools, blade, holders, machine model, the operations' own)
+  const placeholders = useMemo(() => usedUnconfirmed(machine, toolpaths.flatMap((tp) => (tp.tool ? [tp.tool.id] : [])), [part], (op) => toolpaths.find((tp) => tp.opId === op.id)?.tool ?? null), [machine, toolpaths, part])
 
   useEffect(() => {
     if (!playing) return
@@ -342,6 +346,13 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           <Stat label="Cells" value={fmt(cell)} />
           {pieces && (pieces.scrap > 0 || pieces.offcut > 0) && <Stat label="Cut free" value={[pieces.scrap ? `${pieces.scrap} scrap` : '', pieces.offcut ? `${pieces.offcut} offcut${pieces.offcut > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ')} />}
         </section>
+        {placeholders.length > 0 && (
+          <section className="rounded-md border border-amber-400/30 bg-amber-400/5 p-2" data-cfg="sim:unconfirmed">
+            <h3 className="mb-1 font-medium text-amber-200">Placeholder values in this simulation</h3>
+            <p className="mb-1.5 text-[11px] text-stone-400">The simulation and collision check use these; they are not confirmed yet.</p>
+            <UnconfirmedList items={placeholders} tone="dark" limit={5} />
+          </section>
+        )}
         <section>
           <h3 className="mb-1.5 font-medium text-stone-300">Collision check</h3>
           {check.error ? (

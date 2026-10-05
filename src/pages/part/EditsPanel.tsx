@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button'
 import type { MachineProfile } from '@/core/types'
 import { cn } from '@/lib/utils'
 import type { PathPick } from './OpsPanel'
+import { useOpCfg } from './opConfigure'
+import { cutDefaultsOf } from '@/core/confirm'
+import { useStore } from '@/app/store'
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -113,6 +116,10 @@ const PAGE = 50
 /** Toolpath edits: corner slow-down, rapid height, reverse, pocket start points, and point by point. */
 export function EditsGroup({ op, part, machine, tp, sel, onChange }: { op: CamOp; part: CamPart; machine: MachineProfile; tp?: Toolpath; sel: string[]; onChange: (o: CamOp) => void }) {
   const e: ToolpathEdits = op.edits ?? {}
+  const c = useOpCfg(op, part, onChange)
+  const shopCorners = useStore((st) => cutDefaultsOf(st.data!.machine).corners)
+  // corner values typed in are this operation's own (confirmed for it)
+  const setCorners = (corners: NonNullable<ToolpathEdits['corners']>) => c('corners').set({ ...op, edits: { ...e, corners } } as CamOp)
   const set = (patch: Partial<ToolpathEdits>) => {
     const next = { ...e, ...patch }
     for (const k of Object.keys(next) as (keyof ToolpathEdits)[]) if (next[k] === undefined) delete next[k]
@@ -171,14 +178,14 @@ export function EditsGroup({ op, part, machine, tp, sel, onChange }: { op: CamOp
         </div>
       )}
       <div className="col-span-2">
-        <SwitchField label="Slow down in corners" checked={!!e.corners} onChange={(v) => set({ corners: v ? { angle: 45, distance: 10, steps: 2, percent: 50 } : undefined })} hint="Sharp turns and tight arcs; placeholder default values" />
+        <SwitchField label="Slow down in corners" checked={!!e.corners} onChange={(v) => set({ corners: v ? { ...shopCorners } : undefined })} hint="Sharp turns and tight arcs; starts from the shop's default values" cfg={c('corners').cfg} badge={e.corners ? c('corners').badge : undefined} />
       </div>
       {e.corners && (
         <>
-          <NumField label="Corners sharper than" suffix="°" value={e.corners.angle} min={1} max={180} onChange={(v) => set({ corners: { ...e.corners!, angle: v } })} />
-          <NumField label="Distance each side" value={e.corners.distance} min={0.1} onChange={(v) => set({ corners: { ...e.corners!, distance: v } })} />
-          <NumField label="Steps" suffix="" value={e.corners.steps} min={1} max={20} onChange={(v) => set({ corners: { ...e.corners!, steps: Math.round(v) } })} />
-          <NumField label="Feed at the corner" suffix="%" value={e.corners.percent} min={1} max={100} onChange={(v) => set({ corners: { ...e.corners!, percent: v } })} />
+          <NumField label="Corners sharper than" suffix="°" value={e.corners.angle} min={1} max={180} onChange={(v) => setCorners({ ...e.corners!, angle: v })} />
+          <NumField label="Distance each side" value={e.corners.distance} min={0.1} onChange={(v) => setCorners({ ...e.corners!, distance: v })} />
+          <NumField label="Steps" suffix="" value={e.corners.steps} min={1} max={20} onChange={(v) => setCorners({ ...e.corners!, steps: Math.round(v) })} />
+          <NumField label="Feed at the corner" suffix="%" value={e.corners.percent} min={1} max={100} onChange={(v) => setCorners({ ...e.corners!, percent: v })} />
         </>
       )}
       <div className="col-span-2">

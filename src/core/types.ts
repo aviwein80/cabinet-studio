@@ -437,6 +437,14 @@ export interface MachineProfile {
   holders?: ToolHolder[]
   /** Machine model (axes, table, heads, capabilities); absent = the placeholder N-200 model (`machineModelOf`). */
   physical?: MachineModel
+  /**
+   * Values the shop has confirmed (M2.6e): keys from `src/core/confirm.ts` such as
+   * `tool:t140:blade`, `model:spoilboard`, `default:faceStepover`. Anything placeholder and not
+   * listed here shows a "Configure" badge. Confirming never switches on any output.
+   */
+  confirmed?: string[]
+  /** The shop's default cutting values for new operations; absent ones are the PLACEHOLDER built-ins. */
+  cutDefaults?: Partial<import('./confirm').CutDefaults>
 }
 
 export interface NestSettings {

@@ -332,7 +332,8 @@ export function modelsFor(op: CamOp, part: CamPart): string[] {
  * this tool in the part's material. Changing any of them marks the op stale.
  */
 export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: OpMachineInputs): string {
-  const { builtHash: _b, name: _n, note: _note, ...params } = op
+  // (confirming a value changes nothing the toolpath reads)
+  const { builtHash: _b, name: _n, note: _note, confirmed: _c, ...params } = op
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
   const deps: unknown[] = [params, geo, tool, part.thickness]
   // a facing before it re-set the stock top

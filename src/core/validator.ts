@@ -11,6 +11,8 @@ import type { Placement } from './nesting'
 import { machineModelOf } from './machineModel'
 import { featuresOf } from './features'
 import type { Library, MachineProfile, ShopSettings } from './types'
+import { machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed } from './confirm'
+import { resolveTool } from '@/cam/ops'
 
 export type Severity = 'error' | 'warning' | 'info'
 
@@ -21,6 +23,8 @@ export interface Issue {
   sheet?: number
   partNo?: number
   partUid?: string
+  /** Placeholder values behind this issue: each opens the field for the real value (M2.6e). */
+  configure?: Unconfirmed[]
 }
 
 const SMALL_PART_MIN_SIDE = 120
@@ -39,11 +43,13 @@ export function validateJob(
   const byUid = new Map(instances.map((i) => [i.uid, i]))
   const add = (i: Issue) => issues.push(i)
 
+  const shopItems = machineUnconfirmed(machine)
   if (machine.placeholder)
     add({
       severity: 'warning',
       code: 'PLACEHOLDER_TOOLS',
       message: 'Machine profile uses PLACEHOLDER tool data. Replace it with the real N-200 tool table before running any program.',
+      configure: shopItems.filter((u) => u.group === 'Tools' && u.target.kind === 'tool' && u.target.part === 'data'),
     })
 
   const model = machineModelOf(machine)
@@ -52,8 +58,10 @@ export function validateJob(
       severity: 'warning',
       code: 'MACHINE_PLACEHOLDER',
       message: 'Machine model (table, travel, tool change, spoilboard, saw and aggregate units) is PLACEHOLDER data. Confirm the real N-200 figures on the Machine page.',
+      configure: shopItems.filter((u) => u.group === 'Machine model'),
     })
   const noSaw = (what: string) => `${what}: the machine model has no saw unit. Confirm the unit on the Machine page (Saw unit fitted) or use router pockets.`
+  const unit = (fact: 'saw' | 'aggregate'): Unconfirmed[] => [{ key: `model:${fact}`, label: MODEL_FACT_LABEL[fact], value: model.capabilities[fact] ? 'fitted' : 'not fitted', group: 'Machine model', target: { kind: 'model', fact } }]
 
   const cutter = cutoutTool(machine)
   if (!cutter)
@@ -186,7 +194,7 @@ export function validateJob(
           break
         }
         case 'saw':
-          if (!model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(label) })
+          if (!model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(label), configure: unit('saw') })
           if (!op.tool) add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no saw unit in the tool table.` })
           if (op.depth >= T - EPS)
             add({ ...ref, severity: 'error', code: 'DEPTH', message: `${label}: saw groove ${fmt(op.depth)} mm cuts through ${fmt(T)} mm material.` })
@@ -213,7 +221,7 @@ export function validateJob(
             if (p && (bx.minX < p.x - r || bx.minY < p.y - r || bx.maxX > p.x + p.dx + r || bx.maxY > p.y + p.dy + r))
               add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${what}: path leaves its part and would cut a neighbour.` })
           }
-          if (it.k === 'saw' && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(what) })
+          if (it.k === 'saw' && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(what), configure: unit('saw') })
           // M2.6: how far the cutter reaches past its path (facing) or the blade past the cut's ends
           // (saw run-out) must stay off every other part on the sheet
           if ((it.k === 'contour' && it.reach) || (it.k === 'saw' && it.runout)) {
@@ -296,8 +304,8 @@ export function validateJob(
           message: `Custom part #${c.partNo} ${name}: ${c.more25d} newer 2.5D operation(s) (facing, chamfers, saw-cut settings, hand-drawn or edited toolpaths) are not written because their output is off (Machine > Features).`,
         })
       if (c.aggregateOps && !model.capabilities.aggregate)
-        add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: `Custom part #${c.partNo} ${name}: ${c.aggregateOps} edge-work operation(s) need a rotating aggregate, and the machine model has none. Confirm the unit on the Machine page (Aggregate head fitted) or machine the edge another way.` })
-      if (c.sawUnwritten && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(`Custom part #${c.partNo} ${name}: ${c.sawUnwritten} saw operation(s)`) })
+        add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: `Custom part #${c.partNo} ${name}: ${c.aggregateOps} edge-work operation(s) need a rotating aggregate, and the machine model has none. Confirm the unit on the Machine page (Aggregate head fitted) or machine the edge another way.`, configure: unit('aggregate') })
+      if (c.sawUnwritten && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(`Custom part #${c.partNo} ${name}: ${c.sawUnwritten} saw operation(s)`), configure: unit('saw') })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
       if (c.written && c.backHoles > 0)
         add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })
@@ -313,6 +321,27 @@ export function validateJob(
       })
     }
   }
+
+  // M2.6e: every placeholder value this job uses, each with the field where the real value goes
+  const toolIds = new Set<string>()
+  for (const prog of programs)
+    for (const op of prog.ops) {
+      const t = op.kind === 'cam' ? ('tool' in op.intent ? op.intent.tool : null) : op.tool
+      if (t) toolIds.add(t.id)
+    }
+  const camParts = [...new Map(instances.filter((i) => i.cam).map((i) => [i.cam!.id, i.cam!])).values()]
+  for (const p of camParts) for (const op of p.ops) if (op.enabled && op.toolId) toolIds.add(op.toolId)
+  const used = usedUnconfirmed(machine, toolIds, camParts, (op) => (op.toolId ? null : resolveTool(op, machine)))
+  if (used.length)
+    add({
+      severity: 'warning',
+      code: 'UNCONFIRMED',
+      message: `${used.length} value(s) this job uses are placeholders, not confirmed yet: ${used
+        .slice(0, 6)
+        .map((u) => `${u.label} (${u.value})`)
+        .join('; ')}${used.length > 6 ? `; and ${used.length - 6} more` : ''}. Configure each one, or mark it confirmed if it is right. Confirming does not switch on any output.`,
+      configure: used,
+    })
 
   add({
     severity: 'info',

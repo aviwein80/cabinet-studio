@@ -237,6 +237,15 @@ export checker. Tool numbers are still placeholders.
     saw cuts, curve cuts, edge work, toolpaths with heights edited point by point and lost edits
     are never written (`CAM_NO_OUTPUT`). A facing cutter's reach or a saw blade's run-out into
     another part on the sheet is an error (`OP_HITS_NEIGHBOUR`).
+- **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
+  the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
+  aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
+  used: operation editor, tool table, Machine page, simulator and the export checker's messages.
+  Configure opens the exact field for the real value; **Mark as confirmed** keeps the value
+  shown. The Machine page lists them all, and the sidebar shows how many are left. Every value can
+  be changed at any time (the tool table, the Machine page's **Default cutting values**, or on
+  one operation); changes mark the affected operations out of date and the checks run again.
+  Confirming a value never switches on any output.
 - **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and the tool.
   The material left is shown as a shaded top view or in 3D (with the tool's shank and holder,
   see-through stock and a section cut across the width or the length), with depth readouts and
@@ -441,6 +450,7 @@ src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpat
   model/           model data store (compressed, by SHA-256, outside the shop file), part files
   stock/           stock model interface, the heightfield stock, playback, cut-free pieces
   collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)
+src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its real value goes
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
                    Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse)
   worker/          background compute worker (3D tasks) with progress and cancel

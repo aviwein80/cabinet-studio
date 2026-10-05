@@ -8,4 +8,5 @@ WARNING SMALL_PART         S3 #4 Part #4 (564 x 99) is small; vacuum may not hol
 WARNING SMALL_PART         S3 #5 Part #5 (564 x 100) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
 WARNING SMALL_PART         S3 #21 Part #21 (99 x 764) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).
 WARNING HORIZONTAL_SKIPPED S3 4 horizontal holes on parts #21 are not in the program (no horizontal drill unit). Drill them off-machine.
+WARNING UNCONFIRMED        14 value(s) this job uses are placeholders, not confirmed yet: T101 number, diameter and depth (Ø12, 42 deep); T101 feeds, speed and step-down (18000 rpm, 5000 mm/min (built-in)); T201 number, diameter and depth (Ø5, 35 deep); T203 number, diameter and depth (Ø8, 35 deep); T204 number, diameter and depth (Ø35, 15 deep); T103 number, diameter and depth (Ø6, 20 deep); and 8 more. Configure each one, or mark it confirmed if it is right. Confirming does not switch on any output.
 INFO    SIMULATE           Generated programs are not machine-proven. Open every MPR in woodWOP and run the simulation before cutting.

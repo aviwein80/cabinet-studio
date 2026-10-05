@@ -1,3 +1,4 @@
+import { ConfigureBadge } from '@/components/Configure'
 import {
   ArrowLeft,
   CircleAlert,
@@ -511,7 +512,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
             )}
             <div className="border-t p-4">
               <div className="mb-2 text-xs font-semibold">Sheet checks</div>
-              <IssueList issues={sheetIssues} onPick={(uid) => setSelected(uid)} empty="No issues on this sheet." />
+              <IssueList issues={sheetIssues} onPick={(uid) => setSelected(uid)} empty="No issues on this sheet." jobId={job.id} />
             </div>
           </div>
         </div>
@@ -526,7 +527,7 @@ const SEV = {
   info: { icon: Info, cls: 'border-sky-200 bg-sky-50 text-sky-900' },
 } as const
 
-function IssueList({ issues, onPick, empty }: { issues: Issue[]; onPick?: (uid: string) => void; empty: string }) {
+function IssueList({ issues, onPick, empty, jobId }: { issues: Issue[]; onPick?: (uid: string) => void; empty: string; jobId?: string }) {
   if (issues.length === 0) return <div className="text-xs text-muted-foreground">{empty}</div>
   const order = { error: 0, warning: 1, info: 2 }
   return (
@@ -550,6 +551,17 @@ function IssueList({ issues, onPick, empty }: { issues: Issue[]; onPick?: (uid: 
                   {i.message}
                 </span>
               </button>
+              {i.configure && i.configure.length > 0 && (
+                <div className="mt-1 flex flex-wrap items-center gap-1 pl-6" data-cfg={`issue:${i.code}`}>
+                  {i.configure.slice(0, 8).map((u) => (
+                    <span key={u.key} className="inline-flex items-center gap-1 rounded border border-amber-200 bg-white px-1 py-0.5 text-[10px] text-amber-950">
+                      {u.label}
+                      <ConfigureBadge item={u.target.kind === 'op' && jobId ? { ...u, target: { ...u.target, jobId } } : u} />
+                    </span>
+                  ))}
+                  {i.configure.length > 8 && <span className="text-[10px] text-muted-foreground">and {i.configure.length - 8} more on the Machine page</span>}
+                </div>
+              )}
             </li>
           )
         })}
@@ -653,7 +665,7 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
             </Badge>
             <Badge variant="outline">{counts.info} info</Badge>
           </div>
-          <IssueList issues={out.issues} empty="No issues found." />
+          <IssueList issues={out.issues} empty="No issues found." jobId={job.id} />
         </div>
       </div>
 

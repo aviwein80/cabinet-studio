@@ -20,6 +20,28 @@ The owner's Vercel deployment builds from GitHub `main` automatically. So:
 
 Full details: section 11 of `docs/stage-2-3-prompt.md`.
 
+## Standing rule: every unconfirmed value shows "Configure" (from M2.6e, all future milestones)
+
+The owner does not know many real values yet (tools, saw blade, aggregate, machine figures,
+cutting defaults). Instead of waiting, every such value stays visible and easy to fix:
+
+1. **Track it.** Any value that is a placeholder, assumed or a built-in default gets a key in the
+   registry (`src/core/confirm.ts`: `machineUnconfirmed`, `toolUnconfirmed`, `opUnconfirmed`,
+   `OP_FIELDS`, `CutDefaults`). Its state is stored: `MachineProfile.confirmed` for shop values,
+   `CamOp.confirmed` for an operation's own values. Entering a real value marks it confirmed;
+   "Mark as confirmed" keeps the shown value and marks it.
+2. **Show it.** A "Configure" badge (`src/components/Configure.tsx`) wherever the value is used:
+   operation editor, tool table and tool dialog, Machine page (banner list, machine model, default
+   cutting values), simulator, and export-checker messages (`Issue.configure`, `UNCONFIRMED`).
+   Clicking it opens the exact field (`data-cfg` key, `openConfigure` in the store).
+3. **Editable any time.** Every such value can be changed later (tool table, Machine page, and a
+   per-operation override where it makes sense). Changes mark the affected operations stale
+   (they reach `opInputHash`) and the collision and export checks run again. Nothing is locked.
+4. **Safety unchanged.** Confirming never switches on any output or fits a unit; no existing check
+   is weakened. New milestones add their placeholders to the registry with tests (badge shown while
+   a placeholder, gone once confirmed).
+
+
 ## Status
 
 | Milestone | Status | Notes |
@@ -45,12 +67,13 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.6b Chamfers, cuts between curves, along 3D curves, Z-waves | **Done** (October 2026) | See below. |
 | M2.6c Hand-drawn toolpaths, toolpath edits | **Done** (October 2026) | See below. |
 | M2.6d Edge work with a rotating aggregate, screenshots, docs | **Done** (October 2026) | See below. M2.6 complete. |
+| M2.6e Unconfirmed values: Configure badges, confirmation tracking | **Done** (October 2026) | Owner request before M2.7. See below. |
 | M2.7 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -73,6 +96,10 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
 11. DWG stays out. DXF only; DWG files go through the free ODA File Converter first.
 12. Rhino (.3dm) and SketchUp (.skp): no reader. Export STL or OBJ from those programs (agreed,
     run 3).
+14. Before M2.7 (M2.6e): the owner does not know the real T140 blade, the aggregate or the M2.6
+    defaults. Make every unconfirmed value visible with a "Configure" badge and easy to fix any
+    time; keep 200 mm as the T140 placeholder blade, treat the aggregate as not fitted, keep the
+    M2.6 placeholder defaults, all with badges. Confirming never switches on output.
 13. With the M2.6 go-ahead: keep the 2 mm collision margin, and full-panel roughing (with a
     warning) when there is no boundary and the model does not cover the panel (M2.4); keep the
     6 mm rebate reach and drill pointed holes to the straight-wall depth (M2.5); flat-layer 3D
@@ -912,6 +939,49 @@ proven output.
    slow-down 45° / 10 mm / 2 steps / 50 %, edge-work height 9.5 mm and reach 5 mm, Z-wave 1-4 mm
    every 40 mm, between-curves step-over 1 mm. Replace with the shop's values when ready.
 
+## M2.6e unconfirmed values: what was built
+
+| What | Where |
+|---|---|
+| Registry of unconfirmed values, each with a key, the value in use and where the real one goes: per tool (number / diameter / depth while the table is placeholder; saw blade diameter, assumed 200 mm when absent; shank, flute and stick-out of 3D tools; feeds, speed and step-down, also when the built-in 18000 rpm / 5000 mm/min is used), holders, the seven machine-model facts (table, travel, tool change, safe Z, spoilboard, saw unit fitted or not, aggregate fitted or not) and twelve default cutting values (pocket, facing, 3D finishing and roughing step-overs and step-downs, adaptive width, corner slow-down, edge-work height and reach, Z-wave, between-curves step-over) | `src/core/confirm.ts` |
+| Confirmation stored in the data: `MachineProfile.confirmed` (shop values), `CamOp.confirmed` (an operation's own); `MachineProfile.cutDefaults` (the shop's default cutting values). Optional fields: no format change. Confirming an operation value does not mark it stale (it is left out of `opInputHash`) | `src/core/types.ts`, `src/cam/types.ts`, `src/cam/doc.ts` |
+| An operation value is a placeholder while it equals the shop default, that default is not confirmed, and the operation has not confirmed it. Typing a value in the operation editor confirms it for that operation (an override); a different value set earlier counts as the owner's | `opFieldPlaceholder`, `confirmOp` |
+| Shop defaults on the Machine page ("Default cutting values"). New operations take them; changing one confirms it and moves every operation still on the old value (jobs and the part library), which marks them stale. Saw cuts also take a per-operation blade diameter | `setCutDefault`, `retargetDefault`, `newOpDefaults`, `CutDefaultsSection.tsx`, `SawSettings.blade` |
+| Badges: operation editor (a strip of every value the operation uses, plus a badge on each field from a default, on the tool and on the feed), tool table (per row) and tool dialog (data, blade, lengths, feeds, holder; new feed / speed / step-down fields), Machine page (banner listing all, machine model, defaults), simulator (values behind the simulation and collision check), export checker (`UNCONFIRMED` warning with the values the job uses; `PLACEHOLDER_TOOLS`, `MACHINE_PLACEHOLDER` and the saw / aggregate `MACHINE_CANNOT` carry their Configure links), sidebar banner (count) | `Configure.tsx`, `configureFocus.ts`, `OpsPanel.tsx`, `opConfigure.tsx`, `EditsPanel.tsx`, `MachinePage.tsx`, `ToolDialog.tsx`, `MachineModelSection.tsx`, `SimulateDialog.tsx`, `JobPage.tsx`, `App.tsx` |
+| Configure opens the exact field: the store holds the target (`openConfigure`), the page opens what holds it (Machine page: the tool dialog; designer: the operation) and focuses it with a highlight | `useConfigureTarget`, `focusField` |
+
+Owner decisions applied: T140 keeps the placeholder 200 mm blade (badge); the aggregate counts
+as not fitted (badge on the fact); the M2.6 defaults stay as they were (badges). Confirming all
+machine-model facts clears the model's placeholder flag but never fits a unit; output switches
+are untouched.
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Badges show for placeholders and clear once confirmed | `tests/confirm.test.ts`; browser check | Placeholder machine lists the T140 blade ("Ø200 mm (assumed)"), tool data, 3D lengths, feeds, the holder, all 7 machine facts (aggregate "not fitted") and the defaults. "Mark as confirmed" clears exactly that one and changes no value. In the browser: typing 250 in T140's Blade Ø cleared its badge (sidebar 44 -> 43); "Mark as confirmed" on a default cleared it; typing a facing step-over cleared that operation's badge |
+| Operation values | same | A new facing takes the shop default and shows its badge; typing a value or marking it clears it; confirming the shop default clears it everywhere; a saw cut with its own blade drops the tool's blade badge; edge work shows height, reach and the aggregate |
+| Edits mark operations stale and re-run the checks | same | Changing the facing default to 60 % moved the job and library operations on 45 % (stale) and left the one confirmed at 45 %; a 20 mm blade instead of the placeholder 200 mm: the saw cut is stale, run-out 9.8 instead of 39.2 mm, and `OP_HITS_NEIGHBOUR` goes away; confirming a value does not mark anything stale |
+| Safety unchanged | same | With every value confirmed: `CAM_OUTPUT_OFF` and the saw `MACHINE_CANNOT` still there; capabilities unchanged; output switches off. All earlier tests and goldens unchanged |
+| Export checker messages | same | `UNCONFIRMED` lists the values the job uses with targets (T140 blade -> the tool's blade field); after confirming the blade it leaves the list and every other check is still there |
+
+The sample job's `validation.txt` gains one line: the new `UNCONFIRMED` warning (14 values the
+sample job uses). Nothing else in the sample output changed.
+
+### Screenshots
+
+`docs/screenshots/stage-2-3/M2.6e/`:
+
+- `01-machine-banner.png`: the Machine page banner listing what is unconfirmed (Configure / Mark as confirmed each), the sidebar count, and badges in the tool table.
+- `03-configure-opens-blade-field.png`: Configure on the T140 blade: the tool dialog opens with the Blade Ø field focused and highlighted.
+- `04-blade-entered-badge-cleared.png`: after typing 250 mm the blade's badge is gone.
+- `05-machine-model-facts.png`, `06-default-cutting-values.png`: machine-model facts and the default cutting values with their badges.
+- `07-op-editor-facing.png`: the operation editor's strip (the facing step-over, the tool's data and feeds) and field badges.
+- `08-op-editor-edge-aggregate.png`: edge work: height, reach and the aggregate (not fitted) with Configure.
+- `09-simulator-placeholders.png`: the values behind a simulation.
+- `10-op-editor-saw.png`: a saw cut: blade, tool and the saw unit, plus the per-operation blade field.
+- `11-export-checker-configure.png`: the job's validation list with Configure links on each placeholder message.
+
 ## Next run: M2.7 CAD and tool additions
 
 - CAD-02, CAD-08, CAD-17, CAD-18, NEW-05, NEW-06, TOOL-04, TOOL-05, NEW-15 as in the prompt.
@@ -941,3 +1011,4 @@ proven output.
 - **Run 7 (M2.6b)**: chamfers, cuts between curves, along 3D curves, Z-waves. See `git log`.
 - **Run 7 (M2.6c)**: hand-drawn toolpaths and toolpath edits. See `git log`.
 - **Run 7 (M2.6d)**: edge work with a rotating aggregate, screenshots, README, ROADMAP. M2.6 complete.
+- **Run 8 (M2.6e)**: Configure badges and confirmation tracking for every unconfirmed value. See `git log`.

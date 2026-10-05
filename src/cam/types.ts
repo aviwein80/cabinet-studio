@@ -225,6 +225,11 @@ interface OpBase {
   auto?: string
   /** Changes made to the calculated toolpath (NEW-11). */
   edits?: ToolpathEdits
+  /**
+   * Values of this operation the owner confirmed or set (M2.6e: default-cutting-value keys such as
+   * `faceStepover`); they no longer show a "Configure" badge.
+   */
+  confirmed?: string[]
 }
 
 /**
@@ -374,6 +379,8 @@ export interface SawSettings {
   clear: boolean
   /** Extra length added at each end, mm. */
   extend: number
+  /** Blade diameter for this operation, mm (absent = the tool's). */
+  blade?: number
   /** Lines shorter than this (after joining) are not cut, mm. */
   minLength: number
   /** Join straight lines that lie on one line and touch or overlap into one cut. */

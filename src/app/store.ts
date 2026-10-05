@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid'
+import { type ConfigTarget, confirmKey, type CutDefaultKey, type CutDefaults, setCutDefault } from '@/core/confirm'
 import { create } from 'zustand'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { sampleJob } from '@/core/sample'
@@ -49,6 +50,14 @@ interface State {
   /** Insert or replace a custom part in a job (jobId) or the shared part library. */
   savePart(part: CamPart, jobId?: string): void
   deletePart(partId: string, jobId?: string): void
+  /** A "Configure" badge was clicked: the field to open (the page it is on reads and clears it). */
+  configure: ConfigTarget | null
+  openConfigure(t: ConfigTarget): void
+  clearConfigure(): void
+  /** "Mark as confirmed" on a shop value. */
+  confirmValue(key: string): void
+  /** Change a default cutting value; operations still using the old one follow it. */
+  setCutDefault(key: CutDefaultKey, value: CutDefaults[CutDefaultKey]): void
 }
 
 export function partsOf(d: AppData, jobId?: string): CamPart[] {
@@ -108,6 +117,17 @@ export const useStore = create<State>((set, get) => {
     lastSaved: null,
     route: { page: 'jobs' },
     go: (route) => set({ route }),
+    configure: null,
+    openConfigure(t) {
+      const r = get().route
+      if (t.kind === 'op') {
+        if (!(r.page === 'part' && r.partId === t.partId)) set({ route: { page: 'part', partId: t.partId, ...(t.jobId ? { jobId: t.jobId } : {}) } })
+      } else if (r.page !== 'machine') set({ route: { page: 'machine' } })
+      set({ configure: t })
+    },
+    clearConfigure: () => set({ configure: null }),
+    confirmValue: (key) => mutate((d) => confirmKey(d.machine, key)),
+    setCutDefault: (key, value) => mutate((d) => setCutDefault(d, key, value)),
 
     async init() {
       try {

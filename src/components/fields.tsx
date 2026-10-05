@@ -8,10 +8,12 @@ import { formatLength, parseLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
-export function Field({ label, hint, children, className }: { label: string; hint?: string; children: ReactNode; className?: string }) {
+/** `cfg`: the key a "Configure" badge opens (the field is found by it); `badge`: shown beside the label. */
+export function Field({ label, hint, children, className, cfg, badge }: { label: string; hint?: string; children: ReactNode; className?: string; cfg?: string; badge?: ReactNode }) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex flex-col gap-1.5 rounded-md', className)} data-cfg={cfg}>
       <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+      {badge && <div className="-mt-0.5 flex min-w-0 flex-wrap items-center gap-1 empty:hidden">{badge}</div>}
       {children}
       {hint && <p className="text-[11px] leading-snug text-muted-foreground">{hint}</p>}
     </div>
@@ -28,6 +30,8 @@ export function NumField({
   suffix = 'mm',
   hint,
   className,
+  cfg,
+  badge,
 }: {
   label: string
   value: number
@@ -38,6 +42,8 @@ export function NumField({
   suffix?: string
   hint?: string
   className?: string
+  cfg?: string
+  badge?: ReactNode
 }) {
   const units: UnitSystem = useStore((s) => (suffix === 'mm' ? (s.data?.settings.units ?? 'mm') : 'mm'))
   const length = suffix === 'mm'
@@ -55,7 +61,7 @@ export function NumField({
   }
   const unitLabel = length && units === 'in' ? 'in' : suffix
   return (
-    <Field label={label} hint={hint} className={className}>
+    <Field label={label} hint={hint} className={className} cfg={cfg} badge={badge}>
       <div className="flex items-center gap-1.5">
         <Input
           id={id}
@@ -97,6 +103,8 @@ export function SelectField<T extends string>({
   onChange,
   hint,
   className,
+  cfg,
+  badge,
 }: {
   label: string
   value: T
@@ -104,9 +112,11 @@ export function SelectField<T extends string>({
   onChange: (v: T) => void
   hint?: string
   className?: string
+  cfg?: string
+  badge?: ReactNode
 }) {
   return (
-    <Field label={label} hint={hint} className={className}>
+    <Field label={label} hint={hint} className={className} cfg={cfg} badge={badge}>
       <Select value={value} onValueChange={(v) => onChange(v as T)}>
         <SelectTrigger className="h-8 w-full">
           <SelectValue />
@@ -123,14 +133,17 @@ export function SelectField<T extends string>({
   )
 }
 
-export function SwitchField({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+export function SwitchField({ label, checked, onChange, hint, cfg, badge }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string; cfg?: string; badge?: ReactNode }) {
   const id = useId()
   return (
-    <div className="flex items-start justify-between gap-3 py-1">
+    <div className="flex items-start justify-between gap-3 rounded-md py-1" data-cfg={cfg}>
       <div className="flex flex-col gap-0.5">
-        <Label htmlFor={id} className="text-sm">
-          {label}
-        </Label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Label htmlFor={id} className="text-sm">
+            {label}
+          </Label>
+          {badge}
+        </div>
         {hint && <p className="text-[11px] leading-snug text-muted-foreground">{hint}</p>}
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onChange} />

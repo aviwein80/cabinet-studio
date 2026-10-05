@@ -34,6 +34,7 @@ import { ModelImportDialog } from './part/ModelImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
 import { use3dToolpaths } from './part/use3dToolpaths'
 import { appendStep } from '@/cam/more25d/edits'
+import { useConfigureTarget } from '@/components/configureFocus'
 import type { PathPick } from './part/OpsPanel'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
@@ -173,6 +174,13 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
     setToolId(id)
     if (t.params?.includes('text')) setTimeout(() => document.getElementById('param-text')?.focus(), 0)
   }
+
+  // a "Configure" badge asked for one of this part's operation values: pick the operation, then the field
+  useConfigureTarget(['op'], (t) => {
+    if (t.kind !== 'op') return
+    setTab('ops')
+    setSelectedOp(t.opId)
+  })
 
   const setPathPick = (pp: PathPick | null) => {
     setPathPickState(pp)

@@ -1182,8 +1182,8 @@ function genSawCuts(op: SawOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const tool = tp.tool
   if (!tool) tp.warnings.push('No saw unit in the tool table.')
   const kerf = tool?.kerf ?? 4
-  const placeholderBlade = !tool?.bladeDiameter
-  const R = (tool?.bladeDiameter ?? PLACEHOLDER_BLADE) / 2
+  const placeholderBlade = !st.blade && !tool?.bladeDiameter
+  const R = (st.blade || tool?.bladeDiameter || PLACEHOLDER_BLADE) / 2
   if (placeholderBlade) tp.warnings.push(`${tool ? `T${tool.number} has` : 'The saw has'} no blade diameter: a PLACEHOLDER Ø${PLACEHOLDER_BLADE} mm blade is assumed for the run-out. Set the real blade on the Machine page.`)
   if (op.levels.through) tp.warnings.push('A saw cut right through the panel: check the spoilboard allowance.')
   const D = totalDepth(op, ctx)

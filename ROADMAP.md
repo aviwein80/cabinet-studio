@@ -43,8 +43,10 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   with re-set stock top; chamfers; cuts between curves, along 3D curves and Z-waves; hand-drawn
   toolpaths; toolpath edits that survive recalculation or are flagged; edge work with a rotating
   aggregate (simulation only). Part format version 4. Saw and aggregate output are refused while
-  the machine model has no such unit (the N-200 default); the new output switch is off. Next:
-  M2.7 (CAD and tool additions).
+  the machine model has no such unit (the N-200 default); the new output switch is off. **M2.6e: done**: every
+  unconfirmed value (tools, saw blade, holders, machine figures, saw / aggregate fitted, default
+  cutting values) shows a Configure badge, can be confirmed or changed any time, and is listed by
+  the export checker. Next: M2.7 (CAD and tool additions).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

@@ -14,6 +14,10 @@ import { nestSettingsOf, partSpacing } from '@/core/machining'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 import { MachineModelSection } from './machine/MachineModelSection'
+import { CutDefaultsSection } from './machine/CutDefaultsSection'
+import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
+import { useConfigureTarget } from '@/components/configureFocus'
+import { confirmKey, machineUnconfirmed, toolUnconfirmed } from '@/core/confirm'
 import { ToolDialog } from './machine/ToolDialog'
 
 const TOOL_TYPES: { value: ToolType; label: string }[] = [
@@ -55,10 +59,19 @@ export function MachinePage() {
   const [importOpen, setImportOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [editTool, setEditTool] = useState<string | null>(null)
+  // a "Configure" badge elsewhere asked for a field on this page: open its tool, then focus it
+  useConfigureTarget(['tool', 'holder', 'model', 'default'], (t) => {
+    if (t.kind === 'tool') setEditTool(t.toolId)
+    if (t.kind === 'holder') {
+      const tool = data?.machine.tools.find((x) => x.holderId === t.holderId)
+      if (tool) setEditTool(tool.id)
+    }
+  })
   if (!data) return null
   const m = data.machine
   const s = data.settings
   const routers = m.tools.filter((t) => t.type === 'router')
+  const unconfirmed = machineUnconfirmed(m)
   const feat = featuresOf(s)
   const ns = nestSettingsOf(s)
 
@@ -88,15 +101,23 @@ export function MachinePage() {
         }
       />
       <div className="min-h-0 flex-1 overflow-auto">
-        {m.placeholder && (
-          <div className="flex items-start gap-3 border-b border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-950">
+        {(m.placeholder || unconfirmed.length > 0) && (
+          <div className="flex items-start gap-3 border-b border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-950" data-cfg="unconfirmed-list">
             <TriangleAlert className="mt-0.5 size-5 shrink-0" />
-            <div>
-              <p className="font-medium">Placeholder tool table</p>
-              <p className="text-xs leading-relaxed">
-                Every tool number, diameter and depth below is invented. Copy the real values from the N-200 tool database (woodWOP / Tool Manager), or import them as CSV, before exporting programs. Each MPR header carries a
-                PLACEHOLDER note while this is on.
-              </p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{m.placeholder ? 'Placeholder tool table' : 'Placeholder values'}{unconfirmed.length ? ` · ${unconfirmed.length} value${unconfirmed.length === 1 ? '' : 's'} still to configure` : ''}</p>
+              {m.placeholder && (
+                <p className="text-xs leading-relaxed">
+                  Every tool number, diameter and depth below is invented. Copy the real values from the N-200 tool database (woodWOP / Tool Manager), or import them as CSV, before exporting programs. Each MPR header carries a
+                  PLACEHOLDER note while this is on.
+                </p>
+              )}
+              {unconfirmed.length > 0 && (
+                <div className="mt-2 max-w-3xl">
+                  <p className="mb-1 text-xs">Not confirmed yet. Configure opens the field for the real value; Mark as confirmed keeps the value shown. Neither switches on any machine output.</p>
+                  <UnconfirmedList items={unconfirmed} limit={10} />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -191,6 +212,7 @@ export function MachinePage() {
               </div>
             </Section>
             <MachineModelSection machine={m} updateMachine={updateMachine} />
+            <CutDefaultsSection machine={m} />
             <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${partSpacing(m, s)} mm`}>
               <div className="grid grid-cols-2 gap-2">
                 <NumField label="Edge trim" value={s.nesting.edgeTrim} min={0} max={50} onChange={(v) => updateSettings((x) => (x.nesting.edgeTrim = v))} />
@@ -282,8 +304,14 @@ export function MachinePage() {
                 updateMachine((x) => {
                   const t = x.tools.find((tt) => tt.id === id) as Record<string, unknown> | undefined
                   if (t) t[key as string] = value
+                  // a real number, diameter or depth typed in: the tool's data is confirmed
+                  if (t && (key === 'number' || key === 'diameter' || key === 'maxDepth')) confirmKey(x, `tool:${id}:data`)
                 })
               }
+              rowExtra={(t) => {
+                const u = toolUnconfirmed(m, t)
+                return u.length ? <ConfigureBadge item={{ ...u[0], label: `${u.length} value(s) of T${t.number}: ${u.map((x) => x.label.replace(`T${t.number} `, '')).join(', ')}` }} /> : null
+              }}
               onDelete={(t) => updateMachine((x) => void (x.tools = x.tools.filter((tt) => tt.id !== t.id)))}
               onEdit={(t) => setEditTool(t.id)}
               canDelete={(t) => (t.number === m.cutoutToolNumber ? 'This is the cut-out tool' : null)}
@@ -301,10 +329,11 @@ export function MachinePage() {
           tool={m.tools.find((t) => t.id === editTool)!}
           machine={m}
           onClose={() => setEditTool(null)}
-          update={(fn) =>
+          update={(fn, confirm) =>
             updateMachine((x) => {
               const t = x.tools.find((tt) => tt.id === editTool)
               if (t) fn(t)
+              if (confirm) confirmKey(x, confirm)
             })
           }
         />

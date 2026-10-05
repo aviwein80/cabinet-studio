@@ -4,6 +4,9 @@ import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
 import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
 import { ManualFields, EditsGroup } from './EditsPanel'
+import { useOpCfg } from './opConfigure'
+import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
+import { confirmOp, type CutDefaultKey, newOpDefaults, opUnconfirmed } from '@/core/confirm'
 import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
@@ -96,7 +99,8 @@ export function OpsPanel({
     // a new saw cut gets the M2.6 settings when they are switched on; facing takes the whole panel
     if (kind === 'saw' && more25d && !('saw' in extra)) extra = { ...extra, saw: { ...DEFAULT_SAW } } as Partial<CamOp>
     if (kind === 'face') geometry = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
-    let op = defaultOp(kind, kind === 'code' ? [] : geometry, extra)
+    // the shop's default cutting values (placeholders until confirmed)
+    let op = defaultOp(kind, kind === 'code' ? [] : geometry, { ...newOpDefaults(kind, machine, extra), ...extra } as Partial<CamOp>)
     if (op.kind === 'finish3d' || op.kind === 'rough3d') {
       // boundary: the selected closed shapes (none = the whole model); projection: every selected
       // shape is projected. First model on the part.
@@ -313,6 +317,10 @@ function OpEditor({
   const set = <K extends keyof CamOp>(k: K, v: CamOp[K]) => onChange({ ...op, [k]: v } as CamOp)
   const lv = (patch: Partial<CamOp['levels']>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
   const allowed = machine.tools.filter((t) => (op.kind === 'saw' ? t.type === 'saw' : op.kind === 'drill' ? t.type.startsWith('drill') : t.type === 'router'))
+  // values this operation uses that are not confirmed (its own, its tool's, the machine's)
+  const unconf = opUnconfirmed(op, part, machine, tp?.tool ?? null)
+  const toolItem = unconf.find((u) => u.target.kind === 'tool' && u.target.part !== 'feeds')
+  const feedItem = unconf.find((u) => u.target.kind === 'tool' && u.target.part === 'feeds')
   const missing = op.geometry.filter((g) => !part.entities.some((e) => e.id === g)).length
 
   return (
@@ -348,6 +356,15 @@ function OpEditor({
           </span>
         )}
       </div>
+      {unconf.length > 0 && (
+        <div className="border-b border-white/10 bg-amber-500/5 px-4 py-2 text-stone-200" data-cfg={`op:${op.id}:list`}>
+          <div className="mb-1 text-[11px] text-amber-200">Uses {unconf.length} value{unconf.length === 1 ? '' : 's'} not confirmed yet (placeholders). Configure opens the field; nothing here turns on machine output.</div>
+          <UnconfirmedList items={unconf} tone="dark" limit={4} onConfirm={(u) => {
+              const t = u.target
+              return t.kind === 'op' && t.key !== 'blade' ? () => onChange(confirmOp(op, t.key as CutDefaultKey)) : undefined
+            }} />
+        </div>
+      )}
       {tp && tp.warnings.length > 0 && (
         <div className="space-y-1 border-b border-white/10 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-200">
           {tp.warnings.map((w, i) => (
@@ -380,6 +397,7 @@ function OpEditor({
             value={op.toolId ?? NONE}
             options={[{ value: NONE, label: op.kind === 'drill' ? 'Match each hole diameter' : 'Pick automatically' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
+            badge={toolItem && <ConfigureBadge item={toolItem} />}
           />
           <SelectField
             label="Face"
@@ -460,7 +478,7 @@ function OpEditor({
       {op.kind !== 'code' && (
         <Group title="Feeds">
           <NumField label="Spindle" suffix="rpm" value={op.feeds.rpm ?? tp?.feeds.rpm ?? 0} min={0} step={500} onChange={(v) => set('feeds', { ...op.feeds, rpm: v || undefined })} />
-          <NumField label="Feed" suffix="mm/min" value={op.feeds.feed ?? tp?.feeds.feed ?? 0} min={0} step={100} onChange={(v) => set('feeds', { ...op.feeds, feed: v || undefined })} />
+          <NumField label="Feed" suffix="mm/min" value={op.feeds.feed ?? tp?.feeds.feed ?? 0} min={0} step={100} onChange={(v) => set('feeds', { ...op.feeds, feed: v || undefined })} badge={feedItem && <ConfigureBadge item={feedItem} />} />
           <NumField label="Plunge" suffix="mm/min" value={op.feeds.plunge ?? tp?.feeds.plunge ?? 0} min={0} step={100} onChange={(v) => set('feeds', { ...op.feeds, plunge: v || undefined })} />
           <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.feeds.feed || op.feeds.rpm || op.feeds.plunge ? 'Set on this operation' : 'From tool / material table'}</div>
         </Group>
@@ -510,10 +528,10 @@ function SurfaceGroup({ op, part, onSurface, walls, pattern }: { op: CamOp & { s
 }
 
 /** Adaptive clearing settings (pockets and Z-level roughing). */
-function AdaptiveFields({ ad, onAd, rampAngle, onRamp }: { ad: AdaptiveSettings; onAd: (patch: Partial<AdaptiveSettings>) => void; rampAngle: number; onRamp: (v: number) => void }) {
+function AdaptiveFields({ ad, onAd, rampAngle, onRamp, width }: { ad: AdaptiveSettings; onAd: (patch: Partial<AdaptiveSettings>, confirmWidth?: boolean) => void; rampAngle: number; onRamp: (v: number) => void; width?: { cfg: string; badge: React.ReactNode } }) {
   return (
     <>
-      <NumField label="Width of cut" suffix="%" value={Math.round(ad.width * 1000) / 10} min={2} max={60} step={1} onChange={(v) => onAd({ width: v / 100, angle: undefined })} hint={`Of the tool diameter · ${(Math.acos(Math.max(-1, 1 - 2 * ad.width)) * 180 / Math.PI).toFixed(0)}° engagement · placeholder default`} />
+      <NumField label="Width of cut" suffix="%" value={Math.round(ad.width * 1000) / 10} min={2} max={60} step={1} cfg={width?.cfg} badge={width?.badge} onChange={(v) => onAd({ width: v / 100, angle: undefined }, true)} hint={`Of the tool diameter · ${(Math.acos(Math.max(-1, 1 - 2 * ad.width)) * 180 / Math.PI).toFixed(0)}° engagement · placeholder default`} />
       <NumField label="Or engagement angle" suffix="°" value={ad.angle ?? 0} min={0} max={180} onChange={(v) => onAd({ angle: v > 0 ? v : undefined, ...(v > 0 ? { width: (1 - Math.cos((v * Math.PI) / 180)) / 2 } : {}) })} hint="0 = use the width" />
       <NumField label="Smoothing radius" value={ad.smoothing} min={0} step={0.5} onChange={(v) => onAd({ smoothing: v })} hint="Smallest turn of the path; 0 = turn freely" />
       <NumField label="Lift for moves back" value={ad.lift} min={0} step={0.1} onChange={(v) => onAd({ lift: v })} hint="Through cleared area only" />
@@ -524,13 +542,19 @@ function AdaptiveFields({ ad, onAd, rampAngle, onRamp }: { ad: AdaptiveSettings;
 }
 
 /** Edge work with a rotating aggregate (5AX-04). */
-function EdgeFields({ op, onChange }: { op: Extract<CamOp, { kind: 'edge' }>; onChange: (o: CamOp) => void }) {
+function EdgeFields({ op, part, onChange }: { op: Extract<CamOp, { kind: 'edge' }>; part: CamPart; onChange: (o: CamOp) => void }) {
   const aggregate = useStore((s) => machineModelOf(s.data!.machine).capabilities.aggregate)
+  const c = useOpCfg(op, part, onChange)
   return (
     <Group title="Edge work (aggregate)">
-      {!aggregate && <div className="col-span-2 rounded border border-amber-400/30 bg-amber-400/10 p-2 text-[11px] text-amber-100">The machine model has no rotating aggregate (Machine &amp; tools → Aggregate head fitted). This is simulated only; the export checker refuses it.</div>}
-      <NumField label="Tool axis below face 1" value={op.height} min={0} step={0.5} onChange={(v) => onChange({ ...op, height: v })} hint="Placeholder default" />
-      <NumField label="Reach into the edge" value={op.reach} min={0} step={0.5} onChange={(v) => onChange({ ...op, reach: v })} />
+      {!aggregate && (
+        <div className="col-span-2 flex flex-wrap items-center gap-2 rounded border border-amber-400/30 bg-amber-400/10 p-2 text-[11px] text-amber-100">
+          <span className="min-w-0 flex-1">The machine model has no rotating aggregate (Machine &amp; tools → Aggregate head fitted). This is simulated only; the export checker refuses it.</span>
+          <ConfigureBadge item={{ key: 'model:aggregate', label: 'Rotating aggregate fitted or not', value: 'not fitted', group: 'Machine model', target: { kind: 'model', fact: 'aggregate' } }} />
+        </div>
+      )}
+      <NumField label="Tool axis below face 1" value={op.height} min={0} step={0.5} cfg={c('edgeHeight').cfg} badge={c('edgeHeight').badge} onChange={(v) => c('edgeHeight').set({ ...op, height: v })} />
+      <NumField label="Reach into the edge" value={op.reach} min={0} step={0.5} cfg={c('edgeReach').cfg} badge={c('edgeReach').badge} onChange={(v) => c('edgeReach').set({ ...op, reach: v })} />
       <NumField label="Reach per pass" value={op.reachPass} min={0} step={0.5} onChange={(v) => onChange({ ...op, reachPass: v })} hint="0 = one pass" />
       <SelectField label="Travel" value={op.direction} options={[{ value: 'climb', label: 'Material on the left' }, { value: 'conventional', label: 'Material on the right' }]} onChange={(v) => onChange({ ...op, direction: v })} />
       <NumField label="Run on past open ends" value={op.overrun} min={0} onChange={(v) => onChange({ ...op, overrun: v })} />
@@ -555,6 +579,7 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
         <>
           <NumField label="Blade tilt" suffix="°" value={st.tilt} min={0} max={45} onChange={(v) => patch({ tilt: v })} hint="0 = vertical. Angled cuts are simulated only" />
           {st.tilt > 0 && <SelectField label="Leans to" value={st.tiltSide} options={[{ value: 'left', label: 'Left of the line' }, { value: 'right', label: 'Right of the line' }]} onChange={(v) => patch({ tiltSide: v })} />}
+          <NumField label="Blade Ø for this cut" value={st.blade ?? 0} min={0} cfg={`op:${op.id}:blade`} onChange={(v) => patch({ blade: v > 0 ? v : undefined })} hint="0 = the tool's (Machine & tools)" />
           <NumField label="Extra length each end" value={st.extend} min={0} onChange={(v) => patch({ extend: v })} />
           <NumField label="Skip lines shorter than" value={st.minLength} min={0} onChange={(v) => patch({ minLength: v })} />
           <div className="col-span-2">
@@ -570,6 +595,7 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
 
 function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
   const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
+  const c = useOpCfg(op, part, onChange)
   switch (op.kind) {
     case 'finish3d': {
       const waterline = op.strategy === 'waterline'
@@ -642,9 +668,9 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
           <Group title={waterline ? 'Waterline passes' : 'Parallel passes'}>
             {strategy}
-            {waterline && <NumField label="Step-down" value={op.stepdown ?? 1} min={0.05} step={0.1} onChange={(v) => onChange({ ...op, stepdown: v })} hint="Placeholder default; set your own" />}
+            {waterline && <NumField label="Step-down" value={op.stepdown ?? 1} min={0.05} step={0.1} cfg={c('waterlineStepdown').cfg} badge={c('waterlineStepdown').badge} onChange={(v) => c('waterlineStepdown').set({ ...op, stepdown: v })} />}
             {waterline && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
-            <NumField label={waterline ? 'Fill step-over' : 'Step-over'} value={op.stepover} min={0.01} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint={waterline ? 'For the shallow-area fill' : 'Placeholder default; set your own'} />
+            <NumField label={waterline ? 'Fill step-over' : 'Step-over'} value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} hint={waterline ? 'For the shallow-area fill' : undefined} />
             <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />
             {!waterline && <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />}
             {!waterline && op.pattern === 'oneway' && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Along the angle' }, { value: 'conventional', label: 'Against the angle' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
@@ -675,18 +701,18 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} walls />
           <Group title="Levels">
             <NumField label="Leave on floors" value={op.stockZ} min={0} step={0.1} onChange={(v) => onChange({ ...op, stockZ: v })} />
-            <NumField label="Step-down" value={op.stepdown} min={0.1} step={0.5} onChange={(v) => onChange({ ...op, stepdown: v })} hint="Placeholder default; set your own" />
+            <NumField label="Step-down" value={op.stepdown} min={0.1} step={0.5} cfg={c('roughStepdown').cfg} badge={c('roughStepdown').badge} onChange={(v) => c('roughStepdown').set({ ...op, stepdown: v })} />
             <SelectField
               label="Pattern"
               value={op.pattern}
               options={adaptiveOn || adaptive ? [...patterns, { value: 'adaptive' as const, label: 'Adaptive (steady width of cut)' }] : patterns}
               onChange={(v) => onChange({ ...op, pattern: v, ...(v === 'adaptive' && !op.adaptive ? { adaptive: { ...DEFAULT_ADAPTIVE } } : {}) })}
             />
-            {!adaptive && <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} />}
+            {!adaptive && <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} cfg={c('roughStepover').cfg} badge={c('roughStepover').badge} onChange={(v) => c('roughStepover').set({ ...op, stepover: v / 100 })} />}
             {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}
             <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
             {adaptive ? (
-              <AdaptiveFields ad={ad} onAd={(patch) => onChange({ ...op, adaptive: { ...ad, ...patch } })} rampAngle={op.rampAngle} onRamp={(v) => onChange({ ...op, rampAngle: v })} />
+              <AdaptiveFields ad={ad} onAd={(patch, cw) => (cw ? c('adaptiveWidth').set : onChange)({ ...op, adaptive: { ...ad, ...patch } })} rampAngle={op.rampAngle} onRamp={(v) => onChange({ ...op, rampAngle: v })} width={{ cfg: c('adaptiveWidth').cfg, badge: c('adaptiveWidth').badge }} />
             ) : (
               <>
                 <SelectField label="Entry" value={op.entry} options={[{ value: 'helix', label: 'Helix' }, { value: 'ramp', label: 'Ramp' }, { value: 'plunge', label: 'Straight down' }]} onChange={(v) => onChange({ ...op, entry: v })} />
@@ -734,10 +760,10 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           />
           <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
           {adaptive ? (
-            <AdaptiveFields ad={ad} onAd={(patch) => onChange({ ...op, adaptive: { ...ad, ...patch } })} rampAngle={op.rampAngle} onRamp={(v) => onChange({ ...op, rampAngle: v })} />
+            <AdaptiveFields ad={ad} onAd={(patch, cw) => (cw ? c('adaptiveWidth').set : onChange)({ ...op, adaptive: { ...ad, ...patch } })} rampAngle={op.rampAngle} onRamp={(v) => onChange({ ...op, rampAngle: v })} width={{ cfg: c('adaptiveWidth').cfg, badge: c('adaptiveWidth').badge }} />
           ) : (
             <>
-              <NumField label="Stepover" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} />
+              <NumField label="Stepover" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} cfg={c('pocketStepover').cfg} badge={c('pocketStepover').badge} onChange={(v) => c('pocketStepover').set({ ...op, stepover: v / 100 })} />
               {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}
               <SelectField label="Entry" value={op.entry} options={[{ value: 'helix', label: 'Helix' }, { value: 'ramp', label: 'Ramp' }, { value: 'plunge', label: 'Straight down' }]} onChange={(v) => onChange({ ...op, entry: v })} />
               <NumField label="Ramp angle" suffix="°" value={op.rampAngle} min={1} max={45} onChange={(v) => onChange({ ...op, rampAngle: v })} />
@@ -797,7 +823,7 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
     case 'saw':
       return <SawFields op={op} onChange={onChange} />
     case 'edge':
-      return <EdgeFields op={op} onChange={onChange} />
+      return <EdgeFields op={op} part={part} onChange={onChange} />
     case 'chamfer':
       return (
         <Group title="Chamfer">
@@ -827,7 +853,7 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
             <>
               <NumField label="First curve depth" value={op.depthA} min={0} step={0.5} onChange={(v) => onChange({ ...op, depthA: v })} hint="When it is drawn in 2D" />
               <NumField label="Second curve depth" value={op.depthB} min={0} step={0.5} onChange={(v) => onChange({ ...op, depthB: v })} hint="3D polylines keep their heights" />
-              <NumField label="Step-over" value={op.stepover} min={0.05} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint="Largest gap between passes · placeholder default" />
+              <NumField label="Step-over" value={op.stepover} min={0.05} step={0.1} cfg={c('betweenStepover').cfg} badge={c('betweenStepover').badge} onChange={(v) => c('betweenStepover').set({ ...op, stepover: v })} hint="Largest gap between passes" />
               <div className="self-end pb-1.5">
                 <SwitchField label="Back and forth" checked={op.zigzag} onChange={(v) => onChange({ ...op, zigzag: v })} />
               </div>
@@ -840,9 +866,9 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           )}
           {op.mode === 'zwave' && (
             <>
-              <NumField label="Shallowest" value={op.wave.min} min={0} step={0.25} onChange={(v) => onChange({ ...op, wave: { ...op.wave, min: v } })} />
-              <NumField label="Deepest" value={op.wave.max} min={0} step={0.25} onChange={(v) => onChange({ ...op, wave: { ...op.wave, max: v } })} />
-              <NumField label="Wave length" value={op.wave.length} min={0.5} step={1} onChange={(v) => onChange({ ...op, wave: { ...op.wave, length: v } })} hint="Closed shapes get a whole number of waves" />
+              <NumField label="Shallowest" value={op.wave.min} min={0} step={0.25} cfg={c('zwave').cfg} badge={c('zwave').badge} onChange={(v) => c('zwave').set({ ...op, wave: { ...op.wave, min: v } })} />
+              <NumField label="Deepest" value={op.wave.max} min={0} step={0.25} onChange={(v) => c('zwave').set({ ...op, wave: { ...op.wave, max: v } })} />
+              <NumField label="Wave length" value={op.wave.length} min={0.5} step={1} onChange={(v) => c('zwave').set({ ...op, wave: { ...op.wave, length: v } })} hint="Closed shapes get a whole number of waves" />
               <SelectField label="Shape" value={op.wave.shape} options={[{ value: 'sine', label: 'Smooth' }, { value: 'triangle', label: 'Straight up and down' }]} onChange={(v) => onChange({ ...op, wave: { ...op.wave, shape: v } })} />
             </>
           )}
@@ -855,7 +881,7 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
         <Group title="Facing">
           <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'offset', label: 'Rings from the outside in' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
           <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
-          <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} hint="Of the tool diameter · placeholder default" />
+          <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} cfg={c('faceStepover').cfg} badge={c('faceStepover').badge} onChange={(v) => c('faceStepover').set({ ...op, stepover: v / 100 })} hint="Of the tool diameter" />
           {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}
           <NumField label="Tool centre past the edge" value={op.overhang} min={0} step={0.5} onChange={(v) => onChange({ ...op, overhang: v })} hint="0 = centre on the edge (the cutter still reaches its radius past it)" />
           <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole panel'}</div>

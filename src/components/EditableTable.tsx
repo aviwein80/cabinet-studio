@@ -47,6 +47,7 @@ export function EditableTable<T extends { id: string }>({
   onEdit,
   canDelete,
   empty,
+  rowExtra,
 }: {
   rows: T[]
   columns: Column<T>[]
@@ -55,6 +56,8 @@ export function EditableTable<T extends { id: string }>({
   onEdit?: (row: T) => void
   canDelete?: (row: T) => string | null
   empty: string
+  /** Shown before the row's buttons (e.g. a "Configure" badge). */
+  rowExtra?: (row: T) => React.ReactNode
 }) {
   const units = useStore((s) => s.data?.settings.units ?? 'mm')
   return (
@@ -67,7 +70,7 @@ export function EditableTable<T extends { id: string }>({
                 {c.label}
               </TableHead>
             ))}
-            <TableHead className="w-28" />
+            <TableHead className={rowExtra ? 'w-48' : 'w-28'} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -115,7 +118,8 @@ export function EditableTable<T extends { id: string }>({
                   )
                 })}
                 <TableCell className="py-1">
-                  <div className="flex justify-end gap-1">
+                  <div className="flex items-center justify-end gap-1">
+                    {rowExtra?.(r)}
                     {onEdit && (
                       <Button size="xs" variant="outline" onClick={() => onEdit(r)}>
                         Edit

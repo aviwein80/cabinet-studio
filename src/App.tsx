@@ -1,3 +1,4 @@
+import { machineUnconfirmed } from '@/core/confirm'
 import { Boxes, Cpu, FolderKanban, Inbox, Library as LibraryIcon, Loader2, PenTool, Settings, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Toaster } from '@/components/ui/sonner'
@@ -41,6 +42,7 @@ export default function App() {
         <Loader2 className="size-4 animate-spin" /> Loading shop data...
       </div>
     )
+  const unconfirmedCount = machineUnconfirmed(data.machine).length
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -92,10 +94,13 @@ export default function App() {
                 </button>
               ))}
             </div>
-            {data.machine.placeholder && (
+            {(data.machine.placeholder || unconfirmedCount > 0) && (
               <button onClick={() => go({ page: 'machine' })} className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-left text-[11px] leading-snug text-amber-200">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                Placeholder tool table. Load the real N-200 tools before cutting.
+                <span>
+                  {data.machine.placeholder ? 'Placeholder tool table. Load the real N-200 tools before cutting.' : 'Placeholder values in use.'}
+                  {unconfirmedCount > 0 && <span className="mt-0.5 block font-medium underline">{unconfirmedCount} value{unconfirmedCount === 1 ? '' : 's'} to configure</span>}
+                </span>
               </button>
             )}
             <div className="px-1 text-[10px] leading-snug text-stone-500">

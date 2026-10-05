@@ -5,10 +5,12 @@
 import { nanoid } from 'nanoid'
 import { cutoutTool, findDrill, squareEnd } from '@/core/machining'
 import type { MachineProfile, Tool } from '@/core/types'
-import type { CamOp, CamOpKind, Leads, Levels, OpTemplate, Tags } from './types'
+import type { AdaptiveSettings, CamOp, CamOpKind, Leads, Levels, OpTemplate, Tags } from './types'
 
 export const DEFAULT_LEVELS: Levels = { safeZ: 20, rapidZ: 3, depth: 6, through: false, stockZ: 0, passDepth: 0 }
 export const DEFAULT_LEADS: Leads = { in: 'arc', out: 'arc', length: 2, radius: 1.5, rampAngle: 5, overlap: 2, feedPct: 50 }
+/** PLACEHOLDER adaptive-clearing values until the shop supplies its own: 15 % width of cut, feed not boosted. */
+export const DEFAULT_ADAPTIVE: AdaptiveSettings = { width: 0.15, smoothing: 1, lift: 0.5, feedBoost: 1 }
 export const DEFAULT_TAGS: Tags = { mode: 'none', count: 4, length: 12, height: 2, shape: 'flat', rampAngle: 30, at: [] }
 
 export const OP_LABEL: Record<CamOpKind, string> = {

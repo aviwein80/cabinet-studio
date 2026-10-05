@@ -3,7 +3,7 @@
  * clipped in integer space, then fitted back into lines and arcs and snapped onto the exact
  * source circles (and their offsets) so radii survive the round trip.
  */
-import { area as clipArea, areaPaths, booleanOp, ClipType, EndType, FillRule, inflatePaths, intersect, JoinType, union, type Path64, type Paths64 } from 'clipper2-ts'
+import { area as clipArea, areaPaths, booleanOp, ClipType, EndType, FillRule, inflatePaths, intersect, JoinType, simplifyPaths, union, type Path64, type Paths64 } from 'clipper2-ts'
 import {
   add,
   arc,
@@ -116,9 +116,10 @@ export function overlapArea(a: Contour[], b: Contour[]) {
   return Math.abs(areaPaths(res)) / (SCALE * SCALE)
 }
 
-/** Polygon-level union (fast, no refit). Used by nesting and simulation. */
-export function unionPolys(polys: P[][]): P[][] {
-  return union(polys.map(polyPath), FillRule.NonZero).map(pathPoly)
+/** Polygon-level union (fast, no refit). Used by nesting and simulation. `eps` > 0: drop points within eps (mm) of the outline through the others. */
+export function unionPolys(polys: P[][], eps = 0): P[][] {
+  const u = union(polys.map(polyPath), FillRule.NonZero)
+  return (eps > 0 ? simplifyPaths(u, eps * SCALE, true) : u).map(pathPoly)
 }
 /**
  * Polygon booleans without refitting. `a` is read with the non-zero rule (loops wound by meaning:

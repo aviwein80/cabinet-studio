@@ -16,13 +16,13 @@ Read this first at the start of every run. Sources:
 | M2.2b Z-level roughing, waterline | **Done** (October 2026) | Flat-layer output as `<105>` contours (decision 2), behind its own switch, off. See below. |
 | M2.2c Projection finishing, performance | **Done** (October 2026) | See below. M2.2 complete. |
 | M2.3a 2D rest machining | **Done** (October 2026) | See below. |
-| M2.3b Adaptive clearing (2D pockets) | **Next** | |
-| M2.3c Adaptive Z-level roughing, 3D rest and pencil | Not started | |
+| M2.3b Adaptive clearing (2D pockets) | **Done** (October 2026) | See below. Simulation only (woodWOP output blocked). |
+| M2.3c Adaptive Z-level roughing, 3D rest and pencil | **Next** | |
 | M2.4 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
-(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped).
+(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -305,10 +305,44 @@ calculation); a recipe made from a rest pocket follows every earlier operation i
   seen.
 - **Rest pieces always use follow-shape passes**, whatever the pattern setting.
 
-## Next run: M2.3b
+## M2.3b adaptive clearing: what was built
 
-- **Adaptive clearing (NEW-01)** in 2D pockets: steady width of cut, smoothing, lifted
-  back-moves, adaptive feed, trochoidal sections; an independent per-move engagement check.
+| Spec ID | What | Where |
+|---|---|---|
+| NEW-01 | Pocket pattern "Adaptive": the tool holds a set width of cut (share of the diameter, or an engagement angle). The material still to cut is a bit raster; before each short straight step the heading is searched (turn into the material when light, away when heavy) so the step's removed area / length comes just under the target. Every step keeps the tool its radius from the pocket edge (exact distance to the wall edges). Smoothing radius limits the turn per step. Back-moves go straight through cleared area lifted a little (or up and over). New areas get a helix entry, kept only if a pass can follow it. Channels too narrow for passes get trochoidal loops: circles centred in the channel whose centre creeps forward in the first quarter of each loop (so each loop's front cuts exactly its own creep), the creep halved until the cut is under the target. Adaptive feed (off by default): lighter moves and the moves back run up to N times the feed | `src/cam/adaptive/adaptive.ts`, `raster.ts`, `walls.ts`, `genAdaptivePocket` in `src/cam/toolpath.ts` |
+| Check | Independent engagement checker: per move, exact Clipper2 area of material removed (swept disc less what earlier moves removed, kept as per-tile unions) / length; full-width = material over 95 % of the tool's leading half | `src/cam/adaptive/check.ts` |
+| IR | Feed moves may carry `k` (adaptive feed factor; posts write F x k, the simulator and times use it); toolpaths may carry `sections` (flagged trochoidal move ranges) | `src/cam/toolpath.ts`, `sim.ts`, `post.ts` |
+| Screens | Adaptive pattern and its fields in the pocket editor; adaptive pockets (and rest pockets that follow one) are calculated in the compute worker with progress, like 3D operations | `OpsPanel.tsx`, `use3dToolpaths.ts`, `PartDesigner.tsx` |
+| Export | Not written to woodWOP: `CAM_ADAPTIVE_NO_OUTPUT` (error) whenever a part has an enabled adaptive pocket. Export does not wait for it (it is skipped, not calculated) | `src/core/machining.ts`, `validator.ts` |
+
+### Acceptance (M2.3 criteria for adaptive clearing)
+
+| Criterion | Proof | Measured (6 mm tool, 0.9 mm target unless noted; limit = target + 10 %) |
+|---|---|---|
+| Engagement never > target + 10 %, per move, from the swept area | `tests/cam-adaptive.test.ts` (independent checker) | Square 60 x 40: widest 0.856 mm (95.1 %). With a 20 mm island: 0.865 (96.1 %). Conventional: 0.855 (95.0 %). 60° engagement (1.5 mm): 1.399 (93.3 %). Rooms with an 8 mm slot: 0.862 (95.7 %) on passes, 0.667 on the trochoidal loops |
+| No full-width moves outside flagged trochoidal sections | same | 0 in every case; the slot's 4,165 trochoidal moves are flagged |
+| Checker is right | same | A side cut measures its width to 0.001 mm; a slot measures 6 mm and full width |
+| Stays clear of walls and islands | same | Every move at least the tool radius from the pocket edges (exact); against the simulated stock of a follow-shape pocket it never cuts anything that pocket leaves, and leaves 11 of 38,272 and 24 of 81,248 cells (scraps under 0.1 %) |
+| Depth passes, determinism, adaptive feed | same | Each level repeats the plan with its own helix; same input gives the same moves; feed factors only between 1 and the limit, shorter time, same path |
+| Export | same | Blocked with `CAM_ADAPTIVE_NO_OUTPUT`; nothing written; export of the job in under 2 s |
+| Performance | `tests/perf.test.ts` | 300 x 200 mm with a 60 mm island, 8 mm tool: 3.4 s (limit 10 s), in the background worker |
+| Goldens | `tests/golden/cam2/adaptive-{square,slot}` | 2 new digests |
+
+### Limits recorded
+
+- **Trochoidal loops need room**: a channel narrower than about the tool diameter plus 0.3 x the
+  tool radius is left, with a warning to finish it with rest machining and a smaller tool. Nothing
+  is ever cut at full width.
+- **Adaptive per Z level of 3D roughing** is M2.3c.
+- **woodWOP output** is a decision (see the report): each pass could become a contour-milling
+  pass, but woodWOP would plunge at each start (our helix entries and lifted moves back are not
+  in that form).
+
+## Next run: M2.3c
+
+- **Adaptive clearing per Z level** in Z-level roughing.
+- **3D rest and pencil (3D-06):** material left by a larger tool; pencil pass along valleys
+  within 0.02 mm.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -320,3 +354,4 @@ calculation); a recipe made from a rest pocket follows every earlier operation i
 - **Run 3 (M2.2b)**: Z-level roughing, waterline, flat-layer output (switch off). See `git log`.
 - **Run 4 (M2.2c)**: projection finishing, faster clearance test, browser-preview fix. See `git log`.
 - **Run 4 (M2.3a)**: 2D rest machining. See `git log`.
+- **Run 4 (M2.3b)**: adaptive clearing in pockets. See `git log`.

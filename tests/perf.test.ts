@@ -11,17 +11,19 @@
  *   M2.2c (faster clearance test in the drop-cutter, same results):
  *   Waterline, 51k-facet dome, 40 levels: 5.7 s before, 3.3 s after (limit 8 s)
  *   Z-level roughing of the 200k relief: 6.4 s before, 4.3 s after; parallel finishing 7.3 s
+ *   M2.3b adaptive clearing, 300 x 200 pocket with island, 8 mm tool: 3.4 s alone (limit 10 s)
  */
 import { describe, expect, it } from 'vitest'
 import { buildMesh } from '@/cam/mesh/build'
 import { parseStl, readMeshFile } from '@/cam/mesh/read'
 import { sectionAt } from '@/cam/mesh/tools'
-import { newPart } from '@/cam/doc'
+import { makeEntity, newPart } from '@/cam/doc'
+import { circle, pt, rect } from '@/cam/geom'
 import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { meshBounds } from '@/cam/mesh/types'
 import { defaultOp } from '@/cam/ops'
-import { generateOp } from '@/cam/toolpath'
-import type { CamOp, Finish3dOp, Rough3dOp } from '@/cam/types'
+import { generateOp, generatePart } from '@/cam/toolpath'
+import type { CamOp, Finish3dOp, PocketOp, Rough3dOp } from '@/cam/types'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { relief, stlBinary } from './mesh-fixtures'
 import { SURFACES } from './surfaces'
@@ -132,6 +134,22 @@ describe('M2.2c performance', () => {
   }, 120_000)
 })
 
+describe('M2.3 performance', () => {
+  it('adaptive clearing: 300 x 200 mm pocket with an island, 8 mm tool, 15 % width of cut', () => {
+    const part = newPart({ length: 400, width: 300 })
+    const es = [rect(50, 50, 300, 200), circle(pt(200, 150), 30)].map((c) => makeEntity({ t: 'contour', c }, 'machining'))
+    part.entities.push(...es)
+    part.ops = [{ ...(defaultOp('pocket', es.map((e) => e.id)) as PocketOp), toolId: 't102', pattern: 'adaptive' }]
+    const t0 = performance.now()
+    const [tp] = generatePart(part, PLACEHOLDER_MACHINE)
+    const ms = performance.now() - t0
+    log(`adaptive clearing, 300 x 200 mm, 8 mm tool: ${tp.moves.length.toLocaleString('en')} moves, ${Math.round(tp.stats.cut / 1000)} m of cutting, in ${Math.round(ms)} ms`)
+    expect(tp.warnings.join(' ')).not.toMatch(/could not reach/)
+    expect(ms).toBeLessThan(PERF_LIMIT_ADAPTIVE_MS)
+  }, 120_000)
+})
+
+const PERF_LIMIT_ADAPTIVE_MS = 10_000
 const PERF_LIMIT_WATERLINE_MS = 8000
 const PERF_LIMIT_ROUGHING_MS = 20_000
 

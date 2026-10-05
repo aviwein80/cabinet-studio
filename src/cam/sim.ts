@@ -144,10 +144,10 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
       return h && h.k === 'vdrill' ? h.d : undefined
     }
     let cutter = base
-    const push = (b: V3, kind: SimKind, extra = 0) => {
+    const push = (b: V3, kind: SimKind, extra = 0, k = 1) => {
       const l = len3(at, b)
       if (l < 1e-9 && !extra) return
-      const rate = kind === 'rapid' ? RAPID_RATE / 60 : kind === 'plunge' || kind === 'drill' ? plunge : feed
+      const rate = (kind === 'rapid' ? RAPID_RATE / 60 : kind === 'plunge' || kind === 'drill' ? plunge : feed) * k
       const side = tp.kind === 'drill' && kind !== 'rapid' && kind !== 'drill' && Math.hypot(b.x - at.x, b.y - at.y) > 1e-9
       const seg: SimSeg = { a: at, b, kind, op: index, t0: t, t1: t + l / rate + extra, cutter }
       if (side) seg.side = true
@@ -174,7 +174,7 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
           const d = drillD(m.x, m.y)
           cutter = d ? { ...base, r: d / 2 } : base
         }
-        push({ x: m.x, y: m.y, z: m.z }, m.f === 'cut' ? 'cut' : m.f)
+        push({ x: m.x, y: m.y, z: m.z }, m.f === 'cut' ? 'cut' : m.f, 0, m.k ?? 1)
       }
     }
     op.end = t

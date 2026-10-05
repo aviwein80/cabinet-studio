@@ -41,7 +41,8 @@ import {
 } from './geom'
 import { breakAt, inflatePolys, normaliseWinding, offset, offsetChain } from './kernel'
 import { contourPolys, PolySet, restAt, restPieces, type SweepSource, sweptAt } from './adaptive/rest'
-import { feedsFor, passDepths, resolveTool } from './ops'
+import { planAdaptive } from './adaptive/adaptive'
+import { DEFAULT_ADAPTIVE, feedsFor, passDepths, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
@@ -56,7 +57,8 @@ import type { CamOp, CamPart, DrillOp, Entity, FaceId, Finish3dOp, PocketOp, Pro
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
   | { t: 'rapid'; x: number; y: number; z: number }
-  | { t: 'feed'; x: number; y: number; z: number; f: FeedKind }
+  /** `k`: adaptive feed, this move runs at k times the operation's feed (absent = 1). */
+  | { t: 'feed'; x: number; y: number; z: number; f: FeedKind; k?: number }
   | { t: 'arc'; x: number; y: number; z: number; cx: number; cy: number; ccw: boolean; f: FeedKind }
   | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number }
   /** 3D chain: straight feed moves through each (x, y, z) in `pts` in turn, from the current position. */
@@ -112,6 +114,8 @@ export interface Toolpath {
   intents: Intent[]
   warnings: string[]
   stats: { cut: number; rapid: number; minutes: number }
+  /** Flagged move ranges (indices into `moves`, `to` exclusive): trochoidal loops of adaptive clearing. */
+  sections?: { kind: 'trochoidal'; from: number; to: number }[]
 }
 
 export interface GenContext {
@@ -141,9 +145,9 @@ class Builder {
     this.moves.push({ t: 'rapid', x, y, z })
     Object.assign(this, { x, y, z })
   }
-  feed(x: number, y: number, z: number, f: FeedKind = 'cut') {
+  feed(x: number, y: number, z: number, f: FeedKind = 'cut', k?: number) {
     if (Math.abs(x - this.x) < 1e-9 && Math.abs(y - this.y) < 1e-9 && Math.abs(z - this.z) < 1e-9) return
-    this.moves.push({ t: 'feed', x, y, z, f })
+    this.moves.push(k && k !== 1 ? { t: 'feed', x, y, z, f, k } : { t: 'feed', x, y, z, f })
     Object.assign(this, { x, y, z })
   }
   seg(s: Seg, z: number, f: FeedKind = 'cut') {
@@ -198,6 +202,8 @@ function stats(moves: Move[], feed: number) {
   let cut = 0
   let rapid = 0
   let drills = 0
+  // adaptive feed: time saved or added by moves that run at k times the feed (in feed-mm)
+  let boost = 0
   let x = 0
   let y = 0
   let z = 50
@@ -221,11 +227,12 @@ function stats(moves: Move[], feed: number) {
     }
     if (m.t === 'rapid') rapid += d
     else cut += d
+    if (m.t === 'feed' && m.k && m.k !== 1) boost += d / m.k - d
     x = m.x
     y = m.y
     z = m.z
   }
-  return { cut: Math.round(cut), rapid: Math.round(rapid), minutes: Math.round((cut / Math.max(1, feed) + rapid / RAPID_RATE + drills * 0.03) * 100) / 100 }
+  return { cut: Math.round(cut), rapid: Math.round(rapid), minutes: Math.round(((boost ? cut + boost : cut) / Math.max(1, feed) + rapid / RAPID_RATE + drills * 0.03) * 100) / 100 }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -628,6 +635,7 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const orient = (c: Contour) => (op.direction === 'climb' ? c : reverse(c))
   const slack = offset(first, 0.01)
   if (op.rest) return genRestPocket(op, ctx, tp, b, { region, tool, depths, entry, first, rings: [...levels].reverse().flat().map(orient), slack })
+  if (op.pattern === 'adaptive') return genAdaptivePocket(op, ctx, tp, b, { region, tool, depths, first })
 
   const circ = region.length === 1 && region[0].segs.every((s) => s.k === 'A') && new Set(region[0].segs.map((s) => radius(s as never).toFixed(6))).size === 1
 
@@ -762,19 +770,7 @@ function enterAt(entry: PocketOp['entry'], c: Contour, S: P, prevZ: number, z: n
     const fitsAt = (C: P) => Array.from({ length: 16 }, (_, k) => (k * Math.PI) / 8).every((a) => inRegion({ x: C.x + (h - 0.01) * Math.cos(a), y: C.y + (h - 0.01) * Math.sin(a) }))
     const C = [left(t), right(t), t].map((n) => add(S, mul(n, h))).find(fitsAt)
     if (C) {
-      const pitch = Math.max(0.5, 2 * Math.PI * h * Math.tan((Math.max(1, op.rampAngle) * Math.PI) / 180))
-      const turns = Math.max(1, Math.ceil(Math.abs(z - prevZ) / pitch))
-      b.feed(S.x, S.y, prevZ, 'plunge')
-      const W = sub(mul(C, 2), S)
-      for (let i = 0; i < turns; i++) {
-        const za = prevZ + ((z - prevZ) * (i + 0.5)) / turns
-        const zb = prevZ + ((z - prevZ) * (i + 1)) / turns
-        b.moves.push({ t: 'arc', x: W.x, y: W.y, z: za, cx: C.x, cy: C.y, ccw: true, f: 'plunge' })
-        b.moves.push({ t: 'arc', x: S.x, y: S.y, z: zb, cx: C.x, cy: C.y, ccw: true, f: 'plunge' })
-      }
-      b.moves.push({ t: 'arc', x: W.x, y: W.y, z, cx: C.x, cy: C.y, ccw: true, f: 'cut' })
-      b.moves.push({ t: 'arc', x: S.x, y: S.y, z, cx: C.x, cy: C.y, ccw: true, f: 'cut' })
-      Object.assign(b, { x: S.x, y: S.y, z })
+      helixDown(b, C, S, h, prevZ, z, op.rampAngle)
       return
     }
     tp.warnings.push('Helix does not fit at a pocket start; ramped instead.')
@@ -798,6 +794,80 @@ function enterAt(entry: PocketOp['entry'], c: Contour, S: P, prevZ: number, z: n
     return
   }
   b.feed(S.x, S.y, z, 'plunge')
+}
+
+/** Helix of radius h around C from S (on it) down from prevZ to z, then a full turn at z. */
+function helixDown(b: Builder, C: P, S: P, h: number, prevZ: number, z: number, rampAngle: number) {
+  const pitch = Math.max(0.5, 2 * Math.PI * h * Math.tan((Math.max(1, rampAngle) * Math.PI) / 180))
+  const turns = Math.max(1, Math.ceil(Math.abs(z - prevZ) / pitch))
+  b.feed(S.x, S.y, prevZ, 'plunge')
+  const W = sub(mul(C, 2), S)
+  for (let i = 0; i < turns; i++) {
+    const za = prevZ + ((z - prevZ) * (i + 0.5)) / turns
+    const zb = prevZ + ((z - prevZ) * (i + 1)) / turns
+    b.moves.push({ t: 'arc', x: W.x, y: W.y, z: za, cx: C.x, cy: C.y, ccw: true, f: 'plunge' })
+    b.moves.push({ t: 'arc', x: S.x, y: S.y, z: zb, cx: C.x, cy: C.y, ccw: true, f: 'plunge' })
+  }
+  b.moves.push({ t: 'arc', x: W.x, y: W.y, z, cx: C.x, cy: C.y, ccw: true, f: 'cut' })
+  b.moves.push({ t: 'arc', x: S.x, y: S.y, z, cx: C.x, cy: C.y, ccw: true, f: 'cut' })
+  Object.assign(b, { x: S.x, y: S.y, z })
+}
+
+/**
+ * Adaptive clearing (NEW-01): one level planned at a steady width of cut (`adaptive/adaptive.ts`)
+ * and repeated at every depth (each level of a straight-walled pocket is the same full layer).
+ * Entries are helixes; moves back run lifted through cleared area, or up and over. Not written to
+ * woodWOP: the export checker blocks it.
+ */
+function genAdaptivePocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder, g: { region: Contour[]; tool: Tool; depths: number[]; first: Contour[] }) {
+  const a = op.adaptive ?? DEFAULT_ADAPTIVE
+  const r = g.tool.diameter / 2
+  const width = a.angle && a.angle > 0 ? r * (1 - Math.cos((Math.min(180, a.angle) * Math.PI) / 180)) : Math.max(0.01, a.width) * g.tool.diameter
+  const walls = contourPolys(op.stockXY > 0 ? offset(g.region, -op.stockXY) : g.region)
+  const centres = contourPolys(g.first)
+  const material = inflatePolys(centres, r, 'round', 0.001)
+  const plan = planAdaptive(material, centres, walls, { r, target: width, smoothing: Math.max(0, a.smoothing), climb: op.direction === 'climb', helixPct: op.helixPct }, ctx.work)
+  tp.warnings.push(...plan.warnings)
+  if (!plan.items.length) {
+    tp.warnings.push('Adaptive clearing found no place for its entry helix.')
+    return
+  }
+  const boost = Math.max(1, a.feedBoost || 1)
+  const lift = Math.max(0, a.lift)
+  const sections: NonNullable<Toolpath['sections']> = []
+  g.depths.forEach((d, pi) => {
+    const z = -d
+    const prevZ = pi === 0 ? 0 : -g.depths[pi - 1]
+    for (const it of plan.items) {
+      if (it.k === 'helix') {
+        if (b.z < op.levels.rapidZ) b.rapid(b.x, b.y, op.levels.rapidZ)
+        b.rapid(it.start.x, it.start.y, op.levels.safeZ)
+        b.rapid(it.start.x, it.start.y, Math.max(prevZ, 0) + op.levels.rapidZ)
+        helixDown(b, it.c, it.start, it.rho, prevZ, z, op.rampAngle)
+      } else if (it.k === 'link') {
+        if (it.clear) {
+          b.feed(b.x, b.y, z + lift, 'lead')
+          b.feed(it.to.x, it.to.y, z + lift, 'lead', boost)
+          b.feed(it.to.x, it.to.y, z, 'lead')
+        } else {
+          b.rapid(b.x, b.y, op.levels.rapidZ)
+          b.rapid(it.to.x, it.to.y, op.levels.safeZ)
+          b.rapid(it.to.x, it.to.y, Math.max(prevZ, 0) + op.levels.rapidZ)
+          b.feed(it.to.x, it.to.y, z, 'plunge')
+        }
+      } else {
+        const from = b.moves.length
+        it.pts.forEach((p, i) => b.feed(p.x, p.y, z, 'cut', boost > 1 ? Math.min(boost, Math.max(1, width / Math.max(1e-9, it.load[i]))) : undefined))
+        if (it.trochoidal) sections.push({ kind: 'trochoidal', from, to: b.moves.length })
+      }
+    }
+  })
+  b.rapid(b.x, b.y, op.levels.safeZ)
+  if (sections.length) {
+    tp.sections = sections
+    tp.warnings.push(`${sections.length / g.depths.length} narrow place(s) cleared with trochoidal loops.`)
+  }
+  tp.warnings.push(`Adaptive clearing holds a ${width.toFixed(2)} mm width of cut. It is not written to woodWOP yet; simulate it.`)
 }
 
 /** Parallel lines across the region at an angle, linked end to end. */
@@ -1105,6 +1175,18 @@ function genSweep(op: SweepOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 /** 3D operation kinds: they need a model's mesh. */
 export const OPS_3D: ReadonlySet<CamOp['kind']> = new Set(['finish3d', 'rough3d'])
 
+/** Adaptive clearing (a pocket with the adaptive pattern; rest machining wins over it). */
+export const isAdaptive = (op: CamOp) => op.kind === 'pocket' && op.pattern === 'adaptive' && !op.rest
+
+/**
+ * Operations that can take seconds, so screens calculate them in the compute worker: 3D
+ * operations, adaptive clearing, and rest machining that follows adaptive clearing.
+ */
+export function inBackground(op: CamOp, part: CamPart): boolean {
+  if (OPS_3D.has(op.kind) || isAdaptive(op)) return true
+  return op.kind === 'pocket' && !!op.rest && restSources(op, part).some(isAdaptive)
+}
+
 /**
  * 3D operations that cut only at constant heights (Z-level roughing; waterline without the
  * shallow-area fill). They can be written to woodWOP as ordinary contour-milling passes, behind
@@ -1270,15 +1352,25 @@ function minWidth(op: CamOp, ctx: GenContext) {
 }
 
 /**
- * Toolpaths of a part's enabled operations. `paths3d`: 3D toolpaths already calculated (in the
- * compute worker), by `pathKey`; a 3D operation found there is not calculated again.
+ * Toolpaths of a part's enabled operations. `paths3d`: toolpaths already calculated (in the
+ * compute worker), by `pathKey`; an operation found there is not calculated again.
+ * `skipBackground`: operations that would take seconds (`inBackground`) and are not in `paths3d`
+ * get an empty toolpath with a note instead (for export, which blocks them anyway).
  */
-export function generatePart(part: CamPart, machine: MachineProfile, meshes?: ReadonlyMap<string, Mesh>, paths3d?: ReadonlyMap<string, Toolpath>): Toolpath[] {
+export function generatePart(part: CamPart, machine: MachineProfile, meshes?: ReadonlyMap<string, Mesh>, paths3d?: ReadonlyMap<string, Toolpath>, skipBackground = false): Toolpath[] {
   const done = new Map<string, Toolpath>()
   return part.ops
     .filter((o) => o.enabled)
     .map((op) => {
-      const tp = (OPS_3D.has(op.kind) ? paths3d?.get(pathKey(op, part, machine)) : undefined) ?? generateOp(op, { part, machine, meshes, done })
+      const bg = inBackground(op, part)
+      const pre = bg ? paths3d?.get(pathKey(op, part, machine)) : undefined
+      const skip = !pre && bg && skipBackground && !OPS_3D.has(op.kind)
+      const tool = skip ? resolveTool(op, machine) : null
+      const tp: Toolpath =
+        pre ??
+        (skip
+          ? { opId: op.id, kind: op.kind, name: op.name, tool, feeds: feedsFor(op, tool, part.materialId, machine), moves: [], intents: [], warnings: ['Not calculated for export (adaptive clearing is calculated in the part designer).'], stats: { cut: 0, rapid: 0, minutes: 0 } }
+          : generateOp(op, { part, machine, meshes, done }))
       done.set(op.id, tp)
       return tp
     })

@@ -1,0 +1,54 @@
+{
+ "op": "Pocket",
+ "kind": "pocket",
+ "tool": 103,
+ "moves": {
+  "rapid": 3,
+  "feed": 3854,
+  "arc": 12,
+  "drill": 0
+ },
+ "cutMm": 4872,
+ "box": [
+  23,
+  23,
+  77,
+  57
+ ],
+ "zMin": -6,
+ "intents": {},
+ "warnings": [
+  "Adaptive clearing holds a 0.90 mm width of cut. It is not written to woodWOP yet; simulate it."
+ ],
+ "first": [
+  {
+   "t": "rapid",
+   "x": 36.65,
+   "y": 34.25,
+   "z": 20
+  },
+  {
+   "t": "rapid",
+   "x": 36.65,
+   "y": 34.25,
+   "z": 3
+  },
+  {
+   "t": "feed",
+   "x": 36.65,
+   "y": 34.25,
+   "z": 0,
+   "f": "plunge"
+  },
+  {
+   "t": "arc",
+   "x": 31.85,
+   "y": 34.25,
+   "z": -0.6,
+   "cx": 34.25,
+   "cy": 34.25,
+   "ccw": true,
+   "f": "plunge"
+  }
+ ]
+}

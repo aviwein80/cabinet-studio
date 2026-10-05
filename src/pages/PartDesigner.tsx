@@ -9,7 +9,7 @@ import { serializePartFile } from '@/cam/model/partFile'
 import { evalLength, parseCoord, resolveVariables } from '@/cam/expr'
 import { dist, type P } from '@/cam/geom'
 import { ALL_SNAPS, SNAP_LABEL, type SnapMode, type SnapResult } from '@/cam/snap'
-import { generateOp, OPS_3D, toolpathContours, type Toolpath } from '@/cam/toolpath'
+import { generateOp, inBackground, toolpathContours, type Toolpath } from '@/cam/toolpath'
 import { exportDxf } from '@/cam/dxf'
 import type { CamPart } from '@/cam/types'
 import { EmptyState } from '@/components/PageHeader'
@@ -126,7 +126,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
       part.ops
         .filter((o) => o.enabled)
         .map((op) => {
-          if (OPS_3D.has(op.kind)) return path3dOf(op)
+          if (inBackground(op, part)) return path3dOf(op)
           try {
             return generateOp(op, { part, machine })
           } catch (e) {

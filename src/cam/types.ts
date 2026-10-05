@@ -225,7 +225,8 @@ export interface ProfileOp extends OpBase {
 
 export interface PocketOp extends OpBase {
   kind: 'pocket'
-  pattern: 'offset' | 'zigzag' | 'spiral'
+  /** 'adaptive': clearing at a steady width of cut (NEW-01), settings in `adaptive`. */
+  pattern: 'offset' | 'zigzag' | 'spiral' | 'adaptive'
   /** Stepover as a fraction of tool diameter. */
   stepover: number
   angle: number
@@ -243,6 +244,21 @@ export interface PocketOp extends OpBase {
    * milling operation before this one. Pieces that cut less than `minLength` mm are skipped.
    */
   rest?: { from: string[]; minLength: number }
+  /** Adaptive clearing settings (used when `pattern` is 'adaptive'). */
+  adaptive?: AdaptiveSettings
+}
+
+export interface AdaptiveSettings {
+  /** Width of cut to hold, as a fraction of the tool diameter. */
+  width: number
+  /** Or the engagement angle, degrees; when set it wins over `width`. */
+  angle?: number
+  /** Smallest turning radius of the path, mm (0 = turn freely). */
+  smoothing: number
+  /** Lift for the moves back through cleared area, mm. */
+  lift: number
+  /** Adaptive feed: lighter cuts and the moves back run up to this many times the feed (1 = off). */
+  feedBoost: number
 }
 
 export interface DrillOp extends OpBase {

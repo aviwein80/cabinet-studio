@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { opInputHash } from '@/cam/doc'
 import type { Mesh } from '@/cam/mesh/types'
 import { feedsFor, resolveTool } from '@/cam/ops'
-import { OPS_3D, type Toolpath } from '@/cam/toolpath'
+import { inBackground, type Toolpath } from '@/cam/toolpath'
 import type { CamOp, CamPart } from '@/cam/types'
 import { compute } from '@/cam/worker/client'
 import { Cancelled } from '@/core/cancel'
@@ -27,7 +27,7 @@ export function use3dToolpaths(part: CamPart, machine: MachineProfile) {
   const running = useRef(new Map<string, { key: string; abort: AbortController }>())
 
   useEffect(() => {
-    const ops = part.ops.filter((o) => o.enabled && OPS_3D.has(o.kind))
+    const ops = part.ops.filter((o) => o.enabled && inBackground(o, part))
     const live = new Set(ops.map((o) => o.id))
     for (const [id, r] of running.current)
       if (!live.has(id)) {

@@ -87,6 +87,13 @@ export checker. Tool numbers are still placeholders.
   out from the earlier toolpaths themselves, level by level. Pieces that would cut less than a
   set length are skipped. Each piece is written to woodWOP as a contour-milling pass, so the
   earlier operations must run first, in the order shown.
+- **Adaptive clearing** (pocket pattern): the tool keeps a steady width of cut (set as a share of
+  the tool diameter or as an engagement angle) instead of following offset rings. It turns into
+  the material when the cut gets light and away when it gets heavy, goes back through cleared
+  area lifted a little, enters new areas by helix, and clears channels too narrow for that with
+  trochoidal loops. Optional adaptive feed speeds up the lighter cuts. It is calculated in the
+  background and can be simulated; it is **not written to woodWOP** yet (the export checker
+  blocks it, `CAM_ADAPTIVE_NO_OUTPUT`).
 - **Parametric doors**: slab, shaker, arched and cathedral, driven by variables or a door-list CSV.
   Hinge cups and pulls are placed automatically.
 - **Native woodWOP**: each operation is written as an editable macro (`<105` contour on the drawn

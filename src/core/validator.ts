@@ -249,6 +249,13 @@ export function validateJob(
           code: 'CAM_3D_NO_OUTPUT',
           message: `Custom part #${c.partNo} ${name}: ${c.ops3d} 3D operation(s) need true 3D output, which cannot be written to woodWOP yet (it stays off until the format is confirmed with a program from the machine). Only simulate them. Z-level roughing, and waterline without the shallow-area fill, can be written as flat layers.`,
         })
+      if (c.adaptiveOps)
+        add({
+          ...ref,
+          severity: 'error',
+          code: 'CAM_ADAPTIVE_NO_OUTPUT',
+          message: `Custom part #${c.partNo} ${name}: ${c.adaptiveOps} adaptive-clearing pocket(s) cannot be written to woodWOP yet (its entry helixes, lifted moves back and steady width of cut have no contour-milling form that is confirmed). Only simulate it, or use follow-shape or back-and-forth for the program.`,
+        })
       if (c.flat3d && !c.flat3dWritten) {
         const off = !featuresOf(settings).cam3dMprOutput || !c.written
         add({

@@ -1,6 +1,6 @@
 import type { Seg } from '@/cam/geom'
 import { partProgramOps } from '@/cam/mpr'
-import { generatePart, type Intent, isFlatLayer, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
+import { generatePart, type Intent, isAdaptive, isFlatLayer, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
@@ -200,6 +200,8 @@ export interface SheetProgram {
     warnings: string[]
     /** 3D operations that need true 3D output (never written). */
     ops3d?: number
+    /** Adaptive-clearing pockets: not written to woodWOP (blocked by the export checker). */
+    adaptiveOps?: number
     /** Flat-layer 3D operations (Z-level roughing, waterline), and how many of them have no toolpath yet. */
     flat3d?: number
     flat3dMissing?: number
@@ -301,13 +303,14 @@ export function buildSheetProgram(
     const { pt, dir, angle } = placementTransform(inst, pl)
     const base = { partUid: inst.uid, partNo: inst.no }
     if (inst.cam) {
-      const paths = generatePart(inst.cam, machine, undefined, opts.paths3d)
+      const paths = generatePart(inst.cam, machine, undefined, opts.paths3d, true)
       const tf = { pt, dir, rotated: pl.rotated, angle }
       const all = partProgramOps(inst.cam, paths, tf, inst.uid, inst.no, machine, true)
       const backHoles = paths.reduce((n, tp) => n + tp.intents.filter((it) => it.k === 'vdrill' && it.back).length, 0)
       const machining = all.filter((o) => o.kind === 'cam')
       const enabled3d = inst.cam.ops.filter((o) => o.enabled && OPS_3D.has(o.kind))
       const ops3d = enabled3d.filter((o) => !isFlatLayer(o)).length
+      const adaptiveOps = inst.cam.ops.filter((o) => o.enabled && isAdaptive(o)).length
       const flat = enabled3d.filter(isFlatLayer)
       const flatIds = new Set(flat.map((o) => o.id))
       const flat3dMissing = flat.filter((o) => !opts.paths3d?.has(pathKey(o, inst.cam!, machine))).length
@@ -319,6 +322,7 @@ export function buildSheetProgram(
         backHoles,
         warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)),
         ...(ops3d ? { ops3d } : {}),
+        ...(adaptiveOps ? { adaptiveOps } : {}),
         ...(flat.length ? { flat3d: flat.length, flat3dMissing, flat3dWritten: write3d && !flat3dMissing } : {}),
       })
       for (const o of all) {

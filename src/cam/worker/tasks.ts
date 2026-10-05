@@ -24,6 +24,7 @@ import type { SolidData } from '../solid/types'
 import { type Recognition, recognizePanel, type RecognizeOptions } from '../solid/recognize'
 import { type FeatureRow, featureEntities, solidToPart, type SolidPartOptions } from '../solid/toPart'
 import { type AssemblyPart, assemblyParts } from '../solid/assembly'
+import { grainDirection } from '../solid/faces'
 import type { Entity, Layer } from '../types'
 
 export interface ImportedModel {
@@ -55,7 +56,7 @@ export interface TaskMap {
   'solid.pack': { in: { solid: SolidData }; out: Packed }
   'blob.unpackSolid': { in: { gz: Uint8Array; hash: string }; out: SolidData }
   /** Find the features of one body (SOL-01); with `model`, also the layers and shapes for them. */
-  'solid.recognize': { in: { solid: SolidData; body: number; opt: Omit<RecognizeOptions, 'frame'>; model?: { id: string; blob: string }; layers?: Layer[] }; out: { recognition: Recognition; layers?: Layer[]; entities?: Entity[]; outlineId?: string; rows?: FeatureRow[] } }
+  'solid.recognize': { in: { solid: SolidData; body: number; opt: Omit<RecognizeOptions, 'frame'>; model?: { id: string; blob: string }; layers?: Layer[]; grainFaces?: number[] }; out: { recognition: Recognition; layers?: Layer[]; entities?: Entity[]; outlineId?: string; rows?: FeatureRow[] } }
   /** Bodies of a file grouped into parts with quantities and properties (SOL-04). */
   'solid.assembly': { in: { solid: SolidData; opt: Omit<RecognizeOptions, 'frame'> }; out: AssemblyPart[] }
   /** A custom part from one body of a solid, laid flat with its features on layers. */
@@ -125,11 +126,12 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     if ((await sha256Hex(raw)) !== hash) throw new Error(`Solid model data ${hash.slice(0, 12)}… is damaged (checksum mismatch).`)
     return decodeSolid(raw)
   },
-  'solid.recognize'({ solid, body, opt, model, layers }, work) {
+  'solid.recognize'({ solid, body, opt, model, layers, grainFaces }, work) {
     const b = solid.bodies.find((x) => x.index === body)
     if (!b) throw new Error(`Body ${body} is not in this solid.`)
     work.progress?.(0.1, 'Finding features')
-    const recognition = recognizePanel(b, opt)
+    const along = grainFaces?.length ? grainDirection(b, grainFaces) : null
+    const recognition = recognizePanel(b, along ? { ...opt, align: { ...opt.align, along } } : opt)
     if (!model) return { recognition }
     return { recognition, ...featureEntities(recognition, model, layers) }
   },

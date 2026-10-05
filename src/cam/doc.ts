@@ -314,6 +314,9 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   const { builtHash: _b, name: _n, note: _note, ...params } = op
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
   const deps: unknown[] = [params, geo, tool, part.thickness]
+  // shapes made from solid faces: the solid's current data (a new version marks the op stale)
+  const solids = geo.flatMap((e) => (typeof e === 'object' && e.solid ? [part.models?.find((m) => m.id === e.solid!.modelId)?.blob ?? null] : []))
+  if (solids.length) deps.push({ solids })
   // 3D ops: the model's data (by hash, never the mesh itself) and where it sits
   if (op.kind === 'finish3d' || op.kind === 'rough3d') {
     const m = part.models?.find((x) => x.id === op.surface.modelId)

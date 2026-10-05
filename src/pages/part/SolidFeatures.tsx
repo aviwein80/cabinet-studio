@@ -16,6 +16,7 @@ import { featuresOf } from '@/core/features'
 import type { UnitSystem } from '@/core/types'
 import { formatLength } from '@/core/units'
 import { TaskProgress } from './ModelImportDialog'
+import { useFacePick } from './facePick'
 import { drillSizes, loadModelSolid } from './solidData'
 
 interface Found {
@@ -40,6 +41,8 @@ export function SolidFeatures({ part, model, units, onChange }: { part: CamPart;
   const [found, setFound] = useState<Found | null>(null)
   const [busy, setBusy] = useState<{ fraction: number; note?: string; abort: AbortController } | null>(null)
   const [rules, setRules] = useState(true)
+  const picked = useFacePick((s) => (s.modelId === model.id ? s.faces : null))
+  const [grainBy, setGrainBy] = useState<number[] | null>(null)
   const fmt = (n: number) => formatLength(n, units)
 
   const find = async (which?: number) => {
@@ -50,7 +53,7 @@ export function SolidFeatures({ part, model, units, onChange }: { part: CamPart;
       setSolid(s)
       const b = which ?? body ?? s.bodies[0]?.index ?? 0
       setBody(b)
-      const r = await compute().run('solid.recognize', { solid: { ...s, bodies: s.bodies.filter((x) => x.index === b) }, body: b, opt: drillSizes(machine), model: { id: model.id, blob: model.blob }, layers: part.layers }, { signal: abort.signal, onProgress: (fraction, note) => setBusy({ fraction, note, abort }) })
+      const r = await compute().run('solid.recognize', { solid: { ...s, bodies: s.bodies.filter((x) => x.index === b) }, body: b, opt: drillSizes(machine), model: { id: model.id, blob: model.blob }, layers: part.layers, ...(grainBy?.length ? { grainFaces: grainBy } : {}) }, { signal: abort.signal, onProgress: (fraction, note) => setBusy({ fraction, note, abort }) })
       setFound({ body: b, recognition: r.recognition, layers: r.layers!, entities: r.entities!, outlineId: r.outlineId!, rows: r.rows! })
     } catch (e) {
       if (!(e instanceof Cancelled)) toast.error(e instanceof Error ? e.message : String(e))
@@ -75,6 +78,7 @@ export function SolidFeatures({ part, model, units, onChange }: { part: CamPart;
       outlineId: found.outlineId,
       models: (part.models ?? []).map((m) => (m.id === model.id ? { ...m, place: { frame: [...f.R[0], ...f.R[1], ...f.R[2]], up: '+z' as const, rotZ: 0, scale: 1, mirror: false, at: [0, 0, 0] as [number, number, number] }, size: [r6(f.length), r6(f.width), r6(f.thickness)] as [number, number, number] } : m)),
       workVolume: undefined,
+      ...(grainBy?.length ? { grain: 'length' as const } : {}),
       updatedAt: new Date().toISOString(),
     }
     let msg = `${found.rows.length} features on layers; part ${fmt(next.length)} × ${fmt(next.width)} × ${fmt(next.thickness)}`
@@ -117,6 +121,12 @@ export function SolidFeatures({ part, model, units, onChange }: { part: CamPart;
         </Button>
       </div>
       {busy && <TaskProgress fraction={busy.fraction} note={busy.note} onCancel={() => busy.abort.abort()} />}
+      {(picked?.length || grainBy) && (
+        <label className="flex items-center gap-1.5 text-[11px] text-stone-300">
+          <Switch checked={!!grainBy} onCheckedChange={(on) => setGrainBy(on ? (picked ?? []) : null)} aria-label="Grain along the picked faces" />
+          {grainBy ? `Grain along face${grainBy.length === 1 ? '' : 's'} ${grainBy.slice(0, 4).join(', ')} (its longest straight edge becomes the length)` : `Grain along the ${picked?.length} picked face(s)`}
+        </label>
+      )}
       {found && counts && (
         <>
           <div className="text-[11px] text-stone-300">

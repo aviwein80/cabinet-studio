@@ -21,6 +21,7 @@ import { nanoid } from 'nanoid'
 import { DEFAULT_LAYERS, newPart } from '../doc'
 import { area, type Contour, radius, type Seg } from '../geom'
 import type { CamPart, Entity, Geom, Layer, ModelRef, SolidRole } from '../types'
+import { grainDirection } from './faces'
 import { type Recognition, recognizePanel, type RecognizeOptions } from './recognize'
 import { matchMaterial } from './material'
 import type { SolidData } from './types'
@@ -136,6 +137,11 @@ export interface SolidPartOptions extends RecognizeOptions {
   qty?: number
   materialId?: string | null
   modelId?: string
+  /**
+   * Faces that show the grain (e.g. picked by colour): the length is laid along their longest
+   * straight edge and the part's grain runs along its length.
+   */
+  grainFaces?: number[]
   /** Library materials: one named (or coded) as the file's "Material" property is picked. */
   materials?: { id: string; name: string; code?: string }[]
 }
@@ -148,7 +154,8 @@ export interface SolidPartOptions extends RecognizeOptions {
 export function solidToPart(solid: SolidData, opt: SolidPartOptions): { part: CamPart; recognition: Recognition; rows: FeatureRow[] } {
   const body = solid.bodies.find((b) => b.index === opt.body)
   if (!body) throw new Error(`Body ${opt.body} is not in this solid.`)
-  const rec = recognizePanel(body, opt)
+  const along = opt.grainFaces?.length ? grainDirection(body, opt.grainFaces) : null
+  const rec = recognizePanel(body, along ? { ...opt, align: { ...opt.align, along } } : opt)
   const f = rec.frame
   const r6 = (n: number) => Math.round(n * 1e6) / 1e6
   const modelId = opt.modelId ?? nanoid(8)
@@ -171,6 +178,8 @@ export function solidToPart(solid: SolidData, opt: SolidPartOptions): { part: Ca
   }
   const { layers, entities, outlineId, rows } = featureEntities(rec, { id: modelId, blob: opt.blob })
   const modelsLayer: Layer = { id: 'models', name: '3D models', color: '#c084fc', visible: true, locked: false }
+  const grainProp = Object.entries(props).find(([k]) => /^grain/i.test(k.trim()))?.[1]
+  const grain: CamPart['grain'] = along || (grainProp !== undefined && /length|long/i.test(String(grainProp))) ? 'length' : 'none'
   const notes = Object.keys(props).length ? Object.entries(props).map(([k, v]) => `${k}: ${v}`).join('\n') : undefined
   const part = newPart({
     name: opt.name ?? (body.name || opt.source.replace(/\.[^.]+$/, '')),
@@ -178,6 +187,7 @@ export function solidToPart(solid: SolidData, opt: SolidPartOptions): { part: Ca
     width: r6(f.width),
     thickness: r6(f.thickness),
     qty: opt.qty ?? 1,
+    grain,
     materialId: opt.materialId ?? matchMaterial(props, opt.materials),
     layers: [...layers, modelsLayer],
     entities,

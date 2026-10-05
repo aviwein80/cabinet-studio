@@ -7,6 +7,7 @@ import { toPoints } from '@/cam/geom'
 import { placeMesh } from '@/cam/mesh/place'
 import type { CamPart, ModelRef } from '@/cam/types'
 import { useModelMesh } from './modelData'
+import { useFacePick } from './facePick'
 import { faceColorMap, useModelSolid } from './solidData'
 
 /**
@@ -70,11 +71,21 @@ function View({ part }: { part: CamPart }) {
 }
 
 const MODEL_COLOR = '#d6c3f5'
+/** Picked faces are drawn in this colour. */
+const PICKED = '#f59e0b'
+const NONE: number[] = []
 
 function ModelMesh({ model }: { model: ModelRef }) {
   const { mesh, error } = useModelMesh(model.blob)
   const { solid } = useModelSolid(model.blob, model.kind === 'solid')
-  const colors = useMemo(() => (solid ? faceColorMap(solid, model.faceColors) : null), [solid, model.faceColors])
+  const picked = useFacePick((s) => (s.modelId === model.id ? s.faces : NONE))
+  const pick = useFacePick((s) => s.pick)
+  const colors = useMemo(() => {
+    if (!solid) return null
+    const map = faceColorMap(solid, model.faceColors)
+    for (const f of picked) map.set(f, PICKED)
+    return map
+  }, [solid, model.faceColors, picked])
   const geo = useMemo(() => {
     if (!mesh) return null
     const placed = placeMesh(mesh, model.place)
@@ -105,8 +116,22 @@ function ModelMesh({ model }: { model: ModelRef }) {
   if (error) console.warn(error)
   if (!geo) return null
   const colored = !!geo.getAttribute('color')
+  const groups = mesh?.groups
   return (
-    <mesh geometry={geo}>
+    <mesh
+      geometry={geo}
+      onClick={
+        model.kind === 'solid' && groups
+          ? (e) => {
+              e.stopPropagation()
+              const t = e.faceIndex
+              if (t === undefined || t === null) return
+              const face = groups[t]
+              if (face) pick(model.id, face, e.shiftKey)
+            }
+          : undefined
+      }
+    >
       <meshStandardMaterial color={colored ? '#ffffff' : MODEL_COLOR} vertexColors={colored} roughness={0.65} metalness={0.05} side={THREE.DoubleSide} flatShading={false} />
     </mesh>
   )

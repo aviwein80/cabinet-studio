@@ -38,13 +38,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.4d Cut-free pieces (SIM-05), screenshots, docs | **Done** (October 2026) | See below. M2.4 complete. |
 | M2.5a Solid import: reader choice, lazy WASM, face ids and types, packaging | **Done** (October 2026) | See below. |
 | M2.5b Feature recognition to layers, rules and a checked MPR | **Done** (October 2026) | See below. |
-| M2.5c - M2.5e | In progress | Assemblies, faces and face machining; 3D wires and surfaces; screenshots and docs. |
+| M2.5c Assemblies, faces to layers / colours / grain, machining picked faces | **Done** (October 2026) | See below. |
+| M2.5d - M2.5e | In progress | 3D wires and surfaces; packaged-app check, screenshots and docs. |
 | M2.6 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -639,7 +640,29 @@ an underside pocket, a 60 mm round pocket, holes in all four edges, a rebate and
   does not look at the corner radius, so a 12 mm cutter in a 40 x 20 R3 recess leaves R6 corners.
   The feature list shows each pocket's smallest corner radius.
 
-## Next: M2.5c assemblies, faces, face machining
+## M2.5c assemblies, faces and face machining: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| SOL-04 | Bodies grouped into parts: same name and same shape (panel size, face count, types and areas, and the holes, pockets and cut-outs in the panel's own frame, either way round). A turned copy counts as the same part; a mirrored copy (same areas, mirrored holes) is a separate part ("Side (2)"). Quantity = number of bodies; properties from the file's product; the parts go into the parts list they were imported from (a job's parts are nested with the job) | `src/cam/solid/assembly.ts`, `SolidImportDialog.tsx` |
+| SOL-02 | Machine picked faces: pocket (pick the floor or a wall), drill (the hole's wall, floor or drill point), profile (a wall of the outline: outside, through; of a cut-out: inside, through; of a pocket: inside at its depth; loose upright walls: along their top edges at their depth), saw (along a straight upright wall's top edge, at its height). The picked faces are matched to the recognised feature they belong to, so the shapes are exact; they are made for you, linked to the faces, on the "Machined faces" layer (no rule reads it, so the layer rules never double them), with one operation | `src/cam/solid/faces.ts` (`machineFaces`, `faceShapes`) |
+| SOL-03 | Faces to a layer by colour or by type (hole walls of one size, flat faces...): their shapes go on the layer (the layer rules machine it by its name), optionally with a recipe's operations; the faces remember the layer. Face colours set in the app (they win over the file's). Grain from faces: their longest straight edge becomes the part's length and the grain runs along it; the file's "Grain: Length" property also sets the grain | `sendFacesToLayer`, `setFaceColor`, `facesByColor`, `facesByType`, `grainDirection`; `solidToPart` (`grainFaces`) |
+| Associativity | An operation on shapes made from solid faces includes the solid's current data in its input hash: a new version of the file marks those operations stale at once. "Update shapes" makes the shapes again from the same face ids (faces no longer there are listed, shapes left as they were). Parts without solid shapes hash exactly as before | `opInputHash` in `src/cam/doc.ts`, `staleSolidShapes`, `refreshSolidShapes` |
+| Screens | 3D view: click a face of a solid to pick it, Shift-click to add (picked faces amber). Side panel "Faces": select by colour or type (hole size), Machine: Profile / Pocket / Drill / Saw, colour faces, send to a layer (with a recipe), "New version" of the file, "Update shapes" when the solid changed. "Features": grain along the picked faces | `Model3DView.tsx`, `SolidFacesPanel.tsx`, `facePick.ts`, `SolidFeatures.tsx` |
+
+### Acceptance (M2.5 criteria and spec text for SOL-02/03/04)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| 5-part assembly split into named parts with quantities and properties | `tests/cam-solid-faces.test.ts` | Side x2, Bottom, Top rail, Back; properties as in the file; sizes 720 x 560 x 19 ... 701 x 562 x 6 |
+| Into the job and nesting | same (`runJob`, output on) | 5 pieces nested on 2 sheets (plywood, MDF back, materials from the "Material" property); no export-checker errors; cut list Side qty 2 |
+| Turned copy grouped, mirrored copy kept apart | same | 2 parts: "Cabinet side" x2 and "Cabinet side (2)" x1; the mirrored copy still reads 30 holes, 4 pockets, 1 cut-out |
+| Machine faces without a 2D extract | same | Floor of the 4 mm step -> pocket cut to 4.000; drill point -> drill Ø8 at 13; outline wall -> outside through profile; cut-out wall -> inside through (box 300,250-420,290 exact); straight wall -> saw line 720.000 long, refused by the export checker (no saw unit) |
+| Faces to layers by type / colour; recipe | same | 26 hole walls Ø5 -> 26 circles at 13 mm on "SHELF_PINS"; with the drill recipe, 26 drill moves at 13; an outline wall sent to "cut" -> the shop rules give a through profile |
+| Face colours; grain from a face | same | Red face found by colour; set / cleared in the app; side's grain along file Z (its 720 length); the door's 400 mm bottom edge face puts 400 along X |
+| Stale when the solid changes | same | New version: every operation on its shapes stale, every shape listed; "Update shapes": all made again, same geometry; a different solid: shapes listed as missing |
+
+## Next: M2.5d 3D wires and surfaces
 
 - SOL-01..04, CAD-16, NEW-19 as in the prompt (M2.5b-e above).
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
@@ -662,3 +685,4 @@ an underside pocket, a 60 mm round pocket, holes in all four edges, a rebate and
 - **Run 6 (M2.5a)**: solid import, reader choice, lazy WebAssembly, `app://`. See `git log`.
 - **Run 6 (M2.5b)**: feature recognition, layers, solid parts, checked MPR. Also fixes a lint error
   that went out with M2.5a (a test helper named like a React hook). See `git log`.
+- **Run 6 (M2.5c)**: assemblies, faces to layers / colours / grain, machining picked faces. See `git log`.

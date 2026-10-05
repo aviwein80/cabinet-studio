@@ -82,7 +82,7 @@ export interface RecognizeOptions {
 
 type Kind = 'up' | 'down' | 'vwall' | 'vcyl' | 'hcyl' | 'cone' | 'other'
 
-interface FaceInfo {
+export interface FaceInfo {
   id: number
   kind: Kind
   zmin: number
@@ -109,12 +109,12 @@ export const OPEN_REACH = 6
 const EPS = 1e-4
 const r6 = (n: number) => Math.round(n * 1e6) / 1e6
 
-export function recognizePanel(body: SolidBody, opt: RecognizeOptions = {}): Recognition {
-  const frame = opt.frame ?? panelFrame(body, opt.align)
-  const warnings = [...frame.warnings]
+/**
+ * A body in a part frame: each face's kind and height range, its boundary loops, and helpers to
+ * follow walls and turn loops into exact contours. Shared by recognition and face machining.
+ */
+export function panelContext(body: SolidBody, frame: Pick<PanelFrame, 'R' | 'origin' | 'thickness' | 'length' | 'width'>) {
   const T = frame.thickness
-  const L = frame.length
-  const W = frame.width
   const topo = topology(body)
   const pp = topo.points.map((p) => toPart(frame, p))
   const R = frame.R
@@ -156,7 +156,6 @@ export function recognizePanel(body: SolidBody, opt: RecognizeOptions = {}): Rec
     return k === 'up' || k === 'down'
   }
   const level = (id: number) => (info.get(id)!.zmin + info.get(id)!.zmax) / 2
-  const used = new Set<number>()
 
   /** Walls reached from `start` without crossing level faces; and the level faces met. */
   const flood = (start: Iterable<number>) => {
@@ -191,6 +190,18 @@ export function recognizePanel(body: SolidBody, opt: RecognizeOptions = {}): Rec
     return ls.length ? ls.reduce((b, l) => (Math.abs(loopArea(l)) > Math.abs(loopArea(b)) ? l : b)) : null
   }
   const contourOf = (loop: LoopEdge[]) => loopContour(loop, pp, info)
+  return { T, topo, pp, info, isLevel, level, flood, loopsOf, loopArea, outerLoop, contourOf }
+}
+
+export type PanelContext = ReturnType<typeof panelContext>
+
+export function recognizePanel(body: SolidBody, opt: RecognizeOptions = {}): Recognition {
+  const frame = opt.frame ?? panelFrame(body, opt.align)
+  const warnings = [...frame.warnings]
+  const L = frame.length
+  const W = frame.width
+  const { T, topo, pp, info, level, flood, loopsOf, loopArea, outerLoop, contourOf } = panelContext(body, frame)
+  const used = new Set<number>()
 
   // ---- holes (round, 360° walls), faces 1 and 6 ------------------------------------------------
   const holes: RecognizedHole[] = []
@@ -431,7 +442,7 @@ export function recognizePanel(body: SolidBody, opt: RecognizeOptions = {}): Rec
 }
 
 /** Concave round faces grouped by axis and radius; only groups going all the way round. */
-function roundGroups(faces: FaceInfo[], pp: V3[]): FaceInfo[][] {
+export function roundGroups(faces: FaceInfo[], pp: V3[]): FaceInfo[][] {
   const groups: FaceInfo[][] = []
   for (const f of faces) {
     const g = groups.find((x) => {
@@ -473,7 +484,7 @@ const norm = (a: V3): V3 => {
   return [a[0] / l, a[1] / l, a[2] / l]
 }
 
-function circleContour(c: V3, r: number): Contour {
+export function circleContour(c: V3, r: number): Contour {
   const cx = r6(c[0])
   const cy = r6(c[1])
   const rr = r6(r)
@@ -484,7 +495,7 @@ function circleContour(c: V3, r: number): Contour {
 }
 
 /** Counter-clockwise. */
-function normalise(c: Contour): Contour {
+export function normalise(c: Contour): Contour {
   if (area(c) >= 0) return c
   return { closed: c.closed, segs: [...c.segs].reverse().map((s) => (s.k === 'L' ? line(s.b, s.a) : arc(s.b, s.a, s.c, !s.ccw))) }
 }

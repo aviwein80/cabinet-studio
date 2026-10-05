@@ -120,6 +120,32 @@ export checker. Tool numbers are still placeholders.
   The 3D view shows the stock, the models and the drawing. Model data is stored as compressed
   files in `data/blobs` next to the shop file, never inside it. Part files (`.csp.json`) carry
   their models with them. Unused model files are removed after 30 days.
+- **Solid models** (STEP AP203 / AP214 / AP242, IGES, BREP; switch: Solid models, on):
+  - **Import solid** (Custom parts page, also a job's Custom parts tab): each panel in the file
+    becomes a part, laid flat (face 1 up, length along X, the smallest rectangle round it), sized
+    to it, with its **outline, cut-outs, pockets (depth, islands) and holes (diameter, depth,
+    drill point, face 1 or the underside, edge holes)** found and put on layers the layer rules
+    already machine (`Outline`, `INSIDE`, `POCKET_D6`, `DRILL_D5_13`, `THRU_DRILL_D8`,
+    `DRILL_D35_13_BACK`, `DRILL_D8_30_EDGE`). Repeated bodies in an assembly become one part
+    with a quantity; names, properties and the material (from a "Material" property that
+    matches the library) come from the file. Pockets on the underside go on `BACK_POCKET_...`
+    and are not machined from the top; a warning says so.
+  - In the part designer, a solid added with **3D model** keeps its face ids and colours.
+    **Find features** shows what was found; **Lay flat and use as the part** puts it on layers
+    (and applies the layer rules). Click faces in the 3D view (Shift adds), or select them by
+    colour or type, then **Machine** them directly (profile, pocket, drill, saw: no 2D extract
+    first), colour them, or send them to a layer (with a recipe). Grain can follow a face (its
+    longest straight edge becomes the length). When the file changes, **New version** reads it
+    again, the operations on its shapes are marked out of date and **Update shapes** makes them
+    again from the same faces.
+  - **Surfaces and wires**: revolve, extrude, flat, ruled, loft and sweep from drawn shapes;
+    surface from faces, untrim, fillet between two flat faces, edges as 3D polylines, extend and
+    split; 3D polylines typed in and edited point by point. New surfaces are 3D models the 3D
+    strategies machine.
+  - The solid reader is OpenCascade (occt-import-js, LGPL-2.1), shipped as separate, unmodified,
+    replaceable files that load only when a solid is opened, offline (Settings → About; and
+    `THIRD_PARTY_NOTICES.md`). Recognition runs in the background. Solid parts go through the
+    same custom-part MPR switch (off) and export checker as every other part.
 - **3D roughing (Z-level)** (Machining → Add operation, when the part has a model): cuts the
   stock away in flat levels from the top of the part down, leaving a set amount on the walls and
   on the floors. Each level is cleared like a pocket (follow the shape from the inside out, or
@@ -347,7 +373,7 @@ The cost is installer size (about 100 MB) and memory, which doesn't matter on a 
 ## Architecture
 
 ```
-electron/          main process: window, JSON storage with backups, folder export (IPC)
+electron/          main process: window (app://bundle), JSON storage with backups, folder export (IPC)
 src/core/          pure TypeScript, no React — everything below is unit tested
   types.ts         domain model (mm internally; cabinet X=width, Y=depth, Z=up; part x=length/grain)
   units.ts         mm storage, fractional-inch display, parse 23-1/4 and 23.25
@@ -368,7 +394,10 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   batch.ts         part-list CSV -> orders -> runJob; batchWatch.ts inbox watcher
   hardware/patterns.ts, patternImport.ts   drilling patterns, DXF/CSV import, PDF drafts
 src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpaths, native MPR, sim
-  mesh/            3D meshes: STL/OBJ/3MF readers, repair, placement, sections, outline, simplify
+  mesh/            3D meshes: STL/OBJ/3MF readers, repair, placement, sections, outline, simplify;
+                   surfaces made in the app (revolve, ruled, loft, sweep, extrude, flat, fillet...)
+  solid/           solid models: OpenCascade reader loading, exact face types, STEP text metadata,
+                   panel alignment, feature recognition, assemblies, face machining, wires
   model/           model data store (compressed, by SHA-256, outside the shop file), part files
   stock/           stock model interface, the heightfield stock, playback, cut-free pieces
   collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)

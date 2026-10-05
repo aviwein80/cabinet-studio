@@ -34,7 +34,12 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   (simulation only; woodWOP output is a decision). **M2.3c adaptive Z-level roughing, 3D rest
   machining and the pencil pass: done** (simulation only). M2.3 complete. **M2.4 stock
   simulation, collision checking and cut-free pieces: done** (October 2026), with the fix for
-  Z-level roughing of models that do not cover the panel. Next: M2.5 (solid models).
+  Z-level roughing of models that do not cover the panel. **M2.5 solid models: done** (October
+  2026): STEP / IGES / BREP import with face ids and colours (OpenCascade reader as separate,
+  lazily loaded WebAssembly), feature recognition onto layers the Stage 1 rules machine (checked
+  MPR, output still off), assemblies split into parts, faces to layers / colours / grain,
+  machining picked faces, 3D wires and surfaces, `app://` in the desktop app. Next: M2.6 (more
+  2.5D machining).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -42,6 +47,8 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - Placeholder 3D tools and cutting values are used until the real ones are supplied.
   - 3D models are stored as separate compressed files next to the shop file.
   - The new milestone order and the M2.2 split are approved.
+  - DXF only (DWG through the free ODA converter); no Rhino or SketchUp readers. LGPL only as a
+    separately loaded, replaceable WebAssembly with notices.
 
 ## Phase 0: prove the output on the real machine (paused)
 

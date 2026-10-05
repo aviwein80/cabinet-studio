@@ -40,7 +40,7 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.5b Feature recognition to layers, rules and a checked MPR | **Done** (October 2026) | See below. |
 | M2.5c Assemblies, faces to layers / colours / grain, machining picked faces | **Done** (October 2026) | See below. |
 | M2.5d 3D wires and surfaces | **Done** (October 2026) | See below. |
-| M2.5e | In progress | Packaged-app check, screenshots and docs. |
+| M2.5e Packaged-app check, screenshots, docs | **Done** (October 2026) | See below. M2.5 complete. |
 | M2.6 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
@@ -82,6 +82,9 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
 5. **3D flat-layer output on the machine**: before switching on "Write 3D roughing and waterline
    to MPR", load one roughing program in woodWOP and check how many points a contour may hold
    (not confirmed; the app warns over 2,000 points per contour).
+6. **Solid models (M2.5)**: the rebate reach (6 mm past the edge) and drilling holes with a
+   drill-point floor to the shoulder depth: confirm or change. Open one STEP file in the
+   installed app on the Windows PC and on the Mac with the network off.
 
 ## M2.1 3D foundation: what was built
 
@@ -697,10 +700,50 @@ imported ones) that the 3D strategies machine. Round shapes are divided so facet
   work on meshes anyway.
 - **Extend** is straight on (linear), not along the surface's curvature.
 
-## Next: M2.5e packaged check, screenshots, docs
+## M2.5e packaged app, screenshots, docs
 
-- SOL-01..04, CAD-16, NEW-19 as in the prompt (M2.5b-e above).
+**Packaged desktop app (Linux x64, `electron-builder --linux dir`)**: the app runs from
+`app.asar` as `app://bundle/index.html`; the reader's files are in
+`resources/app.asar.unpacked/dist/vendor/occt-import-js/`. Reading the cabinet side through the
+packaged app: first read (cold, WebAssembly compile) 1.17 s, warm 0.45 s, recognition 30 holes;
+**no network requests** (everything from `app://`). With the `.wasm` hidden, the read fails with a
+plain "HTTP 404" message (no crash), which shows the unpacked file is the one used (so it can be
+replaced, as the LGPL asks). Windows x64 (`--win dir`) and macOS arm64 (`--mac dir`) packages were
+also built here and have the vendor files in the same unpacked place; they cannot be run in this
+Linux container. The owner's check on the shop computers is in the open questions.
+
+**Screenshots** (`docs/screenshots/stage-2-3/M2.5/`):
+
+- `01-import-step.png`: the 3D model import reading a STEP AP203 door: schema, faces, body, unit, face types.
+- `02-import-assembly.png`: Import solid with the 5-part assembly: Side x2, Bottom, Top rail, Back, properties, sizes, materials.
+- `03-assembly-parts.png`: the four parts added (5 pieces), with their operations from the layer rules.
+- `04-find-features.png`: Find features on the cabinet side: the feature table (layers, faces, sizes, depths).
+- `05-features-on-layers.png`: after "Lay flat and use as the part": 36 shapes, 9 operations, toolpaths.
+- `06-face-picked-3d.png`: a face clicked in the 3D view (amber), the Faces panel.
+- `07-machine-picked-faces.png`: the Ø8 hole walls selected by type and drilled in one operation.
+- `08-revolved-surface.png`: a typed 3D polyline profile revolved into a dish surface (a 3D model).
+- `09-machine-solid-switch.png`: the "Solid models" switch on the Machine page (custom-part output still off).
+- `10-about.png`: Settings → About with the third-party parts and licences.
+- `11-lgpl-text.png`: the LGPL-2.1 text shipped with the reader, opened from About.
+
+## M2.5 decisions needed (see the report)
+
+1. **Rebate reach (cutting).** A pocket open to the panel's edge (a rebate) gets a shape that
+   reaches 6 mm past the edge, so the cutter clears the floor right to it while its centre stays
+   within the export checker's limit (radius + 0.5 mm outside the part). Recommended as is; the
+   alternative is to leave rebates off the machined layers. Until answered: as built (6 mm), and
+   custom-part output stays off.
+2. **Drill points.** A hole with a drill-point floor is drilled to the shoulder depth (the round
+   wall's depth); the point's tip depth is reported. With the Stage 1 default "depth to the
+   tip", a pointed bit never goes deeper than the model's wall. Recommended as is.
+3. **Shop check of the packaged app** on the Windows PC and the Mac: open a STEP file once with
+   the network off (the reader must load from the app's own files).
+
+## Next run: M2.6 more 2.5D machining
+
+- 2D-11, 2D-13, 2D-15, 2D-16, NEW-09, NEW-11, 5AX-04 as in the prompt.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
+
 
 ## Run log
 
@@ -722,3 +765,4 @@ imported ones) that the 3D strategies machine. Round shapes are divided so facet
   that went out with M2.5a (a test helper named like a React hook). See `git log`.
 - **Run 6 (M2.5c)**: assemblies, faces to layers / colours / grain, machining picked faces. See `git log`.
 - **Run 6 (M2.5d)**: 3D wires and surfaces; face jobs moved to the worker. See `git log`.
+- **Run 6 (M2.5e)**: packaged-app check (Linux), screenshots, README, ROADMAP. M2.5 complete.

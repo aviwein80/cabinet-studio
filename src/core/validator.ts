@@ -267,6 +267,13 @@ export function validateJob(
             : `Custom part #${c.partNo} ${name}: ${c.flat3dMissing} 3D roughing or waterline toolpath(s) are not calculated yet. Wait for the job page to finish calculating them (batch runs cannot calculate 3D toolpaths yet).`,
         })
       }
+      if (c.collisions?.length)
+        add({
+          ...ref,
+          severity: 'error',
+          code: 'CAM_COLLISION',
+          message: `Custom part #${c.partNo} ${name}: the simulation found ${c.collisions.length} collision(s). ${c.collisions.slice(0, 3).join(' ')}${c.collisions.length > 3 ? ` And ${c.collisions.length - 3} more.` : ''} Open Simulate on the part to see each one.`,
+        })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
       if (c.written && c.backHoles > 0)
         add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })

@@ -53,6 +53,9 @@ import { centreRegion, type Region } from './3d/region'
 import { restArea, restCentres } from './3d/rest3d'
 import { type Layer, waterlineFinish } from './3d/waterline'
 import { zLevelRough } from './3d/zlevel'
+import { DEFAULT_COLLISION_MARGIN } from './collision/collision'
+import { modelClearance } from './collision/model'
+import { cutterOutline, holderOf } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
 import type { CamOp, CamPart, DrillOp, Entity, FaceId, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SweepOp, VCarveOp } from './types'
@@ -1216,6 +1219,23 @@ function model3d(op: Finish3dOp | Rough3dOp, ctx: GenContext, tp: Toolpath) {
   return { placed: placeMesh(mesh, model.place), cutter: ct.cutter }
 }
 
+/**
+ * A 3D operation whose shank or holder would hit the model (plus the stock to leave) is flagged
+ * now, with the stick-out or flute length it needs; the simulation checks against the stock too.
+ */
+function clearanceWarnings(mesh: Mesh, moves: Move[], stock: number, ctx: GenContext, tp: Toolpath) {
+  const tool = tp.tool
+  if (!tool || !moves.length) return
+  const margin = ctx.machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN
+  const o = cutterOutline(tool, holderOf(ctx.machine, tool))
+  const r = modelClearance(mesh, moves, o, margin, stock, ctx.part)
+  const at = (p: { x: number; y: number; z: number }) => `X${p.x.toFixed(1)} Y${p.y.toFixed(1)} Z${p.z.toFixed(1)}`
+  if (r.holder)
+    tp.warnings.push(`The holder would hit the model from move ${r.holder.move + 1} (${at(r.holder.at)}): T${tool.number} sticks out ${o.gauge} mm and needs at least ${(o.gauge + r.holder.depth).toFixed(1)} mm (with the ${margin} mm margin). Use a longer stick-out or cut less deep.`)
+  if (r.shank)
+    tp.warnings.push(`The shank would rub the model above the flutes from move ${r.shank.move + 1} (${at(r.shank.at)}): T${tool.number} has ${o.flute} mm of flute and needs at least ${(o.flute + r.shank.depth).toFixed(1)} mm (with the ${margin} mm margin).`)
+}
+
 function depthWarnings(minZ: number, ctx: GenContext, tp: Toolpath) {
   const tool = tp.tool!
   if (!Number.isFinite(minZ)) return
@@ -1277,6 +1297,7 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     tp.warnings.push(...r.warnings)
     b.moves.push(...r.moves)
     depthWarnings(r.minZ, ctx, tp)
+    clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
     return
   }
   const region = cutRegion(centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed)))
@@ -1286,6 +1307,7 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     tp.warnings.push(...r.warnings)
     b.moves.push(...r.moves)
     depthWarnings(r.minZ, ctx, tp)
+    clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
     if (isFlatLayer(op)) layerIntents(r.layers, tp, op.name, true)
     return
   }
@@ -1293,6 +1315,7 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)
+  clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
 }
 
 function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
@@ -1315,6 +1338,7 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   // (one at a time: adaptive clearing can make more moves than a call takes arguments)
   for (const mv of r.moves) b.moves.push(mv)
   depthWarnings(r.minZ, ctx, tp)
+  clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
   if (adaptive) {
     if (r.sections?.length) {
       tp.sections = r.sections.map((s) => ({ kind: 'trochoidal' as const, from: s.from + off, to: s.to + off }))

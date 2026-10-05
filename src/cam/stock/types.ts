@@ -19,6 +19,16 @@ export interface StockModel {
   bounds(): Box3
   /** Remove what the cutter sweeps moving in a straight line from `a` to `b` (tip positions). */
   carve(a: V3, b: V3, cutter: Cutter): void
+  /** Tip positions `carve` stamps along a straight move from `a` to `b`, in order. */
+  carvePoints(a: V3, b: V3): V3[]
+  /** Remove what the cutter covers standing with its tip at `p`. */
+  carveAt(p: V3, cutter: Cutter): void
+  /**
+   * How far the remaining material reaches into an envelope round the tool axis at (x, y): the
+   * largest (material top - lowest(d)) over material within `rMax` of the axis, d being the
+   * distance from the axis; -Infinity when there is none. Positive = material inside it.
+   */
+  intrusion(x: number, y: number, rMax: number, lowest: (d: number) => number): { depth: number; d: number }
   /** Top of the material at (x, y); NaN outside the stock. */
   heightAt(x: number, y: number): number
   /** Is (x, y, z) inside the remaining material? */

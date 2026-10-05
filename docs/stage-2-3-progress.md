@@ -34,13 +34,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.3c Adaptive Z-level roughing, 3D rest and pencil | **Done** (October 2026) | See below. M2.3 complete. Simulation only (woodWOP output blocked). |
 | M2.4a Roughing fix (models that do not cover the panel) | **Done** (October 2026) | See below. |
 | M2.4b Stock simulation (SIM-02) | **Done** (October 2026) | See below. |
-| M2.4c - M2.4d Collision checking, cut-free pieces | In progress | Split below. |
+| M2.4c Collision checking (SIM-03, NEW-13 shared model) | **Done** (October 2026) | See below. |
+| M2.4d Cut-free pieces, screenshots, docs | In progress | |
 | M2.5 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -460,11 +461,43 @@ Acceptance so far (`tests/cam-stock-sim.test.ts`, `tests/perf.test.ts`):
 | Playback speeds, stops, steps | Whole program takes feed time / cutting speed + rapid time / rapid speed (within 0.02 s); stops at the one real tool change and not between two operations with the same tool; stops at a chosen time; steps land exactly on move ends |
 | Redraw of what changed | Same picture as a full redraw, byte for byte |
 | Watertight stock STL | Read back watertight; volume within 0.5 % of the block less what was removed; section and coarse meshes closed too |
-| 30 fps for a full sheet at 1 mm cells | 3,658 x 1,524 cells, 27,033 segments, 64x: 1.7 ms a frame on average, 2.9 ms at the 95th percentile (test limit 8 ms; a frame at 30 fps has 33 ms). First full draw 171 ms |
+| 30 fps for a full sheet at 1 mm cells | 3,658 x 1,524 cells, 27,033 segments, 64x: 1.7 ms a frame on average, 2.9 ms at the 95th percentile; after M2.4c's exact level-move carving 0.4-0.5 ms average and 0.5-0.6 ms at the 95th percentile (test limit 2 ms; a frame at 30 fps has 33 ms). First full draw 155-171 ms |
+
+## M2.4c collision checking: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| SIM-03 | The program is replayed into the stock; at each tool position, before the stock is cut, the parts of the tool that do not cut are checked against the material still there: the shank (from the top of the flutes up to the holder, its radius plus the margin), the holder (its outline from the tool table grown by the margin all round), and on rapids the whole tool. The tip is checked against the spoilboard limit (`spoilboardAllowance` below the underside) and the table (under the spoilboard, from the machine model). Results are merged into runs of consecutive moves, each with its first position and time | `checkCollisions`, `collisionSetup`, `partCollisions` in `src/cam/collision/collision.ts` |
+| SIM-03 | Collision log in the simulator (worked out in the background worker), each entry jumps to its move; replaces the old rapid check | `sim.collide` task, `SimulateDialog.tsx` |
+| SIM-03 | Safety margin setting "Collision margin" (default 2 mm, as the prompt sets) on the Machine page | `MachineProfile.collisionMargin`, `MachinePage.tsx` |
+| §7.7 | A 3D operation whose shank or holder would hit the model (plus the stock to leave) is flagged when it is calculated, with the stick-out or flute length it needs and the move where it starts | `src/cam/collision/model.ts`, `clearanceWarnings` in `src/cam/toolpath.ts` |
+| Export | A collision is an export-blocking error, `CAM_COLLISION`, naming the first collisions and their moves | `src/core/machining.ts`, `validator.ts` |
+| NEW-13 | One machine model: the simulator's spoilboard and table, the collision check and the export checker all read `machineModelOf(machine)` | |
+| Speed | Level moves are now carved exactly (each cell takes the cutter's bottom at its distance from the move) instead of stamping the tool every half cell; sloped moves are still stamped. When no shank, holder or rapid can reach below face 1 at all, nothing is carved. A 1,200 x 450 mm door's check went from 5.2 s to 0.16 s; full-sheet playback from 2.9 to 0.6 ms a frame | `sweepLevel` in `src/cam/stock/heightfield.ts` |
+
+How a shank collision is judged: material above the top of the flutes within the shank's reach
+counts, even inside the cutter's own radius. Seen from above, the stock cannot tell a ledge left
+above short flutes from solid wood, so a tool too short for the depth is always reported.
+
+Acceptance (`tests/cam-collision.test.ts`; each case has a near-miss twin that must be clean):
+
+| Case | Found | Twin |
+|---|---|---|
+| Shank too short for a deep pocket: 40 mm deep in 5 mm passes, 8 mm cutter with 30 mm flutes | Shank only, from the first pass below 30 mm (Z-35); worst 10.0 mm of wall above the flutes | 30 mm deep: clean |
+| Holder into a wall: 49 mm deep, 10 mm test tool with 50 mm stick-out, placeholder holder | Holder only, at Z-49, 1.00 mm into the 2 mm margin | 47 mm deep: clean; margin 0 at 49 mm: clean |
+| Rapid through stock: a rapid at Z-4 across uncut panel | Rapid, first touch at X20, 4.00 mm | The same rapid inside the cut pocket, or above the panel: clean |
+| Below the spoilboard limit (0.5 mm): a profile 1 mm under the underside | Spoilboard, 0.50 mm past the limit | Through cut (0.3 mm) and 0.5 mm exactly: clean |
+| Into the table (placeholder spoilboard 19 mm): 20 mm under the underside | Table, 1.00 mm | |
+| Jump-to-move | Every collision's time puts the tool at its reported point, on its reported move | |
+| False alarms on generated programs | None on the 20 Stage 1 reference parts, nor on Z-level roughing + parallel + waterline on the four 3D test surfaces | |
+| Flagged when calculated | 60 mm cavity, 6 mm ball (25 mm flutes, 50 mm stick-out): "needs at least 60.0 mm" of flute and "62.0 mm" of stick-out (with the 2 mm margin), from the first level below the flutes | 20 mm cavity: no warning |
+| Export checker | `CAM_COLLISION` error for the 40 mm pocket in a job | None for 30 mm |
+
+No golden changed.
 
 ## Next run
 
-- Continue M2.4 (c, d) as split above.
+- Finish M2.4 (d) as split above.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -480,3 +513,4 @@ Acceptance so far (`tests/cam-stock-sim.test.ts`, `tests/perf.test.ts`):
 - **Run 4 (M2.3c)**: adaptive Z-level roughing, 3D rest machining, pencil pass. See `git log`.
 - **Run 5 (M2.4a)**: Z-level roughing of models that do not cover the panel. See `git log`.
 - **Run 5 (M2.4b)**: stock simulation on the stock-model interface. See `git log`.
+- **Run 5 (M2.4c)**: collision checking, export checker, flags when 3D operations are calculated. See `git log`.

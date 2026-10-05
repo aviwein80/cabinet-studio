@@ -1,4 +1,5 @@
 import type { Seg } from '@/cam/geom'
+import { partCollisions } from '@/cam/collision/collision'
 import { partProgramOps } from '@/cam/mpr'
 import { generatePart, type Intent, isAdaptive, isFlatLayer, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
@@ -207,6 +208,8 @@ export interface SheetProgram {
     flat3dMissing?: number
     /** Flat-layer 3D operations written to the program. */
     flat3dWritten?: boolean
+    /** Collisions found by simulating the part's toolpaths (shank, holder, rapids, spoilboard, table). */
+    collisions?: string[]
   }[]
 }
 
@@ -219,6 +222,24 @@ export interface ProgramOptions {
   paths3d?: ReadonlyMap<string, Toolpath>
   /** Small parts: the cut-out leaves `thickness` and a last pass at the end of the sheet cuts it. */
   onionSkin?: { thickness: number; maxArea: number }
+}
+
+/** Collision messages for a custom part's toolpaths, worked out once per part, machine and toolpath set. */
+const collisionCache = new WeakMap<object, { machine: MachineProfile; key: string; found: string[] }>()
+function collisionsOf(part: NonNullable<PartInstance['cam']>, paths: Toolpath[], machine: MachineProfile): string[] {
+  // (a checksum of every move and tool, so an edited part never reuses old results)
+  let sum = 0
+  for (const p of paths)
+    for (const m of p.moves) {
+      if (m.t === 'poly') for (let i = 0; i < m.pts.length; i++) sum = (sum * 31 + m.pts[i] * 1000) % 1e15
+      else sum = (sum * 31 + m.x * 1000 + m.y * 7 + m.z * 13) % 1e15
+    }
+  const key = `${part.length}x${part.width}x${part.thickness}:${paths.map((p) => `${p.opId}:${p.tool?.id}:${p.moves.length}`).join('|')}:${sum}`
+  const hit = collisionCache.get(part)
+  if (hit && hit.machine === machine && hit.key === key) return hit.found
+  const found = partCollisions(part, paths, machine).found.map((c) => c.message)
+  collisionCache.set(part, { machine, key, found })
+  return found
 }
 
 function partAreaOf(inst: PartInstance | undefined) {
@@ -316,6 +337,7 @@ export function buildSheetProgram(
       const flatIds = new Set(flat.map((o) => o.id))
       const flat3dMissing = flat.filter((o) => !opts.paths3d?.has(pathKey(o, inst.cam!, machine))).length
       const write3d = !!opts.camOutput && !!opts.cam3dOutput
+      const collisions = collisionsOf(inst.cam, paths, machine)
       custom.push({
         ...base,
         written: !!opts.camOutput,
@@ -325,6 +347,7 @@ export function buildSheetProgram(
         ...(ops3d ? { ops3d } : {}),
         ...(adaptiveOps ? { adaptiveOps } : {}),
         ...(flat.length ? { flat3d: flat.length, flat3dMissing, flat3dWritten: write3d && !flat3dMissing } : {}),
+        ...(collisions.length ? { collisions } : {}),
       })
       for (const o of all) {
         if (o.kind === 'contour') contours.push(o)

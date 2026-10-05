@@ -16,6 +16,7 @@ import { polyline } from '../geom'
 import type { CamPart, ModelPlacement, UpAxis } from '../types'
 import { generateOp, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
+import { type Collision, partCollisions } from '../collision/collision'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -43,6 +44,8 @@ export interface TaskMap {
   'blob.unpack': { in: { gz: Uint8Array; hash: string }; out: Mesh }
   /** Toolpaths of the given (3D) operations; meshes by blob hash. */
   'cam.generate': { in: { part: CamPart; machine: MachineProfile; opIds: string[]; meshes: Record<string, Mesh> }; out: Toolpath[] }
+  /** Collision check of toolpaths on a panel (operations numbered in program order). */
+  'sim.collide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
 }
 
 export type TaskName = keyof TaskMap
@@ -87,6 +90,7 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     const ops = part.ops.filter((o) => opIds.includes(o.id))
     return ops.map((op, i) => generateOp(op, { part, machine, meshes: map, work: { isCancelled: work.isCancelled, progress: (f, n) => work.progress?.((i + f) / ops.length, n) } }))
   },
+  'sim.collide': ({ panel, toolpaths, machine }, work) => partCollisions(panel, toolpaths, machine, work).found,
   async 'blob.unpack'({ gz, hash }) {
     const raw = await gunzip(gz)
     if ((await sha256Hex(raw)) !== hash) throw new Error(`3D model data ${hash.slice(0, 12)}… is damaged (checksum mismatch).`)

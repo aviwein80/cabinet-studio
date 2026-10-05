@@ -423,6 +423,8 @@ export interface MachineProfile {
   grooveMethod: 'router-pocket' | 'saw'
   /** Maximum depth a through-cut may go below the sheet underside into the spoilboard. */
   spoilboardAllowance: number
+  /** Clearance kept round the shank and holder in collision checks (mm). Absent = 2. */
+  collisionMargin?: number
   /** How far through-cuts and through-holes go below the underside. */
   throughDepth: number
   cutoutToolNumber: number

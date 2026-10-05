@@ -180,6 +180,9 @@ export function MachinePage() {
                 <NumField label="Spoilboard limit" value={m.spoilboardAllowance} min={0} max={3} step={0.1} onChange={(v) => updateMachine((x) => (x.spoilboardAllowance = v))} hint="Max into spoilboard" />
               </div>
               <div className="grid grid-cols-2 gap-2">
+                <NumField label="Collision margin" value={m.collisionMargin ?? 2} min={0} max={20} step={0.5} onChange={(v) => updateMachine((x) => (x.collisionMargin = v))} hint="Clearance kept round shank and holder" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <NumField label="Header OP" suffix="" value={m.header.OP} min={0} max={99} onChange={(v) => updateMachine((x) => (x.header.OP = v))} />
                 <NumField label="Header FM" suffix="" value={m.header.FM} min={0} max={99} onChange={(v) => updateMachine((x) => (x.header.FM = v))} />
               </div>

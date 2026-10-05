@@ -13,7 +13,8 @@
  *   Z-level roughing of the 200k relief: 6.4 s before, 4.3 s after; parallel finishing 7.3 s
  *   M2.3b adaptive clearing, 300 x 200 pocket with island, 8 mm tool: 3.4 s alone (limit 10 s)
  *   M2.4b full-sheet playback at 1 mm cells, 64x: 1.7 ms a frame on average, 2.9 ms at the 95th
- *     percentile (limit 8 ms; 30 fps allows 33 ms); first full draw 171 ms
+ *     percentile; M2.4c exact carving of level moves: 0.47 ms average, 0.61 ms at the 95th percentile
+ *     (limit 2 ms; 30 fps allows 33 ms); first full draw 171 ms
  */
 import { describe, expect, it } from 'vitest'
 import { buildMesh } from '@/cam/mesh/build'
@@ -230,5 +231,5 @@ describe('M2.4 stock simulation playback', () => {
   }, 120_000)
 })
 
-// (measured 2.9 ms at the 95th percentile; a frame has 33 ms at 30 fps)
-const PERF_LIMIT_FRAME_MS = 8
+// (measured 0.61 ms at the 95th percentile with exact level-move carving; a frame has 33 ms at 30 fps)
+const PERF_LIMIT_FRAME_MS = 2

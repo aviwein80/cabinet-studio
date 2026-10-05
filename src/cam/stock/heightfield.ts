@@ -4,7 +4,7 @@
  * the stock model share one carving routine.
  */
 import type { Box3, Mesh } from '../mesh/types'
-import { createHeightfield, type Cutter, type Heightfield, heightAt, stamp, type V3 } from '../sim'
+import { createHeightfield, type Cutter, cutterZ, type Heightfield, heightAt, stamp, type V3 } from '../sim'
 import type { StockModel, StockSnapshot } from './types'
 
 export class HeightfieldStock implements StockModel {
@@ -26,9 +26,37 @@ export class HeightfieldStock implements StockModel {
     return { min: [0, 0, -this.hf.thickness], max: [this.hf.length, this.hf.width, 0] }
   }
 
+  /**
+   * Level moves are carved exactly: every cell takes the cutter's bottom at its distance from the
+   * move (the swept shape of a vertical tool moving level). Sloped moves are stamped every half
+   * cell (`carvePoints`).
+   */
   carve(a: V3, b: V3, cutter: Cutter) {
     if (Math.min(a.z, b.z) >= 0) return
-    const r = cutter.r
+    this.mark(a, b, cutter.r)
+    if (Math.abs(a.z - b.z) < 1e-9) sweepLevel(this.hf, a, b, cutter)
+    else for (const p of this.carvePoints(a, b)) stamp(this.hf, p, cutter)
+  }
+
+  carvePoints(a: V3, b: V3): V3[] {
+    const step = this.hf.cell / 2
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step))
+    const out: V3[] = []
+    for (let q = 0; q <= n; q++) {
+      const k = q / n
+      out.push({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, z: a.z + (b.z - a.z) * k })
+    }
+    return out
+  }
+
+  carveAt(p: V3, cutter: Cutter) {
+    if (p.z >= 0) return
+    this.mark(p, p, cutter.r)
+    stamp(this.hf, p, cutter)
+  }
+
+  /** Record the area a cut touches (for `takeDirty`). */
+  private mark(a: V3, b: V3, r: number) {
     const through = Math.min(a.z, b.z) <= -this.hf.thickness + 1e-6
     const d = this.dirty
     if (d) {
@@ -38,12 +66,32 @@ export class HeightfieldStock implements StockModel {
       d.maxY = Math.max(d.maxY, a.y + r, b.y + r)
       d.through ||= through
     } else this.dirty = { minX: Math.min(a.x, b.x) - r, minY: Math.min(a.y, b.y) - r, maxX: Math.max(a.x, b.x) + r, maxY: Math.max(a.y, b.y) + r, through }
-    const step = this.hf.cell / 2
-    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step))
-    for (let q = 0; q <= n; q++) {
-      const k = q / n
-      stamp(this.hf, { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, z: a.z + (b.z - a.z) * k }, cutter)
+  }
+
+  intrusion(x: number, y: number, rMax: number, lowest: (d: number) => number) {
+    const { hf } = this
+    const i0 = Math.max(0, Math.floor((x - rMax) / hf.cell))
+    const i1 = Math.min(hf.nx - 1, Math.floor((x + rMax) / hf.cell))
+    const j0 = Math.max(0, Math.floor((y - rMax) / hf.cell))
+    const j1 = Math.min(hf.ny - 1, Math.floor((y + rMax) / hf.cell))
+    const floor = -hf.thickness + 1e-6
+    let depth = -Infinity
+    let at = 0
+    for (let j = j0; j <= j1; j++) {
+      const dy = (j + 0.5) * hf.cell - y
+      for (let i = i0; i <= i1; i++) {
+        const v = hf.top[j * hf.nx + i]
+        if (v <= floor) continue
+        const d = Math.hypot((i + 0.5) * hf.cell - x, dy)
+        if (d > rMax) continue
+        const e = v - lowest(d)
+        if (e > depth) {
+          depth = e
+          at = d
+        }
+      }
     }
+    return { depth, d: at }
   }
 
   heightAt(x: number, y: number) {
@@ -114,6 +162,33 @@ export class HeightfieldStock implements StockModel {
     if (s.kind !== 'heightfield' || s.data.length !== this.hf.top.length) throw new Error('Snapshot is from a different stock.')
     this.hf.top.set(s.data)
     this.dirty = { minX: 0, minY: 0, maxX: this.hf.length, maxY: this.hf.width, through: true }
+  }
+}
+
+/** Carve the exact swept shape of a level move from a to b (tip height a.z). */
+export function sweepLevel(hf: Heightfield, a: V3, b: V3, c: Cutter) {
+  const r = c.r
+  const floor = -hf.thickness
+  const i0 = Math.max(0, Math.floor((Math.min(a.x, b.x) - r) / hf.cell))
+  const i1 = Math.min(hf.nx - 1, Math.floor((Math.max(a.x, b.x) + r) / hf.cell))
+  const j0 = Math.max(0, Math.floor((Math.min(a.y, b.y) - r) / hf.cell))
+  const j1 = Math.min(hf.ny - 1, Math.floor((Math.max(a.y, b.y) + r) / hf.cell))
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const l2 = dx * dx + dy * dy
+  const flat = c.shape !== 'ball' && c.shape !== 'v' && c.shape !== 'bull'
+  const z0 = Math.max(floor, a.z)
+  for (let j = j0; j <= j1; j++) {
+    const py = (j + 0.5) * hf.cell
+    for (let i = i0; i <= i1; i++) {
+      const px = (i + 0.5) * hf.cell
+      const t = l2 > 0 ? Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / l2)) : 0
+      const d = Math.hypot(a.x + dx * t - px, a.y + dy * t - py)
+      if (d > r + 1e-9) continue
+      const k = j * hf.nx + i
+      const v = flat ? z0 : Math.max(floor, cutterZ(c, a.z, d))
+      if (v < hf.top[k]) hf.top[k] = v
+    }
   }
 }
 

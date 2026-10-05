@@ -6,10 +6,13 @@ import { toast } from 'sonner'
 import * as THREE from 'three'
 import { backend } from '@/app/backend'
 import { writeStl } from '@/cam/mesh/tools'
-import { buildTimeline, cellRect, checkRapids, cutSummary, looseMask, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
+import { buildTimeline, cellRect, cutSummary, looseMask, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
 import { HeightfieldStock, type StockMeshRange, stockMesh, stockMeshTops } from '@/cam/stock/heightfield'
 import { advance, moveAt, moveEnd, simCell, StockSimulation, stepMove, type StopReason } from '@/cam/stock/simulation'
+import type { Collision, CollisionKind } from '@/cam/collision/collision'
 import type { Toolpath } from '@/cam/toolpath'
+import { Cancelled } from '@/core/cancel'
+import { compute } from '@/cam/worker/client'
 import type { CamPart } from '@/cam/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,6 +43,8 @@ function hexRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
+const KIND_LABEL: Record<CollisionKind, string> = { shank: 'shank', holder: 'holder', rapid: 'rapid', spoilboard: 'spoilboard', table: 'table' }
+
 const STOP_TEXT: Record<StopReason, string> = { end: 'End of program.', 'tool-change': 'Stopped at a tool change.', mark: 'Stopped at the chosen move.' }
 
 export function SimulateDialog({ open, onOpenChange, part, toolpaths, machine, units, color }: { open: boolean; onOpenChange: (o: boolean) => void; part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; units: UnitSystem; color?: string }) {
@@ -64,7 +69,21 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const cell = simCell(part.length, part.width)
   const sim = useMemo(() => new StockSimulation(tl, new HeightfieldStock(part.length, part.width, part.thickness, cell)), [part.length, part.width, part.thickness, cell, tl])
   const stock = sim.stock as HeightfieldStock
-  const rapids = useMemo(() => checkRapids(tl, part.length, part.width, part.thickness, Math.max(1, Math.max(part.length, part.width) / 400)), [tl, part.length, part.width, part.thickness])
+  // collision check: the whole program replayed in the background
+  const [checked, setCheck] = useState<{ for: unknown; found: Collision[] | null; fraction: number; error?: string } | null>(null)
+  const checkKey = useMemo(() => ({ toolpaths, machine }), [toolpaths, machine])
+  useEffect(() => {
+    if (!toolpaths.some((tp) => tp.moves.length)) return
+    const abort = new AbortController()
+    compute()
+      .run('sim.collide', { panel: { length: part.length, width: part.width, thickness: part.thickness }, toolpaths, machine }, { signal: abort.signal, onProgress: (fraction) => setCheck({ for: checkKey, found: null, fraction }) })
+      .then((found) => setCheck({ for: checkKey, found, fraction: 1 }))
+      .catch((e) => {
+        if (!(e instanceof Cancelled) && !abort.signal.aborted) setCheck({ for: checkKey, found: null, fraction: 1, error: e instanceof Error ? e.message : String(e) })
+      })
+    return () => abort.abort()
+  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness])
+  const check = checked?.for === checkKey ? checked : { found: null, fraction: 0, error: undefined }
   const outlines = useMemo(() => tl.ops.map((o) => {
     const tool = ordered[o.path]?.tool
     return tool ? cutterOutline(tool, holderOf(machine, tool)) : null
@@ -314,26 +333,32 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           <Stat label="Cells" value={fmt(cell)} />
         </section>
         <section>
-          <h3 className="mb-1.5 font-medium text-stone-300">Rapid check</h3>
-          {rapids.length ? (
+          <h3 className="mb-1.5 font-medium text-stone-300">Collision check</h3>
+          {check.error ? (
+            <p className="text-red-200">Could not check: {check.error}</p>
+          ) : !check.found ? (
+            <p className="text-stone-400">Checking shank, holder, rapids and spoilboard… {Math.round(check.fraction * 100)}%</p>
+          ) : check.found.length ? (
             <ul className="space-y-1">
-              {rapids.slice(0, 8).map((w, i) => (
+              {check.found.slice(0, 12).map((c, i) => (
                 <li key={i}>
-                  <button type="button" className="flex w-full items-start gap-1.5 rounded-md border border-red-400/30 bg-red-400/10 p-1.5 text-left text-red-100 hover:bg-red-400/20" onClick={() => jump(w.t)}>
+                  <button type="button" className="flex w-full items-start gap-1.5 rounded-md border border-red-400/30 bg-red-400/10 p-1.5 text-left text-red-100 hover:bg-red-400/20" onClick={() => jump(c.t)} title="Go to this move">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                     <span>
-                      {tl.ops[w.op]?.name}: rapid into material at X {fmt(w.at.x)} Y {fmt(w.at.y)} Z {fmt(w.at.z)}
+                      <Badge className="mr-1 h-4 bg-red-500/30 px-1 text-[10px] text-red-100">{KIND_LABEL[c.kind]}</Badge>
+                      {tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}
                     </span>
                   </button>
                 </li>
               ))}
-              {rapids.length > 8 && <li className="text-stone-500">and {rapids.length - 8} more</li>}
+              {check.found.length > 12 && <li className="text-stone-500">and {check.found.length - 12} more</li>}
             </ul>
           ) : (
             <p className="flex items-center gap-1.5 text-stone-400">
-              <Badge className="h-4 bg-emerald-500/20 px-1 text-[10px] text-emerald-200">clear</Badge> No rapid passes through uncut material.
+              <Badge className="h-4 bg-emerald-500/20 px-1 text-[10px] text-emerald-200">clear</Badge> No collisions of shank, holder or rapids with the material; nothing below the spoilboard limit.
             </p>
           )}
+          <p className="mt-1 text-stone-500">Margin round shank and holder: {fmt(machine.collisionMargin ?? 2)} (Machine &amp; tools).</p>
         </section>
         <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={saveStl}>
           <Download /> Save stock as STL

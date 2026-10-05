@@ -105,7 +105,8 @@ export function cutterZ(c: Cutter, z: number, d: number): number {
   return z
 }
 
-function arcPoints(a: V3, m: { x: number; y: number; z: number; cx: number; cy: number; ccw: boolean }): V3[] {
+/** Points along an arc move from `a` (helix when Z changes), for the simulator. */
+export function arcPoints(a: V3, m: { x: number; y: number; z: number; cx: number; cy: number; ccw: boolean }): V3[] {
   const r = Math.hypot(a.x - m.cx, a.y - m.cy)
   const a0 = Math.atan2(a.y - m.cy, a.x - m.cx)
   let sw = Math.atan2(m.y - m.cy, m.x - m.cx) - a0

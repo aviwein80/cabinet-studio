@@ -6,6 +6,20 @@ Read this first at the start of every run. Sources:
 - How to work: `docs/stage-2-3-prompt.md`.
 - Audit and 3D design: `docs/stage-2-3-audit.md`.
 
+## Standing rule: push every finished milestone to `main`
+
+The owner's Vercel deployment builds from GitHub `main` automatically. So:
+
+1. Work only on `main`. No side branches.
+2. After each milestone (or each clean chunk with all checks green), commit and push to `main`
+   straight away.
+3. After each push, run `git ls-remote origin refs/heads/main` and check it matches
+   `git rev-parse HEAD`. If not, the push did not land; fix it before moving on.
+4. Never leave finished work only on a side branch, in a local commit or in a stash.
+5. Vercel deploys from `main`, so only green work goes there.
+
+Full details: section 11 of `docs/stage-2-3-prompt.md`.
+
 ## Status
 
 | Milestone | Status | Notes |
@@ -28,7 +42,9 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
 
-1. Work on `main`. The audit branch was merged, and runs push straight to `main`.
+1. Work on `main`. The audit branch was merged, and runs push straight to `main`. Every finished
+   milestone is pushed to `main` and confirmed with `git ls-remote` (see the standing rule above);
+   Vercel deploys from `main`.
 2. 3D output to woodWOP starts with the flat-layer operations (Z-level roughing, waterline) as
    normal contour-milling macros. True 3D output stays off until the owner supplies a sample
    program saved from woodWOP on the shop PC.

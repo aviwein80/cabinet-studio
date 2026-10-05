@@ -45,7 +45,8 @@ how to work. If the two ever disagree, stop and ask.
 
 This is many weeks of work. **You will do it milestone by milestone across many runs.** Never try
 to do everything in one run. Each run: pick up where the last one stopped, finish one milestone
-(or a clearly defined part of one), test it, commit, push, report.
+(or a clearly defined part of one), test it, commit, push to `main`, confirm GitHub `main` moved,
+report (section 11).
 
 ---
 
@@ -396,19 +397,31 @@ anything else.
 
 ## 11. Git workflow
 
-1. Work on `main` (the owner's choice). Pull/rebase before starting each run.
-2. **You do the commits and pushes yourself.** Commit and push to `main` at least at the end of
-   each milestone; smaller commits inside a milestone are welcome, as long as each one leaves
-   tests, typecheck, lint and build green.
-3. Commit message style: short imperative summary, prefixed with the milestone, e.g.
+**Standing rule: every finished milestone goes to GitHub `main`, the same run.** The owner's
+Vercel deployment builds from `main` automatically, so work that is not on GitHub `main` does
+not exist as far as the owner is concerned.
+
+1. **Work only on `main`** (the owner's choice). Do not create feature or side branches. Pull
+   (rebase) from `origin main` before starting each run.
+2. **You do the commits and pushes yourself.** After **each** finished milestone, or each clean
+   chunk inside one (tests, typecheck, lint and build green), commit and push it to `main` right
+   away. Do not batch several milestones into one push at the end of a run.
+3. **Confirm the push landed.** After every push, run `git ls-remote origin refs/heads/main` and
+   check that the hash it prints equals your local `git rev-parse HEAD`. If they differ, the push
+   did not land: fix it (pull/rebase, re-run the checks, push again) before doing anything else.
+   Include the confirmed hash in your report.
+4. **Never leave finished work only on a side branch**, in a local commit, or in a stash. If your
+   environment put you on another branch, bring the work onto `main` and push `main` before you
+   end the run.
+5. **Vercel deploys from `main`.** A push to `main` is what updates the live preview; nothing else
+   does. Never push half-finished or red work to `main`, because it goes live.
+6. Commit message style: short imperative summary, prefixed with the milestone, e.g.
    `M2.2: waterline finishing with slope limits and golden tests`. Body: what changed and why.
-4. Never force-push, never rewrite pushed history, never skip hooks, never commit
+7. Never force-push, never rewrite pushed history, never skip hooks, never commit
    `node_modules`, build output, `release/`, secrets, API keys, tokens or `secrets/ai-keys.json`.
    Use whatever git credentials your environment already provides; never print, log or commit a
    token.
-5. After pushing, confirm the remote `main` points at your commit (e.g. `git ls-remote origin
-   main`) and include the hash in your report.
-6. Large binary fixtures: keep each test fixture small (< 1 MB; generate big meshes in the test
+8. Large binary fixtures: keep each test fixture small (< 1 MB; generate big meshes in the test
    instead of committing them).
 
 ---
@@ -419,9 +432,10 @@ anything else.
   parts (e.g. M2.2a waterline, M2.2b projection) and say so in the progress file.
 - Start each run: read `docs/stage-2-3-progress.md`, `git log -10`, run the test suite, then
   continue.
-- End each run: all checks green, docs updated, committed, pushed, report sent. Never end a run
-  with uncommitted work or red tests; if you run out of room, commit the green part and describe
-  the rest.
+- End each run: all checks green, docs updated, committed, pushed to `main`, `git ls-remote`
+  confirms GitHub `main` is at your last commit, report sent. Never end a run with uncommitted or
+  unpushed work, work on a side branch, or red tests; if you run out of room, commit and push the
+  green part and describe the rest.
 - If you hit a decision that affects cutting, a licence, a purchase, or a conflict between this
   prompt and the spec: stop that item, finish what is safe, and ask.
 
@@ -437,7 +451,8 @@ Write the report in plain English for a non-programmer, using these headings:
 3. **Screenshots**: paths under `docs/screenshots/stage-2-3/...` with one line on what each shows.
 4. **Tests**: total count before and after (e.g. 218 -> 263), all passing; typecheck, lint and
    build status; any golden files added or changed and why.
-5. **Commits**: hashes and messages, and confirmation they are on GitHub `main`.
+5. **Commits**: hashes and messages, and confirmation they are on GitHub `main` (the hash
+   `git ls-remote origin refs/heads/main` printed after your last push).
 6. **New dependencies**: name, version, licence, why.
 7. **What's left**: remaining milestones and anything deferred inside this one.
 8. **Decisions needed from you**: numbered questions in plain English, each with the options, my

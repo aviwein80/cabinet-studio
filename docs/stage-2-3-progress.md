@@ -33,13 +33,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.3b Adaptive clearing (2D pockets) | **Done** (October 2026) | See below. Simulation only (woodWOP output blocked). |
 | M2.3c Adaptive Z-level roughing, 3D rest and pencil | **Done** (October 2026) | See below. M2.3 complete. Simulation only (woodWOP output blocked). |
 | M2.4a Roughing fix (models that do not cover the panel) | **Done** (October 2026) | See below. |
-| M2.4b - M2.4d Stock simulation, collision, cut-free pieces | In progress | Split below. |
+| M2.4b Stock simulation (SIM-02) | **Done** (October 2026) | See below. |
+| M2.4c - M2.4d Collision checking, cut-free pieces | In progress | Split below. |
 | M2.5 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -133,8 +134,8 @@ npx vitest run tests/perf.test.ts
   restored.
 - **Delete facets** in the UI removes downward-facing facets only. The core also deletes by group
   or below a Z; picking facets by hand comes with 3D picking (M2.5).
-- **The simulator screen still uses the heightfield directly.** It moves onto the `StockModel`
-  interface in M2.4.
+- **The simulator screen still uses the heightfield directly.** Moved onto the `StockModel`
+  interface in M2.4b.
 
 ## M2.2a parallel finishing: what was built
 
@@ -440,9 +441,30 @@ cutting the old check threw away (15,784 -> 15,796 mm, 36 more points, same move
 pieces pass the independent gouge check (0.0022 mm at most over 3,944 positions). No other golden
 changed (Stage 1, 2D and every other 3D golden byte-identical).
 
+## M2.4b stock simulation: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| SIM-02 | Simulation on the `StockModel` interface: carves lazily to any time; going back restores the stock saved at the nearest operation start (within 256 MB) instead of replaying from the start | `StockSimulation`, `carveStock` in `src/cam/stock/simulation.ts` |
+| SIM-02 | Playback: separate speeds for cutting and for rapids, stop at a tool change (only where the tool number changes), run to a chosen move of a chosen operation, one move back or forward | `advance`, `stepMove`, `moveEnd` in the same file; every timeline segment now carries its move number and the tool number |
+| SIM-02 | Section view (across the width or the length, any position) and stock transparency in the 3D view; the tool is drawn with its shank and holder from the tool table | `stockMesh` / `stockMeshTops` in `src/cam/stock/heightfield.ts`, `SimulateDialog.tsx` |
+| SIM-02 | Save the stock as STL: closed (watertight). Stock over 2 million cells is written every few cells, each corner taking the lowest cell round it, so the file never shows material that was cut | `stockMesh(..., { exact: true })`, "Save stock as STL" |
+| Speed | Only the cells that changed are carved and redrawn each frame (changed-area tracking in the stock); the backplot is a canvas drawn once and added to as it plays; cut-free pieces are worked out when paused. Cell size: as fine as 0.25 mm, at most about 6 million cells (1 mm for a full sheet) | `takeDirty`, `cellRect`, `shadeHeightfield(..., { rect })`, `simCell` |
+
+Acceptance so far (`tests/cam-stock-sim.test.ts`, `tests/perf.test.ts`):
+
+| Criterion | Measured |
+|---|---|
+| Removed volume within 1 % of analytic at 0.5 mm cells | Real pocket (100 x 60 R8, 6 mm in two passes, 8 mm tool): 35,682 against 35,670 mm³ (+0.033 %). Real profile (inside a 40 mm radius circle, 5 mm, 12 mm tool): 12,821 against 12,818 mm³ (+0.028 %) |
+| Back-and-forth carving | Byte-identical to one straight carve at every time tried |
+| Playback speeds, stops, steps | Whole program takes feed time / cutting speed + rapid time / rapid speed (within 0.02 s); stops at the one real tool change and not between two operations with the same tool; stops at a chosen time; steps land exactly on move ends |
+| Redraw of what changed | Same picture as a full redraw, byte for byte |
+| Watertight stock STL | Read back watertight; volume within 0.5 % of the block less what was removed; section and coarse meshes closed too |
+| 30 fps for a full sheet at 1 mm cells | 3,658 x 1,524 cells, 27,033 segments, 64x: 1.7 ms a frame on average, 2.9 ms at the 95th percentile (test limit 8 ms; a frame at 30 fps has 33 ms). First full draw 171 ms |
+
 ## Next run
 
-- Continue M2.4 (b, c, d) as split above.
+- Continue M2.4 (c, d) as split above.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -457,3 +479,4 @@ changed (Stage 1, 2D and every other 3D golden byte-identical).
 - **Run 4 (M2.3b)**: adaptive clearing in pockets. See `git log`.
 - **Run 4 (M2.3c)**: adaptive Z-level roughing, 3D rest machining, pencil pass. See `git log`.
 - **Run 5 (M2.4a)**: Z-level roughing of models that do not cover the panel. See `git log`.
+- **Run 5 (M2.4b)**: stock simulation on the stock-model interface. See `git log`.

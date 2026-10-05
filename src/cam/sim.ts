@@ -39,6 +39,8 @@ export interface SimSeg {
   cutter: Cutter
   /** Edge drilling: below the face, so not carved into the heightfield. */
   side?: boolean
+  /** Move number within its operation (0-based, 3D chains counted point by point). */
+  move: number
 }
 
 export interface SimOp {
@@ -47,6 +49,10 @@ export interface SimOp {
   start: number
   end: number
   cutter: Cutter
+  /** woodWOP tool number (undefined when no tool was resolved). */
+  toolNumber?: number
+  /** Index of the toolpath in the list given to `buildTimeline`. */
+  path: number
 }
 
 export interface SimTimeline {
@@ -133,11 +139,11 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
   let t = 0
   let cutLength = 0
   let rapidLength = 0
-  for (const tp of toolpaths) {
-    if (!tp.moves.length) continue
+  toolpaths.forEach((tp, path) => {
+    if (!tp.moves.length) return
     const index = ops.length
     const base = cutterOf(tp)
-    const op: SimOp = { name: tp.name, tool: tp.tool ? `T${tp.tool.number} ${tp.tool.name}` : 'No tool', start: t, end: t, cutter: base }
+    const op: SimOp = { name: tp.name, tool: tp.tool ? `T${tp.tool.number} ${tp.tool.name}` : 'No tool', start: t, end: t, cutter: base, path, ...(tp.tool ? { toolNumber: tp.tool.number } : {}) }
     ops.push(op)
     const feed = Math.max(1, tp.feeds.feed) / 60
     const plunge = Math.max(1, tp.feeds.plunge || tp.feeds.feed) / 60
@@ -146,12 +152,13 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
       return h && h.k === 'vdrill' ? h.d : undefined
     }
     let cutter = base
+    let move = 0
     const push = (b: V3, kind: SimKind, extra = 0, k = 1) => {
       const l = len3(at, b)
       if (l < 1e-9 && !extra) return
       const rate = (kind === 'rapid' ? RAPID_RATE / 60 : kind === 'plunge' || kind === 'drill' ? plunge : feed) * k
       const side = tp.kind === 'drill' && kind !== 'rapid' && kind !== 'drill' && Math.hypot(b.x - at.x, b.y - at.y) > 1e-9
-      const seg: SimSeg = { a: at, b, kind, op: index, t0: t, t1: t + l / rate + extra, cutter }
+      const seg: SimSeg = { a: at, b, kind, op: index, t0: t, t1: t + l / rate + extra, cutter, move }
       if (side) seg.side = true
       segs.push(seg)
       t = seg.t1
@@ -178,9 +185,10 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
         }
         push({ x: m.x, y: m.y, z: m.z }, m.f === 'cut' ? 'cut' : m.f, 0, m.k ?? 1)
       }
+      move++
     }
     op.end = t
-  }
+  })
   return { segs, ops, total: t, cutLength, rapidLength, start: { ...HOME } }
 }
 
@@ -390,16 +398,36 @@ export function looseMask(hf: Heightfield): Uint8Array {
   return out
 }
 
+/** Cells i0..i1-1 by j0..j1-1. */
+export interface CellRect {
+  i0: number
+  j0: number
+  i1: number
+  j1: number
+}
+
+/** Cells touched by a plan-view box (mm), plus `pad` cells round it, clipped to the grid. */
+export function cellRect(hf: Heightfield, b: { minX: number; minY: number; maxX: number; maxY: number }, pad = 1): CellRect {
+  return {
+    i0: Math.max(0, Math.floor(b.minX / hf.cell) - pad),
+    j0: Math.max(0, Math.floor(b.minY / hf.cell) - pad),
+    i1: Math.min(hf.nx, Math.floor(b.maxX / hf.cell) + 1 + pad),
+    j1: Math.min(hf.ny, Math.floor(b.maxY / hf.cell) + 1 + pad),
+  }
+}
+
 /**
  * Shaded top view as RGBA pixels (one per cell, row 0 = y max so it draws upright).
  * `through: true` shows only what is cut through (material-cut view). `loose` (from
  * `looseMask`) hides pieces that fall away in the through view and fades them otherwise.
+ * `rect`: shade only those cells (the rest of `out` is left as it is).
  */
-export function shadeHeightfield(hf: Heightfield, out: Uint8ClampedArray, opt: { base: [number, number, number]; through?: boolean; loose?: Uint8Array } = { base: [214, 186, 140] }) {
+export function shadeHeightfield(hf: Heightfield, out: Uint8ClampedArray, opt: { base: [number, number, number]; through?: boolean; loose?: Uint8Array; rect?: CellRect } = { base: [214, 186, 140] }) {
   const { nx, ny, top, cell, thickness } = hf
   const [br, bg, bb] = opt.base
-  for (let j = 0; j < ny; j++) {
-    for (let i = 0; i < nx; i++) {
+  const r = opt.rect ?? { i0: 0, j0: 0, i1: nx, j1: ny }
+  for (let j = Math.max(0, r.j0); j < Math.min(ny, r.j1); j++) {
+    for (let i = Math.max(0, r.i0); i < Math.min(nx, r.i1); i++) {
       const k = j * nx + i
       const o = ((ny - 1 - j) * nx + i) * 4
       const v = top[k]

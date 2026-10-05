@@ -12,6 +12,8 @@
  *   Waterline, 51k-facet dome, 40 levels: 5.7 s before, 3.3 s after (limit 8 s)
  *   Z-level roughing of the 200k relief: 6.4 s before, 4.3 s after; parallel finishing 7.3 s
  *   M2.3b adaptive clearing, 300 x 200 pocket with island, 8 mm tool: 3.4 s alone (limit 10 s)
+ *   M2.4b full-sheet playback at 1 mm cells, 64x: 1.7 ms a frame on average, 2.9 ms at the 95th
+ *     percentile (limit 8 ms; 30 fps allows 33 ms); first full draw 171 ms
  */
 import { describe, expect, it } from 'vitest'
 import { buildMesh } from '@/cam/mesh/build'
@@ -22,6 +24,9 @@ import { circle, pt, rect } from '@/cam/geom'
 import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { meshBounds } from '@/cam/mesh/types'
 import { defaultOp } from '@/cam/ops'
+import { buildTimeline, cellRect, shadeHeightfield } from '@/cam/sim'
+import { HeightfieldStock } from '@/cam/stock/heightfield'
+import { advance, simCell, StockSimulation } from '@/cam/stock/simulation'
 import { generateOp, generatePart } from '@/cam/toolpath'
 import type { CamOp, Finish3dOp, PocketOp, Rough3dOp } from '@/cam/types'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
@@ -173,3 +178,57 @@ const PERF_LIMIT_ROUGHING_MS = 20_000
 const PERF_LIMIT_PARALLEL_MS = 20_000
 const PERF_LIMIT_IMPORT_MS = 5000
 const PERF_LIMIT_SECTION_MS = 400
+
+describe('M2.4 stock simulation playback', () => {
+  it('a full 5 x 12 ft sheet at 1 mm cells plays at 30 frames a second (carve + redraw of what changed)', () => {
+    // 18 parts profiled through, each with a pocket and two holes cut through: about a nested sheet
+    const part = newPart({ name: 'Sheet', length: 3658, width: 1524, thickness: 18, materialId: 'mat-mdf18', entities: [] })
+    const ops: CamOp[] = []
+    const lvl = (depth: number, through = false, passDepth = 0) => ({ safeZ: 20, rapidZ: 3, depth, through, stockZ: 0, passDepth })
+    for (let r = 0; r < 3; r++)
+      for (let c = 0; c < 6; c++) {
+        const x = 30 + c * 600
+        const y = 30 + r * 495
+        const outline = makeEntity({ t: 'contour', c: rect(x, y, 560, 455) }, 'outline')
+        const pocket = makeEntity({ t: 'contour', c: rect(x + 80, y + 80, 300, 200) }, 'machining')
+        const holes = [pt(x + 450, y + 120), pt(x + 450, y + 330)].map((q) => makeEntity({ t: 'contour', c: circle(q, 20) }, 'machining'))
+        part.entities.push(outline, pocket, ...holes)
+        ops.push({ ...defaultOp('pocket', [pocket.id]), toolId: 't102', levels: lvl(8, false, 4) } as CamOp)
+        ops.push({ ...defaultOp('profile', holes.map((h) => h.id)), side: 'inside', levels: lvl(18, true) } as CamOp)
+        ops.push({ ...defaultOp('profile', [outline.id]), side: 'outside', levels: lvl(18, true, 9) } as CamOp)
+      }
+    part.ops = ops
+    const tl = buildTimeline(generatePart(part, PLACEHOLDER_MACHINE))
+    const cell = simCell(part.length, part.width)
+    expect(cell).toBe(1)
+    const stock = new HeightfieldStock(part.length, part.width, part.thickness, cell)
+    const sim = new StockSimulation(tl, stock)
+    const img = new Uint8ClampedArray(stock.hf.nx * stock.hf.ny * 4)
+    const base: [number, number, number] = [214, 186, 140]
+    let t0 = performance.now()
+    shadeHeightfield(stock.hf, img, { base })
+    const first = performance.now() - t0
+    stock.takeDirty()
+    // 64x: one frame is 64/30 s of program time
+    const frames: number[] = []
+    let t = 0
+    for (let f = 0; f < 600 && t < tl.total; f++) {
+      t0 = performance.now()
+      t = advance(tl, t, 1 / 30, { speed: 64, rapidSpeed: 256 }).t
+      sim.syncTo(t)
+      const d = stock.takeDirty()
+      if (d) shadeHeightfield(stock.hf, img, { base, rect: cellRect(stock.hf, d, 1) })
+      frames.push(performance.now() - t0)
+    }
+    const sorted = [...frames].sort((a, b) => a - b)
+    const avg = frames.reduce((a, b) => a + b, 0) / frames.length
+    const p95 = sorted[Math.floor(sorted.length * 0.95)]
+    log(`full-sheet playback, ${stock.hf.nx} x ${stock.hf.ny} cells (1 mm), ${tl.segs.length.toLocaleString('en')} segments, 64x: first full draw ${Math.round(first)} ms; per frame average ${avg.toFixed(2)} ms, 95th percentile ${p95.toFixed(2)} ms, worst ${sorted[sorted.length - 1].toFixed(1)} ms over ${frames.length} frames`)
+    expect(frames.length).toBeGreaterThan(100)
+    // 30 fps leaves 33 ms a frame for everything; the stock part must stay well inside it
+    expect(p95).toBeLessThan(PERF_LIMIT_FRAME_MS)
+  }, 120_000)
+})
+
+// (measured 2.9 ms at the 95th percentile; a frame has 33 ms at 30 fps)
+const PERF_LIMIT_FRAME_MS = 8

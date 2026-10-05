@@ -412,7 +412,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
           }}
         />
       )}
-      <SimulateDialog open={simOpen} onOpenChange={setSimOpen} part={part} toolpaths={toolpaths} units={units} color={data!.library.materials.find((m) => m.id === part.materialId)?.color} />
+      <SimulateDialog open={simOpen} onOpenChange={setSimOpen} part={part} toolpaths={toolpaths} machine={machine} units={units} color={data!.library.materials.find((m) => m.id === part.materialId)?.color} />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <nav aria-label="Commands" className="flex shrink-0 gap-3 overflow-x-auto border-b border-white/10 bg-[#15171c] p-2 md:w-[124px] md:flex-col md:gap-2 md:overflow-y-auto md:border-r md:border-b-0">

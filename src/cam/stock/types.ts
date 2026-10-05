@@ -31,4 +31,11 @@ export interface StockModel {
   toMesh(): Mesh
   snapshot(): StockSnapshot
   restore(s: StockSnapshot): void
+  /** Back to the uncut block. */
+  reset(): void
+  /**
+   * Area changed since the last call (plan view, mm), or null when nothing changed; `through`:
+   * some cut reached the underside (cut-free pieces may have changed). Clears the record.
+   */
+  takeDirty(): { minX: number; minY: number; maxX: number; maxY: number; through: boolean } | null
 }

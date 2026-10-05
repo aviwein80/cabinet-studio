@@ -82,6 +82,11 @@ export checker. Tool numbers are still placeholders.
 - **Machining**: profile (sides, leads, tabs, multiple passes), pocket (contour, zig-zag, spiral,
   islands, ramps), drill and peck, engrave, V-carve, saw groove and profiled sweep. **Layer rules**
   machine an imported drawing from its layer names.
+- **Rest machining** (pocket option): a smaller tool cuts only what the earlier operations left,
+  such as corners, necks the bigger tool could not enter, and wall stock. The leftover is worked
+  out from the earlier toolpaths themselves, level by level. Pieces that would cut less than a
+  set length are skipped. Each piece is written to woodWOP as a contour-milling pass, so the
+  earlier operations must run first, in the order shown.
 - **Parametric doors**: slab, shaker, arched and cathedral, driven by variables or a door-list CSV.
   Hinge cups and pulls are placed automatically.
 - **Native woodWOP**: each operation is written as an editable macro (`<105` contour on the drawn

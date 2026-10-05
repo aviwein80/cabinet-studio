@@ -1,0 +1,54 @@
+{
+ "op": "Rest",
+ "kind": "pocket",
+ "tool": 103,
+ "moves": {
+  "rapid": 3,
+  "feed": 8,
+  "arc": 0,
+  "drill": 0
+ },
+ "cutMm": 424,
+ "box": [
+  53,
+  43,
+  147,
+  97
+ ],
+ "zMin": -6,
+ "intents": {
+  "contour": 1
+ },
+ "warnings": [
+  "Helix does not fit at a pocket start; ramped instead.",
+  "Rest machining follows the toolpaths of the earlier operations: they must run first, in the order shown. In woodWOP each rest piece is its own contour-milling pass."
+ ],
+ "first": [
+  {
+   "t": "rapid",
+   "x": 147,
+   "y": 43,
+   "z": 20
+  },
+  {
+   "t": "rapid",
+   "x": 147,
+   "y": 43,
+   "z": 3
+  },
+  {
+   "t": "feed",
+   "x": 147,
+   "y": 43,
+   "z": 0,
+   "f": "plunge"
+  },
+  {
+   "t": "feed",
+   "x": 147,
+   "y": 97,
+   "z": -4.724,
+   "f": "plunge"
+  }
+ ]
+}

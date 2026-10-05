@@ -527,6 +527,8 @@ export interface FeatureFlags {
   cam3dMprOutput: boolean
   /** 3D models on custom parts: STL/OBJ/3MF import, mesh tools, sections, work volume from a model. */
   cam3d: boolean
+  /** Adaptive clearing and rest machining options on pockets (screens only). */
+  camAdaptive: boolean
 }
 
 export interface Library {

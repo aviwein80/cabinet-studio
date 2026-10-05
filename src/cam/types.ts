@@ -237,6 +237,12 @@ export interface PocketOp extends OpBase {
   helixPct: number
   finishPass: boolean
   stockXY: number
+  /**
+   * Rest machining (2D-07): cut only the material that earlier operations left in the pocket,
+   * worked out from their toolpaths. `from`: those operations (ids); empty = every enabled
+   * milling operation before this one. Pieces that cut less than `minLength` mm are skipped.
+   */
+  rest?: { from: string[]; minLength: number }
 }
 
 export interface DrillOp extends OpBase {

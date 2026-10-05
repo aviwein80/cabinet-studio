@@ -34,6 +34,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camBatch', 'Batch runs', 'Part lists from CSV or an inbox folder, without opening the screens.'],
   ['hardwarePatterns', 'Drilling patterns', 'Hardware drilling patterns in the library and the Hardware button on parts.'],
   ['cam3d', '3D models', 'Import STL, OBJ and 3MF models onto parts: sections, outlines, simplify, work volume from the model.'],
+  ['camAdaptive', 'Rest machining and adaptive clearing', 'Pocket options: cut only what earlier operations left; clear at a steady width of cut.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel and projection finishing are never written.'],
 ]

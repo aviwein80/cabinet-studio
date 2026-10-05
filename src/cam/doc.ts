@@ -268,8 +268,22 @@ export function fnv(s: string) {
   return (h >>> 0).toString(36)
 }
 
-/** Machine settings a toolpath reads besides its tool: through depth and the material feed table. */
-export type OpMachineInputs = Pick<MachineProfile, 'throughDepth' | 'feeds'>
+/**
+ * Machine settings a toolpath reads besides its tool: through depth and the material feed table
+ * (and the tool table, for rest machining from operations that pick their tool automatically).
+ */
+export type OpMachineInputs = Pick<MachineProfile, 'throughDepth' | 'feeds'> & Partial<Pick<MachineProfile, 'tools'>>
+
+/** Milling operations whose toolpaths count as removed material for 2D rest machining. */
+export const REST_SOURCE_KINDS: ReadonlySet<CamOp['kind']> = new Set(['profile', 'pocket', 'engrave', 'vcarve', 'sweep'])
+
+/** The operations a rest pocket counts as already machined: picked ones, or every earlier one. */
+export function restSources(op: CamOp, part: CamPart): CamOp[] {
+  if (op.kind !== 'pocket' || !op.rest) return []
+  const i = part.ops.findIndex((o) => o.id === op.id)
+  const earlier = (i < 0 ? part.ops : part.ops.slice(0, i)).filter((o) => o.enabled && o.face === 1 && REST_SOURCE_KINDS.has(o.kind))
+  return op.rest.from.length ? earlier.filter((o) => op.rest!.from.includes(o.id)) : earlier
+}
 
 /**
  * Hash of everything an op's toolpath depends on: its parameters, the picked geometry, the tool,
@@ -284,6 +298,13 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   if (op.kind === 'finish3d' || op.kind === 'rough3d') {
     const m = part.models?.find((x) => x.id === op.surface.modelId)
     deps.push(m ? { blob: m.blob, place: m.place } : null)
+  }
+  // rest machining: everything the earlier operations' toolpaths depend on (and the tool table
+  // when one of them picks its tool automatically)
+  const sources = restSources(op, part)
+  if (sources.length) {
+    deps.push(sources.map((o) => opInputHash(o, part, machine?.tools?.find((t) => t.id === o.toolId) ?? o.toolId, machine)))
+    if (sources.some((o) => !o.toolId) && machine?.tools) deps.push(machine.tools.filter((t) => t.type === 'router'))
   }
   if (machine) {
     const toolId = tool && typeof tool === 'object' && 'id' in tool ? (tool as { id: string }).id : null

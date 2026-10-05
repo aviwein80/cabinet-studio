@@ -15,12 +15,14 @@ Read this first at the start of every run. Sources:
 | M2.2a CL-surface engine, parallel finishing, boundaries, independent gouge checker | **Done** (October 2026) | See below. |
 | M2.2b Z-level roughing, waterline | **Done** (October 2026) | Flat-layer output as `<105>` contours (decision 2), behind its own switch, off. See below. |
 | M2.2c Projection finishing, performance | **Done** (October 2026) | See below. M2.2 complete. |
-| M2.3 Adaptive clearing, rest machining, pencil | **Next** | |
+| M2.3a 2D rest machining | **Done** (October 2026) | See below. |
+| M2.3b Adaptive clearing (2D pockets) | **Next** | |
+| M2.3c Adaptive Z-level roughing, 3D rest and pencil | Not started | |
 | M2.4 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
-(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped).
+(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -263,11 +265,50 @@ Time it on the shop Mac: `npx vitest run tests/perf.test.ts`.
   the precision, but the waterline and roughing goldens would change) or levels calculated in
   parallel workers. Not done: the speed is fine in the background worker today.
 
-## Next run: M2.3
+## M2.3 split (same reasons as M2.2)
 
-- **Adaptive clearing (NEW-01):** constant-engagement clearing in pockets and per Z level.
-- **2D rest machining (2D-07):** cut only what earlier tools left, minimum path length.
-- **3D rest and pencil (3D-06):** material left by a larger tool; pencil pass along valleys.
+M2.3 is three large items, so it is done in named parts: **M2.3a** 2D rest machining, **M2.3b**
+adaptive clearing in 2D pockets, **M2.3c** adaptive clearing per Z level, 3D rest machining and
+the pencil pass.
+
+## M2.3a 2D rest machining: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 2D-07 | Pocket option "Rest machining": the material earlier operations left in the pocket, level by level, from their actual toolpaths (the area each tool swept at that depth, Clipper2 booleans; ball, bull-nose and V tools count with their width at that height, never wider). The pocket's follow-shape passes (inside out) are cut down to the pieces that reach it; pieces that cut less than the minimum length are skipped. A piece that starts clear of the material goes straight down (the column above it is already cut); one that starts in it uses the pocket's entry. "Left by": every earlier milling operation, or one picked | `src/cam/adaptive/rest.ts`, `genRestPocket` in `src/cam/toolpath.ts`, `restSources` in `src/cam/doc.ts` |
+| Associativity | A rest pocket goes stale when any operation it follows changes (parameters, shapes, tool, the tool table when that tool is picked automatically) or when an operation is added before it | `opInputHash` in `src/cam/doc.ts` |
+| Output | Each rest piece is one contour-milling pass at its depth, under the existing custom-part MPR switch (off). Program order keeps the operations of a part in their order, so the earlier operations run first | `genRestPocket` |
+| Switch | "Rest machining and adaptive clearing" (`camAdaptive`, screens, on) | `src/core/features.ts`, Machine page |
+
+Other changes: `generatePart` hands each toolpath to the later operations (no second
+calculation); a recipe made from a rest pocket follows every earlier operation in the new part.
+
+### Acceptance (M2.3 criteria for 2D rest)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Rest cuts only where the previous tool left material (simulated stock, independent of the booleans) | `tests/cam-rest.test.ts` | Corners (100 x 60 pocket, 12 mm then 6 mm): 4 pieces, every one finds material still there before it cuts. Neck (10 mm neck the 12 mm tool cannot enter): 8 pieces, same |
+| Earlier tool + rest = what the small tool alone leaves | same | 0 of 95,872 cells (corners) and 0 of 116,544 cells (neck) differ, at 0.25 mm cells. Rest cutting length 75 mm against 2,106 mm for the small tool alone (corners), 238 against 3,903 mm (neck) |
+| Verified against the swept-area boolean | same | Each piece's swept area overlaps the rest region; of 17.922 mm² of rest, 0.0035 mm² is left uncovered (a hair-thin edge at the small tool's reach) |
+| Minimum path length honoured | same | 50 mm: nothing cut, with a clear warning; 2 mm: the 4 corners; neck: 15 mm keeps fewer pieces than 0 |
+| Depth passes, wall stock | same | Each level cuts what was left at that level; 0.5 mm wall stock left by the earlier pocket is cut all the way round |
+| Goldens | `tests/golden/cam2/rest-{corners,neck,wall}` | 3 new 2D digests. All Stage 1 and 3D goldens unchanged |
+| woodWOP | same | 4 contour-milling passes for the corners, no export errors |
+
+### Limits recorded
+
+- **Rest from 3D operations is not counted** (only profile, pocket, engrave, V-carve and sweep).
+  3D rest machining is M2.3c.
+- **woodWOP's own pocket macro**: for a rectangular earlier pocket written as `<112 Tasche`, the
+  rest is worked out from our toolpath of that pocket, not from woodWOP's. Both use the same tool
+  and step-over, so the corners match; a cusp woodWOP leaves between its own passes would not be
+  seen.
+- **Rest pieces always use follow-shape passes**, whatever the pattern setting.
+
+## Next run: M2.3b
+
+- **Adaptive clearing (NEW-01)** in 2D pockets: steady width of cut, smoothing, lifted
+  back-moves, adaptive feed, trochoidal sections; an independent per-move engagement check.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -278,3 +319,4 @@ Time it on the shop Mac: `npx vitest run tests/perf.test.ts`.
 - **Run 3 (M2.2a)**: parallel finishing. Commit `c1bc896`.
 - **Run 3 (M2.2b)**: Z-level roughing, waterline, flat-layer output (switch off). See `git log`.
 - **Run 4 (M2.2c)**: projection finishing, faster clearance test, browser-preview fix. See `git log`.
+- **Run 4 (M2.3a)**: 2D rest machining. See `git log`.

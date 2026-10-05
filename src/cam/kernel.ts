@@ -131,6 +131,15 @@ export function clipPolys(op: BoolOp, a: P[][], b: P[][]): P[][] {
 export function inflatePolys(polys: P[][], d: number, join: Join = 'round', arcTol = 0.05): P[][] {
   return inflatePaths(polys.map(polyPath), d * SCALE, JOIN[join], EndType.Polygon, 4, arcTol * SCALE).map(pathPoly)
 }
+/**
+ * Area swept by a disc of radius r moving along open polylines (a one-point path is a disc), as
+ * filled polygons (counter-clockwise outer loops). `arcTol`: largest gap between the polygon and
+ * the true round ends (the polygon lies inside them).
+ */
+export function sweptPolys(paths: P[][], r: number, arcTol = 0.001): P[][] {
+  if (!paths.length || !(r > 0)) return []
+  return inflatePaths(paths.map(polyPath), r * SCALE, JoinType.Round, EndType.Round, 4, arcTol * SCALE).map(pathPoly)
+}
 export function polyOverlap(a: P[][], b: P[][]) {
   return Math.abs(areaPaths(intersect(a.map(polyPath), b.map(polyPath), FillRule.NonZero))) / (SCALE * SCALE)
 }

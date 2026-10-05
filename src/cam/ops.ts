@@ -131,6 +131,8 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
 
 export function toTemplate(op: CamOp): OpTemplate {
   const { id: _id, geometry: _g, builtHash: _h, ...rest } = op
+  // operation ids mean nothing in another part: rest machining then follows every earlier operation
+  if (rest.kind === 'pocket' && rest.rest) return { ...rest, rest: { ...rest.rest, from: [] } } as OpTemplate
   return rest as OpTemplate
 }
 export function fromTemplate(t: OpTemplate, geometry: string[]): CamOp {

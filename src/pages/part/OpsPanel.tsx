@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
-import { opInputHash, opState, partOutline, type OpState } from '@/cam/doc'
+import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, type OpState } from '@/cam/doc'
 import { defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { OPS_3D, type Toolpath } from '@/cam/toolpath'
@@ -178,6 +178,7 @@ export function OpsPanel({
                         : op.levels.through
                           ? 'through'
                           : formatLength(op.levels.depth, units)}
+                  {op.kind === 'pocket' && op.rest ? ' · rest' : ''}
                   {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : null}
                 </div>
               </div>
@@ -436,6 +437,7 @@ function SurfaceGroup({ op, part, onSurface, walls, pattern }: { op: CamOp & { s
 }
 
 function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
+  const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
   switch (op.kind) {
     case 'finish3d': {
       const waterline = op.strategy === 'waterline'
@@ -547,7 +549,26 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           <div className="col-span-2">
             <SwitchField label="Keep islands" checked={op.islands} onChange={(v) => onChange({ ...op, islands: v })} hint="Closed shapes inside the pocket stay standing" />
             <SwitchField label="Finish pass on the wall" checked={op.finishPass} onChange={(v) => onChange({ ...op, finishPass: v })} />
+            {(adaptiveOn || op.rest) && (
+              <SwitchField
+                label="Rest machining"
+                checked={!!op.rest}
+                onChange={(v) => onChange({ ...op, rest: v ? { from: [], minLength: 0 } : undefined })}
+                hint="Cut only what earlier operations left (corners, narrow parts, walls), worked out from their toolpaths. Uses follow-shape passes."
+              />
+            )}
           </div>
+          {op.rest && (
+            <>
+              <SelectField
+                label="Left by"
+                value={op.rest.from[0] ?? NONE}
+                options={[{ value: NONE, label: 'Every earlier operation' }, ...part.ops.slice(0, Math.max(0, part.ops.findIndex((o) => o.id === op.id))).filter((o) => REST_SOURCE_KINDS.has(o.kind)).map((o) => ({ value: o.id, label: o.name }))]}
+                onChange={(v) => onChange({ ...op, rest: { ...op.rest!, from: v === NONE ? [] : [v] } })}
+              />
+              <NumField label="Skip pieces shorter than" value={op.rest.minLength} min={0} onChange={(v) => onChange({ ...op, rest: { ...op.rest!, minLength: v } })} hint="Measured where the tool cuts" />
+            </>
+          )}
         </Group>
       )
     case 'drill':

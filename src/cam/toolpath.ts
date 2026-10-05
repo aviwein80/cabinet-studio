@@ -6,7 +6,7 @@
  *    geometry with radius correction, drilling macros, rectangular pockets, saw grooves).
  */
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
-import { entityContours, layerOf, opInputHash } from './doc'
+import { entityContours, layerOf, opInputHash, restSources } from './doc'
 import {
   add,
   arc,
@@ -39,7 +39,8 @@ import {
   closestOnContour,
   atLength,
 } from './geom'
-import { breakAt, normaliseWinding, offset, offsetChain } from './kernel'
+import { breakAt, inflatePolys, normaliseWinding, offset, offsetChain } from './kernel'
+import { contourPolys, PolySet, restAt, restPieces, type SweepSource, sweptAt } from './adaptive/rest'
 import { feedsFor, passDepths, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
@@ -120,6 +121,8 @@ export interface GenContext {
   meshes?: ReadonlyMap<string, Mesh>
   /** Progress and cancel for long 3D operations. */
   work?: Work
+  /** Toolpaths of operations already generated, by op id (rest machining reads them). */
+  done?: ReadonlyMap<string, Toolpath>
 }
 
 export const RAPID_RATE = 40000
@@ -624,6 +627,7 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   }
   const orient = (c: Contour) => (op.direction === 'climb' ? c : reverse(c))
   const slack = offset(first, 0.01)
+  if (op.rest) return genRestPocket(op, ctx, tp, b, { region, tool, depths, entry, first, rings: [...levels].reverse().flat().map(orient), slack })
 
   const circ = region.length === 1 && region[0].segs.every((s) => s.k === 'A') && new Set(region[0].segs.map((s) => radius(s as never).toFixed(6))).size === 1
 
@@ -676,6 +680,64 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
       tp.intents.push({ k: 'contour', segs: ring.segs, closed: true, rk: 'NOWRK', approach: 'SEN', ramp: entry !== 'plunge', tool, label: `${op.name} ring`, passes: depths.map((d) => ({ depth: d, from: 0, to: ring.segs.length - 1 })) })
     tp.warnings.push('Free-form pocket is written to woodWOP as contour-milling passes on the offset rings (each one editable).')
   }
+}
+
+/**
+ * Rest machining (2D-07): the pocket's offset passes (inside out) cut down, level by level, to the
+ * pieces that reach material the earlier operations left. A piece starting clear of that material
+ * goes straight down (the column above it was cut by the earlier tools); one starting in it uses
+ * the pocket's entry.
+ */
+function genRestPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder, g: { region: Contour[]; tool: Tool; depths: number[]; entry: PocketOp['entry']; first: Contour[]; rings: Contour[]; slack: Contour[] }) {
+  const rest = op.rest!
+  const sources = restSources(op, ctx.part)
+  if (!sources.length) {
+    tp.warnings.push('Rest machining: there is no earlier milling operation to follow, so nothing is cut.')
+    return
+  }
+  const srcs: SweepSource[] = []
+  for (const s of sources) {
+    const stp = ctx.done?.get(s.id) ?? generateOp(s, { part: ctx.part, machine: ctx.machine, meshes: ctx.meshes, done: ctx.done })
+    const ct = cutterOfTool(stp.tool)
+    if ('error' in ct) {
+      tp.warnings.push(`Rest machining: "${s.name}" has no usable router, so it is not counted.`)
+      continue
+    }
+    srcs.push({ moves: [...simpleMoves(stp.moves)], cutter: ct.cutter })
+  }
+  const r = g.tool.diameter / 2
+  const target = contourPolys(op.stockXY > 0 ? offset(g.region, -op.stockXY) : g.region)
+  const centres = contourPolys(g.first)
+  // keep pieces from a little before the tool reaches the material to a little after
+  const margin = Math.min(1, 0.25 * r)
+  let pieces = 0
+  g.depths.forEach((d, pi) => {
+    const z = -d
+    const prevZ = pi === 0 ? 0 : -g.depths[pi - 1]
+    // tips at this depth count as having cut it
+    const left = restAt(target, sweptAt(srcs, z + 1e-6), centres, r)
+    if (!left.length) return
+    const zone = new PolySet(inflatePolys(left, r + margin, 'round', 0.001))
+    const touch = new PolySet(inflatePolys(left, Math.max(0.001, r - 0.002), 'round', 0.001))
+    for (const ring of g.rings)
+      for (const pc of restPieces(ring, zone, touch, Math.max(0, rest.minLength))) {
+        const segs = pc.whole ? ring.segs : sliceByLength(ring, pc.d0, pc.d1)
+        if (!segs.length) continue
+        const c: Contour = { segs, closed: pc.whole }
+        const S = startOf(c)
+        if (b.z < op.levels.rapidZ) b.rapid(b.x, b.y, op.levels.rapidZ)
+        b.rapid(S.x, S.y, op.levels.safeZ)
+        b.rapid(S.x, S.y, Math.max(prevZ, 0) + op.levels.rapidZ)
+        if (pc.startsInMaterial) enterAt(g.entry, c, S, prevZ, z, op, r, g.slack, b, tp)
+        else b.feed(S.x, S.y, z, 'plunge')
+        for (const s of segs) b.seg(s, z)
+        tp.intents.push({ k: 'contour', segs, closed: c.closed, rk: 'NOWRK', approach: 'SEN', ramp: pc.startsInMaterial && g.entry !== 'plunge', tool: g.tool, label: `${op.name} rest`, passes: [{ depth: d, from: 0, to: segs.length - 1 }] })
+        pieces++
+      }
+  })
+  b.rapid(b.x, b.y, op.levels.safeZ)
+  if (!pieces) tp.warnings.push(`Rest machining: the earlier operations left nothing T${g.tool.number} can reach${rest.minLength > 0 ? ' in pieces longer than the minimum length' : ''}.`)
+  else tp.warnings.push('Rest machining follows the toolpaths of the earlier operations: they must run first, in the order shown. In woodWOP each rest piece is its own contour-milling pass.')
 }
 
 function linkInside(region: Contour[], a: P, b: P) {
@@ -1212,7 +1274,14 @@ function minWidth(op: CamOp, ctx: GenContext) {
  * compute worker), by `pathKey`; a 3D operation found there is not calculated again.
  */
 export function generatePart(part: CamPart, machine: MachineProfile, meshes?: ReadonlyMap<string, Mesh>, paths3d?: ReadonlyMap<string, Toolpath>): Toolpath[] {
-  return part.ops.filter((o) => o.enabled).map((op) => (OPS_3D.has(op.kind) ? paths3d?.get(pathKey(op, part, machine)) : undefined) ?? generateOp(op, { part, machine, meshes }))
+  const done = new Map<string, Toolpath>()
+  return part.ops
+    .filter((o) => o.enabled)
+    .map((op) => {
+      const tp = (OPS_3D.has(op.kind) ? paths3d?.get(pathKey(op, part, machine)) : undefined) ?? generateOp(op, { part, machine, meshes, done })
+      done.set(op.id, tp)
+      return tp
+    })
 }
 
 /** Key of a toolpath: the part, the operation and the hash of everything the path depends on. */

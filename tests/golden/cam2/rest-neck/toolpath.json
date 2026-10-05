@@ -1,0 +1,53 @@
+{
+ "op": "Rest",
+ "kind": "pocket",
+ "tool": 103,
+ "moves": {
+  "rapid": 24,
+  "feed": 28,
+  "arc": 4,
+  "drill": 0
+ },
+ "cutMm": 238,
+ "box": [
+  23,
+  23,
+  147,
+  87
+ ],
+ "zMin": -6,
+ "intents": {
+  "contour": 8
+ },
+ "warnings": [
+  "Rest machining follows the toolpaths of the earlier operations: they must run first, in the order shown. In woodWOP each rest piece is its own contour-milling pass."
+ ],
+ "first": [
+  {
+   "t": "rapid",
+   "x": 62.066,
+   "y": 23,
+   "z": 20
+  },
+  {
+   "t": "rapid",
+   "x": 62.066,
+   "y": 23,
+   "z": 3
+  },
+  {
+   "t": "feed",
+   "x": 62.066,
+   "y": 23,
+   "z": -6,
+   "f": "plunge"
+  },
+  {
+   "t": "feed",
+   "x": 67,
+   "y": 23,
+   "z": -6,
+   "f": "cut"
+  }
+ ]
+}

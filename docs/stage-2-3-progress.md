@@ -18,12 +18,14 @@ Read this first at the start of every run. Sources:
 | M2.3a 2D rest machining | **Done** (October 2026) | See below. |
 | M2.3b Adaptive clearing (2D pockets) | **Done** (October 2026) | See below. Simulation only (woodWOP output blocked). |
 | M2.3c Adaptive Z-level roughing, 3D rest and pencil | **Done** (October 2026) | See below. M2.3 complete. Simulation only (woodWOP output blocked). |
-| M2.4 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.4a Roughing fix (models that do not cover the panel) | **Done** (October 2026) | See below. |
+| M2.4b - M2.4d Stock simulation, collision, cut-free pieces | In progress | Split below. |
+| M2.5 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped).
+skipped), 407 after M2.4a (406 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -392,15 +394,39 @@ less often (no change to any toolpath).
 - **Adaptive per level treats the tool as a cylinder of its full radius**: a bull-nose leaves its
   corner radius at walls (as every pattern does); helix centres and panel edges are handled so the
   floor is clean (0.03 mm). It cuts a little air past the panel edges.
-- **Z-level roughing of a model that does not cover the panel** (for example a closed box
-  standing on its own) finds nothing to rough, with every pattern: the level lines are only
-  found where the model is. Found in this run; it dates from M2.2b. Models covering the panel
-  (reliefs, doors) are fine. Proposed fix: treat the panel outside the model as the floor.
+- **Z-level roughing of a model that does not cover the panel** found nothing to rough. Fixed in
+  M2.4a (below).
 
-## Next run: M2.4
+## M2.4 split
 
-- **Stock simulation and collision (SIM-02, SIM-03, SIM-05, NEW-13)** as in the prompt.
-- Proposed fix for Z-level roughing of models that do not cover the panel (see M2.3c limits).
+M2.4 is done in named parts: **M2.4a** the Z-level roughing fix (owner asked for it first),
+**M2.4b** the stock simulation on the `StockModel` interface (removed volume, section view,
+transparency, stepping, stop at tool change, stock STL), **M2.4c** collision checking (shank,
+holder, rapids, spoilboard) with a log, jump-to-move and the export checker, **M2.4d** cut-free
+pieces, full-sheet playback speed, screenshots and docs.
+
+## M2.4a Z-level roughing of a model that does not cover the panel: what was fixed
+
+| What | Where |
+|---|---|
+| With no boundary drawn, the tool centre was kept inside the model's own footprint, so a model smaller than the panel (a closed box standing on its own) had nowhere below face 1 to cut. Now, when the model does not reach every edge of the panel (by more than 0.01 mm), the whole panel is the roughing area and the panel round the model is roughed down to the model's lowest point (plus the stock to leave in Z). A warning says so and gives the depth: "Draw a boundary to rough less." A drawn boundary works as before. Models that cover the panel (reliefs, doors) are unchanged | `genRough3d` in `src/cam/toolpath.ts` |
+| Second bug found by the new test: the safety check threw away a whole straight piece when any spot on it touched the model. A zig-zag line is one piece, so lines next to the box's rounded corners vanished (material left standing at the panel edge). The check now splits a failing piece every check step and cuts out only the part that touches | `checked` in `src/cam/3d/zlevel.ts` |
+
+Acceptance (`tests/cam-3d-zlevel.test.ts`): a 40 x 30 x 12 mm box on a 100 x 80 mm panel, 12 mm R2
+bull-nose, 0.5 mm stock to leave, offset, zig-zag and adaptive. Simulated at 0.5 mm cells: the box
+and its stock are never cut (highest cut 0.000 mm); everywhere more than 7 mm from the box is down
+to the floor (-11.500 mm offset and zig-zag, -11.478 adaptive; limit -11.45); nothing below the
+floor; sampled gouge check under 0.005 mm. A drawn 30 mm circle still limits the tool centre
+(within 30.01 mm). Models that cover the panel get no new warning.
+
+Golden changed (explained): `tests/golden/cam3d/rough-hemisphere` - the trim fix keeps 12 mm of
+cutting the old check threw away (15,784 -> 15,796 mm, 36 more points, same move counts). Those
+pieces pass the independent gouge check (0.0022 mm at most over 3,944 positions). No other golden
+changed (Stage 1, 2D and every other 3D golden byte-identical).
+
+## Next run
+
+- Continue M2.4 (b, c, d) as split above.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -414,3 +440,4 @@ less often (no change to any toolpath).
 - **Run 4 (M2.3a)**: 2D rest machining. See `git log`.
 - **Run 4 (M2.3b)**: adaptive clearing in pockets. See `git log`.
 - **Run 4 (M2.3c)**: adaptive Z-level roughing, 3D rest machining, pencil pass. See `git log`.
+- **Run 5 (M2.4a)**: Z-level roughing of models that do not cover the panel. See `git log`.

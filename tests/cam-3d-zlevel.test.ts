@@ -23,7 +23,7 @@ import type { CamOp, CamPart, Finish3dOp, Rough3dOp } from '@/cam/types'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import type { MachineProfile } from '@/core/types'
 import { digest3d } from './cam-digest'
-import { relief, stlBinary } from './mesh-fixtures'
+import { box, relief, stlBinary } from './mesh-fixtures'
 import { SURFACES } from './surfaces'
 
 const machine = PLACEHOLDER_MACHINE
@@ -242,6 +242,62 @@ describe('M2.2b Z-level roughing', () => {
       expect(Math.max(...rs), pattern).toBeLessThanOrEqual(30.01)
       expect(Math.max(...rs), pattern).toBeGreaterThan(29)
     }
+  }, 120_000)
+
+  it('a model that does not cover the panel (a closed box standing on its own): the panel round it is roughed to its foot, the box is left (simulated, sampled gouge check)', () => {
+    // 40 x 30 x 12 box, top at face 1, in the middle of a 100 x 80 panel. Before the fix every
+    // pattern found "nothing to rough": the tool centre was kept inside the model's own footprint.
+    const mesh = buildMesh(parseStl(stlBinary(box(30, 25, -12, 70, 55, 0))), { gapTol: 0 }).mesh
+    const part: CamPart = {
+      ...newPart({ name: 'box', length: 100, width: 80, thickness: 45 }),
+      models: [{ id: 'm', name: 'box', kind: 'mesh', blob: 'box', source: 'box.stl', units: 'mm', place: { ...DEFAULT_PLACEMENT, at: [30, 25, 0] }, layer: 'models', visible: true, triangles: mesh.indices.length / 3, size: [40, 30, 12] }],
+    }
+    const s = 0.5
+    const dBox = (x: number, y: number) => Math.hypot(Math.max(0, 30 - x, x - 70), Math.max(0, 25 - y, y - 55))
+    for (const pattern of ['offset', 'zigzag', 'adaptive'] as const) {
+      const base = defaultOp('rough3d') as Rough3dOp
+      const op: Rough3dOp = { ...base, pattern, toolId: BULL, stepdown: 3, stockZ: s, surface: { ...base.surface, modelId: 'm', stockToLeave: s } }
+      part.ops = [op]
+      const tp = generateOp(op, { part, machine, meshes: new Map([['box', mesh]]) })
+      expect(tp.warnings.some((w) => w.includes('does not cover the whole panel') && w.includes('-11.50 mm')), pattern).toBe(true)
+      expect(tp.warnings.some((w) => w.startsWith('Nothing to rough')), pattern).toBe(false)
+      const g = checkGouge(mesh, { shape: 'bull', r: 6, cornerRadius: 2 }, tp.moves, { stock: s, step: 0.2, resolution: 0.1, maxPoints: THOROUGH ? 2000 : 400 })
+      expect(g.max, pattern).toBeLessThanOrEqual(0.005)
+      const stock = new HeightfieldStock(part.length, part.width, part.thickness, 0.5)
+      for (const seg of buildTimeline([tp]).segs) if (seg.kind !== 'rapid') stock.carve(seg.a, seg.b, seg.cutter)
+      let keptMin = Infinity
+      let floorHi = -Infinity
+      let lowest = Infinity
+      for (let y = 0.25; y < part.width; y += 0.5)
+        for (let x = 0.25; x < part.length; x += 0.5) {
+          const top = stock.heightAt(x, y)
+          const d = dBox(x, y)
+          lowest = Math.min(lowest, top)
+          // the box and the stock to leave round it stay whole
+          if (d < s - 0.05) keptMin = Math.min(keptMin, top)
+          // beyond the tool's radius (plus the stock and a cell) the panel is down at the floor
+          else if (d > 6 + s + 0.5) floorHi = Math.max(floorHi, top)
+        }
+      process.stdout.write(`  [roughing] box on its own, ${pattern}: box and stock kept to ${keptMin.toFixed(3)} mm, panel round it at most ${floorHi.toFixed(3)}, lowest ${lowest.toFixed(3)} (floor -11.5)\n`)
+      expect(keptMin, pattern).toBeGreaterThanOrEqual(-1e-6)
+      expect(floorHi, pattern).toBeLessThanOrEqual(-11.5 + 0.05)
+      expect(lowest, pattern).toBeGreaterThanOrEqual(-11.5 - 0.005)
+    }
+    // with a boundary drawn nothing changes: the boundary still limits the tool centre
+    const ring = makeEntity({ t: 'contour', c: circle(pt(50, 40), 30) }, 'outline')
+    part.entities = [...part.entities, ring]
+    const base = defaultOp('rough3d', [ring.id]) as Rough3dOp
+    const op: Rough3dOp = { ...base, toolId: BULL, stepdown: 3, surface: { ...base.surface, modelId: 'm', boundaryMode: 'centre' } }
+    part.ops = [op]
+    const tp = generateOp(op, { part, machine, meshes: new Map([['box', mesh]]) })
+    expect(tp.warnings.some((w) => w.includes('does not cover the whole panel'))).toBe(false)
+    const rs = clPoints(tp).map(([x, y]) => Math.hypot(x - 50, y - 40))
+    expect(rs.length).toBeGreaterThan(100)
+    expect(Math.max(...rs)).toBeLessThanOrEqual(30.01)
+  }, 120_000)
+
+  it('a model that covers the panel gets no "does not cover" warning', () => {
+    for (const name of Object.keys(SURFACES)) expect(rough(name).tp.warnings.some((w) => w.includes('does not cover the whole panel')), name).toBe(false)
   }, 120_000)
 
   it('flat-layer output: every pass of every level is a closed or open contour at that level depth', () => {

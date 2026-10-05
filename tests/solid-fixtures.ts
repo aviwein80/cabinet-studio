@@ -12,7 +12,7 @@ import type { SolidData } from '@/cam/solid/types'
 const require = createRequire(import.meta.url)
 export const FIXTURES = path.join(import.meta.dirname, 'fixtures', 'solid')
 
-export function useNodeOcct() {
+export function registerNodeOcct() {
   setOcctLoader(() => {
     const factory = require('occt-import-js') as (m: object) => Promise<OcctModule>
     return factory({ print: () => {}, printErr: () => {} })
@@ -40,7 +40,7 @@ export async function readFixture(name: string, opt: SolidReadOptions = {}): Pro
   const key = `${name}|${JSON.stringify(opt)}`
   const hit = cache.get(key)
   if (hit) return hit
-  useNodeOcct()
+  registerNodeOcct()
   const s = readSolid(await occt(), fixtureBytes(name), name, opt)
   cache.set(key, s)
   return s

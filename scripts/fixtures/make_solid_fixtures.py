@@ -208,6 +208,8 @@ def write_step(doc, path, schema):
     txt = open(path, encoding='latin-1').read()
     import re
     txt = re.sub(r"FILE_NAME\('([^']*)','[^']*'", r"FILE_NAME('\1','2026-10-01T00:00:00'", txt, count=1)
+    txt = re.sub(r"CALENDAR_DATE\(\d+,\d+,\d+\)", "CALENDAR_DATE(2026,1,1)", txt)
+    txt = re.sub(r"LOCAL_TIME\(\d+,\d+,", "LOCAL_TIME(0,0,", txt)
     open(path, 'w', encoding='latin-1', newline='\n').write(txt)
 
 def write_iges(doc, path, unit='MM'):
@@ -427,7 +429,76 @@ def iges_shelf():
     write_iges(doc, os.path.join(OUT, 'shelf-inch.igs'), 'INCH')
     truth(os.path.join(OUT, 'shelf-inch.truth.json'), {'name': 'Shelf', 'length': L, 'width': W, 'thickness': T, 'holes': holes, 'pockets': [], 'cutouts': [], 'outline': {'area': L * W}})
 
+# ---------------------------------------------------------------------------------------------
+# 5. Feature block (AP214): the rarer cases recognition must handle
+# ---------------------------------------------------------------------------------------------
+
+def edge_hole(face, u, v, d, depth, L, W):
+    """Hole drilled into an edge face; (u, v) as Stage 1 stores edge geometry."""
+    r = d / 2
+    z = -v
+    if face == 2:   # y = 0, u along +x
+        ax = gp_Ax2(P(u, -1.0, z), gp_Dir(0, 1, 0))
+    elif face == 3:  # x = L, u along +y
+        ax = gp_Ax2(P(L + 1.0, u, z), gp_Dir(-1, 0, 0))
+    elif face == 4:  # y = W, u from x = L towards x = 0
+        ax = gp_Ax2(P(L - u, W + 1.0, z), gp_Dir(0, -1, 0))
+    else:            # face 5: x = 0, u from y = W towards y = 0
+        ax = gp_Ax2(P(-1.0, W - u, z), gp_Dir(1, 0, 0))
+    return BRepPrimAPI_MakeCylinder(ax, r, depth + 1.0).Shape()
+
+def feature_block():
+    L, W, T = 500.0, 300.0, 25.0
+    body = prism(polygon([(0, 0), (L, 0), (L, W), (0, W)]), 0.0, -T)
+    pockets, holes, cutouts = [], [], []
+    # pocket with an island: 120 x 80 R8 ring, 8 deep, round island R15 in the middle
+    body = cut(body, prism(rounded_rect(40.0, 40.0, 160.0, 120.0, 8.0), 1.0, -8.0))
+    island = BRepPrimAPI_MakeCylinder(gp_Ax2(P(100.0, 80.0, -8.0), gp_Dir(0, 0, 1)), 15.0, 8.0).Shape()
+    body = fuse(body, island)
+    pockets.append({'depth': 8.0, 'face': 1, 'area': 120.0 * 80.0 - (4 - math.pi) * 64.0, 'box': [40.0, 40.0, 160.0, 120.0], 'islands': 1})
+    # a 5 mm hole 6 deep in the pocket floor (13.9 below face 1 at its shoulder)
+    body = cut(body, BRepPrimAPI_MakeCylinder(gp_Ax2(P(60.0, 60.0, -14.0), gp_Dir(0, 0, 1)), 2.5, 6.0).Shape())
+    holes.append({'x': 60.0, 'y': 60.0, 'd': 5.0, 'depth': 14.0, 'face': 1, 'through': False, 'floor': 'flat'})
+    # underside pocket: 100 x 60 sharp corners, 5 deep from face 6
+    body = cut(body, prism(polygon([(250.0, 40.0), (350.0, 40.0), (350.0, 100.0), (250.0, 100.0)]), -T + 5.0, -T - 1.0))
+    pockets.append({'depth': 5.0, 'face': 6, 'area': 6000.0, 'box': [250.0, 40.0, 350.0, 100.0], 'islands': 0})
+    # big round blind hole (no drill that size): 60 mm, 10 deep -> a round pocket
+    body = cut(body, BRepPrimAPI_MakeCylinder(gp_Ax2(P(400.0, 200.0, -10.0), gp_Dir(0, 0, 1)), 30.0, 11.0).Shape())
+    pockets.append({'depth': 10.0, 'face': 1, 'area': math.pi * 900.0, 'box': [370.0, 170.0, 430.0, 230.0], 'islands': 0, 'round': True})
+    # holes in the four edges: 8 mm, 30 deep, 12.5 below face 1 (18 below on the rebated back edge)
+    for face, u, v in ((2, 250.0, 12.5), (3, 150.0, 12.5), (4, 100.0, 18.0), (5, 120.0, 12.5)):
+        body = cut(body, edge_hole(face, u, v, 8.0, 30.0, L, W))
+        holes.append({'x': u, 'y': v, 'd': 8.0, 'depth': 30.0, 'face': face, 'through': False, 'floor': 'flat'})
+    # rebate along the back edge (y = W): 10 wide, 12 deep, full length
+    body = cut(body, prism(polygon([(-1.0, W - 10.0), (L + 1.0, W - 10.0), (L + 1.0, W + 1.0), (-1.0, W + 1.0)]), 1.0, -12.0))
+    # a chamfer on the front top edge: 45 degrees, 3 mm (a sloped face recognition leaves alone)
+    from OCP.BRepFilletAPI import BRepFilletAPI_MakeChamfer
+    from OCP.TopExp import TopExp_Explorer as Ex
+    from OCP.TopAbs import TopAbs_EDGE
+    from OCP.BRepAdaptor import BRepAdaptor_Curve
+    ch = BRepFilletAPI_MakeChamfer(body)
+    ex = Ex(body, TopAbs_EDGE)
+    while ex.More():
+        e = TopoDS.Edge(ex.Current())
+        c = BRepAdaptor_Curve(e)
+        a = c.Value(c.FirstParameter())
+        b = c.Value(c.LastParameter())
+        if abs(a.Y()) < 1e-9 and abs(b.Y()) < 1e-9 and abs(a.Z()) < 1e-9 and abs(b.Z()) < 1e-9 and abs(a.X() - b.X()) > 400:
+            ch.Add(3.0, e)
+        ex.Next()
+    body = ch.Shape()
+    doc, st, ct = new_doc()
+    add_part(st, ct, body, 'Feature block', color='#c9a979')
+    write_step(doc, os.path.join(OUT, 'feature-block.step'), 4)
+    truth(os.path.join(OUT, 'feature-block.truth.json'), {
+        'name': 'Feature block', 'length': L, 'width': W, 'thickness': T,
+        'outline': {'area': L * W}, 'holes': holes, 'pockets': pockets, 'cutouts': cutouts,
+        'rebate': {'depth': 12.0, 'width': 10.0, 'edge': 'y = W'},
+        'chamfer': {'size': 3.0, 'edge': 'front top'},
+    })
+
 if __name__ == '__main__':
+    feature_block()
     cabinet_side()
     shaped_door()
     assembly()

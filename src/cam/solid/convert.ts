@@ -9,19 +9,12 @@ import { UNIT_MM, type MeshUnits } from '../mesh/types'
 import { facePoints, fitSurface } from './classify'
 import { type OcctModule, type OcctNode, type OcctParams, type OcctResult } from './occt'
 import { readIgesMeta, readStepMeta } from './step21'
+import { solidFormatOf } from './format'
 import type { SolidBody, SolidData, SolidFace, SolidFormat, SolidProduct } from './types'
 
 export class SolidReadError extends Error {}
 
-export function solidFormatOf(name: string): SolidFormat | null {
-  const ext = name.toLowerCase().split('.').pop() ?? ''
-  if (ext === 'step' || ext === 'stp' || ext === 'p21') return 'step'
-  if (ext === 'iges' || ext === 'igs') return 'iges'
-  if (ext === 'brep' || ext === 'brp') return 'brep'
-  return null
-}
-
-export const isSolidFile = (name: string) => solidFormatOf(name) !== null
+export { isSolidFile, solidFormatOf } from './format'
 
 export interface SolidReadOptions {
   /** Read the numbers in this unit instead of the one the file states. */

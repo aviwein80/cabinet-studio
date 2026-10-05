@@ -19,7 +19,7 @@ import { decodeStepString, readStepMeta } from '@/cam/solid/step21'
 import { faceCount } from '@/cam/solid/types'
 import type { CamPart, ModelRef } from '@/cam/types'
 import { runTask } from '@/cam/worker/tasks'
-import { fixtureBytes, readFixture, truthOf, useNodeOcct } from './solid-fixtures'
+import { fixtureBytes, readFixture, truthOf, registerNodeOcct } from './solid-fixtures'
 
 const kinds = (s: Awaited<ReturnType<typeof readFixture>>) => {
   const k: Record<string, number> = {}
@@ -129,7 +129,7 @@ describe('M2.5a solid import (CAD-14)', () => {
   })
 
   it('bad files give a clear error, never a crash', async () => {
-    useNodeOcct()
+    registerNodeOcct()
     const reader = await occt()
     const good = fixtureBytes('cabinet-side.step')
     const cases: [Uint8Array, string, RegExp][] = [
@@ -221,7 +221,7 @@ describe('M2.5a solid import (CAD-14)', () => {
   })
 
   it('worker task: reads, packs and unpacks a solid (checksum checked)', async () => {
-    useNodeOcct()
+    registerNodeOcct()
     const s = await runTask('solid.import', { bytes: fixtureBytes('shaped-door.step'), name: 'shaped-door.step' })
     expect(s.bodies[0].faces).toHaveLength(16)
     const packed = await runTask('solid.pack', { solid: s })

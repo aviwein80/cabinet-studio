@@ -1,0 +1,105 @@
+{
+ "chamfer": {
+  "edge": "front top",
+  "size": 3.0
+ },
+ "cutouts": [],
+ "holes": [
+  {
+   "d": 5.0,
+   "depth": 14.0,
+   "face": 1,
+   "floor": "flat",
+   "through": false,
+   "x": 60.0,
+   "y": 60.0
+  },
+  {
+   "d": 8.0,
+   "depth": 30.0,
+   "face": 2,
+   "floor": "flat",
+   "through": false,
+   "x": 250.0,
+   "y": 12.5
+  },
+  {
+   "d": 8.0,
+   "depth": 30.0,
+   "face": 3,
+   "floor": "flat",
+   "through": false,
+   "x": 150.0,
+   "y": 12.5
+  },
+  {
+   "d": 8.0,
+   "depth": 30.0,
+   "face": 4,
+   "floor": "flat",
+   "through": false,
+   "x": 100.0,
+   "y": 18.0
+  },
+  {
+   "d": 8.0,
+   "depth": 30.0,
+   "face": 5,
+   "floor": "flat",
+   "through": false,
+   "x": 120.0,
+   "y": 12.5
+  }
+ ],
+ "length": 500.0,
+ "name": "Feature block",
+ "outline": {
+  "area": 150000.0
+ },
+ "pockets": [
+  {
+   "area": 9545.061929829746,
+   "box": [
+    40.0,
+    40.0,
+    160.0,
+    120.0
+   ],
+   "depth": 8.0,
+   "face": 1,
+   "islands": 1
+  },
+  {
+   "area": 6000.0,
+   "box": [
+    250.0,
+    40.0,
+    350.0,
+    100.0
+   ],
+   "depth": 5.0,
+   "face": 6,
+   "islands": 0
+  },
+  {
+   "area": 2827.4333882308138,
+   "box": [
+    370.0,
+    170.0,
+    430.0,
+    230.0
+   ],
+   "depth": 10.0,
+   "face": 1,
+   "islands": 0,
+   "round": true
+  }
+ ],
+ "rebate": {
+  "depth": 12.0,
+  "edge": "y = W",
+  "width": 10.0
+ },
+ "thickness": 25.0,
+ "width": 300.0
+}

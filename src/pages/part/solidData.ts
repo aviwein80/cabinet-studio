@@ -5,7 +5,8 @@
 import { useEffect, useState } from 'react'
 import { backend } from '@/app/backend'
 import type { SolidData } from '@/cam/solid/types'
-import { compute, solidCompute } from '@/cam/worker/client'
+import { compute } from '@/cam/worker/client'
+import type { MachineProfile } from '@/core/types'
 
 const cache = new Map<string, Promise<SolidData>>()
 
@@ -24,13 +25,24 @@ export function loadModelSolid(hash: string): Promise<SolidData> {
   return p
 }
 
+/** Store a solid; returns its hash. */
+export async function saveSolidData(solid: SolidData): Promise<string> {
+  const a = await compute().run('solid.pack', { solid })
+  if (!(await backend.blobs.has(a.hash))) await backend.blobs.put(a.hash, a.gz)
+  cache.set(a.hash, Promise.resolve(solid))
+  return a.hash
+}
+
+/** Store the file a solid came from; returns its hash. */
+export async function saveSolidFile(bytes: Uint8Array): Promise<string> {
+  const b = await compute().run('blob.packBytes', { bytes: bytes.slice() })
+  if (!(await backend.blobs.has(b.hash))) await backend.blobs.put(b.hash, b.gz)
+  return b.hash
+}
+
 /** Store a solid and the file it came from; returns both hashes. */
 export async function saveSolid(solid: SolidData, file: Uint8Array): Promise<{ blob: string; file: string }> {
-  const a = await solidCompute().run('solid.pack', { solid })
-  const b = await solidCompute().run('blob.packBytes', { bytes: file })
-  for (const x of [a, b]) if (!(await backend.blobs.has(x.hash))) await backend.blobs.put(x.hash, x.gz)
-  cache.set(a.hash, Promise.resolve(solid))
-  return { blob: a.hash, file: b.hash }
+  return { blob: await saveSolidData(solid), file: await saveSolidFile(file) }
 }
 
 export function useModelSolid(hash: string | undefined, enabled = true): { solid: SolidData | null; error: string | null } {
@@ -57,4 +69,10 @@ export function faceColorMap(solid: SolidData, overrides?: Record<string, string
     if (c) out.set(f.id, c)
   }
   return out
+}
+
+/** Drill sizes in the tool table, for recognition (vertical for faces 1 and 6, horizontal for edges). */
+export function drillSizes(machine: MachineProfile | undefined) {
+  const tools = machine?.tools ?? []
+  return { drills: tools.filter((t) => t.type === 'drill-vertical').map((t) => t.diameter), edgeDrills: tools.filter((t) => t.type === 'drill-horizontal').map((t) => t.diameter) }
 }

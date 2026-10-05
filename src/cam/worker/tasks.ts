@@ -21,6 +21,10 @@ import { readSolid, type SolidReadOptions } from '../solid/convert'
 import { decodeSolid, encodeSolid } from '../solid/encode'
 import { occt } from '../solid/occt'
 import type { SolidData } from '../solid/types'
+import { type Recognition, recognizePanel, type RecognizeOptions } from '../solid/recognize'
+import { type FeatureRow, featureEntities, solidToPart, type SolidPartOptions } from '../solid/toPart'
+import { type AssemblyPart, assemblyParts } from '../solid/assembly'
+import type { Entity, Layer } from '../types'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -50,6 +54,12 @@ export interface TaskMap {
   'solid.import': { in: { bytes: Uint8Array; name: string; vendor?: string } & SolidReadOptions; out: SolidData }
   'solid.pack': { in: { solid: SolidData }; out: Packed }
   'blob.unpackSolid': { in: { gz: Uint8Array; hash: string }; out: SolidData }
+  /** Find the features of one body (SOL-01); with `model`, also the layers and shapes for them. */
+  'solid.recognize': { in: { solid: SolidData; body: number; opt: Omit<RecognizeOptions, 'frame'>; model?: { id: string; blob: string }; layers?: Layer[] }; out: { recognition: Recognition; layers?: Layer[]; entities?: Entity[]; outlineId?: string; rows?: FeatureRow[] } }
+  /** Bodies of a file grouped into parts with quantities and properties (SOL-04). */
+  'solid.assembly': { in: { solid: SolidData; opt: Omit<RecognizeOptions, 'frame'> }; out: AssemblyPart[] }
+  /** A custom part from one body of a solid, laid flat with its features on layers. */
+  'solid.part': { in: { solid: SolidData; opt: SolidPartOptions }; out: { part: CamPart; rows: FeatureRow[]; warnings: string[] } }
   /** Store any bytes (the original file of a solid). */
   'blob.packBytes': { in: { bytes: Uint8Array }; out: Packed }
   /** Toolpaths of the given (3D) operations; meshes by blob hash. */
@@ -114,6 +124,23 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     const raw = await gunzip(gz)
     if ((await sha256Hex(raw)) !== hash) throw new Error(`Solid model data ${hash.slice(0, 12)}… is damaged (checksum mismatch).`)
     return decodeSolid(raw)
+  },
+  'solid.recognize'({ solid, body, opt, model, layers }, work) {
+    const b = solid.bodies.find((x) => x.index === body)
+    if (!b) throw new Error(`Body ${body} is not in this solid.`)
+    work.progress?.(0.1, 'Finding features')
+    const recognition = recognizePanel(b, opt)
+    if (!model) return { recognition }
+    return { recognition, ...featureEntities(recognition, model, layers) }
+  },
+  'solid.assembly'({ solid, opt }, work) {
+    work.progress?.(0.1, 'Sorting the bodies into parts')
+    return assemblyParts(solid, opt)
+  },
+  'solid.part'({ solid, opt }, work) {
+    work.progress?.(0.1, 'Finding features')
+    const { part, rows, recognition } = solidToPart(solid, opt)
+    return { part, rows, warnings: recognition.warnings }
   },
   async 'blob.packBytes'({ bytes }) {
     return { hash: await sha256Hex(bytes), gz: await gzip(bytes) }

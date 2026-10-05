@@ -1,4 +1,4 @@
-import { Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, ScanText, Trash2 } from 'lucide-react'
+import { Boxes, Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, ScanText, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -15,6 +15,7 @@ import type { Material, UnitSystem } from '@/core/types'
 import { DoorDialog } from '@/components/DoorDialog'
 import { DrawingImportDialog } from '@/components/DrawingImportDialog'
 import { PartDraftDialog } from '@/components/PartDraftDialog'
+import { SolidImportDialog } from '@/components/SolidImportDialog'
 import { useStore } from '@/app/store'
 import { featuresOf } from '@/core/features'
 import { contourPath } from '@/pages/part/hit'
@@ -67,7 +68,9 @@ export function PartList({
   const [importing, setImporting] = useState(false)
   const [doors, setDoors] = useState(false)
   const [drafting, setDrafting] = useState(false)
+  const [solids, setSolids] = useState(false)
   const doorsOn = useStore((s) => featuresOf(s.data?.settings).camParametric)
+  const solidsOn = useStore((s) => featuresOf(s.data?.settings).camSolids)
   const create = () => {
     const p = newPart({ name: `Part ${parts.length + 1}` })
     onSave(p)
@@ -93,6 +96,22 @@ export function PartList({
         <Button variant="outline" onClick={() => setImporting(true)}>
           <FileInput /> Import drawing
         </Button>
+        {solidsOn && (
+          <Button variant="outline" onClick={() => setSolids(true)}>
+            <Boxes /> Import solid
+          </Button>
+        )}
+        {solidsOn && (
+          <SolidImportDialog
+            open={solids}
+            onOpenChange={setSolids}
+            units={units}
+            onImport={(ps) => {
+              for (const p of ps) onSave(p)
+              if (ps.length === 1) onOpen(ps[0].id)
+            }}
+          />
+        )}
         <Button variant="outline" onClick={() => setDrafting(true)}>
           <ScanText /> Draft from customer drawing
         </Button>

@@ -37,13 +37,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.4c Collision checking (SIM-03, NEW-13 shared model) | **Done** (October 2026) | See below. |
 | M2.4d Cut-free pieces (SIM-05), screenshots, docs | **Done** (October 2026) | See below. M2.4 complete. |
 | M2.5a Solid import: reader choice, lazy WASM, face ids and types, packaging | **Done** (October 2026) | See below. |
-| M2.5b - M2.5e | In progress | Feature recognition; assemblies, faces and face machining; 3D wires and surfaces; screenshots and docs. |
+| M2.5b Feature recognition to layers, rules and a checked MPR | **Done** (October 2026) | See below. |
+| M2.5c - M2.5e | In progress | Assemblies, faces and face machining; 3D wires and surfaces; screenshots and docs. |
 | M2.6 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -601,7 +602,44 @@ side), shelf in inches (IGES). Each has a `.truth.json` written from the constru
 | Lazy loading, not in the start-up bundle | same (source scan), browser and Electron checks | Nothing imports the library; start-up bundle +0.2 kB; no `vendor/` request at start-up; first read in the browser preview 1.4 s (cold, cabinet side), Electron (Linux, `app://`) 0.96 s (door) |
 | Speed (STEP part ~50+ faces < 3 s warm, cold < 5 s) | same | Node: reader start 42 ms, first read of the 106-face side 0.8 s, warm 0.56 s |
 
-## Next: M2.5b feature recognition
+## M2.5b feature recognition: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| SOL-01 alignment | Lay the panel flat: thickness = the direction with the most area of opposite flat faces; face 1 = the side the pockets open on (only drilling can be done from face 6, in the turned-over program), else the side more blind holes open on; length along the longer side of the smallest rectangle round the panel (rotating calipers on the convex hull); a face can be named as face 1 instead | `src/cam/solid/align.ts` |
+| SOL-01 recognition | Outline (largest outer loop of the big faces, exact lines and arcs), cut-outs (openings whose walls reach the underside with no floor), pockets (each flat floor: depth, outline where its walls meet the face above, islands, smallest corner radius), holes (round walls going all the way round: diameter, depth to the shoulder, drill point tip depth and angle, flat / point / through, face 1 or 6), holes in the edges (faces 2-5 with Stage 1's (u, v)), pockets from the underside, rebates (pockets open to the edge: the shape reaches 6 mm past the edge, see decision 1), anything else listed with a reason. A round hole with no drill of that size becomes a round pocket or cut-out | `src/cam/solid/recognize.ts` |
+| Layers | Features go on layers the built-in "Shop layer names" rules already read: `Outline`, `INSIDE`, `POCKET_D<depth>`, `DRILL_D<Ø>_<depth>`, `THRU_DRILL_D<Ø>`, `DRILL_D<Ø>_<depth>_BACK` (face 6), `DRILL_D<Ø>_<depth>_EDGE`; `BACK_POCKET_D<depth>` and `EDGE_HOLE_...` (no drill that size) on purpose match no rule. Every shape remembers its solid faces (`Entity.solid`); hole shapes carry their exact depth | `src/cam/solid/toPart.ts` |
+| Part from a solid | Sized to the panel, the solid on it as a model turned flat (`ModelPlacement.frame`), material picked from the file's "Material" property when the library has one of that name | `solidToPart`, `material.ts` |
+| Screens | Part designer, 3D tab, on a solid: "Find features" (table of what was found, warnings) and "Lay flat and use as the part" (with the layer rules applied). Parts list: "Import solid" makes one part per distinct body (quantities, properties, material), rules applied | `SolidFeatures.tsx`, `src/components/SolidImportDialog.tsx` |
+| Worker | `solid.recognize`, `solid.part`, `solid.assembly` (recognition runs in the background) | `src/cam/worker/tasks.ts` |
+
+A fifth fixture, `feature-block.step`, covers the rarer cases: an island, a hole in a pocket floor,
+an underside pocket, a 60 mm round pocket, holes in all four edges, a rebate and a chamfer.
+
+### Acceptance (M2.5 criteria for recognition)
+
+| Criterion | Proof | Measured (worst over the fixture) |
+|---|---|---|
+| Every outline, pocket and hole found, depths within 0.01 mm | `tests/cam-solid-recognition.test.ts` against the `.truth.json` files | Cabinet side (30 holes, 4 pockets incl. a stepped one, 1 cut-out, L outline): position 0, Ø 0, depth 0, drill-point tip 4.8e-7 mm, area 3.6e-12 mm². Door (arch R250 exact, field R180, knob hole, 2 hinge cups on face 6): all 0, area 4e-6 mm². Feature block: all found, nothing left unexplained. IGES (holes as surfaces of revolution): within 0.0001 mm |
+| Results on layers the Stage 1 rules machine | same | Cabinet side: every layer matched, 9 operations; door: every layer matched; feature block: only `BACK_POCKET_D5` left (by design) |
+| MPR passes the export checker | same (`runJob`, custom-part output switched on for the test) | No errors for the cabinet side and the door. Off (the default): blocked with `CAM_OUTPUT_OFF`. The MPR read back: 26 x Ø5 at 13 mm, 2 x Ø8 at 13 mm, 2 x Ø8 through; door's turned-over program: 2 x Ø35 at 13 mm |
+| Drill points | same | Depth = shoulder (13); tip depth (15.403) reported. Drill operations use their default "depth to the tip", so a pointed bit never goes deeper than the model's wall |
+| Rebate stays inside the checker's limit | same | Cutter centre within radius + 0.5 mm of the part; floor cleared to the edge |
+| Speed | same | Recognition: cabinet side 109 ms, door 21 ms (in the worker) |
+
+### Limits recorded
+
+- **2.5D panels.** Sloped walls, round-overs and free-form faces are listed (with a warning) and
+  left for 3D machining; a chamfer or round-over along the outline is cut straight (warning).
+- **Underside pockets** are found and put on `BACK_POCKET_...` (no rule machines them).
+- **Holes**: a round wall that does not go all the way round is not a hole (pocket corners).
+  Edge holes need a horizontal drill in the tool table (none in the placeholder table): they land on
+  `EDGE_HOLE_...` and are not machined.
+- **Pocket corners**: the Stage 1 pocket picks the widest cutter that fits the pocket's width; it
+  does not look at the corner radius, so a 12 mm cutter in a 40 x 20 R3 recess leaves R6 corners.
+  The feature list shows each pocket's smallest corner radius.
+
+## Next: M2.5c assemblies, faces, face machining
 
 - SOL-01..04, CAD-16, NEW-19 as in the prompt (M2.5b-e above).
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
@@ -622,3 +660,5 @@ side), shelf in inches (IGES). Each has a `.truth.json` written from the constru
 - **Run 5 (M2.4c)**: collision checking, export checker, flags when 3D operations are calculated. See `git log`.
 - **Run 5 (M2.4d)**: cut-free pieces, screenshots, docs. M2.4 complete. See `git log`.
 - **Run 6 (M2.5a)**: solid import, reader choice, lazy WebAssembly, `app://`. See `git log`.
+- **Run 6 (M2.5b)**: feature recognition, layers, solid parts, checked MPR. Also fixes a lint error
+  that went out with M2.5a (a test helper named like a React hook). See `git log`.

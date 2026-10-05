@@ -18,6 +18,7 @@ import { formatLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { loadModelMesh, saveModelMesh, UP_OPTIONS } from './modelData'
 import { TaskProgress } from './ModelImportDialog'
+import { SolidFeatures } from './SolidFeatures'
 
 const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
   sections: { id: 'model-sections', name: 'Model sections', color: '#34d399', visible: true, locked: false },
@@ -175,6 +176,7 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
         {rep && <Badge variant="outline">{rep.openEdges ? `${rep.openEdges} open edges` : 'closed'}</Badge>}
         {model.original && <Badge variant="outline">simplified</Badge>}
       </div>
+      {model.kind === 'solid' && <SolidFeatures part={part} model={model} units={units} onChange={onChange} />}
       {busy && <TaskProgress fraction={busy.fraction} note={busy.note} onCancel={() => busy.abort.abort()} />}
 
       <fieldset disabled={!!busy} className="grid gap-2">

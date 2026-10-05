@@ -197,6 +197,46 @@ export checker. Tool numbers are still placeholders.
     clearing (`CAM_ADAPTIVE_NO_OUTPUT`).
   - With the switch off, the checker blocks the flat-layer operations too (`CAM_3D_OUTPUT_OFF`).
   - Batch runs cannot calculate 3D toolpaths yet (`CAM_3D_NOT_READY`).
+- **More 2.5D machining** (switch: More 2.5D machining, on; Machining → Add operation → More 2.5D):
+  - **Saw cuts**: the saw operation gets blade settings: tilt (angled cuts) and the side it
+    leans to; **extend to clear** (full depth right to the line ends, the blade running past
+    them by its run-out) or keep the cut on the line at the surface; extra length; skip lines
+    shorter than a minimum; join lines that lie on one line; **keep off neighbouring parts**
+    (the blade never cuts outside the outline; the uncut length is reported). The run-out comes
+    from the blade diameter (Machine & tools → tool → Blade Ø; without it a placeholder 200 mm
+    blade is assumed, with a warning). The drawing shows each cut's footprint and the blade at
+    both ends; the simulator draws the blade standing in the cut.
+  - **Facing**: mills the top of the panel (or picked closed shapes) down by a set amount, back
+    and forth or in rings, in passes. **Re-set the stock top** makes later operations on the
+    top measure their depths from the faced surface (through cuts still end where they did).
+  - **Chamfer**: a V cutter's flank makes a bevel along the picked edges, set by width or by
+    depth, optionally with the tip lower than the bevel; from shapes on the top, or from level
+    3D edges of a solid at their own height.
+  - **Cut between two curves** (the surface joining two shapes or 3D polylines, finished with
+    passes from one to the other, the tool placed exactly on that surface), **cut along a 3D
+    curve** (the tip follows a 3D polyline, or a smooth curve through its points) and
+    **Z-wave** (the depth rises and falls along a shape). These move the tool up and down while
+    cutting: simulated only, never written to woodWOP (`CAM_NO_OUTPUT`).
+  - **Hand-drawn toolpath**: pick feed lines, arcs (through a point, then the end) and rapids on
+    the drawing at a set height; undo last; edit each step in a table.
+  - **Edit toolpath** (any operation except notes and drilling): slow down in corners (distance,
+    steps, feed % at the corner), feed % on single moves, heights point by point, moves between
+    cuts at another height, reverse, and pocket start points. Point edits are tied to the moves
+    they were made on; when the toolpath is recalculated they are applied again, moved to the
+    move that ends at the same point, or marked **Edits lost** (export refused until you keep or
+    clear them).
+  - **Edge work (aggregate)**: a flat tool on an aggregate that turns about the vertical axis,
+    kept square to the edge, pushed a set distance into it at a set height (for example a
+    groove round a door's edge), in passes. Simulated only: the machine model has no aggregate
+    and no aggregate macro is confirmed, so the export checker always refuses it.
+  - **Output** (switch: Write facing, chamfers and saw cuts to MPR, **off**, also needs the
+    custom-part switch): facing, chamfers, hand-drawn toolpaths at one depth and edited
+    toolpaths become contour-milling passes; saw cuts become saw-groove macros. While it is off
+    the checker blocks them (`CAM_25D_OUTPUT_OFF`). **Saw cuts are refused while the machine
+    model has no saw unit** (`MACHINE_CANNOT`, the N-200 default), whatever the switches; angled
+    saw cuts, curve cuts, edge work, toolpaths with heights edited point by point and lost edits
+    are never written (`CAM_NO_OUTPUT`). A facing cutter's reach or a saw blade's run-out into
+    another part on the sheet is an error (`OP_HITS_NEIGHBOUR`).
 - **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and the tool.
   The material left is shown as a shaded top view or in 3D (with the tool's shank and holder,
   see-through stock and a section cut across the width or the length), with depth readouts and
@@ -401,6 +441,8 @@ src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpat
   model/           model data store (compressed, by SHA-256, outside the shop file), part files
   stock/           stock model interface, the heightfield stock, playback, cut-free pieces
   collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)
+  more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
+                   Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse)
   worker/          background compute worker (3D tasks) with progress and cancel
 src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)

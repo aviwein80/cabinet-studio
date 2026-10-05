@@ -4,7 +4,8 @@
  *
  * Part frame: X along length, Y along width, Z = 0 at face 1 and negative into the material.
  * The heightfield stores the top surface per cell, from 0 (uncut) down to -thickness (through).
- * Horizontal (edge) drilling runs below the surface, so it is backplotted but not carved.
+ * Horizontal (edge) drilling and edge work with an aggregate run below the surface, so they are
+ * backplotted but not carved.
  */
 import type { ToolShape } from '@/core/types'
 import { RAPID_RATE, simpleMoves } from './moves'
@@ -158,7 +159,8 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
       const l = len3(at, b)
       if (l < 1e-9 && !extra) return
       const rate = (kind === 'rapid' ? RAPID_RATE / 60 : kind === 'plunge' || kind === 'drill' ? plunge : feed) * k
-      const side = tp.kind === 'drill' && kind !== 'rapid' && kind !== 'drill' && Math.hypot(b.x - at.x, b.y - at.y) > 1e-9
+      // edge drilling, and edge work with an aggregate (a flat tool under the surface): drawn, not carved
+      const side = (tp.kind === 'drill' && kind !== 'rapid' && kind !== 'drill' && Math.hypot(b.x - at.x, b.y - at.y) > 1e-9) || (tp.kind === 'edge' && kind !== 'rapid')
       const seg: SimSeg = { a: at, b, kind, op: index, t0: t, t1: t + l / rate + extra, cutter, move }
       if (side) seg.side = true
       segs.push(seg)

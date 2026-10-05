@@ -35,6 +35,7 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   chamfer: 'Chamfer',
   curve: 'Curve cut',
   manual: 'Hand-drawn toolpath',
+  edge: 'Edge work (aggregate)',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -106,6 +107,10 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       op = { ...base, kind, name: { between: 'Cut between curves', follow3d: 'Cut along 3D curve', zwave: 'Z-wave' }[mode], mode, stepover: 1, depthA: 0, depthB: 5, zigzag: true, smooth: false, wave: { min: 1, max: 4, length: 40, shape: 'sine' }, tolerance: 0.01, levels: { ...DEFAULT_LEVELS, depth: 0 } }
       break
     }
+    case 'edge':
+      // PLACEHOLDER height and reach until the shop has an aggregate and supplies its own
+      op = { ...base, kind, height: 9.5, reach: 5, reachPass: 0, direction: 'climb', overrun: 5 }
+      break
     case 'manual':
       op = { ...base, kind, start: { x: 0, y: 0, z: 0 }, steps: [] }
       break
@@ -195,6 +200,7 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
       return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
     }
     case 'manual':
+    case 'edge':
       return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
     case 'face':
       // the widest flat cutter

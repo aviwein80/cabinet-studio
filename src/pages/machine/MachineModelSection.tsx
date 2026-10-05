@@ -34,7 +34,7 @@ export function MachineModelSection({ machine, updateMachine }: { machine: Machi
         onChange={(v) => upd((p) => (p.capabilities.saw = v))}
         hint="Off (until confirmed): saw grooves, on cabinets and custom parts, are blocked by the export checker. Use router pockets."
       />
-      <SwitchField label="Aggregate head fitted" checked={mm.capabilities.aggregate} onChange={(v) => upd((p) => (p.capabilities.aggregate = v))} hint="Off: edge milling with an aggregate is not offered." />
+      <SwitchField label="Aggregate head fitted" checked={mm.capabilities.aggregate} onChange={(v) => upd((p) => (p.capabilities.aggregate = v))} hint="Off: edge work with an aggregate is simulated only and the export checker refuses it." />
       <div className="grid grid-cols-2 gap-2">
         <NumField label="Table length (X)" value={mm.table.length} min={1} onChange={(v) => upd((p) => (p.table.length = v))} />
         <NumField label="Table width (Y)" value={mm.table.width} min={1} onChange={(v) => upd((p) => (p.table.width = v))} />

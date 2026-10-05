@@ -1,0 +1,61 @@
+[
+ {
+  "op": "Edge work (aggregate)",
+  "kind": "edge",
+  "tool": 103,
+  "moves": {
+   "rapid": 1,
+   "feed": 9,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 1639,
+  "box": [
+   4,
+   -2,
+   496,
+   296
+  ],
+  "zMin": -9.5,
+  "intents": {},
+  "warnings": [
+   "The machine model has no rotating aggregate: this is simulated only, and the export checker refuses it."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 250,
+    "y": -2,
+    "z": 20
+   },
+   {
+    "t": "feed",
+    "x": 250,
+    "y": -2,
+    "z": -9.5,
+    "f": "lead"
+   },
+   {
+    "t": "feed",
+    "x": 250,
+    "y": 4,
+    "z": -9.5,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 496,
+    "y": 4,
+    "z": -9.5,
+    "f": "cut"
+   }
+  ],
+  "edge": {
+   "height": 9.5,
+   "r": 3,
+   "flute": 20,
+   "side": "left"
+  },
+  "noOutput": "edge work with a rotating aggregate has no confirmed woodWOP macro"
+ }
+]

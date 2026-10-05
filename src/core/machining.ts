@@ -217,6 +217,8 @@ export interface SheetProgram {
     more25dWritten?: boolean
     /** Enabled saw operations whose grooves were not put in the program (for the saw-unit check). */
     sawUnwritten?: number
+    /** Enabled edge-work operations with an aggregate (for the aggregate check). */
+    aggregateOps?: number
   }[]
 }
 
@@ -384,6 +386,8 @@ export function buildSheetProgram(
       }
       const sawOps = inst.cam.ops.filter((o) => o.enabled && o.kind === 'saw' && o.face === 1).length
       if (sawOps && !sawWritten) custom[custom.length - 1].sawUnwritten = sawOps
+      const aggregateOps = inst.cam.ops.filter((o) => o.enabled && o.kind === 'edge').length
+      if (aggregateOps) custom[custom.length - 1].aggregateOps = aggregateOps
       continue
     }
     for (const op of inst.ops) {

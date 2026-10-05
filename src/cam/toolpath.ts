@@ -59,10 +59,10 @@ import { type Layer, waterlineFinish } from './3d/waterline'
 import { zLevelRough } from './3d/zlevel'
 import { DEFAULT_COLLISION_MARGIN } from './collision/collision'
 import { modelClearance } from './collision/model'
-import { cutterOutline, holderOf } from '@/core/machineModel'
+import { cutterOutline, holderOf, machineModelOf } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, ChamferOp, CurveOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -135,6 +135,11 @@ export interface Toolpath {
    * how many point edits were applied as made, moved to the matching move, or lost.
    */
   edited?: { base: string; applied: number; moved: number; lost: number; reversed: boolean }
+  /**
+   * Edge work with an aggregate (5AX-04): the moves are the tool tip, at the tool axis height; the
+   * tool lies flat, square to the path, on the `side` of travel where the material is.
+   */
+  edge?: { height: number; r: number; flute: number; side: 'left' | 'right' }
 }
 
 export interface GenContext {
@@ -1396,6 +1401,82 @@ function genChamfer(op: ChamferOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   if (shapes.length) tp.warnings.push(`Chamfer ${(d * tan).toFixed(2)} mm wide and ${d.toFixed(2)} mm deep with T${tool.number} (${tool.angle}°).`)
 }
 
+const EDGE_NO_OUTPUT = 'edge work with a rotating aggregate has no confirmed woodWOP macro'
+
+/**
+ * Edge work with a rotating aggregate (5AX-04): the tool lies flat with its axis `height` below
+ * face 1 and square to the edge; the aggregate turns so it stays square while the tip runs `reach`
+ * inside the picked shapes (the outline by default), in passes. It comes in from 2 mm outside the
+ * edge and goes back out the same way. Simulated only: the heightfield sees the stock from above, so
+ * the cut under the surface is drawn, not carved.
+ */
+function genEdge(op: EdgeOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  tp.noOutput = EDGE_NO_OUTPUT
+  const tool = tp.tool
+  if (!tool) {
+    tp.warnings.push('No router for the aggregate.')
+    return
+  }
+  if (!machineModelOf(ctx.machine).capabilities.aggregate) tp.warnings.push('The machine model has no rotating aggregate: this is simulated only, and the export checker refuses it.')
+  const r = tool.diameter / 2
+  const reach = Math.max(0, op.reach)
+  const flute = tool.fluteLength ?? tool.maxDepth
+  if (!(reach > 0)) {
+    tp.warnings.push('Reach into the edge is 0: nothing to cut.')
+    return
+  }
+  if (reach > flute + 1e-9) {
+    tp.warnings.push(`Reach ${reach} mm is more than T${tool.number} cuts (${flute} mm): the aggregate would hit the edge.`)
+    return
+  }
+  const T = ctx.part.thickness
+  if (op.height - r < -1e-9) tp.warnings.push(`The tool reaches ${(r - op.height).toFixed(2)} mm above face 1: the cut is open to the top.`)
+  if (op.height + r > T + 1e-9) tp.warnings.push(`The tool reaches ${(op.height + r - T).toFixed(2)} mm below the underside: check the spoilboard.`)
+  const z = -op.height
+  const picked = geometryOf(op, ctx.part).flatMap((g) => g.contours.filter((c) => c.segs.length))
+  const shapes = picked.length ? picked : [partOutline(ctx.base ?? ctx.part).contour]
+  const reaches = op.reachPass > 0 ? passDepths(reach, op.reachPass) : [reach]
+  const left = op.direction === 'climb'
+  const lv = op.levels
+  for (const g0 of shapes) {
+    let g = g0
+    if (g.closed && left !== area(g) > 0) g = reverse(g)
+    if (g.closed) g = startAtLength(g, defaultStart(g))
+    for (const rk of reaches) {
+      let path: Contour | null
+      if (g.closed) {
+        // material on the left of travel when the shape runs counter-clockwise
+        const res = offset([g], -rk, 'round')
+        path = res.length ? rotateToNearest(area(res[0]) > 0 === area(g) > 0 ? res[0] : reverse(res[0]), startOf(g)) : null
+      } else {
+        const t0 = tangentAt(g.segs[0], 0)
+        const t1 = tangentAt(g.segs[g.segs.length - 1], 1)
+        const ext: Contour = { closed: false, segs: [line(sub(startOf(g), mul(t0, op.overrun)), startOf(g)), ...g.segs, line(endOf(g), add(endOf(g), mul(t1, op.overrun)))].filter((sg) => segLength(sg) > 1e-9) }
+        path = offsetChain(ext, left ? rk : -rk)
+      }
+      if (!path || !path.segs.length) {
+        tp.warnings.push(`A shape is too small for ${rk} mm of reach and was left out.`)
+        continue
+      }
+      const S = startOf(path)
+      const E = endOf(path)
+      const t = tangentAt(path.segs[0], 0)
+      const te = tangentAt(path.segs[path.segs.length - 1], 1)
+      // out of the material: the side away from it, square to the path
+      const out = (q: P) => (left ? { x: q.y, y: -q.x } : { x: -q.y, y: q.x })
+      const A = add(S, mul(out(t), rk + 2))
+      const B = add(E, mul(out(te), rk + 2))
+      b.rapid(A.x, A.y, lv.safeZ)
+      b.feed(A.x, A.y, z, 'lead')
+      b.feed(S.x, S.y, z, 'plunge')
+      for (const sg of path.segs) b.seg(sg, z)
+      b.feed(B.x, B.y, z, 'lead')
+      b.feed(B.x, B.y, lv.safeZ, 'lead')
+    }
+  }
+  tp.edge = { height: op.height, r, flute, side: left ? 'left' : 'right' }
+}
+
 const CURVE_NO_OUTPUT = 'curve cuts move the tool up and down along the path, which needs true 3D output (off until the format is confirmed)'
 
 /** Tool-tip chains as 3D moves: down to each chain's start, along it, up again. */
@@ -1970,6 +2051,9 @@ function generateAt(op: CamOp, ctx: GenContext): Toolpath {
         break
       case 'manual':
         genManual(op, ctx, tp, b)
+        break
+      case 'edge':
+        genEdge(op, ctx, tp, b)
         break
     }
   tp.stats = stats(b.moves, feeds.feed)

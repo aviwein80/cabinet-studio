@@ -572,7 +572,26 @@ export interface ManualOp extends OpBase {
   steps: ManualStep[]
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp
+/**
+ * Edge work with a rotating aggregate (5AX-04): a horizontal tool on an aggregate that turns about
+ * the vertical axis, kept square to the edge of the picked shapes (the part outline by default) and
+ * pushed `reach` mm into it with its axis `height` mm below face 1, e.g. a groove round the edge.
+ * Only for a machine model with an aggregate; never written to woodWOP until its macro is confirmed.
+ */
+export interface EdgeOp extends OpBase {
+  kind: 'edge'
+  /** Tool axis below face 1, mm. */
+  height: number
+  /** How far the tool tip goes into the edge, square to it, mm. */
+  reach: number
+  /** Reach per pass, mm (0 = one pass). */
+  reachPass: number
+  direction: Direction
+  /** Open shapes: how far the tool runs on past each end, mm. */
+  overrun: number
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

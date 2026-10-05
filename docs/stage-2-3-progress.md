@@ -44,13 +44,13 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.6a Saw cuts, facing, format v4, switches | **Done** (October 2026) | See below. |
 | M2.6b Chamfers, cuts between curves, along 3D curves, Z-waves | **Done** (October 2026) | See below. |
 | M2.6c Hand-drawn toolpaths, toolpath edits | **Done** (October 2026) | See below. |
-| M2.6d | In progress | Aggregate edge work, screenshots, docs. |
+| M2.6d Edge work with a rotating aggregate, screenshots, docs | **Done** (October 2026) | See below. M2.6 complete. |
 | M2.7 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -73,6 +73,12 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
 11. DWG stays out. DXF only; DWG files go through the free ODA File Converter first.
 12. Rhino (.3dm) and SketchUp (.skp): no reader. Export STL or OBJ from those programs (agreed,
     run 3).
+13. With the M2.6 go-ahead: keep the 2 mm collision margin, and full-panel roughing (with a
+    warning) when there is no boundary and the model does not cover the panel (M2.4); keep the
+    6 mm rebate reach and drill pointed holes to the straight-wall depth (M2.5); flat-layer 3D
+    output, adaptive and true 3D output stay off; the saw unit and the rotating aggregate count
+    as absent on the N-200 until confirmed (ship the operations; the checker blocks their output;
+    no invented macros).
 
 ## Open questions for the owner
 
@@ -86,9 +92,10 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
 5. **3D flat-layer output on the machine**: before switching on "Write 3D roughing and waterline
    to MPR", load one roughing program in woodWOP and check how many points a contour may hold
    (not confirmed; the app warns over 2,000 points per contour).
-6. **Solid models (M2.5)**: the rebate reach (6 mm past the edge) and drilling holes with a
-   drill-point floor to the shoulder depth: confirm or change. Open one STEP file in the
-   installed app on the Windows PC and on the Mac with the network off.
+6. **Solid models (M2.5)**: open one STEP file in the installed app on the Windows PC and on the
+   Mac with the network off. (The rebate reach of 6 mm and drilling pointed holes to the
+   straight-wall depth were confirmed with the M2.6 go-ahead.)
+7. **M2.6 (saw, aggregate, cutting values)**: see "M2.6 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -856,6 +863,59 @@ proven output.
   entries become exits.
 
 
+## M2.6d edge work with a rotating aggregate: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 5AX-04 | Edge work: a flat tool on an aggregate that turns about the vertical axis, kept square to the edge of the picked shapes (the part outline by default), its tip pushed a set reach into the edge with its axis a set height below face 1, in passes; material on the left or right of travel; open edges run on past their ends; it comes in from 2 mm outside the edge and goes back out. The tool must cut the whole reach (flute length). The simulator draws the path and the tool lying flat with a block for the aggregate; it does not carve it (the heightfield sees the stock from above) and the collision check leaves it out, as for edge drilling | `genEdge` in `src/cam/toolpath.ts`, `buildTimeline` in `src/cam/sim.ts`, `FlatToolModel` in `SimulateDialog.tsx` |
+| Output | Never written: `CAM_NO_OUTPUT` (no confirmed woodWOP aggregate macro), plus `MACHINE_CANNOT` while the machine model has no aggregate (the N-200 default) | `src/core/validator.ts`, `src/core/machining.ts` |
+| Screens | Add operation → Edge work (aggregate), with a warning when the machine model has no aggregate; the Machine page's aggregate switch now says edge work is simulated only without it | `OpsPanel.tsx` (`EdgeFields`), `MachineModelSection.tsx` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Golden toolpaths on 3 reference parts | `tests/golden/cam25d/edge01-03` | Groove round a rectangle; arched door edge in two passes; one straight edge with run-on |
+| Aggregate output only with the unit; otherwise blocked clearly | `tests/cam-edge.test.ts` | Placeholder N-200: `MACHINE_CANNOT` ("need a rotating aggregate, and the machine model has none") and `CAM_NO_OUTPUT`. Aggregate declared: `CAM_NO_OUTPUT` only ("no confirmed woodWOP macro") |
+| Geometry | same | Every cutting point 4.000 mm inside the outline at -9.5; moves in and out 2 mm outside; open edge runs on to x = 610; too much reach for the tool refused |
+| Not carved, no false collisions | same | Every simulated cutting segment marked as under the surface; heightfield untouched; collision check clean |
+
+## M2.6 screenshots
+
+`docs/screenshots/stage-2-3/M2.6/` (browser preview, Playwright):
+
+- `01-add-operation-more-25d.png`: the Add operation menu with the More 2.5D group.
+- `02-saw-cuts-blade.png`: saw cuts kept inside the part: footprints with run-outs, the blade at each end, the placeholder-blade and pulled-back warnings.
+- `03-saw-blade-3d.png`: simulator 3D, looking along the groove: the blade standing in the cut at the end of its run-out.
+- `04-facing-reset-top.png`: the facing editor with "Re-set the stock top".
+- `05-chamfer.png`: the chamfer editor on the door's outline.
+- `06-wave-chamfer-simulate-3d.png`: simulator 3D after facing, chamfer and the Z-wave groove.
+- `07-between-curves.png`: passes between two circles (a bevel) and a smooth 3D curve.
+- `08-hand-drawn-toolpath.png`: a path drawn with feed lines, an arc and a rapid; the steps table.
+- `09-toolpath-edits.png`: a pocket from a start point with corner slow-down; the move table for point edits.
+- `10-edge-aggregate.png`: the edge-work editor with the no-aggregate warning.
+- `11-edge-aggregate-3d.png`: simulator 3D: the flat tool entering the panel's edge.
+- `12-edits-lost-flagged.png`: after changing the pocket's depth, a point edit no longer matches: "Edits lost" and the keep / clear banner.
+- `13-machine-switches.png`: the two new switches on the Machine page (screens on, output off).
+
+## M2.6 decisions needed (see the report)
+
+1. **Saw blade (cutting).** The blade diameter of T140 (needed for the run-out; a placeholder
+   200 mm is used meanwhile, which errs long) and, if a saw unit is ever fitted, what woodWOP's
+   saw-groove XA / XE mean (cut length at the surface or at full depth). We write the full-depth
+   span. Until answered: saw output is refused (no saw unit), and the new output switch is off.
+2. **Rotating aggregate.** Whether one will be fitted, and if so a small program saved from
+   woodWOP that uses it, so the macro can be matched. Until then: simulated only, always refused.
+   Our reading of 5AX-04 is a flat tool on an aggregate turning about the vertical axis; say if
+   you meant something else.
+3. **Placeholder cutting values for the new operations**: facing step-over 45 %, corner
+   slow-down 45° / 10 mm / 2 steps / 50 %, edge-work height 9.5 mm and reach 5 mm, Z-wave 1-4 mm
+   every 40 mm, between-curves step-over 1 mm. Replace with the shop's values when ready.
+
+## Next run: M2.7 CAD and tool additions
+
+- CAD-02, CAD-08, CAD-17, CAD-18, NEW-05, NEW-06, TOOL-04, TOOL-05, NEW-15 as in the prompt.
+
 ## Run log
 
 - **Run 1 (M2.0)**: audit and this file. Pushed `9492d66`; merged to `main` in run 2.
@@ -880,3 +940,4 @@ proven output.
 - **Run 7 (M2.6a)**: saw cuts, facing, format v4, switches. See `git log`.
 - **Run 7 (M2.6b)**: chamfers, cuts between curves, along 3D curves, Z-waves. See `git log`.
 - **Run 7 (M2.6c)**: hand-drawn toolpaths and toolpath edits. See `git log`.
+- **Run 7 (M2.6d)**: edge work with a rotating aggregate, screenshots, README, ROADMAP. M2.6 complete.

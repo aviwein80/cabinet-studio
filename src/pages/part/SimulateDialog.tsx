@@ -256,7 +256,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
         {view === 'top' ? (
           <TopView sim={sim} t={t} part={part} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} outline={outline} onPieces={setPieces} />
         ) : (
-          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
+          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Button size="icon-sm" variant="ghost" aria-label="Previous operation" title="Previous operation" onClick={prevOp}>
@@ -595,7 +595,17 @@ function bladeOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b
   return { r: sw.r, kerf: sw.kerf, tilt: sw.tilt, dir, lean }
 }
 
-function View3D({ sim, t, part, base, pos, rapid, outline, blade, r, opacity, section, spoilboard, onCarved }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number }) {
+/** Edge work with an aggregate: the tool lies flat, pointing into the material, square to the move it is on. */
+type Flat = { r: number; length: number; dir: number }
+function flatOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b: { x: number; y: number } } | null): Flat | null {
+  if (!tp?.edge || !seg) return null
+  const along = Math.atan2(seg.b.y - seg.a.y, seg.b.x - seg.a.x)
+  const still = Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y) < 1e-9
+  // into the material: to the left of travel (or right); on the moves in and out, along the move
+  return { r: tp.edge.r, length: tp.edge.flute, dir: still ? 0 : along + (tp.edge.side === 'left' ? Math.PI / 2 : -Math.PI / 2) }
+}
+
+function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opacity, section, spoilboard, onCarved }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; flat: Flat | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number }) {
   const max = Math.max(part.length, part.width)
   return (
     <div className="h-[56vh] min-h-72 overflow-hidden rounded-md border border-white/10 bg-[#0e1013]">
@@ -609,11 +619,28 @@ function View3D({ sim, t, part, base, pos, rapid, outline, blade, r, opacity, se
             <boxGeometry args={[part.length + 40, part.width + 40, Math.max(1, spoilboard)]} />
             <meshStandardMaterial color="#3a3f47" />
           </mesh>
-          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} />}
+          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : flat ? <FlatToolModel pos={pos} flat={flat} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} />}
         </group>
         <OrbitControls makeDefault />
       </Canvas>
     </div>
+  )
+}
+
+/** A tool lying flat (aggregate), its tip at `pos`, pointing along `dir` in plan. */
+function FlatToolModel({ pos, flat, rapid }: { pos: { x: number; y: number; z: number }; flat: Flat; rapid: boolean }) {
+  // a cylinder runs along its Y axis: turn it to point along dir, tip at pos, body behind it
+  return (
+    <group position={[pos.x, pos.y, pos.z]} rotation={[0, 0, flat.dir - Math.PI / 2]}>
+      <mesh position={[0, -flat.length / 2, 0]}>
+        <cylinderGeometry args={[flat.r, flat.r, flat.length, 32]} />
+        <meshStandardMaterial color={rapid ? '#f87171' : '#e7e5e4'} transparent opacity={0.7} metalness={0.4} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, -flat.length - 15, 0]}>
+        <boxGeometry args={[flat.r * 4, 30, flat.r * 4]} />
+        <meshStandardMaterial color="#64748b" transparent opacity={0.6} />
+      </mesh>
+    </group>
   )
 }
 

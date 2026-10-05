@@ -15,6 +15,7 @@ import { featuresOf } from '@/core/features'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { MachineProfile } from '@/core/types'
+import { machineModelOf } from '@/core/machineModel'
 import { formatLength } from '@/core/units'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/app/store'
@@ -139,6 +140,7 @@ export function OpsPanel({
                 <DropdownMenuItem onSelect={() => add('curve', { mode: 'follow3d' } as Partial<CamOp>)}>Cut along a 3D curve</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('curve', { mode: 'zwave' } as Partial<CamOp>)}>Z-wave along a shape</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('manual')}>{OP_LABEL.manual}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('edge')}>{OP_LABEL.edge}</DropdownMenuItem>
               </>
             )}
             {on3d && (
@@ -212,6 +214,8 @@ export function OpsPanel({
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
                         : op.kind === 'chamfer'
                           ? `chamfer ${formatLength(op.size, units)} ${op.drive === 'width' ? 'wide' : 'deep'}`
+                          : op.kind === 'edge'
+                            ? `edge ${formatLength(op.reach, units)} in, ${formatLength(op.height, units)} down`
                           : op.kind === 'curve'
                             ? { between: 'between two curves', follow3d: 'along 3D curves', zwave: `wave ${formatLength(op.wave.min, units)} to ${formatLength(op.wave.max, units)}` }[op.mode]
                         : op.levels.through
@@ -400,14 +404,14 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind === 'manual' && (
+      {(op.kind === 'manual' || op.kind === 'edge') && (
         <Group title="Heights">
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} />
           <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => lv({ rapidZ: v })} />
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && !OPS_3D.has(op.kind) && (
+      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -516,6 +520,23 @@ function AdaptiveFields({ ad, onAd, rampAngle, onRamp }: { ad: AdaptiveSettings;
       <NumField label="Adaptive feed up to" suffix="×" value={ad.feedBoost} min={1} max={3} step={0.1} onChange={(v) => onAd({ feedBoost: Math.max(1, v) })} hint="Lighter cuts and moves back run faster; 1 = off" />
       <NumField label="Helix angle" suffix="°" value={rampAngle} min={1} max={45} onChange={onRamp} hint="Entries are always helixes" />
     </>
+  )
+}
+
+/** Edge work with a rotating aggregate (5AX-04). */
+function EdgeFields({ op, onChange }: { op: Extract<CamOp, { kind: 'edge' }>; onChange: (o: CamOp) => void }) {
+  const aggregate = useStore((s) => machineModelOf(s.data!.machine).capabilities.aggregate)
+  return (
+    <Group title="Edge work (aggregate)">
+      {!aggregate && <div className="col-span-2 rounded border border-amber-400/30 bg-amber-400/10 p-2 text-[11px] text-amber-100">The machine model has no rotating aggregate (Machine &amp; tools → Aggregate head fitted). This is simulated only; the export checker refuses it.</div>}
+      <NumField label="Tool axis below face 1" value={op.height} min={0} step={0.5} onChange={(v) => onChange({ ...op, height: v })} hint="Placeholder default" />
+      <NumField label="Reach into the edge" value={op.reach} min={0} step={0.5} onChange={(v) => onChange({ ...op, reach: v })} />
+      <NumField label="Reach per pass" value={op.reachPass} min={0} step={0.5} onChange={(v) => onChange({ ...op, reachPass: v })} hint="0 = one pass" />
+      <SelectField label="Travel" value={op.direction} options={[{ value: 'climb', label: 'Material on the left' }, { value: 'conventional', label: 'Material on the right' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+      <NumField label="Run on past open ends" value={op.overrun} min={0} onChange={(v) => onChange({ ...op, overrun: v })} />
+      <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} edge shape(s)` : 'No shapes picked: the part outline'}</div>
+      <div className="col-span-2 text-[11px] text-stone-400">A flat tool on an aggregate turning about the vertical axis, kept square to the edge. Never written to woodWOP until the aggregate's macro is confirmed.</div>
+    </Group>
   )
 }
 
@@ -775,6 +796,8 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
       )
     case 'saw':
       return <SawFields op={op} onChange={onChange} />
+    case 'edge':
+      return <EdgeFields op={op} onChange={onChange} />
     case 'chamfer':
       return (
         <Group title="Chamfer">

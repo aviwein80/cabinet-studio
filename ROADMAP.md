@@ -38,8 +38,13 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   2026): STEP / IGES / BREP import with face ids and colours (OpenCascade reader as separate,
   lazily loaded WebAssembly), feature recognition onto layers the Stage 1 rules machine (checked
   MPR, output still off), assemblies split into parts, faces to layers / colours / grain,
-  machining picked faces, 3D wires and surfaces, `app://` in the desktop app. Next: M2.6 (more
-  2.5D machining).
+  machining picked faces, 3D wires and surfaces, `app://` in the desktop app. **M2.6 more 2.5D
+  machining: done** (October 2026): saw cuts with blade run-out, joining and keep-off; facing
+  with re-set stock top; chamfers; cuts between curves, along 3D curves and Z-waves; hand-drawn
+  toolpaths; toolpath edits that survive recalculation or are flagged; edge work with a rotating
+  aggregate (simulation only). Part format version 4. Saw and aggregate output are refused while
+  the machine model has no such unit (the N-200 default); the new output switch is off. Next:
+  M2.7 (CAD and tool additions).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -49,6 +54,13 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - The new milestone order and the M2.2 split are approved.
   - DXF only (DWG through the free ODA converter); no Rhino or SketchUp readers. LGPL only as a
     separately loaded, replaceable WebAssembly with notices.
+  - M2.6: the saw unit and the rotating aggregate count as absent on the N-200 until confirmed;
+    their operations ship, and the export checker refuses their output with a clear message. No
+    saw or aggregate macro is presented as proven output.
+- Open for M2.6 (see `docs/stage-2-3-progress.md`): the real saw blade diameter and what
+  woodWOP's saw-groove XA/XE mean (cut length at the surface or at full depth), whether a
+  rotating aggregate will be fitted (and a sample program for it), and the shop's facing
+  step-over and corner slow-down values.
 
 ## Phase 0: prove the output on the real machine (paused)
 

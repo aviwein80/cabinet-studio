@@ -385,7 +385,8 @@ export function PartCanvas(props: CanvasProps) {
               .filter((tp) => !props.hiddenOps.has(tp.opId))
               .map((tp) => {
                 const { cut, rapid, drills } = toolpathPaths(tp)
-                const d = tp.tool?.diameter ?? 6
+                // (edge work: the tool lies flat, so its width is not drawn round the path)
+                const d = tp.kind === 'edge' ? 1 : (tp.tool?.diameter ?? 6)
                 return (
                   <g key={tp.opId}>
                     <path d={cut} stroke="#0ea5e9" strokeOpacity={0.18} strokeWidth={d} strokeLinecap="round" strokeLinejoin="round" fill="none" />

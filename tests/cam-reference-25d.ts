@@ -176,3 +176,17 @@ function withPointEdits(p: CamPart): CamPart {
   const edits = { ...op.edits, base, feeds: [{ from: anchorOf(moves, 10), to: anchorOf(moves, 14), percent: 60 }], z: [{ at: anchorOf(moves, 20), z: moves[20].z - 0.5 }] }
   return { ...p, ops: [{ ...op, edits }] }
 }
+
+/** Edge work with a rotating aggregate (5AX-04): three reference parts. */
+export function edgeParts(): CamPart[] {
+  n = 600
+  return [
+    part('edge01', 'Groove round the outline, one pass', [500, 300, 19], [E(C(rect(0, 0, 500, 300)))], () => [OP('edge', [], { toolId: 't103', height: 9.5, reach: 4 } as Partial<CamOp>)]),
+    part('edge02', 'Arched door edge in two passes', [400, 700, 19], [E(C({ closed: true, segs: [line(pt(0, 0), pt(400, 0)), line(pt(400, 0), pt(400, 600)), arc(pt(400, 600), pt(0, 600), pt(200, 450), true), line(pt(0, 600), pt(0, 0))] }))], () => [
+      OP('edge', [], { toolId: 't103', height: 6, reach: 6, reachPass: 3, direction: 'conventional' } as Partial<CamOp>),
+    ]),
+    part('edge03', 'One straight edge with run-on past both ends', [600, 400, 25], [E(C(rect(0, 0, 600, 400))), E(C(polyline([pt(0, 0), pt(600, 0)], false)), 'machining')], (es) => [
+      OP('edge', ids(es, 1), { toolId: 't102', height: 12.5, reach: 8, overrun: 10 } as Partial<CamOp>),
+    ]),
+  ]
+}

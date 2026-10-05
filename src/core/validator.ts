@@ -295,6 +295,8 @@ export function validateJob(
           code: 'CAM_25D_OUTPUT_OFF',
           message: `Custom part #${c.partNo} ${name}: ${c.more25d} newer 2.5D operation(s) (facing, chamfers, saw-cut settings, hand-drawn or edited toolpaths) are not written because their output is off (Machine > Features).`,
         })
+      if (c.aggregateOps && !model.capabilities.aggregate)
+        add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: `Custom part #${c.partNo} ${name}: ${c.aggregateOps} edge-work operation(s) need a rotating aggregate, and the machine model has none. Confirm the unit on the Machine page (Aggregate head fitted) or machine the edge another way.` })
       if (c.sawUnwritten && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(`Custom part #${c.partNo} ${name}: ${c.sawUnwritten} saw operation(s)`) })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
       if (c.written && c.backHoles > 0)

@@ -39,13 +39,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.5a Solid import: reader choice, lazy WASM, face ids and types, packaging | **Done** (October 2026) | See below. |
 | M2.5b Feature recognition to layers, rules and a checked MPR | **Done** (October 2026) | See below. |
 | M2.5c Assemblies, faces to layers / colours / grain, machining picked faces | **Done** (October 2026) | See below. |
-| M2.5d - M2.5e | In progress | 3D wires and surfaces; packaged-app check, screenshots and docs. |
+| M2.5d 3D wires and surfaces | **Done** (October 2026) | See below. |
+| M2.5e | In progress | Packaged-app check, screenshots and docs. |
 | M2.6 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -662,7 +663,41 @@ an underside pocket, a 60 mm round pocket, holes in all four edges, a rebate and
 | Face colours; grain from a face | same | Red face found by colour; set / cleared in the app; side's grain along file Z (its 720 length); the door's 400 mm bottom edge face puts 400 along X |
 | Stale when the solid changes | same | New version: every operation on its shapes stale, every shape listed; "Update shapes": all made again, same geometry; a different solid: shapes listed as missing |
 
-## Next: M2.5d 3D wires and surfaces
+## M2.5d 3D wires and surfaces: what was built
+
+All in our own TypeScript; new surfaces are 3D models (meshes in part coordinates, stored like
+imported ones) that the 3D strategies machine. Round shapes are divided so facets stay within
+0.01 mm of the true surface.
+
+| Spec ID | What | Where |
+|---|---|---|
+| CAD-16 | Edges where a solid's faces meet as 3D polylines (one per pair of faces; smooth joins left out; angles from the exact surfaces); contours joined from picked edges or paths (projected onto face 1); faces as a surface of their own; 3D polylines typed in and edited point by point (move, insert, remove; length in 3D) | `src/cam/solid/wires.ts`, `src/cam/mesh/poly3d.ts`, Properties panel |
+| NEW-19 | Revolve (a profile: its left end is the axis, its top face 1; any angle), ruled between two curves, loft through sections, sweep a section along a path (no twist: rotation-minimising frames), extrude, flat (a closed shape with holes filled), fillet between two flat faces of a solid (outside edge or inside corner), split by a level plane (keep above or below), extend open edges (straight on, square corners), untrim a face (flat: its rectangle; round: the whole cylinder or cone; sphere), solid to mesh | `src/cam/mesh/surface.ts`, `wires.ts` |
+| Screens | 3D tab: "Surfaces from the drawing" (Extrude, Flat, Ruled, Loft, Sweep, Revolve on the shapes picked in the drawing; Z1/Z2), "3D wires" (Join to contour, New 3D polyline). Faces panel: From faces, Untrim, Edges, Fillet (two flat faces, radius), To mesh. Mesh models: Extend by, Keep above / below Z | `SurfacesPanel.tsx`, `SolidFacesPanel.tsx`, `ModelsPanel.tsx` |
+| Worker | Surface making and every face job (machining faces, sending to layers, updating shapes, untrim, edges, fillet) run in the background worker; recognition and surface code are not in the start-up bundle | `surface.make`, `solid.faces`, `solid.machineFaces`, `solid.sendFaces`, `solid.refresh` |
+
+### Acceptance (analytic checks, `tests/cam-surfaces.test.ts`)
+
+| Check | Measured |
+|---|---|
+| Revolve: quarter circle R50 -> hemisphere | Every point on the sphere (float32 storage); facet centres within 0.02 mm inside; area within 0.1 % of 2πr² |
+| Ruled between circles R50 (z 0) and R30 (z -20) | Every point on the cone; area within 0.1 % of π(R+r)·slant |
+| Loft, extrude, flat with a hole | Areas exact (to 1e-6) |
+| Sweep: circle R5 along a line / a quarter arc R50 | Every point 5 from the path (1e-4); areas match Pappus within 0.1 % |
+| Fillet between two flat faces | Every point at the radius from the centre line; tangent at both faces; outside edge and inside corner; on the solid: a round-over of the panel edge and of a pocket corner |
+| Split, extend | Split cube areas add up; a 10 x 10 square extended by 2 is 14 x 14 |
+| Edges, join, faces, untrim on the cabinet side | Inside face's outline edges = 2 x (720 + 560) mm exactly, all at 90°; joined into one closed contour of the L's area; face surface = face area; untrimmed inside face = 720 x 560 rectangle; R6 corner -> whole cylinder |
+
+### Limits recorded
+
+- **Fillet** is between two flat faces only. Curved-to-curved fillets, true trimming and untrimming
+  of free-form faces need a B-rep modelling kernel (the replicad OpenCascade build is the option;
+  23 MB, not added). Untrim of a free-form face says so.
+- **Surfaces are meshes** (facets within 0.01 mm), not exact B-rep surfaces; the 3D strategies
+  work on meshes anyway.
+- **Extend** is straight on (linear), not along the surface's curvature.
+
+## Next: M2.5e packaged check, screenshots, docs
 
 - SOL-01..04, CAD-16, NEW-19 as in the prompt (M2.5b-e above).
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
@@ -686,3 +721,4 @@ an underside pocket, a 60 mm round pocket, holes in all four edges, a rebate and
 - **Run 6 (M2.5b)**: feature recognition, layers, solid parts, checked MPR. Also fixes a lint error
   that went out with M2.5a (a test helper named like a React hook). See `git log`.
 - **Run 6 (M2.5c)**: assemblies, faces to layers / colours / grain, machining picked faces. See `git log`.
+- **Run 6 (M2.5d)**: 3D wires and surfaces; face jobs moved to the worker. See `git log`.

@@ -4,16 +4,20 @@ import { toast } from 'sonner'
 import { useStore } from '@/app/store'
 import { recipesOf } from '@/cam/rules'
 import { faceLabel } from '@/cam/solid/encode'
-import { type FaceAction, type FaceType, faceColors, facesByColor, facesByType, faceType, machineFaces, refreshSolidShapes, sendFacesToLayer, setFaceColor, staleSolidShapes } from '@/cam/solid/faces'
+import type { FaceAction } from '@/cam/solid/faces'
+import { type FaceType, faceColors, facesByColor, facesByType, faceType, setFaceColor, staleSolidShapes } from '@/cam/solid/faceSelect'
 import { faceCount, type SolidData } from '@/cam/solid/types'
 import type { CamPart, ModelRef } from '@/cam/types'
-import { occtVendorUrl, solidCompute } from '@/cam/worker/client'
+import { compute, occtVendorUrl, solidCompute } from '@/cam/worker/client'
+import type { SolidFacesJob } from '@/cam/worker/tasks'
+import { makeEntity } from '@/cam/doc'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Cancelled } from '@/core/cancel'
 import { useFacePick } from './facePick'
 import { TaskProgress } from './ModelImportDialog'
+import { addSurfaceModel, loadModelMesh, MODEL_LAYER, saveModelMesh } from './modelData'
 import { loadModelSolid, saveSolid } from './solidData'
 
 const TYPES: { value: FaceType; label: string }[] = [
@@ -39,6 +43,7 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
   const [layer, setLayer] = useState('')
   const [recipe, setRecipe] = useState('__none__')
   const [hole, setHole] = useState<number | null>(null)
+  const [fillet, setFillet] = useState(3)
   const [busy, setBusy] = useState<{ fraction: number; note?: string; abort: AbortController } | null>(null)
   const input = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -56,30 +61,81 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
   const faceOf = (id: number) => solid?.bodies.flatMap((b) => b.faces).find((f) => f.id === id)
   const holeSizes = solid ? [...new Set(solid.bodies.flatMap((b) => b.faces).filter((f) => faceType(f) === 'hole').map((f) => Math.round((f.surface.r ?? 0) * 2000) / 1000))].sort((a, b) => a - b) : []
 
-  const machine = (action: FaceAction) => {
+  /** Run a face job in the background worker (recognition can take a moment on big parts). */
+  const inWorker = async <T,>(note: string, job: (signal: AbortSignal) => Promise<T>): Promise<T | null> => {
+    const abort = new AbortController()
+    setBusy({ fraction: 0.3, note, abort })
+    try {
+      return await job(abort.signal)
+    } catch (e) {
+      if (!(e instanceof Cancelled)) toast.error(e instanceof Error ? e.message : String(e))
+      return null
+    } finally {
+      setBusy(null)
+    }
+  }
+  const machine = async (action: FaceAction) => {
     if (!solid || !picked.length) return
-    const r = machineFaces(part, model, solid, picked, action)
-    if (r.op) {
+    const r = await inWorker('Machining the faces', (signal) => compute().run('solid.machineFaces', { part, model, solid, faces: picked, action }, { signal }))
+    if (!r) return
+    if (r.opName) {
       onChange(r.part)
-      toast.success(`${r.op.name}: ${r.entities.length} shape(s) from the picked faces`, r.warnings.length ? { description: r.warnings.join(' ') } : undefined)
+      toast.success(`${r.opName}: ${r.made} shape(s) from the picked faces`, r.warnings.length ? { description: r.warnings.join(' ') } : undefined)
     } else toast.warning(r.warnings.join(' ') || 'Nothing to machine on those faces.')
   }
-  const send = () => {
+  const send = async () => {
     if (!solid || !picked.length || !layer.trim()) return
     const rc = recipe === '__none__' ? undefined : recipesOf(lib ?? {}).find((x) => x.id === recipe)
-    const r = sendFacesToLayer(part, model, solid, picked, layer, rc)
-    if (r.entities.length) {
+    const r = await inWorker('Sending the faces', (signal) => compute().run('solid.sendFaces', { part, model, solid, faces: picked, layer, ...(rc ? { recipe: rc } : {}) }, { signal }))
+    if (!r) return
+    if (r.made) {
       onChange(r.part)
-      toast.success(`${r.entities.length} shape(s) on layer “${layer.trim()}”${rc ? ` with “${rc.name}”` : ''}`)
+      toast.success(`${r.made} shape(s) on layer “${layer.trim()}”${rc ? ` with “${rc.name}”` : ''}`)
     } else toast.warning(r.warnings.join(' '))
   }
-  const update = () => {
+  const update = async () => {
     if (!solid) return
-    const r = refreshSolidShapes(part, model, solid)
+    const r = await inWorker('Updating the shapes', (signal) => compute().run('solid.refresh', { part, model, solid }, { signal }))
+    if (!r) return
     onChange(r.part)
-    if (r.missing.length) toast.warning(`${r.updated} shape(s) updated; ${r.missing.length} could not be found on the new solid (their faces are gone) and were left as they were.`)
+    if (r.missing) toast.warning(`${r.updated} shape(s) updated; ${r.missing} could not be found on the new solid (their faces are gone) and were left as they were.`)
     else toast.success(`${r.updated} shape(s) updated from the solid. Their operations are marked to calculate again.`)
   }
+  /** Surfaces and edges from the picked faces (in part coordinates as the model sits). */
+  const fromFaces = async (job: SolidFacesJob, name: string) => {
+    if (!solid) return
+    const abort = new AbortController()
+    setBusy({ fraction: 0.3, note: name, abort })
+    try {
+      const r = await compute().run('solid.faces', { solid, place: model.place, job }, { signal: abort.signal })
+      if (r.mesh) {
+        onChange(await addSurfaceModel(part, r.mesh, `${model.name}: ${name.toLowerCase()}`, name))
+        toast.success(`${name} added as a 3D model`)
+      } else if (r.edges) {
+        const layer = { id: 'model-edges', name: 'Model edges', color: '#f472b6', visible: true, locked: false }
+        const layers = part.layers.some((l) => l.id === layer.id) ? part.layers : [...part.layers, layer]
+        onChange({ ...part, layers, entities: [...part.entities, ...r.edges.map((pts) => makeEntity({ t: 'poly3d', pts }, layer.id))] })
+        toast.success(`${r.edges.length} edge(s) as 3D polylines on “Model edges”`)
+      }
+    } catch (e) {
+      if (!(e instanceof Cancelled)) toast.error(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+  /** The solid as a plain mesh model (for mesh tools such as simplify); the solid is hidden. */
+  const toMesh = async () => {
+    try {
+      const mesh = await loadModelMesh(model.blob)
+      const hash = await saveModelMesh(mesh)
+      const copy: ModelRef = { id: `${model.id}m`, name: `${model.name} (mesh)`, kind: 'mesh', blob: hash, source: model.source, units: model.units, place: { ...model.place }, layer: MODEL_LAYER.id, visible: true, triangles: mesh.indices.length / 3, size: model.size }
+      onChange({ ...part, models: [...(part.models ?? []).map((m) => (m.id === model.id ? { ...m, visible: false } : m)), copy] })
+      toast.success('Mesh copy added; the solid is hidden (its faces stay available).')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   /** Read a new version of the file: same model, new data; the shapes are then updated by face id. */
   const newVersion = async (f: File) => {
     const abort = new AbortController()
@@ -112,6 +168,9 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
             e.target.value = ''
             if (f) void newVersion(f)
           }} />
+        <Button size="xs" variant="ghost" disabled={!!busy} onClick={() => void toMesh()} title="A plain mesh copy of the solid">
+          To mesh
+        </Button>
         <Button size="xs" variant="ghost" disabled={!!busy} onClick={() => input.current?.click()} title="Read a new version of the file into this model">
           <FileUp /> New version
         </Button>
@@ -120,7 +179,7 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
       {stale.length > 0 && (
         <div className="flex items-center gap-2 rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-amber-100">
           <span className="flex-1">The solid changed: {stale.length} shape(s) made from its faces are out of date, and so are their operations.</span>
-          <Button size="xs" variant="secondary" onClick={update}>
+          <Button size="xs" variant="secondary" onClick={() => void update()}>
             <RefreshCw /> Update shapes
           </Button>
         </div>
@@ -184,7 +243,7 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
           <div className="flex flex-wrap items-center gap-1">
             <span className="text-stone-400">Machine:</span>
             {(['profile', 'pocket', 'drill', 'saw'] as FaceAction[]).map((a) => (
-              <Button key={a} size="xs" variant="secondary" onClick={() => machine(a)}>
+              <Button key={a} size="xs" variant="secondary" onClick={() => void machine(a)}>
                 {a === 'profile' ? 'Profile' : a === 'pocket' ? 'Pocket' : a === 'drill' ? 'Drill' : 'Saw'}
               </Button>
             ))}
@@ -220,9 +279,25 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
                 ))}
               </SelectContent>
             </Select>
-            <Button size="xs" variant="secondary" disabled={!layer.trim()} onClick={send}>
+            <Button size="xs" variant="secondary" disabled={!layer.trim()} onClick={() => void send()}>
               Send to layer
             </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-stone-400">Surfaces:</span>
+            <Button size="xs" variant="secondary" onClick={() => void fromFaces({ k: 'mesh', faces: picked }, 'Surface from faces')}>
+              From faces
+            </Button>
+            <Button size="xs" variant="secondary" disabled={picked.length !== 1} onClick={() => void fromFaces({ k: 'untrim', face: picked[0], tol: 0.01 }, 'Untrimmed face')} title="The face's whole surface, without its holes and cut edges">
+              Untrim
+            </Button>
+            <Button size="xs" variant="secondary" onClick={() => void fromFaces({ k: 'edges', faces: picked, minAngle: 1 }, 'Edges')}>
+              Edges
+            </Button>
+            <Button size="xs" variant="secondary" disabled={picked.length !== 2} onClick={() => void fromFaces({ k: 'fillet', a: picked[0], b: picked[1], r: fillet, tol: 0.01 }, `Fillet R${fillet}`)} title="Round the edge between two flat faces">
+              Fillet
+            </Button>
+            <Input aria-label="Fillet radius" className="h-6 w-12 px-1 text-[11px]" defaultValue={fillet} onBlur={(e) => Number(e.target.value) > 0 && setFillet(Number(e.target.value))} />
           </div>
         </>
       )}

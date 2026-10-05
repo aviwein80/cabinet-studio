@@ -13,7 +13,7 @@ import { deleteFacets, type FacetFilter, featureEdges, projectOutline, sectionAt
 import type { Mesh, MeshReport, MeshUnits } from '../mesh/types'
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
-import type { CamPart, ModelPlacement, UpAxis } from '../types'
+import type { CamPart, ModelPlacement, ModelRef, Recipe, UpAxis } from '../types'
 import { generateOp, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
 import { type Collision, partCollisions } from '../collision/collision'
@@ -24,7 +24,9 @@ import type { SolidData } from '../solid/types'
 import { type Recognition, recognizePanel, type RecognizeOptions } from '../solid/recognize'
 import { type FeatureRow, featureEntities, solidToPart, type SolidPartOptions } from '../solid/toPart'
 import { type AssemblyPart, assemblyParts } from '../solid/assembly'
-import { grainDirection } from '../solid/faces'
+import { type FaceAction, grainDirection, machineFaces, placementFrame, refreshSolidShapes, sendFacesToLayer } from '../solid/faces'
+import { extendMesh, extrude, flat, loft, revolve, ruled, splitMesh, sweep, type V3 } from '../mesh/surface'
+import { facesMesh, filletFaces, solidEdges, untrimFace } from '../solid/wires'
 import type { Entity, Layer } from '../types'
 
 export interface ImportedModel {
@@ -61,12 +63,47 @@ export interface TaskMap {
   'solid.assembly': { in: { solid: SolidData; opt: Omit<RecognizeOptions, 'frame'> }; out: AssemblyPart[] }
   /** A custom part from one body of a solid, laid flat with its features on layers. */
   'solid.part': { in: { solid: SolidData; opt: SolidPartOptions }; out: { part: CamPart; rows: FeatureRow[]; warnings: string[] } }
+  /** Make or edit a surface (NEW-19); the result is a mesh in part coordinates. */
+  'surface.make': { in: SurfaceJob; out: Mesh }
+  /** Surfaces and edges from a solid's faces (CAD-16): in part coordinates as the model is placed. */
+  'solid.faces': { in: { solid: SolidData; place: ModelPlacement; job: SolidFacesJob }; out: { mesh?: Mesh; edges?: [number, number, number][][] } }
+  /** Machine picked faces (SOL-02): the part with the new shapes and operation. */
+  'solid.machineFaces': { in: { part: CamPart; model: ModelRef; solid: SolidData; faces: number[]; action: FaceAction }; out: { part: CamPart; made: number; opName: string | null; warnings: string[] } }
+  /** Send faces to a layer, with a recipe's operations (SOL-03). */
+  'solid.sendFaces': { in: { part: CamPart; model: ModelRef; solid: SolidData; faces: number[]; layer: string; recipe?: Recipe }; out: { part: CamPart; made: number; warnings: string[] } }
+  /** Make a model's shapes again from its current solid (same face ids). */
+  'solid.refresh': { in: { part: CamPart; model: ModelRef; solid: SolidData }; out: { part: CamPart; updated: number; missing: number } }
   /** Store any bytes (the original file of a solid). */
   'blob.packBytes': { in: { bytes: Uint8Array }; out: Packed }
   /** Toolpaths of the given (3D) operations; meshes by blob hash. */
   'cam.generate': { in: { part: CamPart; machine: MachineProfile; opIds: string[]; meshes: Record<string, Mesh> }; out: Toolpath[] }
   /** Collision check of toolpaths on a panel (operations numbered in program order). */
   'sim.collide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
+}
+
+export type SurfaceJob =
+  | { k: 'revolve'; profile: [number, number][]; angle: number; centre: [number, number]; tol: number }
+  | { k: 'ruled'; a: V3[]; b: V3[] }
+  | { k: 'loft'; sections: V3[][] }
+  | { k: 'extrude'; curves: V3[][]; v: V3 }
+  | { k: 'flat'; outer: [number, number][]; holes: [number, number][][]; z: number }
+  | { k: 'sweep'; section: [number, number][]; closed: boolean; path: V3[] }
+  | { k: 'extend'; mesh: Mesh; d: number }
+  | { k: 'split'; mesh: Mesh; z: number; keep: 'above' | 'below' }
+
+export type SolidFacesJob = { k: 'mesh'; faces: number[] } | { k: 'untrim'; face: number; tol: number } | { k: 'edges'; faces?: number[]; minAngle: number } | { k: 'fillet'; a: number; b: number; r: number; tol: number }
+
+/** Several meshes as one (for extruding several curves). */
+function joinMeshes(ms: Mesh[]): Mesh {
+  let nv = 0
+  const pos: number[] = []
+  const idx: number[] = []
+  for (const m of ms) {
+    pos.push(...m.positions)
+    for (const i of m.indices) idx.push(i + nv)
+    nv += m.positions.length / 3
+  }
+  return { positions: Float32Array.from(pos), indices: Uint32Array.from(idx) }
 }
 
 export type TaskName = keyof TaskMap
@@ -143,6 +180,57 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     work.progress?.(0.1, 'Finding features')
     const { part, rows, recognition } = solidToPart(solid, opt)
     return { part, rows, warnings: recognition.warnings }
+  },
+  'surface.make'(job) {
+    switch (job.k) {
+      case 'revolve':
+        return revolve(job.profile, { angle: job.angle, centre: job.centre, tol: job.tol })
+      case 'ruled':
+        return ruled(job.a, job.b)
+      case 'loft':
+        return loft(job.sections)
+      case 'extrude':
+        return joinMeshes(job.curves.map((c) => extrude(c, job.v)))
+      case 'flat':
+        return flat(job.outer, job.holes, job.z)
+      case 'sweep':
+        return sweep(job.section, job.path, { closedSection: job.closed })
+      case 'extend':
+        return extendMesh(job.mesh, job.d)
+      case 'split': {
+        const r = splitMesh(job.mesh, { p: [0, 0, job.z], n: [0, 0, 1] })
+        return job.keep === 'above' ? r.above : r.below
+      }
+    }
+  },
+  'solid.faces'({ solid, place, job }) {
+    const face = job.k === 'mesh' ? job.faces[0] : job.k === 'untrim' ? job.face : job.k === 'fillet' ? job.a : job.faces?.[0]
+    const body = face !== undefined ? solid.bodies.find((b) => b.faces.some((f) => f.id === face)) : solid.bodies[0]
+    if (!body) throw new Error('Those faces are not in this solid.')
+    const pf = placementFrame(body, place)
+    if ('error' in pf) throw new Error(pf.error)
+    switch (job.k) {
+      case 'mesh':
+        return { mesh: facesMesh(body, pf.frame, job.faces) }
+      case 'untrim':
+        return { mesh: untrimFace(body, pf.frame, job.face, job.tol) }
+      case 'fillet':
+        return { mesh: filletFaces(body, pf.frame, job.a, job.b, job.r, job.tol) }
+      case 'edges':
+        return { edges: solidEdges(body, pf.frame, { faces: job.faces, minAngle: job.minAngle }).map((e) => e.pts) }
+    }
+  },
+  'solid.machineFaces'({ part, model, solid, faces, action }) {
+    const r = machineFaces(part, model, solid, faces, action)
+    return { part: r.part, made: r.entities.length, opName: r.op?.name ?? null, warnings: r.warnings }
+  },
+  'solid.sendFaces'({ part, model, solid, faces, layer, recipe }) {
+    const r = sendFacesToLayer(part, model, solid, faces, layer, recipe)
+    return { part: r.part, made: r.entities.length, warnings: r.warnings }
+  },
+  'solid.refresh'({ part, model, solid }) {
+    const r = refreshSolidShapes(part, model, solid)
+    return { part: r.part, updated: r.updated, missing: r.missing.length }
   },
   async 'blob.packBytes'({ bytes }) {
     return { hash: await sha256Hex(bytes), gz: await gzip(bytes) }

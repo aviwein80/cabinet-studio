@@ -7,6 +7,7 @@ import { area, boxOf, contourLength, radius } from '@/cam/geom'
 import type { CamPart, Entity, FaceId, Layer } from '@/cam/types'
 import { NONE, NumField, SelectField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
+import { deletePoint3d, insertPoint3d, movePoint3d, poly3dLength } from '@/cam/mesh/poly3d'
 import { Input } from '@/components/ui/input'
 import type { Material, UnitSystem } from '@/core/types'
 import { formatLength } from '@/core/units'
@@ -217,6 +218,24 @@ function EntityProps({ e, part, fmt, nodeSeg, onChange }: { e: Entity; part: Cam
             <NumField label="Diameter" value={g.r * 2} min={0.01} onChange={(v) => setE({ g: { ...g, r: v / 2 } })} />
             <NumField label="Hole depth" value={e.depth ?? 0} min={0} onChange={(v) => setE({ depth: v || undefined })} hint="Used by drilling when set" />
           </>
+        )}
+        {g.t === 'poly3d' && (
+          <div className="col-span-2 grid gap-1">
+            {g.pts.map((q, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto_auto] items-end gap-1">
+                <NumField label={i ? '' : 'X'} value={q[0]} onChange={(v) => setE({ g: movePoint3d(e, i, [v, q[1], q[2]]).g })} />
+                <NumField label={i ? '' : 'Y'} value={q[1]} onChange={(v) => setE({ g: movePoint3d(e, i, [q[0], v, q[2]]).g })} />
+                <NumField label={i ? '' : 'Z'} value={q[2]} onChange={(v) => setE({ g: movePoint3d(e, i, [q[0], q[1], v]).g })} />
+                <Button size="icon-xs" variant="ghost" aria-label={`Add a point after point ${i + 1}`} onClick={() => setE({ g: insertPoint3d(e, i).g })}>
+                  +
+                </Button>
+                <Button size="icon-xs" variant="ghost" aria-label={`Remove point ${i + 1}`} disabled={g.pts.length <= 2} onClick={() => setE({ g: deletePoint3d(e, i).g })}>
+                  −
+                </Button>
+              </div>
+            ))}
+            <div className="text-[11px] text-stone-400">Length {fmt(poly3dLength(g.pts))} in 3D</div>
+          </div>
         )}
         {g.t === 'text' && (
           <>

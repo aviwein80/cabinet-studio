@@ -561,7 +561,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TabsList>
             {feat.cam3d && (
               <TabsContent value="models" className="min-h-0 flex-1 overflow-auto">
-                <ModelsPanel part={part} units={units} onChange={change} onImport={() => setModelOpen(true)} />
+                <ModelsPanel part={part} units={units} sel={sel} onChange={change} onImport={() => setModelOpen(true)} />
               </TabsContent>
             )}
             {feat.camMachining && (

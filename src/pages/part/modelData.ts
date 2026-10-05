@@ -2,6 +2,7 @@
  * Loading and saving 3D model data for the part designer. The heavy steps (decompress, hash,
  * decode, encode) run in the compute worker; meshes are cached by hash.
  */
+import { nanoid } from 'nanoid'
 import { useEffect, useState } from 'react'
 import { backend } from '@/app/backend'
 import type { Mesh, MeshUnits } from '@/cam/mesh/types'
@@ -64,3 +65,36 @@ export const UP_OPTIONS: { value: UpAxis; label: string }[] = [
   { value: '-x', label: '−X up' },
 ]
 export const MODEL_LAYER = { id: 'models', name: '3D models', color: '#c084fc', visible: true, locked: false }
+
+/**
+ * Add a surface made in the app (a mesh in part coordinates) to the part as a 3D model: stored like
+ * an imported mesh, placed where it was made.
+ */
+export async function addSurfaceModel(part: import('@/cam/types').CamPart, mesh: Mesh, name: string, source: string): Promise<import('@/cam/types').CamPart> {
+  if (!mesh.indices.length) throw new Error('The surface came out empty.')
+  const hash = await saveModelMesh(mesh)
+  const p = mesh.positions
+  const lo = [Infinity, Infinity, Infinity]
+  const hi = [-Infinity, -Infinity, -Infinity]
+  for (let i = 0; i < p.length; i += 3)
+    for (let k = 0; k < 3; k++) {
+      lo[k] = Math.min(lo[k], p[i + k])
+      hi[k] = Math.max(hi[k], p[i + k])
+    }
+  const r3 = (n: number) => Math.round(n * 1000) / 1000
+  const model: import('@/cam/types').ModelRef = {
+    id: nanoid(8),
+    name,
+    kind: 'mesh',
+    blob: hash,
+    source,
+    units: 'mm',
+    // placed exactly where it was made (no rounding of the position)
+    place: { up: '+z', rotZ: 0, scale: 1, mirror: false, at: [lo[0], lo[1], hi[2]] },
+    layer: MODEL_LAYER.id,
+    visible: true,
+    triangles: mesh.indices.length / 3,
+    size: [r3(hi[0] - lo[0]), r3(hi[1] - lo[1]), r3(hi[2] - lo[2])],
+  }
+  return { ...part, layers: part.layers.some((l) => l.id === MODEL_LAYER.id) ? part.layers : [...part.layers, { ...MODEL_LAYER }], models: [...(part.models ?? []), model] }
+}

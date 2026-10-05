@@ -16,10 +16,12 @@ import { Switch } from '@/components/ui/switch'
 import { Cancelled } from '@/core/cancel'
 import { formatLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
-import { loadModelMesh, saveModelMesh, UP_OPTIONS } from './modelData'
+import { addSurfaceModel, loadModelMesh, saveModelMesh, UP_OPTIONS } from './modelData'
+import { placeMesh } from '@/cam/mesh/place'
 import { TaskProgress } from './ModelImportDialog'
 import { SolidFacesPanel } from './SolidFacesPanel'
 import { SolidFeatures } from './SolidFeatures'
+import { SurfacesPanel } from './SurfacesPanel'
 
 const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
   sections: { id: 'model-sections', name: 'Model sections', color: '#34d399', visible: true, locked: false },
@@ -30,13 +32,14 @@ const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
 const withLayer = (part: CamPart, l: Layer): Layer[] => (part.layers.some((x) => x.id === l.id) ? part.layers : [...part.layers, { ...l }])
 
 /** 3D models on the part: placement, work volume, sections, outline, edges, simplify, clean-up. */
-export function ModelsPanel({ part, units, onChange, onImport }: { part: CamPart; units: UnitSystem; onChange: (p: CamPart) => void; onImport: () => void }) {
+export function ModelsPanel({ part, units, sel = [], onChange, onImport }: { part: CamPart; units: UnitSystem; sel?: string[]; onChange: (p: CamPart) => void; onImport: () => void }) {
   const models = part.models ?? []
   return (
     <div className="flex flex-col gap-3 p-3 text-xs">
       <Button size="sm" variant="outline" onClick={onImport}>
         <Box /> Import 3D model…
       </Button>
+      <SurfacesPanel part={part} sel={sel} units={units} onChange={onChange} />
       {!models.length && <p className="text-stone-400">No 3D models yet. Import an STL, OBJ or 3MF file: a relief, a carved panel or a shaped part.</p>}
       {models.map((m) => (
         <ModelCard key={m.id} part={part} model={m} units={units} onChange={onChange} />
@@ -145,6 +148,25 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
       return { mesh: r.mesh, msg: `${(model.triangles - r.report.kept).toLocaleString('en')} downward facets removed` }
     })
 
+  const [ext, setExt] = useState(2)
+  const [cutZ, setCutZ] = useState(-5)
+  /** Extend or split this surface (in part coordinates); the result is a new model, this one is hidden. */
+  const surfaceEdit = async (what: 'extend' | 'above' | 'below') => {
+    const abort = new AbortController()
+    setBusy({ fraction: 0.3, note: what === 'extend' ? 'Extending' : 'Splitting', abort })
+    try {
+      const placed = placeMesh(await loadModelMesh(model.blob), model.place)
+      const mesh = await compute().run('surface.make', what === 'extend' ? { k: 'extend', mesh: placed, d: ext } : { k: 'split', mesh: placed, z: cutZ, keep: what }, { signal: abort.signal })
+      const next = await addSurfaceModel(part, mesh, `${model.name} (${what === 'extend' ? `extended ${ext}` : `${what} Z${cutZ}`})`, what === 'extend' ? 'Extend' : 'Split')
+      onChange({ ...next, models: (next.models ?? []).map((m) => (m.id === model.id ? { ...m, visible: false } : m)) })
+      toast.success(what === 'extend' ? 'Extended surface added; the original is hidden.' : `The part ${what} Z ${cutZ} added; the original is hidden.`)
+    } catch (e) {
+      if (!(e instanceof Cancelled)) toast.error(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const rep = model.report
   return (
     <div className="flex flex-col gap-2 rounded-md border border-white/10 bg-black/20 p-2.5">
@@ -242,6 +264,21 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
           </Button>
         </Group>
 
+        {model.kind !== 'solid' && (
+          <Group title="Surface">
+            <Button size="xs" variant="secondary" onClick={() => void surfaceEdit('extend')} title="Extend the open edges straight on">
+              Extend by
+            </Button>
+            <LenInput label="Extend by" value={ext} units={units} onChange={(v) => Number.isFinite(v) && v > 0 && setExt(v)} />
+            <Button size="xs" variant="secondary" onClick={() => void surfaceEdit('above')}>
+              Keep above
+            </Button>
+            <Button size="xs" variant="secondary" onClick={() => void surfaceEdit('below')}>
+              Keep below
+            </Button>
+            Z <LenInput label="Split at Z" value={cutZ} units={units} onChange={(v) => Number.isFinite(v) && setCutZ(v)} />
+          </Group>
+        )}
         {model.kind !== 'solid' && (
         <Group title="Simplify">
           <Select value={simp.mode} onValueChange={(v) => setSimp({ mode: v as 'percent' | 'tolerance', value: v === 'percent' ? 10 : 0.02 })}>

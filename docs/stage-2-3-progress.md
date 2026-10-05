@@ -35,13 +35,13 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.4a Roughing fix (models that do not cover the panel) | **Done** (October 2026) | See below. |
 | M2.4b Stock simulation (SIM-02) | **Done** (October 2026) | See below. |
 | M2.4c Collision checking (SIM-03, NEW-13 shared model) | **Done** (October 2026) | See below. |
-| M2.4d Cut-free pieces, screenshots, docs | In progress | |
+| M2.4d Cut-free pieces (SIM-05), screenshots, docs | **Done** (October 2026) | See below. M2.4 complete. |
 | M2.5 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -495,9 +495,59 @@ Acceptance (`tests/cam-collision.test.ts`; each case has a near-miss twin that m
 
 No golden changed.
 
-## Next run
+## M2.4d cut-free pieces: what was built
 
-- Finish M2.4 (d) as split above.
+| Spec ID | What | Where |
+|---|---|---|
+| SIM-05 | After through cuts the stock falls into islands; each is classified: the **part** (the largest island inside the part's outline), **scrap** (any other island inside it: slugs from openings) or **offcut** (outside the outline). The simulator fades scrap and offcuts and drops them from the through-cuts-only view; the part stays; the stats say how many came free. The collision check keeps them in place (the safer choice: a slug may stay on the table) | `cutFreePieces`, `dropMask` in `src/cam/stock/pieces.ts`, `SimulateDialog.tsx` |
+
+Acceptance (`tests/cam-pieces.test.ts`): all 20 Stage 1 reference parts simulated at 0.5 mm cells,
+checked against an independent expectation from the drawing only (Clipper2; no toolpaths): the part
+is the outline less the openings cut through; a slug is an opening shrunk by the tool's diameter;
+an offcut is the panel less the outline grown by the tool's diameter.
+
+| Part | Found | Expected |
+|---|---|---|
+| Part area, all 20 | within 0.05 % (worst ref20: 86,909 against 86,954 mm²) | |
+| ref02 rounded panel (R50 corners) | 4 offcuts of 80 mm² | 4 of 80 |
+| ref03 arched door | 2 offcuts of 3,897 mm² | 2 of 3,898 |
+| ref06 round table top | 4 offcuts of 28,266 mm² | 4 of 28,270 |
+| ref20 bracket | 2 slugs: 5,589 and 28 mm² (the 12 mm cutter leaves a 3 mm-radius slug in the 15 mm hole; the slot clears completely) | 5,776 and 28 (the lead-in and lead-out arcs run inside the larger slug and take 187 mm² of it, within the allowance for lead arcs) |
+| The other 16 | no pieces cut free | none |
+
+Where there is no offcut, what drops is cell for cell what the Stage 1 `looseMask` marks.
+
+## M2.4 screenshots
+
+`docs/screenshots/stage-2-3/M2.4/`:
+
+- `01-simulate-top.png`: top view at the end of a program; collision check clear; "Cut free: 1 scrap" (the slug inside the circle, faded).
+- `02-simulate-3d-section.png`: 3D, see-through stock, section across the width through the pocket and the ring, tool drawn.
+- `03-collision-log.png`: a 40 mm pocket with a 30 mm-flute cutter: two shank collisions in the log; the first clicked (the tool at move 617, Z-35).
+- `04-collision-3d.png`: the same in 3D with a section: the shank inside the pocket wall.
+- `05-machine-collision-margin.png`: the new "Collision margin" setting on the Machine page.
+
+## M2.4 limits recorded
+
+- **Heightfield stock**: exact for a vertical 3-axis tool. It cannot hold a ledge left above short
+  flutes, so material above the flutes within the shank's reach always counts as a collision
+  (a tool too short for the depth is always reported).
+- **Clamps and fixtures** are not modelled yet (SIM-03 says "later"; FIX-01 is M3.6). The table is
+  checked only in depth (the spoilboard thickness from the machine model, a placeholder).
+- **Travel limits in X and Y** are not checked on a single part (its place on the sheet is not known
+  there); the export checker already checks sheets against the table size.
+- **Sloped moves** (ramps, helixes, 3D chains) are carved in half-cell steps; level moves exactly.
+- **Collision checks in export** run per custom part on its own panel (cells of 0.5 mm, coarser only
+  for parts over about 6 million cells). Batch runs check only the toolpaths they can calculate (no
+  3D yet, as before).
+- **Stock STL** of stock over 2 million cells is written every few cells (each corner the lowest cell
+  round it, so nothing that was cut is shown).
+- **Cut-free pieces** need a part outline to tell the part from offcuts; without one, the largest
+  island is the part.
+
+## Next run: M2.5 solid models
+
+- **STEP via OpenCascade WASM, feature recognition (CAD-14, CAD-16, NEW-19, SOL-01..04)** as in the prompt.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -514,3 +564,4 @@ No golden changed.
 - **Run 5 (M2.4a)**: Z-level roughing of models that do not cover the panel. See `git log`.
 - **Run 5 (M2.4b)**: stock simulation on the stock-model interface. See `git log`.
 - **Run 5 (M2.4c)**: collision checking, export checker, flags when 3D operations are calculated. See `git log`.
+- **Run 5 (M2.4d)**: cut-free pieces, screenshots, docs. M2.4 complete. See `git log`.

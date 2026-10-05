@@ -6,8 +6,11 @@ import { toast } from 'sonner'
 import * as THREE from 'three'
 import { backend } from '@/app/backend'
 import { writeStl } from '@/cam/mesh/tools'
-import { buildTimeline, cellRect, cutSummary, looseMask, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
+import { buildTimeline, cellRect, cutSummary, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
 import { HeightfieldStock, type StockMeshRange, stockMesh, stockMeshTops } from '@/cam/stock/heightfield'
+import { cutFreePieces, dropMask } from '@/cam/stock/pieces'
+import { entityContours } from '@/cam/doc'
+import { type P, toPoints } from '@/cam/geom'
 import { advance, moveAt, moveEnd, simCell, StockSimulation, stepMove, type StopReason } from '@/cam/stock/simulation'
 import type { Collision, CollisionKind } from '@/cam/collision/collision'
 import type { Toolpath } from '@/cam/toolpath'
@@ -109,6 +112,12 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const [goMove, setGoMove] = useState('1')
   const base = useMemo(() => hexRgb(color ?? ''), [color])
   const fmt = (n: number) => formatLength(n, units)
+  // the part's outline tells the part from scrap and offcuts
+  const outline = useMemo<P[][] | undefined>(() => {
+    const e = part.entities.find((x) => x.id === part.outlineId)
+    return e ? entityContours(e).filter((c) => c.closed).map((c) => toPoints(c, 0.05)) : undefined
+  }, [part.entities, part.outlineId])
+  const [pieces, setPieces] = useState<{ scrap: number; offcut: number } | null>(null)
   const spoil = machineModelOf(machine).spoilboard.thickness
 
   useEffect(() => {
@@ -245,7 +254,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           )}
         </div>
         {view === 'top' ? (
-          <TopView sim={sim} t={t} part={part} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} />
+          <TopView sim={sim} t={t} part={part} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} outline={outline} onPieces={setPieces} />
         ) : (
           <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
         )}
@@ -331,6 +340,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           <Stat label="Deepest" value={fmt(summary.deepest)} />
           <Stat label="Face cut" value={`${summary.cutPct.toFixed(1)}%`} />
           <Stat label="Cells" value={fmt(cell)} />
+          {pieces && (pieces.scrap > 0 || pieces.offcut > 0) && <Stat label="Cut free" value={[pieces.scrap ? `${pieces.scrap} scrap` : '', pieces.offcut ? `${pieces.offcut} offcut${pieces.offcut > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ')} />}
         </section>
         <section>
           <h3 className="mb-1.5 font-medium text-stone-300">Collision check</h3>
@@ -363,7 +373,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
         <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={saveStl}>
           <Download /> Save stock as STL
         </Button>
-        <p className="text-stone-500">Edge (horizontal) drilling is drawn in the backplot but runs under the face, so it is not carved. Pieces cut free are shown faded and drop out in the through-cut view.</p>
+        <p className="text-stone-500">Edge (horizontal) drilling is drawn in the backplot but runs under the face, so it is not carved. Scrap and offcuts cut free are shown faded and drop out in the through-cut view; the part stays. The collision check keeps them in place (safer).</p>
       </aside>
     </div>
   )
@@ -455,7 +465,7 @@ function drawBackplot(ctx: CanvasRenderingContext2D, tl: SimTimeline, from: numb
   }
 }
 
-function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg, r, rapid, playing, onCarved }: ViewProps & { through: boolean; showPaths: boolean; showRapids: boolean; seg: number; playing: boolean }) {
+function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg, r, rapid, playing, onCarved, outline, onPieces }: ViewProps & { through: boolean; showPaths: boolean; showRapids: boolean; seg: number; playing: boolean; outline?: P[][]; onPieces: (p: { scrap: number; offcut: number }) => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const plot = useRef<HTMLCanvasElement>(null)
   const stock = sim.stock as HeightfieldStock
@@ -501,10 +511,12 @@ function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg,
     if (playing) return
     const id = setTimeout(() => {
       sim.syncTo(t)
-      setLoose(looseMask(hf))
+      const p = cutFreePieces(hf, outline)
+      setLoose(dropMask(p))
+      onPieces({ scrap: p.pieces.filter((x) => x.kind === 'scrap').length, offcut: p.pieces.filter((x) => x.kind === 'offcut').length })
     }, 120)
     return () => clearTimeout(id)
-  }, [playing, sim, hf, t])
+  }, [playing, sim, hf, t, outline, onPieces])
 
   // backplot: the whole program faintly, then what has run on top
   const drawn = useRef<{ upTo: number; key: string } | null>(null)
@@ -644,7 +656,7 @@ function StockMesh({ sim, t, base, opacity, section, onCarved }: Pick<ViewProps,
   const color = useMemo(() => new THREE.Color(base[0] / 255, base[1] / 255, base[2] / 255), [base])
   return (
     <mesh geometry={geo}>
-      <meshStandardMaterial color={color} roughness={0.85} transparent={opacity < 1} opacity={opacity} depthWrite={opacity >= 1} side={THREE.DoubleSide} />
+      <meshStandardMaterial color={color} roughness={0.85} transparent={opacity < 1} opacity={opacity} depthWrite={opacity >= 1} side={opacity < 1 ? THREE.FrontSide : THREE.DoubleSide} />
     </mesh>
   )
 }

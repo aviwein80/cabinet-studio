@@ -132,7 +132,9 @@ export checker. Tool numbers are still placeholders.
   - the boundary and facet groups, as for finishing.
 
   Every cutting move is checked against the model before it is kept. Tests prove it never leaves
-  less than the stock to leave, and never more than the stock plus one step-down.
+  less than the stock to leave, and never more than the stock plus one step-down. If the model
+  does not reach every edge of the panel (a part standing on its own) and no boundary is drawn,
+  the panel round it is roughed down to the model's lowest point; a warning says so.
 - **3D finishing** (Machining → Add operation → 3D finishing, when the part has a model):
   - **Parallel**: passes across the model at any angle, back and forth or one way.
   - **Waterline**: passes at constant heights around the model, best on steep walls. It can
@@ -169,10 +171,24 @@ export checker. Tool numbers are still placeholders.
     clearing (`CAM_ADAPTIVE_NO_OUTPUT`).
   - With the switch off, the checker blocks the flat-layer operations too (`CAM_3D_OUTPUT_OFF`).
   - Batch runs cannot calculate 3D toolpaths yet (`CAM_3D_NOT_READY`).
-- **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and a ghost tool.
-  A 2.5D heightfield of the material is shown as a shaded top view or in 3D, with depth readouts.
-  It checks for rapids into uncut material, shows pieces cut free, and has a through-cuts-only
-  view. This checks our own toolpaths, not the machine; woodWOP's simulation is still required.
+- **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and the tool.
+  The material left is shown as a shaded top view or in 3D (with the tool's shank and holder,
+  see-through stock and a section cut across the width or the length), with depth readouts and
+  the volume removed.
+  - Play, pause, one move back or forward, previous or next operation, go to or run to a chosen
+    move; separate speeds for cutting and for rapids; stop at each tool change.
+  - **Collision check** (in the background): the shank (above the flutes) and the holder must
+    keep a margin (Machine & tools → Collision margin, 2 mm) from the material; rapids must not
+    touch it; cuts must not go deeper than the spoilboard limit, or into the table. Each
+    collision in the list jumps to its move. A collision blocks export (`CAM_COLLISION`). 3D
+    operations whose shank or holder would hit the model are flagged as soon as they are
+    calculated, with the stick-out or flute length they need.
+  - **Cut-free pieces**: after through cuts, slugs from openings and offcuts round a shaped part
+    are shown faded and drop out of the through-cuts-only view; the part stays.
+  - **Save stock as STL**: the material left, as a closed model.
+  - A full 5 x 12 ft sheet plays smoothly at 1 mm cells.
+
+  This checks our own toolpaths, not the machine; woodWOP's simulation is still required.
 - **Drilling patterns** (Library → Drilling patterns): verified Salice and Blum patterns come
   built from the published numbers below. Patterns can also come from manufacturer DXF (circles,
   with depth in the layer name such as `DRILL_D12`) or CSV (`pattern,manufacturer,x,y,diameter,depth,face,units`).
@@ -354,7 +370,8 @@ src/core/          pure TypeScript, no React — everything below is unit tested
 src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpaths, native MPR, sim
   mesh/            3D meshes: STL/OBJ/3MF readers, repair, placement, sections, outline, simplify
   model/           model data store (compressed, by SHA-256, outside the shop file), part files
-  stock/           stock model interface and the heightfield stock
+  stock/           stock model interface, the heightfield stock, playback, cut-free pieces
+  collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)
   worker/          background compute worker (3D tasks) with progress and cancel
 src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)

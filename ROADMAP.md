@@ -32,8 +32,9 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   finishing and flat-layer output (switch off): done.** **M2.2c projection finishing and faster
   waterline: done.** **M2.3a 2D rest machining: done.** **M2.3b adaptive clearing in pockets: done**
   (simulation only; woodWOP output is a decision). **M2.3c adaptive Z-level roughing, 3D rest
-  machining and the pencil pass: done** (simulation only). M2.3 complete. Next: M2.4 (stock
-  simulation and collision checking).
+  machining and the pencil pass: done** (simulation only). M2.3 complete. **M2.4 stock
+  simulation, collision checking and cut-free pieces: done** (October 2026), with the fix for
+  Z-level roughing of models that do not cover the panel. Next: M2.5 (solid models).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

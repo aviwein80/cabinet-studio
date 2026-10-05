@@ -4,8 +4,8 @@ import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, type OpState } from '@/cam/doc'
 import { defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
-import type { Toolpath } from '@/cam/toolpath'
-import type { CamOp, CamOpKind, CamPart, FaceId } from '@/cam/types'
+import { OPS_3D, type Toolpath } from '@/cam/toolpath'
+import type { CamOp, CamOpKind, CamPart, FaceId, Surface3D } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -69,14 +69,14 @@ export function OpsPanel({
   const setOps = (ops: CamOp[]) => onChange({ ...part, ops, updatedAt: new Date().toISOString() })
   const accept = (ids: string[]) => setOps(part.ops.map((o) => (ids.includes(o.id) ? { ...o, builtHash: opInputHash(o, part, tpOf(o.id)?.tool ?? null, machine) } : o)))
 
-  const add = (kind: CamOpKind) => {
+  const add = (kind: CamOpKind, extra: Partial<CamOp> = {}) => {
     let geometry = sel
     if (!geometry.length && (kind === 'profile' || kind === 'drill')) {
       const outline = partOutline(part).entity
       geometry = kind === 'profile' ? (outline ? [outline.id] : []) : part.entities.filter((e) => e.g.t === 'circle' || e.g.t === 'point').map((e) => e.id)
     }
-    let op = defaultOp(kind, kind === 'code' ? [] : geometry)
-    if (op.kind === 'finish3d') {
+    let op = defaultOp(kind, kind === 'code' ? [] : geometry, extra)
+    if (op.kind === 'finish3d' || op.kind === 'rough3d') {
       // boundary: the selected closed shapes (none = the whole model); first model on the part
       const closed = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
       op = { ...op, geometry: closed, surface: { ...op.surface, modelId: part.models?.[0]?.id ?? '' } }
@@ -111,7 +111,9 @@ export function OpsPanel({
             {on3d && (
               <>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => add('rough3d')}>{OP_LABEL.rough3d}</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d')}>{OP_LABEL.finish3d} (parallel)</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'waterline' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (waterline)</DropdownMenuItem>
               </>
             )}
             {rulesOn && lib && (
@@ -161,7 +163,17 @@ export function OpsPanel({
                 <div className="truncate font-medium text-stone-100">{op.name}</div>
                 <div className="truncate text-[10px] text-stone-400">
                   {tp?.tool ? `T${tp.tool.number} ${tp.tool.name}` : op.kind === 'drill' ? 'Drill per hole' : op.kind === 'code' ? 'Note' : 'No tool'} ·{' '}
-                  {op.kind === 'finish3d' ? (busy?.get(op.id) ? `calculating ${Math.round(busy.get(op.id)!.fraction * 100)} %` : `3D, every ${formatLength(op.stepover, units)}`) : op.levels.through ? 'through' : formatLength(op.levels.depth, units)}
+                  {OPS_3D.has(op.kind) && busy?.get(op.id)
+                    ? `calculating ${Math.round(busy.get(op.id)!.fraction * 100)} %`
+                    : op.kind === 'finish3d'
+                      ? op.strategy === 'waterline'
+                        ? `3D waterline, every ${formatLength(op.stepdown ?? 1, units)} down`
+                        : `3D, every ${formatLength(op.stepover, units)}`
+                      : op.kind === 'rough3d'
+                        ? `3D levels every ${formatLength(op.stepdown, units)}`
+                        : op.levels.through
+                          ? 'through'
+                          : formatLength(op.levels.depth, units)}
                   {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : null}
                 </div>
               </div>
@@ -291,13 +303,13 @@ function OpEditor({
         </div>
       )}
 
-      {op.kind === 'finish3d' && (
+      {(op.kind === 'finish3d' || op.kind === 'rough3d') && (
         <Group title="Tool">
           <SelectField
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -305,7 +317,7 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'finish3d' && (
+      {op.kind !== 'code' && !OPS_3D.has(op.kind) && (
         <Group title="Tool">
           <SelectField
             className="col-span-2"
@@ -323,7 +335,7 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'finish3d' && (
+      {op.kind !== 'code' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -388,44 +400,93 @@ const LEADS = [
   { value: 'centre' as const, label: 'From hole centre' },
 ]
 
+/** Model, boundary, stock and groups: shared by the 3D operations. */
+function SurfaceGroup({ op, part, onSurface, walls }: { op: CamOp & { surface: Surface3D }; part: CamPart; onSurface: (s: Surface3D) => void; walls?: boolean }) {
+  const sf = (patch: Partial<Surface3D>) => onSurface({ ...op.surface, ...patch })
+  return (
+    <Group title="Surface">
+      <SelectField className="col-span-2" label="Model" value={op.surface.modelId || NONE} options={[{ value: NONE, label: 'Choose a model' }, ...(part.models ?? []).map((m) => ({ value: m.id, label: m.name }))]} onChange={(v) => sf({ modelId: v === NONE ? '' : v })} />
+      <SelectField
+        label="Boundary"
+        value={op.surface.boundaryMode}
+        options={[
+          { value: 'centre', label: 'Tool centre inside' },
+          { value: 'contained', label: 'Whole tool inside' },
+          { value: 'touching', label: 'Tool may overhang' },
+        ]}
+        onChange={(v) => sf({ boundaryMode: v })}
+      />
+      <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole model'}</div>
+      <NumField label={walls ? 'Leave on walls' : 'Leave on surface'} value={op.surface.stockToLeave} min={0} step={0.1} onChange={(v) => sf({ stockToLeave: v })} />
+      <NumField label="Tolerance" value={op.surface.tolerance} min={0.001} max={0.5} step={0.005} onChange={(v) => sf({ tolerance: v })} hint="Largest gap to the true surface" />
+      <TextField label="Protect groups (numbers)" value={(op.surface.protect ?? []).join(', ')} onChange={(v) => sf({ protect: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
+      <TextField label="Only groups (empty = all)" value={(op.surface.groups ?? []).join(', ')} onChange={(v) => sf({ groups: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
+    </Group>
+  )
+}
+
 function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
   switch (op.kind) {
     case 'finish3d': {
-      const sf = (patch: Partial<typeof op.surface>) => onChange({ ...op, surface: { ...op.surface, ...patch } })
+      const waterline = op.strategy === 'waterline'
       return (
         <>
-          <Group title="Surface">
-            <SelectField className="col-span-2" label="Model" value={op.surface.modelId || NONE} options={[{ value: NONE, label: 'Choose a model' }, ...(part.models ?? []).map((m) => ({ value: m.id, label: m.name }))]} onChange={(v) => sf({ modelId: v === NONE ? '' : v })} />
+          <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+          <Group title={waterline ? 'Waterline passes' : 'Parallel passes'}>
             <SelectField
-              label="Boundary"
-              value={op.surface.boundaryMode}
+              className="col-span-2"
+              label="Strategy"
+              value={op.strategy}
               options={[
-                { value: 'centre', label: 'Tool centre inside' },
-                { value: 'contained', label: 'Whole tool inside' },
-                { value: 'touching', label: 'Tool may overhang' },
+                { value: 'parallel', label: 'Parallel: straight passes over the surface' },
+                { value: 'waterline', label: 'Waterline: passes at constant heights' },
               ]}
-              onChange={(v) => sf({ boundaryMode: v })}
+              onChange={(v) => onChange({ ...op, strategy: v })}
             />
-            <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole model'}</div>
-            <NumField label="Leave on surface" value={op.surface.stockToLeave} min={0} step={0.1} onChange={(v) => sf({ stockToLeave: v })} />
-            <NumField label="Tolerance" value={op.surface.tolerance} min={0.001} max={0.5} step={0.005} onChange={(v) => sf({ tolerance: v })} hint="Largest gap to the true surface" />
-            <TextField label="Protect groups (numbers)" value={(op.surface.protect ?? []).join(', ')} onChange={(v) => sf({ protect: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
-            <TextField label="Only groups (empty = all)" value={(op.surface.groups ?? []).join(', ')} onChange={(v) => sf({ groups: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
-          </Group>
-          <Group title="Parallel passes">
-            <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint="Placeholder default; set your own" />
+            {waterline && <NumField label="Step-down" value={op.stepdown ?? 1} min={0.05} step={0.1} onChange={(v) => onChange({ ...op, stepdown: v })} hint="Placeholder default; set your own" />}
+            {waterline && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
+            <NumField label={waterline ? 'Fill step-over' : 'Step-over'} value={op.stepover} min={0.01} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint={waterline ? 'For the shallow-area fill' : 'Placeholder default; set your own'} />
             <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />
-            <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
-            {op.pattern === 'oneway' && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Along the angle' }, { value: 'conventional', label: 'Against the angle' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
+            {!waterline && <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />}
+            {!waterline && op.pattern === 'oneway' && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Along the angle' }, { value: 'conventional', label: 'Against the angle' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
             <NumField label="Slope from" suffix="°" value={op.slope.min} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, min: v } })} />
             <NumField label="Slope to" suffix="°" value={op.slope.max} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, max: v } })} />
             <div className="col-span-2">
               <SwitchField label="Skip flat areas" checked={op.skipFlats} onChange={(v) => onChange({ ...op, skipFlats: v })} hint="Leaves surfaces under 0.5° for a flat-area pass" />
+              {waterline && (
+                <SwitchField
+                  label="Fill shallow areas"
+                  checked={!!op.fillShallow}
+                  onChange={(v) => onChange({ ...op, fillShallow: v })}
+                  hint="Parallel passes where the surface is flatter than the slope limit. These need true 3D output, so the operation then cannot be written to woodWOP."
+                />
+              )}
             </div>
           </Group>
         </>
       )
     }
+    case 'rough3d':
+      return (
+        <>
+          <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} walls />
+          <Group title="Levels">
+            <NumField label="Leave on floors" value={op.stockZ} min={0} step={0.1} onChange={(v) => onChange({ ...op, stockZ: v })} />
+            <NumField label="Step-down" value={op.stepdown} min={0.1} step={0.5} onChange={(v) => onChange({ ...op, stepdown: v })} hint="Placeholder default; set your own" />
+            <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} onChange={(v) => onChange({ ...op, stepover: v / 100 })} />
+            <SelectField label="Pattern" value={op.pattern} options={[{ value: 'offset', label: 'Follow shape' }, { value: 'zigzag', label: 'Back and forth' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
+            {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}
+            <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+            <SelectField label="Entry" value={op.entry} options={[{ value: 'helix', label: 'Helix' }, { value: 'ramp', label: 'Ramp' }, { value: 'plunge', label: 'Straight down' }]} onChange={(v) => onChange({ ...op, entry: v })} />
+            <NumField label="Ramp angle" suffix="°" value={op.rampAngle} min={1} max={45} onChange={(v) => onChange({ ...op, rampAngle: v })} />
+            <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => onChange({ ...op, levels: { ...op.levels, safeZ: v } })} />
+            <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => onChange({ ...op, levels: { ...op.levels, rapidZ: v } })} hint="Above the level just cut" />
+            <div className="col-span-2">
+              <SwitchField label="Extra levels on flat areas" checked={op.flats} onChange={(v) => onChange({ ...op, flats: v })} hint="A level at the height of every flat area of the model, so flats are left with only the floor stock" />
+            </div>
+          </Group>
+        </>
+      )
     case 'profile':
       return (
         <Group title="Strategy">

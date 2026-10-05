@@ -49,7 +49,7 @@ import { cn } from '@/lib/utils'
 export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
   const { data, go, mutate } = useStore()
   const job = data?.jobs.find((j) => j.id === jobId)
-  const { out, error } = useJobOutput(job, data)
+  const { out, error, pending3d } = useJobOutput(job, data)
   if (!data) return null
   if (!job)
     return (
@@ -119,6 +119,11 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
         {error && (
           <div className="mx-5 mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
             Could not process this job: {error}
+          </div>
+        )}
+        {pending3d > 0 && (
+          <div className="mx-5 mt-4 rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-900">
+            Calculating {pending3d} 3D toolpath(s) for the MPR output in the background…
           </div>
         )}
         <TabsContent value="cabinets" className="min-h-0 flex-1 overflow-auto p-5">

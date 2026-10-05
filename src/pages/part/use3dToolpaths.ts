@@ -44,7 +44,7 @@ export function use3dToolpaths(part: CamPart, machine: MachineProfile) {
       void (async () => {
         try {
           const meshes: Record<string, Mesh> = {}
-          for (const m of part.models ?? []) if (op.kind === 'finish3d' && m.id === op.surface.modelId) meshes[m.blob] = await loadModelMesh(m.blob)
+          for (const m of part.models ?? []) if ((op.kind === 'finish3d' || op.kind === 'rough3d') && m.id === op.surface.modelId) meshes[m.blob] = await loadModelMesh(m.blob)
           const [tp] = await compute().run('cam.generate', { part, machine, opIds: [op.id], meshes }, { signal: abort.signal, onProgress: (fraction, note) => setBusy((b) => new Map(b).set(op.id, { fraction, note })) })
           if (running.current.get(op.id)?.abort !== abort) return
           setDone((d) => new Map(d).set(op.id, { key, tp }))

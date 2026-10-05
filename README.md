@@ -108,19 +108,41 @@ export checker. Tool numbers are still placeholders.
   The 3D view shows the stock, the models and the drawing. Model data is stored as compressed
   files in `data/blobs` next to the shop file, never inside it. Part files (`.csp.json`) carry
   their models with them. Unused model files are removed after 30 days.
+- **3D roughing (Z-level)** (Machining → Add operation, when the part has a model): cuts the
+  stock away in flat levels from the top of the part down, leaving a set amount on the walls and
+  on the floors. Each level is cleared like a pocket (follow the shape from the inside out, or
+  back and forth), ending with a pass along the model. You set:
+  - the step-down, step-over, direction and pattern;
+  - the entry: helix, ramp, or straight down (a tool that cannot plunge gets a ramp instead);
+  - extra levels on the model's flat areas, so they are left with only the floor stock;
+  - the boundary and facet groups, as for finishing.
+
+  Every cutting move is checked against the model before it is kept. Tests prove it never leaves
+  less than the stock to leave, and never more than the stock plus one step-down.
 - **3D finishing** (Machining → Add operation → 3D finishing, when the part has a model):
-  parallel passes across the model at any angle, back and forth or one way. You set:
-  - the step-over, stock to leave and tolerance;
+  - **Parallel**: passes across the model at any angle, back and forth or one way.
+  - **Waterline**: passes at constant heights around the model, best on steep walls. It can
+    fill the flatter areas with parallel passes.
+
+  You set:
+  - the step-over (or step-down), stock to leave and tolerance;
   - slope limits, and skip flat areas;
   - a boundary (tool centre inside, whole tool inside, or allowed to overhang);
   - facet groups to protect or to machine only.
 
-  The tool (ball-nose, bull-nose or flat) is dropped exactly onto the model at every point, and
-  the moves are refined until they stay within the tolerance. An independent check in the tests
-  measures how far the tool goes below the surface (limit 0.005 mm). The toolpath is calculated
-  in the background and can be simulated. **3D operations are not written to woodWOP**: the
-  export checker blocks them (`CAM_3D_NO_OUTPUT`) until the 3D output format is confirmed with a
-  program from the machine.
+  The tool (ball-nose, bull-nose or flat) is placed exactly against the model at every point,
+  and the moves are refined until they stay within the tolerance. An independent check in the
+  tests measures how far the tool goes below the surface (limit 0.005 mm). Toolpaths are
+  calculated in the background and can be simulated.
+- **3D output to woodWOP** (switch: Write 3D roughing and waterline to MPR, **off** by default):
+  Z-level roughing and waterline are written as ordinary contour-milling macros, one per pass
+  per level, so each one can be edited in woodWOP. The machine makes its own approach for each
+  pass. The job page calculates the 3D toolpaths in the background before export.
+  - Parallel finishing, and waterline with the shallow-area fill, need true 3D output. The
+    export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is confirmed with a
+    program from the machine.
+  - With the switch off, the checker blocks the flat-layer operations too (`CAM_3D_OUTPUT_OFF`).
+  - Batch runs cannot calculate 3D toolpaths yet (`CAM_3D_NOT_READY`).
 - **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and a ghost tool.
   A 2.5D heightfield of the material is shown as a shaded top view or in 3D, with depth readouts.
   It checks for rapids into uncut material, shows pieces cut free, and has a through-cuts-only

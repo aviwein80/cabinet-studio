@@ -13,13 +13,13 @@ Read this first at the start of every run. Sources:
 | M2.0 Audit | **Done** | `docs/stage-2-3-audit.md`. |
 | M2.1 3D foundation | **Done** (October 2026) | Includes the approved additions: machine-model data, `StockModel` and the bull-nose cutter, and the WASM/CSP groundwork. |
 | M2.2a CL-surface engine, parallel finishing, boundaries, independent gouge checker | **Done** (October 2026) | See below. |
-| M2.2b Z-level roughing, waterline | **Next** | Flat-layer output as `<105>` contours (decision 2), behind its own switch, off. |
-| M2.2c Projection finishing, performance | Not started | |
+| M2.2b Z-level roughing, waterline | **Done** (October 2026) | Flat-layer output as `<105>` contours (decision 2), behind its own switch, off. See below. |
+| M2.2c Projection finishing, performance | **Next** | |
 | M2.3 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
-(295 + 1 skipped).
+(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -38,6 +38,8 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
 9. The new milestone order and the M2.2 split are approved.
 10. Report cloud speed numbers, and give the one-line command for timing on the owner's Mac.
 11. DWG stays out. DXF only; DWG files go through the free ODA File Converter first.
+12. Rhino (.3dm) and SketchUp (.skp): no reader. Export STL or OBJ from those programs (agreed,
+    run 3).
 
 ## Open questions for the owner
 
@@ -48,13 +50,9 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
    lengths; stick-outs; holder outlines.
 3. **3D feeds, speeds, step-downs and step-overs** for the shop's materials.
 4. **A small 3D program saved from woodWOP**, needed for true 3D output (decision 2).
-5. **Rhino (.3dm) and SketchUp (.skp) import**: there is no permissive reader for these, so they
-   are not built (spec CAD-13). Options:
-   - export STL/OBJ from those programs (works today);
-   - openNURBS for Rhino (permissive licence, a native/WASM build would be needed);
-   - skip.
-
-   Recommendation: export STL/OBJ.
+5. **3D flat-layer output on the machine**: before switching on "Write 3D roughing and waterline
+   to MPR", load one roughing program in woodWOP and check how many points a contour may hold
+   (not confirmed; the app warns over 2,000 points per contour).
 
 ## M2.1 3D foundation: what was built
 
@@ -160,22 +158,69 @@ Roughing criteria (stock >= requested, <= stock + one step-down on walls) belong
 - **The everyday suite checks fewer positions with the sampled checker.** `THOROUGH=1 npx vitest
   run tests/cam-3d-parallel.test.ts` checks six times more.
 
-## Next run: M2.2b
+## M2.2b Z-level roughing and waterline: what was built
 
-- **Z-level roughing (3D-01):**
-  - slice the CL surface into levels;
-  - clear each level with the existing pocket strategies;
-  - entry by helix, ramp or plunge, honouring `centreCutting` and `maxPlunge`;
-  - stock to leave in XY and Z;
-  - extra levels on flats;
-  - account for earlier operations.
-- **Waterline finishing (3D-03).**
-- **Flat-layer output** as `<105>` contours behind a new switch, off by default.
-- **The batch runner reads model data.**
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-01 | Z-level roughing: levels every step-down from face 1, the bottom, and an extra level on each flat area; each level cleared by offset rings (inside out) or zig-zag, ending with a pass along the walls; helix, ramp or plunge entry (plunge becomes a ramp for a tool that is not centre-cutting or deeper than its max plunge); stock to leave on walls and on floors; stay-down links when short and clear; every cutting move checked against the model before it is kept | `src/cam/3d/zlevel.ts` |
+| 3D-03 | Waterline finishing: passes at constant heights along the line where the tool touches the model; slope limits, skip flats, climb or conventional, nearest-first order, links that stay down only where exact checks show the tool clears; optional shallow-area fill with parallel passes | `src/cam/3d/waterline.ts` |
+| Engine | Level lines of the tool-centre surface: exact drops on a grid, marching squares, each crossing moved onto the true line, each piece checked at its middle and quarters and split until within tolerance | `src/cam/3d/clgrid.ts` |
+| Output | Flat-layer output: each pass of each level as one `<105>` contour at that depth (decision 2), behind a new switch "Write 3D roughing and waterline to MPR", **off**. The job page calculates 3D toolpaths in the compute worker before export | `src/cam/toolpath.ts` (`isFlatLayer`, `pathKey`), `src/core/machining.ts`, `src/app/jobOutput.ts` |
+
+Other changes:
+
+- **Export checker:** `CAM_3D_OUTPUT_OFF` (flat-layer operations while the switch is off),
+  `CAM_3D_NOT_READY` (toolpath not calculated yet, e.g. in a batch run). `CAM_3D_NO_OUTPUT` now
+  covers parallel finishing and waterline with the shallow-area fill, whatever the switches say.
+- **Drop-cutter:** a fast "does the tool clear the model at this height?" test (`clears`), which
+  skips every facet below that height; the bull-nose edge test got an exact upper-bound check and
+  a shorter search. Parallel finishing on the 200 k relief: 9.2 s this run (9.9 s before); the goldens
+  did not change.
+- **Independent checker:** the exact (ball-nose) check now stops searching 1 mm from the tool
+  (only nearness matters), 20 times faster on roughing paths. Same results.
+- **Designer:** "3D roughing (Z-level)" and "3D finishing (waterline)" in the Add operation menu,
+  with their own editors; the 3D finishing editor can switch between parallel and waterline.
+- **A real bug found by the boundary test and fixed before commit:** an area's outer wall pass
+  was dropped when its first point sat exactly on the area's edge.
+
+### Acceptance (M2.2 criteria that apply)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Waterline: no gouge > 0.005 mm, independent check | `tests/cam-3d-zlevel.test.ts` | Ball-nose (exact): hemisphere 0.0021, sine 0.0021, raised panel 0.0019, cove 0.0000 mm. Bull-nose (raised panel) and flat (cove), sampled: under 0.005 |
+| Roughing leaves at least the stock to leave | `tests/cam-3d-zlevel.test.ts` | Independent check with 0.5 mm stock: hemisphere (ball, exact) 0.0022 mm into the stock at most; sine and raised panel (bull) 0.0017 and 0.0013; cove (flat) 0.0007. Simulated stock: never less than 0.500 mm straight above the surface |
+| Roughing leaves no more than stock + one step-down on walls | `tests/cam-3d-zlevel.test.ts` (simulated, measured to the nearest point of the model) | Hemisphere 2.365 mm (limit 3.5), sine 2.327 (2.5), raised panel 3.021 (3.5), cove 3.998 (4.5) |
+| Stock to leave ±0.01 mm (waterline) | `tests/cam-3d-zlevel.test.ts` | Points 0.5 ± 0.01 mm from the surface; no move closer than 0.495 |
+| Boundaries clip right | `tests/cam-3d-zlevel.test.ts` | Roughing, offset and zig-zag, inside a 30 mm circle: within 30.01 mm, reaching past 29 |
+| Golden digests stable | `tests/golden/cam3d/{rough,waterline}-*` | 4 new cases; the 4 parallel cases and all Stage 1 goldens unchanged |
+| Z-level roughing of the 200 k relief, 12 mm tool, 3 mm step-down < 30 s | `tests/perf.test.ts` | 7.5 s (test limit 20 s); 556 passes, 132 m of cutting |
+| Flat-layer output, off by default | `tests/cam-3d-integration.test.ts` | Off: `CAM_3D_OUTPUT_OFF`, nothing written. On without toolpaths: `CAM_3D_NOT_READY`. On with toolpaths: one `<105>` per pass, no other errors |
+
+### Limits recorded
+
+- **woodWOP makes its own approach** for each flat-layer contour (the helix or ramp shown in the
+  app is not written). Not machine-proven.
+- **Contour point limit in woodWOP is unknown.** The app warns over 2,000 points per contour.
+- **Batch runs cannot calculate 3D toolpaths** (they block with `CAM_3D_NOT_READY`).
+- **Roughing does not yet account for earlier operations** (rest roughing): it assumes a full
+  panel. Rest machining is in the M2.2 list (3D rest machining) and comes with M2.3/M2.4.
+- **The sampled check of bull-nose and flat roughing looks at 400 spread positions** in the
+  everyday suite (`THOROUGH=1` for 2,000). The simulated stock check covers every 0.5 mm cell.
+- **Very narrow pockets in the tool-centre surface** (narrower than the grid, 1/3 of the tool
+  radius) are not entered: material is left, never cut wrongly.
+
+## Next run: M2.2c
+
+- **Projection finishing (3D-04):** project drawn 2D shapes and text onto the surface
+  (drop-cutter along 2D paths), with depth below the surface for engraving on a 3D face.
+- **Performance:** waterline on dense meshes (40 levels on the 51 k-facet test dome take 7 s);
+  a pencil pass is listed under M2.2 too.
+- Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
 
 - **Run 1 (M2.0)**: audit and this file. Pushed `9492d66`; merged to `main` in run 2.
 - **Run 2 (M2.1)**: commits `00b8c71`, `23ead2d`, `a96c23d`, `5998e05`, `40c481f`, `e3e9095`,
   `9d7e411`.
-- **Run 3 (M2.2a)**: parallel finishing; see `git log` for the commit.
+- **Run 3 (M2.2a)**: parallel finishing. Commit `c1bc896`.
+- **Run 3 (M2.2b)**: Z-level roughing, waterline, flat-layer output (switch off). See `git log`.

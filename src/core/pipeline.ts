@@ -1,6 +1,6 @@
 import { partFileName, writePartPrograms } from '@/cam/mpr'
 import type { CancelCheck } from './cancel'
-import { generatePart } from '@/cam/toolpath'
+import { generatePart, type Toolpath } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
 import { buildAllPrograms, nestJob, nestSettingsOf, type JobNest, type SheetProgram } from './machining'
@@ -50,13 +50,19 @@ export interface JobOutput {
   warnings: string[]
 }
 
-export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelCheck } = {}): JobOutput {
+/**
+ * `paths3d`: 3D toolpaths calculated beforehand in the compute worker (by `pathKey`). Without
+ * them, 3D operations write nothing and the export checker says so.
+ */
+export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelCheck; paths3d?: ReadonlyMap<string, Toolpath> } = {}): JobOutput {
   const { library: lib, machine, settings } = data
   const expanded = expandJob(job, lib, settings)
   const nest = nestJob(expanded.instances, lib, machine, settings, opts.isCancelled)
   const ns = nestSettingsOf(settings)
   const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, {
     camOutput: featuresOf(settings).camMprOutput,
+    cam3dOutput: featuresOf(settings).cam3dMprOutput,
+    ...(opts.paths3d ? { paths3d: opts.paths3d } : {}),
     ...(ns.onionSkin > 0 ? { onionSkin: { thickness: ns.onionSkin, maxArea: ns.onionSkinMaxArea } } : {}),
   })
   const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)

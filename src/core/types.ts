@@ -520,6 +520,11 @@ export interface FeatureFlags {
   hardwarePatterns: boolean
   /** Write custom-part operations into N-200 MPR files. Off until the owner has proven output on the machine. */
   camMprOutput: boolean
+  /**
+   * Write the flat-layer 3D operations (Z-level roughing, waterline) as contour-milling macros.
+   * Needs `camMprOutput` too. Off until the owner has proven the output on the machine.
+   */
+  cam3dMprOutput: boolean
   /** 3D models on custom parts: STL/OBJ/3MF import, mesh tools, sections, work volume from a model. */
   cam3d: boolean
 }

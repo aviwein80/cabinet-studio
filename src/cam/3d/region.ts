@@ -91,3 +91,19 @@ export function clipLine(r: Region, ux: number, uy: number, s: number): [number,
   for (let i = 0; i + 1 < ts.length; i += 2) if (ts[i + 1] - ts[i] > 1e-9) out.push([ts[i], ts[i + 1]])
   return out
 }
+
+/** XY box of a set of polygons. */
+export function polysBox(polys: P[][]) {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const poly of polys)
+    for (const p of poly) {
+      minX = Math.min(minX, p.x)
+      minY = Math.min(minY, p.y)
+      maxX = Math.max(maxX, p.x)
+      maxY = Math.max(maxY, p.y)
+    }
+  return { minX, minY, maxX, maxY }
+}

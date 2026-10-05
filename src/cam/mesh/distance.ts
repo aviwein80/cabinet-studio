@@ -86,8 +86,8 @@ export class TriGrid {
   idx(i: number, j: number, k: number) {
     return (k * this.n[1] + j) * this.n[0] + i
   }
-  /** Distance from p to the nearest facet. */
-  nearest(px: number, py: number, pz: number, stamp: Int32Array, mark: number): number {
+  /** Distance from p to the nearest facet; with `cap`, any distance of `cap` or more is reported as `cap`. */
+  nearest(px: number, py: number, pz: number, stamp: Int32Array, mark: number, cap = Infinity): number {
     const p = this.mesh.positions
     const ix = this.mesh.indices
     const ci = [px, py, pz].map((x, a) => Math.min(this.n[a] - 1, Math.max(0, Math.floor((x - this.o[a]) / this.cell))))
@@ -121,8 +121,10 @@ export class TriGrid {
         if (ci[ax] + r + 1 < this.n[ax]) reach = Math.min(reach, hi - x)
       }
       if (reach === Infinity || (reach > 0 && best <= reach * reach)) break
+      // every facet nearer than the cap has been seen
+      if (reach >= cap) return Math.min(cap, Math.sqrt(best))
     }
-    return Math.sqrt(best)
+    return Math.min(cap, Math.sqrt(best))
   }
 }
 

@@ -1,0 +1,26 @@
+{
+  "op": "3D roughing (Z-level)",
+  "kind": "rough3d",
+  "tool": 107,
+  "moves": {
+    "rapid": 687,
+    "feed": 719,
+    "arc": 16,
+    "drill": 0,
+    "poly": 255,
+    "points": 1403
+  },
+  "cutMm": 37723,
+  "box": [
+    -6,
+    -6,
+    -9.5,
+    206,
+    156,
+    0
+  ],
+  "warnings": [
+    "For woodWOP, Z-level roughing is written as contour-milling passes level by level; the machine makes its own approach for each pass instead of the helix or ramp shown here."
+  ],
+  "hash": "4bd07c4a"
+}

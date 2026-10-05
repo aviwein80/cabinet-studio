@@ -103,6 +103,26 @@ describe('M2.2a drop-cutter: cross-check against brute force on bumpy meshes', (
   }, 60_000)
 })
 
+describe('M2.2b drop-cutter: the fast clearance test', () => {
+  it('clears(x, y, z) says exactly whether the drop is at or below z, for every shape', () => {
+    const r = rng(5)
+    const f = (x: number, y: number) => -6 + 2 * Math.sin(x / 5) * Math.cos(y / 7) + (x > 20 && x < 24 ? 3 : 0)
+    const m = meshOf(relief(40, 40, 40, 40, f))
+    for (const c of ALL) {
+      const d = new DropCutter(m, c)
+      for (let i = 0; i < 300; i++) {
+        const x = r() * 40
+        const y = r() * 40
+        const hit = d.drop(x, y)
+        const z = d.z
+        for (const dz of [-0.5, -1e-6, 1e-6, 0.5]) expect(d.clears(x, y, z + dz), `${c.kind} at ${x}, ${y}`).toBe(!hit || z <= z + dz)
+      }
+      // off the model: nothing to touch
+      expect(d.clears(-50, -50, -100)).toBe(true)
+    }
+  })
+})
+
 describe('M2.2a cutters from the tool table', () => {
   it('maps tool shapes; V cutters cannot grow for stock to leave', () => {
     const t = (n: number) => PLACEHOLDER_MACHINE.tools.find((x) => x.number === n)!

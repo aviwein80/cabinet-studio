@@ -6,7 +6,7 @@
  *    geometry with radius correction, drilling macros, rectangular pockets, saw grooves).
  */
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
-import { entityContours, layerOf } from './doc'
+import { entityContours, layerOf, opInputHash } from './doc'
 import {
   add,
   arc,
@@ -45,9 +45,11 @@ import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
 import { centreRegion } from './3d/region'
+import { type Layer, waterlineFinish } from './3d/waterline'
+import { zLevelRough } from './3d/zlevel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, DrillOp, Entity, FaceId, Finish3dOp, PocketOp, ProfileOp, SweepOp, VCarveOp } from './types'
+import type { CamOp, CamPart, DrillOp, Entity, FaceId, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SweepOp, VCarveOp } from './types'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -1037,36 +1039,99 @@ function genSweep(op: SweepOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 // 3D finishing
 // ---------------------------------------------------------------------------------------------
 
-/** 3D operation kinds: they need a model's mesh and write no native woodWOP macro (yet). */
-export const OPS_3D: ReadonlySet<CamOp['kind']> = new Set(['finish3d'])
+/** 3D operation kinds: they need a model's mesh. */
+export const OPS_3D: ReadonlySet<CamOp['kind']> = new Set(['finish3d', 'rough3d'])
 
-function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+/**
+ * 3D operations that cut only at constant heights (Z-level roughing; waterline without the
+ * shallow-area fill). They can be written to woodWOP as ordinary contour-milling passes, behind
+ * their own switch. Everything else in 3D needs true 3D output, which stays off.
+ */
+export function isFlatLayer(op: CamOp): boolean {
+  if (op.kind === 'rough3d') return true
+  if (op.kind !== 'finish3d' || op.strategy !== 'waterline') return false
+  return !(op.fillShallow && Math.max(op.slope.min, op.skipFlats ? 0.5 : 0) > 0)
+}
+
+/** woodWOP's point limit per contour is not confirmed; contours longer than this get a warning. */
+export const CONTOUR_POINT_WARN = 2000
+
+function model3d(op: Finish3dOp | Rough3dOp, ctx: GenContext, tp: Toolpath) {
   const model = ctx.part.models?.find((m) => m.id === op.surface.modelId)
   if (!model) {
     tp.warnings.push('Pick the 3D model this operation machines.')
-    return
+    return null
   }
   const mesh = ctx.meshes?.get(model.blob)
   if (!mesh) {
     tp.warnings.push(`The 3D model "${model.name}" is not loaded, so no toolpath was calculated.`)
-    return
+    return null
   }
   const ct = cutterOfTool(tp.tool)
   if ('error' in ct) {
     tp.warnings.push(ct.error)
+    return null
+  }
+  return { placed: placeMesh(mesh, model.place), cutter: ct.cutter }
+}
+
+function depthWarnings(minZ: number, ctx: GenContext, tp: Toolpath) {
+  const tool = tp.tool!
+  if (!Number.isFinite(minZ)) return
+  const flute = tool.fluteLength ?? tool.maxDepth
+  if (-minZ > flute + 1e-9) tp.warnings.push(`Cuts ${(-minZ).toFixed(2)} mm below face 1 but T${tool.number} cuts only ${flute} mm deep: the shank or holder may rub. Check in simulation.`)
+  if (minZ < -ctx.part.thickness - 1e-9) tp.warnings.push(`Goes ${(-minZ - ctx.part.thickness).toFixed(2)} mm below the part's underside: check the model's placement and the part thickness.`)
+}
+
+/** Flat-layer output: every pass of every level as one contour-milling pass at that level's depth. */
+function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolean) {
+  let long = 0
+  let above = 0
+  for (const L of layers) {
+    const depth = Math.round(-L.z * 10000) / 10000
+    if (depth <= 0) {
+      above += L.chains.length
+      continue
+    }
+    for (const c of L.chains) {
+      const pts = c.closed ? [...c.pts, c.pts[0]] : c.pts
+      if (pts.length > CONTOUR_POINT_WARN) long++
+      const segs: Seg[] = pts.slice(1).map((b, i) => line(pts[i], b))
+      tp.intents.push({ k: 'contour', segs, closed: c.closed, rk: 'NOWRK', approach: 'SEN', ramp, tool: tp.tool, label: `${label} Z${(-depth).toFixed(2)}`, passes: [{ depth, from: 0, to: segs.length - 1 }] })
+    }
+  }
+  if (above) tp.warnings.push(`${above} pass(es) above face 1 are not written to woodWOP (they cut only where the model stands above the panel).`)
+  if (long) tp.warnings.push(`${long} contour(s) have more than ${CONTOUR_POINT_WARN} points: woodWOP's limit per contour is not confirmed yet. Check the program loads on the machine.`)
+}
+
+function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const m = model3d(op, ctx, tp)
+  if (!m) return
+  const region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed))
+  if (op.strategy === 'waterline') {
+    const r = waterlineFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+    tp.warnings.push(...r.warnings)
+    b.moves.push(...r.moves)
+    depthWarnings(r.minZ, ctx, tp)
+    if (isFlatLayer(op)) layerIntents(r.layers, tp, op.name, true)
     return
   }
-  const placed = placeMesh(mesh, model.place)
-  const region = centreRegion(ctx.part, op.geometry, op.surface, ct.cutter.R, meshBounds(placed))
-  const r = parallelFinish(op, placed, ct.cutter, region, op.levels, ctx.work)
+  const r = parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
-  const tool = tp.tool!
-  if (Number.isFinite(r.minZ)) {
-    const flute = tool.fluteLength ?? tool.maxDepth
-    if (-r.minZ > flute + 1e-9) tp.warnings.push(`Cuts ${(-r.minZ).toFixed(2)} mm below face 1 but T${tool.number} cuts only ${flute} mm deep: the shank or holder may rub. Check in simulation.`)
-    if (r.minZ < -ctx.part.thickness - 1e-9) tp.warnings.push(`Goes ${(-r.minZ - ctx.part.thickness).toFixed(2)} mm below the part's underside: check the model's placement and the part thickness.`)
-  }
+  depthWarnings(r.minZ, ctx, tp)
+}
+
+function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const m = model3d(op, ctx, tp)
+  if (!m) return
+  const region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed))
+  const r = zLevelRough(op, m.placed, m.cutter, region, ctx.part, tp.tool!, ctx.work)
+  tp.warnings.push(...r.warnings)
+  b.moves.push(...r.moves)
+  depthWarnings(r.minZ, ctx, tp)
+  layerIntents(r.layers, tp, op.name, op.entry !== 'plunge')
+  if (r.layers.length) tp.warnings.push('For woodWOP, Z-level roughing is written as contour-milling passes level by level; the machine makes its own approach for each pass instead of the helix or ramp shown here.')
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1110,6 +1175,9 @@ export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
       case 'finish3d':
         genFinish3d(op, ctx, tp, b)
         break
+      case 'rough3d':
+        genRough3d(op, ctx, tp, b)
+        break
     }
   tp.stats = stats(b.moves, feeds.feed)
   tp.moves = b.moves
@@ -1126,8 +1194,17 @@ function minWidth(op: CamOp, ctx: GenContext) {
   return Math.min(bx.maxX - bx.minX, bx.maxY - bx.minY)
 }
 
-export function generatePart(part: CamPart, machine: MachineProfile, meshes?: ReadonlyMap<string, Mesh>): Toolpath[] {
-  return part.ops.filter((o) => o.enabled).map((op) => generateOp(op, { part, machine, meshes }))
+/**
+ * Toolpaths of a part's enabled operations. `paths3d`: 3D toolpaths already calculated (in the
+ * compute worker), by `pathKey`; a 3D operation found there is not calculated again.
+ */
+export function generatePart(part: CamPart, machine: MachineProfile, meshes?: ReadonlyMap<string, Mesh>, paths3d?: ReadonlyMap<string, Toolpath>): Toolpath[] {
+  return part.ops.filter((o) => o.enabled).map((op) => (OPS_3D.has(op.kind) ? paths3d?.get(pathKey(op, part, machine)) : undefined) ?? generateOp(op, { part, machine, meshes }))
+}
+
+/** Key of a toolpath: the part, the operation and the hash of everything the path depends on. */
+export function pathKey(op: CamOp, part: CamPart, machine: MachineProfile): string {
+  return `${part.id}:${op.id}:${opInputHash(op, part, resolveTool(op, machine), machine)}`
 }
 
 

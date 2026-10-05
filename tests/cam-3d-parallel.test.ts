@@ -19,7 +19,8 @@ import { generateOp, simpleMoves, type Toolpath } from '@/cam/toolpath'
 import type { CamPart, Finish3dOp } from '@/cam/types'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { digest3d } from './cam-digest'
-import { relief, type Soup, stlBinary } from './mesh-fixtures'
+import { relief, stlBinary } from './mesh-fixtures'
+import { SURFACES } from './surfaces'
 
 const machine = PLACEHOLDER_MACHINE
 /** THOROUGH=1 checks many more tool positions (minutes instead of seconds). */
@@ -27,26 +28,6 @@ const THOROUGH = process.env.THOROUGH === '1'
 const BALL = 't105' // 6 mm ball-nose (placeholder)
 const BULL = 't107' // 12 mm R2 bull-nose (placeholder)
 const FLAT = 't102' // 8 mm flat (placeholder)
-
-// analytic test surfaces (z = 0 at the top of each)
-// radius 20 so the 6 mm ball's 25 mm flutes reach the base
-const hemisphere = (x: number, y: number) => {
-  const r = Math.hypot(x - 40, y - 40)
-  return r < 20 ? Math.sqrt(400 - r * r) - 20 : -20
-}
-const sine = (x: number, y: number) => -3 + 2.5 * Math.sin(x / 15) * Math.cos(y / 20)
-const raisedPanel = (x: number, y: number) => {
-  const e = Math.min(x - 20, y - 20, 180 - x, 130 - y) // distance in from the bevel's outer edge
-  return e >= 40 ? 0 : e <= 0 ? -10 : -10 + (10 * e) / 40
-}
-const cove = (_x: number, y: number) => (y < 20 ? -Math.sqrt(Math.max(0, 400 - (y - 20) ** 2)) : -20)
-
-const SURFACES: Record<string, { soup: () => Soup; f: (x: number, y: number) => number }> = {
-  hemisphere: { soup: () => relief(80, 80, 160, 160, hemisphere), f: hemisphere },
-  sine: { soup: () => relief(150, 100, 150, 100, sine), f: sine },
-  'raised-panel': { soup: () => relief(200, 150, 200, 150, raisedPanel), f: raisedPanel },
-  cove: { soup: () => relief(60, 40, 30, 160, cove), f: cove },
-}
 
 const meshCache = new Map<string, Mesh>()
 function setup(name: string, patch: Partial<Finish3dOp> = {}, boundary?: ReturnType<typeof makeEntity>[]) {

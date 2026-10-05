@@ -12,6 +12,7 @@ export const DEFAULT_FEATURES: FeatureFlags = {
   camBackplot: true,
   hardwarePatterns: true,
   camMprOutput: false,
+  cam3dMprOutput: false,
   cam3d: true,
 }
 

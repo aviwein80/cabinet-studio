@@ -157,6 +157,19 @@ export class DropCutter {
    * `hitTri` and `hitNz` hold the tip height, the facet touched and the contact normal's Z.
    */
   drop(x: number, y: number): boolean {
+    return this.run(x, y, -Infinity)
+  }
+
+  /**
+   * True when the tool standing with its tip at `z` over (x, y) touches no facet (it may go that
+   * low). Same answer as `!drop(x, y) || this.z <= z`, but facets that lie wholly below `z`
+   * are skipped at once, so it is much faster near the floor. Leaves `z`/`hitTri` undefined.
+   */
+  clears(x: number, y: number, z: number): boolean {
+    return !this.run(x, y, z)
+  }
+
+  private run(x: number, y: number, above: number): boolean {
     const R = this.cutter.R
     const tri = this.tri
     const i0 = Math.max(0, Math.floor((x - R - this.ox) / this.cell))
@@ -171,7 +184,7 @@ export class DropCutter {
       this.eStamp.fill(0)
       this.mark = 1
     }
-    this.z = -Infinity
+    this.z = above
     this.hitTri = -1
     this.hitNz = 1
     // gather the facets under the tool with an upper bound on each one's contact; a facet whose
@@ -201,6 +214,7 @@ export class DropCutter {
           const bx = Math.max(0, tri[o + 14] - x, x - tri[o + 16])
           const by = Math.max(0, tri[o + 15] - y, y - tri[o + 17])
           const ub = tri[o + 13] - this.h(Math.min(R, Math.sqrt(bx * bx + by * by)))
+          if (ub <= above) continue
           if (ub > bestUb) {
             bestUb = ub
             best = n
@@ -330,6 +344,8 @@ export class DropCutter {
     const hi = Math.min(1, (-ab + sq) / B)
     if (lo > hi) return
     const p2 = Math.max(0, aa - (ab * ab) / B) // squared distance from the axis to the edge's line
+    // no point of this part of the edge is nearer the axis than its line, nor higher than its ends
+    if (Math.max(z0 + lo * ez, z0 + hi * ez) - this.h(Math.min(R, Math.sqrt(p2))) <= this.z) return
     switch (this.shape) {
       case 0: {
         // ball: the centre height along the edge is concave; its maximum solves a closed form
@@ -356,7 +372,10 @@ export class DropCutter {
         let m2 = a + g * (b - a)
         let f1 = this.edgeAt(m1, x0, y0, z0, bx, by, ez, x, y)
         let f2 = this.edgeAt(m2, x0, y0, z0, bx, by, ez, x, y)
-        for (let i = 0; i < 60 && b - a > 1e-12; i++) {
+        // stop at 1e-6 mm along the edge: the height error is then far below 1e-9 mm (the
+        // function is flat at its maximum)
+        const stop = 1e-6 / Math.sqrt(B)
+        for (let i = 0; i < 60 && b - a > stop; i++) {
           if (f1 < f2) {
             a = m1
             m1 = m2

@@ -20,7 +20,7 @@ export interface GougeReport {
   /** Deepest cut below the surface (+ stock to leave), mm; 0 or negative = no gouge. */
   max: number
   at: [number, number, number] | null
-  /** Smallest clearance seen (how close the tool came to the surface + stock), mm. */
+  /** Smallest clearance seen (how close the tool came to the surface + stock), mm. The exact check looks no further than 1 mm. */
   minClearance: number
   /** Tool positions checked. */
   points: number
@@ -71,7 +71,8 @@ export function checkGouge(mesh: Mesh, tool: CheckTool, moves: Move[], opt: { st
     const R = tool.r + stock
     for (const [x, y, z] of positions(moves, step)) {
       rep.points++
-      const d = grid.nearest(x, y, z + tool.r, stamp, ++mark)
+      // only nearness matters: a position more than 1 mm clear needs no exact distance
+      const d = grid.nearest(x, y, z + tool.r, stamp, ++mark, R + 1)
       const g = R - d
       if (g > rep.max) {
         rep.max = g
@@ -159,4 +160,12 @@ export function distanceToMesh(mesh: Mesh, x: number, y: number, z: number): num
     best = Math.min(best, pointTriDist2(x, y, z, p[a], p[a + 1], p[a + 2], p[b], p[b + 1], p[b + 2], p[c], p[c + 1], p[c + 2]))
   }
   return Math.sqrt(best)
+}
+
+/** Distance to the nearest facet, for many points (builds the distance grid once). */
+export function meshDistance(mesh: Mesh): (x: number, y: number, z: number) => number {
+  const grid = new TriGrid(mesh)
+  const stamp = new Int32Array(triCount(mesh))
+  let mark = 0
+  return (x, y, z) => grid.nearest(x, y, z, stamp, ++mark)
 }

@@ -281,7 +281,7 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
   const deps: unknown[] = [params, geo, tool, part.thickness]
   // 3D ops: the model's data (by hash, never the mesh itself) and where it sits
-  if (op.kind === 'finish3d') {
+  if (op.kind === 'finish3d' || op.kind === 'rough3d') {
     const m = part.models?.find((x) => x.id === op.surface.modelId)
     deps.push(m ? { blob: m.blob, place: m.place } : null)
   }

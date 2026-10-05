@@ -120,6 +120,14 @@ export function overlapArea(a: Contour[], b: Contour[]) {
 export function unionPolys(polys: P[][]): P[][] {
   return union(polys.map(polyPath), FillRule.NonZero).map(pathPoly)
 }
+/**
+ * Polygon booleans without refitting. `a` is read with the non-zero rule (loops wound by meaning:
+ * counter-clockwise around filled areas, clockwise around holes); `b` with even-odd.
+ */
+export function clipPolys(op: BoolOp, a: P[][], b: P[][]): P[][] {
+  const bb = union(b.map(polyPath), FillRule.EvenOdd)
+  return booleanOp(CLIP[op], a.map(polyPath), bb, FillRule.NonZero).map(pathPoly)
+}
 export function inflatePolys(polys: P[][], d: number, join: Join = 'round', arcTol = 0.05): P[][] {
   return inflatePaths(polys.map(polyPath), d * SCALE, JOIN[join], EndType.Polygon, 4, arcTol * SCALE).map(pathPoly)
 }

@@ -1,0 +1,24 @@
+{
+  "op": "3D finishing (waterline)",
+  "kind": "finish3d",
+  "tool": 105,
+  "moves": {
+    "rapid": 30,
+    "feed": 10,
+    "arc": 0,
+    "drill": 0,
+    "poly": 10,
+    "points": 660
+  },
+  "cutMm": 740,
+  "box": [
+    0,
+    2.83,
+    -19.99,
+    60,
+    19.428,
+    -2
+  ],
+  "warnings": [],
+  "hash": "718fe78a"
+}

@@ -301,13 +301,18 @@ export interface Surface3D {
   tolerance: number
 }
 
-/** 3D finishing on a model. Stage 2 strategies: parallel (M2.2a), waterline, projection, pencil. */
+/** 3D finishing on a model. Stage 2 strategies: parallel (M2.2a), waterline (M2.2b), projection, pencil. */
 export interface Finish3dOp extends OpBase {
   kind: 'finish3d'
-  strategy: 'parallel'
+  /** Parallel: straight passes dropped onto the surface. Waterline: passes at constant heights around the model. */
+  strategy: 'parallel' | 'waterline'
   surface: Surface3D
-  /** Distance between passes, mm. */
+  /** Distance between passes, mm (parallel passes, and the shallow-area fill of waterline). */
   stepover: number
+  /** Waterline: height between passes, mm (default 1). */
+  stepdown?: number
+  /** Waterline: also finish the areas flatter than the minimum slope with parallel passes. */
+  fillShallow?: boolean
   /** Pass direction in degrees from +X. */
   angle: number
   /** Back and forth, or every pass the same way (with a lift between). */
@@ -320,7 +325,35 @@ export interface Finish3dOp extends OpBase {
   skipFlats: boolean
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp
+/**
+ * Z-level roughing (3D-01): the model is sliced into flat levels from the top of the stock down;
+ * each level is cleared like a pocket wherever the tool fits without touching the model.
+ */
+export interface Rough3dOp extends OpBase {
+  kind: 'rough3d'
+  /** `stockToLeave` is the material left on walls (all round); `stockZ` the material left on floors. */
+  surface: Surface3D
+  stockZ: number
+  /** Height between levels, mm. */
+  stepdown: number
+  /** Distance between passes as a fraction of the tool diameter. */
+  stepover: number
+  /** Offset rings from the inside out, or back-and-forth lines (plus a pass along the walls). */
+  pattern: 'offset' | 'zigzag'
+  /** Zig-zag line angle in degrees from +X. */
+  angle: number
+  direction: Direction
+  /** How the tool goes down into each new area. */
+  entry: 'helix' | 'ramp' | 'plunge'
+  /** Ramp and helix angle, degrees. */
+  rampAngle: number
+  /** Helix radius as a fraction of the tool radius. */
+  helixPct: number
+  /** Add a level at the height of every flat area of the model. */
+  flats: boolean
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

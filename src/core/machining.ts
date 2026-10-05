@@ -1,6 +1,6 @@
 import type { Seg } from '@/cam/geom'
 import { partProgramOps } from '@/cam/mpr'
-import { generatePart, type Intent, OPS_3D } from '@/cam/toolpath'
+import { generatePart, type Intent, isFlatLayer, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
@@ -191,12 +191,30 @@ export interface SheetProgram {
   /** Horizontal holes left out of the program because the machine has no horizontal unit. */
   skipped: HDrill[]
   /** Custom parts on this sheet: toolpath warnings, underside drilling, and whether machining was written. */
-  custom?: { partUid: string; partNo: number; written: boolean; machiningOps: number; backHoles: number; warnings: string[]; ops3d?: number }[]
+  custom?: {
+    partUid: string
+    partNo: number
+    written: boolean
+    machiningOps: number
+    backHoles: number
+    warnings: string[]
+    /** 3D operations that need true 3D output (never written). */
+    ops3d?: number
+    /** Flat-layer 3D operations (Z-level roughing, waterline), and how many of them have no toolpath yet. */
+    flat3d?: number
+    flat3dMissing?: number
+    /** Flat-layer 3D operations written to the program. */
+    flat3dWritten?: boolean
+  }[]
 }
 
 export interface ProgramOptions {
   /** Write custom-part machining (feature flag camMprOutput). Off: only the cut-out is written. */
   camOutput?: boolean
+  /** Also write flat-layer 3D operations (feature flag cam3dMprOutput). */
+  cam3dOutput?: boolean
+  /** 3D toolpaths calculated beforehand (in the compute worker), by `pathKey`. */
+  paths3d?: ReadonlyMap<string, Toolpath>
   /** Small parts: the cut-out leaves `thickness` and a last pass at the end of the sheet cuts it. */
   onionSkin?: { thickness: number; maxArea: number }
 }
@@ -283,16 +301,30 @@ export function buildSheetProgram(
     const { pt, dir, angle } = placementTransform(inst, pl)
     const base = { partUid: inst.uid, partNo: inst.no }
     if (inst.cam) {
-      const paths = generatePart(inst.cam, machine)
+      const paths = generatePart(inst.cam, machine, undefined, opts.paths3d)
       const tf = { pt, dir, rotated: pl.rotated, angle }
       const all = partProgramOps(inst.cam, paths, tf, inst.uid, inst.no, machine, true)
       const backHoles = paths.reduce((n, tp) => n + tp.intents.filter((it) => it.k === 'vdrill' && it.back).length, 0)
       const machining = all.filter((o) => o.kind === 'cam')
-      const ops3d = inst.cam.ops.filter((o) => o.enabled && OPS_3D.has(o.kind)).length
-      custom.push({ ...base, written: !!opts.camOutput, machiningOps: machining.length, backHoles, warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)), ...(ops3d ? { ops3d } : {}) })
+      const enabled3d = inst.cam.ops.filter((o) => o.enabled && OPS_3D.has(o.kind))
+      const ops3d = enabled3d.filter((o) => !isFlatLayer(o)).length
+      const flat = enabled3d.filter(isFlatLayer)
+      const flatIds = new Set(flat.map((o) => o.id))
+      const flat3dMissing = flat.filter((o) => !opts.paths3d?.has(pathKey(o, inst.cam!, machine))).length
+      const write3d = !!opts.camOutput && !!opts.cam3dOutput
+      custom.push({
+        ...base,
+        written: !!opts.camOutput,
+        machiningOps: machining.length,
+        backHoles,
+        warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)),
+        ...(ops3d ? { ops3d } : {}),
+        ...(flat.length ? { flat3d: flat.length, flat3dMissing, flat3dWritten: write3d && !flat3dMissing } : {}),
+      })
       for (const o of all) {
         if (o.kind === 'contour') contours.push(o)
         else if (o.kind !== 'cam' || !opts.camOutput) continue
+        else if (flatIds.has(o.opId) && !(write3d && !flat3dMissing)) continue
         else if (o.intent.k === 'vdrill') {
           const it = o.intent
           drills.push({ ...base, kind: 'vdrill', opId: o.opId, purpose: 'custom', x: it.x, y: it.y, diameter: it.d, depth: it.depth, through: it.through, tool: it.tool })

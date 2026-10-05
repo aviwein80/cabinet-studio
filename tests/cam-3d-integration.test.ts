@@ -12,10 +12,11 @@ import { defaultOp } from '@/cam/ops'
 import { runPost, SAMPLE_TEMPLATE } from '@/cam/post'
 import { buildTimeline } from '@/cam/sim'
 import { HeightfieldStock } from '@/cam/stock/heightfield'
-import { toolpathContours } from '@/cam/toolpath'
-import type { CamPart, Finish3dOp } from '@/cam/types'
+import { pathKey, toolpathContours, type Toolpath } from '@/cam/toolpath'
+import type { CamPart, Finish3dOp, Rough3dOp } from '@/cam/types'
 import { runTask, transferables } from '@/cam/worker/tasks'
 import { defaultAppData, PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { writeSheetMpr } from '@/core/mpr/writer'
 import { runJob } from '@/core/pipeline'
 import type { Job } from '@/core/types'
 import { relief, stlBinary } from './mesh-fixtures'
@@ -33,6 +34,68 @@ function part3d(): { part: CamPart; mesh: ReturnType<typeof buildMesh>['mesh'] }
   part.ops = [{ ...base, toolId: 't105', stepover: 2, surface: { ...base.surface, modelId: 'm' } }, defaultOp('profile', [part.outlineId!])]
   return { part, mesh }
 }
+
+describe('M2.2b flat-layer 3D output to woodWOP', () => {
+  async function roughJob(fillShallowWaterline = false) {
+    const { part, mesh } = part3d()
+    const r = defaultOp('rough3d') as Rough3dOp
+    const w = defaultOp('finish3d', [], { strategy: 'waterline' } as Partial<Finish3dOp>) as Finish3dOp
+    part.ops = [
+      { ...r, toolId: 't107', stepdown: 3, surface: { ...r.surface, modelId: 'm' } },
+      { ...w, toolId: 't105', stepdown: 1, fillShallow: fillShallowWaterline, slope: { min: 0, max: 90 }, surface: { ...w.surface, modelId: 'm' } },
+    ]
+    const tps = await runTask('cam.generate', { part, machine: PLACEHOLDER_MACHINE, opIds: part.ops.map((o) => o.id), meshes: { b: mesh } })
+    const paths3d = new Map<string, Toolpath>(part.ops.map((op, i) => [pathKey(op, part, PLACEHOLDER_MACHINE), tps[i]]))
+    const data = defaultAppData()
+    const job: Job = { id: 'j', number: 'J3D', name: '3D', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [part] }
+    data.jobs = [job]
+    const setFlags = (cam: boolean, cam3d: boolean) => (data.settings.features = { ...data.settings.features, camMprOutput: cam, cam3dMprOutput: cam3d } as typeof data.settings.features)
+    return { part, tps, paths3d, data, job, setFlags }
+  }
+  const codes = (out: ReturnType<typeof runJob>) => out.issues.filter((i) => i.code.startsWith('CAM_3D')).map((i) => i.code)
+
+  it('switch off (the default): roughing and waterline are not written, and the export checker says why', async () => {
+    const { data, job, paths3d, setFlags } = await roughJob()
+    expect(data.settings.features?.cam3dMprOutput ?? false).toBe(false)
+    setFlags(true, false)
+    const out = runJob(job, data, { paths3d })
+    expect(codes(out)).toEqual(['CAM_3D_OUTPUT_OFF'])
+    expect(out.programs.flatMap((p) => p.ops).filter((o) => o.kind === 'cam' && o.intent.k === 'contour')).toHaveLength(0)
+  })
+
+  it('switch on, toolpaths not calculated (as in a batch run): blocked with CAM_3D_NOT_READY', async () => {
+    const { data, job, setFlags } = await roughJob()
+    setFlags(true, true)
+    expect(codes(runJob(job, data))).toEqual(['CAM_3D_NOT_READY'])
+  })
+
+  it('switch on, toolpaths supplied: each pass of each level becomes one <105> contour at its depth', async () => {
+    const { data, job, paths3d, tps, setFlags } = await roughJob()
+    setFlags(true, true)
+    const out = runJob(job, data, { paths3d })
+    expect(codes(out)).toEqual([])
+    const written = out.programs.flatMap((p) => p.ops).filter((o) => o.kind === 'cam' && o.intent.k === 'contour')
+    const expected = tps.reduce((n, tp) => n + tp.intents.length, 0)
+    expect(expected).toBeGreaterThan(5)
+    expect(written).toHaveLength(expected)
+    const mpr = writeSheetMpr(out.programs[0], { job, machine: data.machine, mprNumber: 1, mprCount: 1 })
+    expect(mpr.split('<105 ').length - 1).toBeGreaterThanOrEqual(expected)
+    // every contour is at one of the levels (ZA = thickness - depth)
+    const depths = new Set(tps.flatMap((tp) => tp.intents.flatMap((it) => (it.k === 'contour' ? it.passes.map((p) => p.depth) : []))))
+    for (const d of depths) expect(d).toBeGreaterThan(0)
+    // nothing else blocks it (the sample part's thickness differs from the library sheet: unrelated)
+    expect(out.issues.filter((i) => i.severity === 'error' && i.code !== 'THICKNESS').map((i) => i.code)).toEqual([])
+  })
+
+  it('waterline with the shallow-area fill needs true 3D output: CAM_3D_NO_OUTPUT even with the switch on', async () => {
+    const { data, job, paths3d, setFlags } = await roughJob(true)
+    // the fill only exists with a slope limit
+    job.camParts![0].ops[1] = { ...(job.camParts![0].ops[1] as Finish3dOp), slope: { min: 30, max: 90 } }
+    setFlags(true, true)
+    // the roughing is still written; only the waterline is blocked
+    expect(codes(runJob(job, data, { paths3d }))).toEqual(['CAM_3D_NO_OUTPUT'])
+  })
+})
 
 describe('M2.2a 3D finishing through the worker task, simulator and posts', () => {
   it('the worker task returns the same toolpath as a direct call, ready to transfer', async () => {

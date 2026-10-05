@@ -9,6 +9,7 @@ import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type P
 import { cutoutTool, placementTransform, type JobNest, type SheetProgram } from './machining'
 import type { Placement } from './nesting'
 import { machineModelOf } from './machineModel'
+import { featuresOf } from './features'
 import type { Library, MachineProfile, ShopSettings } from './types'
 
 export type Severity = 'error' | 'warning' | 'info'
@@ -246,8 +247,19 @@ export function validateJob(
           ...ref,
           severity: 'error',
           code: 'CAM_3D_NO_OUTPUT',
-          message: `Custom part #${c.partNo} ${name}: ${c.ops3d} 3D operation(s) cannot be written to woodWOP yet (3D output stays off until the format is confirmed with a program from the machine). Only simulate them.`,
+          message: `Custom part #${c.partNo} ${name}: ${c.ops3d} 3D operation(s) need true 3D output, which cannot be written to woodWOP yet (it stays off until the format is confirmed with a program from the machine). Only simulate them. Z-level roughing, and waterline without the shallow-area fill, can be written as flat layers.`,
         })
+      if (c.flat3d && !c.flat3dWritten) {
+        const off = !featuresOf(settings).cam3dMprOutput || !c.written
+        add({
+          ...ref,
+          severity: 'error',
+          code: off ? 'CAM_3D_OUTPUT_OFF' : 'CAM_3D_NOT_READY',
+          message: off
+            ? `Custom part #${c.partNo} ${name}: ${c.flat3d} 3D roughing or waterline operation(s) are not written because 3D flat-layer output is off (Machine > Features).`
+            : `Custom part #${c.partNo} ${name}: ${c.flat3dMissing} 3D roughing or waterline toolpath(s) are not calculated yet. Wait for the job page to finish calculating them (batch runs cannot calculate 3D toolpaths yet).`,
+        })
+      }
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
       if (c.written && c.backHoles > 0)
         add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })

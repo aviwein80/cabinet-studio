@@ -25,3 +25,10 @@ export function tick(work: Work | undefined, i: number, n: number, every = 65536
   checkCancel(work.isCancelled)
   work.progress?.(from + (span * i) / Math.max(1, n), note)
 }
+
+/** The same hooks, with progress mapped into [from, from + span]. */
+export function subWork(work: Work | undefined, from: number, span: number): Work | undefined {
+  if (!work) return undefined
+  const p = work.progress
+  return { isCancelled: work.isCancelled, progress: p && ((f, n) => p(from + span * f, n)) }
+}

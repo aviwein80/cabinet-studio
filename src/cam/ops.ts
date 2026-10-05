@@ -21,6 +21,7 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   sweep: 'Profiled sweep',
   code: 'Program note',
   finish3d: '3D finishing',
+  rough3d: '3D roughing (Z-level)',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -98,6 +99,29 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
         skipFlats: false,
         levels: { ...DEFAULT_LEVELS, depth: 0 },
       }
+      if ((extra as { strategy?: string }).strategy === 'waterline') {
+        // PLACEHOLDER: waterline on slopes of 30° and steeper, parallel passes on the rest
+        Object.assign(op, { name: '3D finishing (waterline)', stepdown: 0.5, fillShallow: true, slope: { min: 30, max: 90 } })
+      }
+      break
+    case 'rough3d':
+      // PLACEHOLDER cutting values until the shop supplies its own
+      op = {
+        ...base,
+        kind,
+        surface: { modelId: '', boundaryMode: 'touching', stockToLeave: 0.5, tolerance: 0.05 },
+        stockZ: 0.5,
+        stepdown: 3,
+        stepover: 0.4,
+        pattern: 'offset',
+        angle: 0,
+        direction: 'climb',
+        entry: 'helix',
+        rampAngle: 5,
+        helixPct: 0.8,
+        flats: true,
+        levels: { ...DEFAULT_LEVELS, depth: 0 },
+      }
       break
   }
   return { ...op, ...extra } as CamOp
@@ -140,6 +164,14 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
       // ball-nose first (largest), then bull-nose
       const shaped = routers(machine).filter((t) => t.shape === 'ball' || t.shape === 'bull')
       return shaped.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || b.diameter - a.diameter || a.number - b.number)[0] ?? null
+    }
+    case 'rough3d': {
+      // bull-nose first, then flat end mills other than the cut-out tool, then ball-nose; largest first
+      const cut = cutoutTool(machine)
+      const rank = (t: Tool) => (t.shape === 'bull' ? 0 : squareEnd(t) ? 1 : t.shape === 'ball' ? 2 : 3)
+      return routers(machine)
+        .filter((t) => rank(t) < 3 && t.id !== cut?.id)
+        .sort((a, b) => rank(a) - rank(b) || b.diameter - a.diameter || a.number - b.number)[0] ?? null
     }
   }
 }

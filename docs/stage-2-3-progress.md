@@ -42,13 +42,14 @@ Full details: section 11 of `docs/stage-2-3-prompt.md`.
 | M2.5d 3D wires and surfaces | **Done** (October 2026) | See below. |
 | M2.5e Packaged-app check, screenshots, docs | **Done** (October 2026) | See below. M2.5 complete. |
 | M2.6a Saw cuts, facing, format v4, switches | **Done** (October 2026) | See below. |
-| M2.6b - M2.6d | In progress | Chamfer and curve cuts; hand-drawn toolpaths and edits; aggregate edge work, screenshots, docs. |
+| M2.6b Chamfers, cuts between curves, along 3D curves, Z-waves | **Done** (October 2026) | See below. |
+| M2.6c - M2.6d | In progress | Hand-drawn toolpaths and edits; aggregate edge work, screenshots, docs. |
 | M2.7 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -789,6 +790,40 @@ proven output.
 - **Facing on shaped outlines** links passes along the edge only where the link stays inside the
   faced area; elsewhere it lifts.
 
+## M2.6b chamfers and curve cuts: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 2D-13 | Chamfer: a V cutter's flank lies on the bevel. Width- or depth-driven (for half-angle a, width = depth x tan a); the tip can run lower than the bevel's bottom (then it moves that much x tan a to the waste side, so the flank cuts); outside / inside / left / right, climb or conventional; passes. From shapes on face 1, or from level 3D edges of a solid (the 3D polylines M2.5 makes from edges) at their own height; edges that are not level are left out with a warning; a chamfer too big for the cutter is refused. Picks the largest V cutter. Written as contour-milling passes behind the M2.6 output switch | `genChamfer` in `src/cam/toolpath.ts` |
+| 2D-15 between | Cut between two curves: the surface ruled between them (each resampled by length, open curves run the same way, closed ones lined up), finished with passes from one curve to the other no further apart than the step-over (measured on the surface). Every point is an exact drop-cutter position on that surface and the moves are refined like 3D finishing, so a ball, bull-nose, flat or V tool never cuts into it. 2D shapes take a depth each; 3D polylines keep their heights. Calculated in the background worker (0.1-0.45 s on the references) | `src/cam/more25d/curves.ts` (`betweenCurves`) |
+| 2D-15 along 3D | The tool tip follows 3D polylines, or a smooth curve through their points (Catmull-Rom, chord within the tolerance), with a depth below them in passes | `smooth3`, `genCurve` |
+| 2D-15 Z-wave | A 2D shape cut with the depth rising and falling between two depths every wave length (smooth or straight up and down); closed shapes get a whole number of waves so the ends meet; optional layers (each pass stops at its floor) | `zWave`, `waveDepth` |
+| Output | Curve cuts move the tool up and down along the path: true 3D, so `CAM_NO_OUTPUT` (also when export skips the background calculation) | `genCurve`, `generatePart` |
+| Screens | Add operation: Chamfer, Cut between two curves, Cut along a 3D curve, Z-wave along a shape, with their editors | `OpsPanel.tsx` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Golden toolpaths on 3 reference parts per op | `tests/golden/cam25d/{cham01-03, btw01-03, f3d01-03, zw01-03}` | Chamfer: panel outline by width; round opening by depth in two cuts with the tip lowered; a level 3D edge at -6 and an open edge. Between: plane bevel, cone between circles, twisted surface between 3D polylines. Along: ramp polyline, smooth curve in two cuts, closed loop. Z-wave: open sine, triangle round a circle, 2 mm layers round a rectangle. Earlier goldens unchanged |
+| Chamfer geometry (simulated, independent of the generator) | `tests/cam-chamfer-curves.test.ts` | 90° cutter, 3 mm wide: the stock at distance u from the edge is -(3 - u) within 0.002 mm (0.1 mm cells) on two edges. 60° cutter, 4 mm deep, tip 1 mm lower: tip at -5, 0.577 mm outside the panel; bevel -(4 - u / tan 30°) within 0.003 mm |
+| Between curves: no gouge | same (the exact ball-nose checker from M2.2, against the true surface) | Plane bevel and cone: deepest 0.005 mm or less; on the bevel the ball centre is its radius from the plane within 0.002 mm (it touches); 22 passes for a 41.2 mm slant at 2 mm |
+| Along 3D / smooth | same | Tip exactly on the polyline's points; the smooth curve passes through every point (1e-9); depth passes at -5.5 and -6 |
+| Z-wave | same | Shallowest at the start, deepest at half a wave; straight moves within 0.01 mm of the true wave; a closed circle gets 13 waves of 48.33 mm and joins; layers stop at -2, -4, -6; the simulated groove lies between the wave and the deepest point within the cutter's reach |
+| Output | same | Chamfer: `CAM_25D_OUTPUT_OFF` until the switch is on, then no errors. Curve cuts: `CAM_NO_OUTPUT` with every switch on |
+
+### Limits recorded
+
+- **Chamfers from solid edges** need the edge as a level 3D polyline (from "Edges" on a solid); a
+  chamfer along a sloping edge is not made.
+- **Inside corners of a chamfer** are rounded by the cutter (a V cutter cannot make a sharp inside
+  corner on the bevel).
+- **Between curves**: a ball-nose cannot reach a sharp bottom edge of the surface (on the bevel
+  reference the deepest point is 0.09 mm above the 10 mm line); passes at either end follow the
+  curve, not past it.
+- **Smooth curves through points** can swing outside the polyline at sharp corners (that is what a
+  curve through the points does); use straight pieces there.
+
 
 ## Run log
 
@@ -812,3 +847,4 @@ proven output.
 - **Run 6 (M2.5d)**: 3D wires and surfaces; face jobs moved to the worker. See `git log`.
 - **Run 6 (M2.5e)**: packaged-app check (Linux), screenshots, README, ROADMAP. M2.5 complete.
 - **Run 7 (M2.6a)**: saw cuts, facing, format v4, switches. See `git log`.
+- **Run 7 (M2.6b)**: chamfers, cuts between curves, along 3D curves, Z-waves. See `git log`.

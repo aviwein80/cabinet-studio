@@ -1,0 +1,109 @@
+[
+ {
+  "op": "Chamfer",
+  "kind": "chamfer",
+  "tool": 104,
+  "moves": {
+   "rapid": 4,
+   "feed": 6,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 1606,
+  "box": [
+   0,
+   0,
+   500,
+   300
+  ],
+  "zMin": -3,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "Chamfer 3.00 mm wide and 3.00 mm deep with T104 (90°)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 250,
+    "y": 300,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 250,
+    "y": 300,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 250,
+    "y": 300,
+    "z": -3,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 500,
+    "y": 300,
+    "z": -3,
+    "f": "cut"
+   }
+  ]
+ },
+ {
+  "op": "Profile",
+  "kind": "profile",
+  "tool": 101,
+  "moves": {
+   "rapid": 4,
+   "feed": 7,
+   "arc": 6,
+   "drill": 0
+  },
+  "cutMm": 1690,
+  "box": [
+   -6,
+   -6,
+   506,
+   315
+  ],
+  "zMin": -19.3,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 241,
+    "y": 315,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 241,
+    "y": 315,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 241,
+    "y": 315,
+    "z": -19.3,
+    "f": "plunge"
+   },
+   {
+    "t": "arc",
+    "x": 250,
+    "y": 306,
+    "z": -19.3,
+    "cx": 249.99999999992116,
+    "cy": 314.9999999978853,
+    "ccw": true,
+    "f": "lead"
+   }
+  ]
+ }
+]

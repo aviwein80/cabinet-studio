@@ -1,0 +1,108 @@
+[
+ {
+  "op": "Chamfer",
+  "kind": "chamfer",
+  "tool": 104,
+  "moves": {
+   "rapid": 4,
+   "feed": 6,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 611,
+  "box": [
+   100,
+   100,
+   300,
+   200
+  ],
+  "zMin": -8,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "Chamfer 2.00 mm wide and 2.00 mm deep with T104 (90°)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 200,
+    "y": 100,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 200,
+    "y": 100,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 200,
+    "y": 100,
+    "z": -8,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 300,
+    "y": 100,
+    "z": -8,
+    "f": "cut"
+   }
+  ]
+ },
+ {
+  "op": "Chamfer",
+  "kind": "chamfer",
+  "tool": 104,
+  "moves": {
+   "rapid": 4,
+   "feed": 2,
+   "arc": 0,
+   "drill": 0
+  },
+  "cutMm": 365,
+  "box": [
+   20,
+   280,
+   380,
+   280
+  ],
+  "zMin": -1.5,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "Chamfer 1.50 mm wide and 1.50 mm deep with T104 (90°)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 380,
+    "y": 280,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 380,
+    "y": 280,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 380,
+    "y": 280,
+    "z": -1.5,
+    "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 20,
+    "y": 280,
+    "z": -1.5,
+    "f": "cut"
+   }
+  ]
+ }
+]

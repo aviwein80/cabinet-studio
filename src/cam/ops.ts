@@ -32,6 +32,8 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   finish3d: '3D finishing',
   rough3d: '3D roughing (Z-level)',
   face: 'Facing',
+  chamfer: 'Chamfer',
+  curve: 'Curve cut',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -94,6 +96,15 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
     case 'code':
       op = { ...base, kind, text: '', stop: false }
       break
+    case 'chamfer':
+      op = { ...base, kind, side: 'outside', drive: 'width', size: 3, tipOffset: 0, direction: 'climb', levels: { ...DEFAULT_LEVELS, depth: 0 } }
+      break
+    case 'curve': {
+      // PLACEHOLDER step-over and wave until the shop supplies its own
+      const mode = ((extra as { mode?: string }).mode ?? 'zwave') as 'between' | 'follow3d' | 'zwave'
+      op = { ...base, kind, name: { between: 'Cut between curves', follow3d: 'Cut along 3D curve', zwave: 'Z-wave' }[mode], mode, stepover: 1, depthA: 0, depthB: 5, zigzag: true, smooth: false, wave: { min: 1, max: 4, length: 40, shape: 'sine' }, tolerance: 0.01, levels: { ...DEFAULT_LEVELS, depth: 0 } }
+      break
+    }
     case 'face':
       // PLACEHOLDER step-over (the pocket's 45 %) until the shop supplies its own
       op = { ...base, kind, pattern: 'zigzag', stepover: 0.45, angle: 0, direction: 'climb', overhang: 0, resetTop: true, levels: { ...DEFAULT_LEVELS, depth: 1 } }
@@ -169,6 +180,15 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
         .filter((t) => squareEnd(t) && (!hint?.width || t.diameter <= hint.width + 1e-9))
         .sort((a, b) => b.diameter - a.diameter || a.number - b.number)
       return fits[0] ?? null
+    }
+    case 'chamfer':
+      return routers(machine).filter((t) => t.shape === 'v').sort((a, b) => b.diameter - a.diameter || a.number - b.number)[0] ?? null
+    case 'curve': {
+      if (op.mode === 'between') {
+        const shaped = routers(machine).filter((t) => t.shape === 'ball' || t.shape === 'bull')
+        return shaped.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || b.diameter - a.diameter || a.number - b.number)[0] ?? routers(machine).filter(squareEnd).sort((a, b) => b.diameter - a.diameter)[0] ?? null
+      }
+      return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
     }
     case 'face':
       // the widest flat cutter

@@ -60,3 +60,58 @@ export function faceParts(): CamPart[] {
     ]),
   ]
 }
+
+const P3 = (pts: [number, number, number][]) => ({ t: 'poly3d' as const, pts })
+
+/** Chamfers (2D-13): three reference parts. */
+export function chamferParts(): CamPart[] {
+  n = 200
+  return [
+    part('cham01', 'Panel outline, 3 mm chamfer by width', [500, 300, 19], [E(C(rect(0, 0, 500, 300)))], (es) => [OP('chamfer', ids(es, 0), { size: 3 } as Partial<CamOp>), OP('profile', ids(es, 0), lv({ through: true }))]),
+    part('cham02', 'Round opening, 2 mm deep in two cuts, tip lowered', [400, 400, 19], [E(C(rect(0, 0, 400, 400))), E({ t: 'circle', c: pt(200, 200), r: 60 }, 'machining')], (es) => [
+      OP('chamfer', ids(es, 1), { side: 'inside', drive: 'depth', size: 2, tipOffset: 0.5, ...lv({ depth: 0, cuts: 2 }) } as Partial<CamOp>),
+    ]),
+    part(
+      'cham03',
+      'Level 3D edge of a step and an open edge',
+      [400, 300, 25],
+      [E(C(rect(0, 0, 400, 300))), E(P3([[100, 100, -6], [300, 100, -6], [300, 200, -6], [100, 200, -6], [100, 100, -6]]), 'edges'), E(C(polyline([pt(20, 280), pt(380, 280)], false)), 'machining')],
+      (es) => [OP('chamfer', ids(es, 1), { side: 'inside', size: 2 } as Partial<CamOp>), OP('chamfer', ids(es, 2), { side: 'right', direction: 'conventional', size: 1.5 } as Partial<CamOp>)],
+    ),
+  ]
+}
+
+/** Curve cuts (2D-15): three reference parts per mode. */
+export function curveParts(): CamPart[] {
+  n = 300
+  const between = (extra: Partial<CamOp> = {}) => ({ mode: 'between', toolId: 't105', ...extra }) as Partial<CamOp>
+  const follow = (extra: Partial<CamOp> = {}) => ({ mode: 'follow3d', toolId: 't105', ...extra }) as Partial<CamOp>
+  const wave = (extra: Partial<CamOp> = {}) => ({ mode: 'zwave', toolId: 't105', ...extra }) as Partial<CamOp>
+  return [
+    part('btw01', 'Bevel between a line on the face and a line 10 mm down', [300, 200, 25], [E(C(rect(0, 0, 300, 200))), E(C(polyline([pt(50, 50), pt(250, 50)], false)), 'machining'), E(C(polyline([pt(50, 90), pt(250, 90)], false)), 'machining')], (es) => [
+      OP('curve', ids(es, 1, 2), between({ depthA: 0, depthB: 10, stepover: 2 })),
+    ]),
+    part('btw02', 'Cone between two circles', [300, 300, 25], [E(C(rect(0, 0, 300, 300))), E({ t: 'circle', c: pt(150, 150), r: 80 }, 'machining'), E({ t: 'circle', c: pt(150, 150), r: 40 }, 'machining')], (es) => [
+      OP('curve', ids(es, 1, 2), between({ depthA: 0, depthB: 8, stepover: 3 })),
+    ]),
+    part(
+      'btw03',
+      'Twisted surface between two 3D polylines',
+      [300, 200, 30],
+      [E(C(rect(0, 0, 300, 200))), E(P3([[40, 40, -2], [140, 60, -6], [260, 40, -3]]), 'edges'), E(P3([[260, 160, -10], [150, 140, -4], [40, 160, -8]]), 'edges')],
+      (es) => [OP('curve', ids(es, 1, 2), between({ stepover: 4, zigzag: false }))],
+    ),
+    part('f3d01', 'Ramp along a 3D polyline', [300, 200, 25], [E(C(rect(0, 0, 300, 200))), E(P3([[30, 30, 0], [150, 30, -4], [150, 170, -8], [270, 170, -2]]), 'edges')], (es) => [OP('curve', ids(es, 1), follow())]),
+    part('f3d02', 'Smooth curve through five points, 1 mm below in two cuts', [300, 200, 25], [E(C(rect(0, 0, 300, 200))), E(P3([[20, 100, -1], [80, 160, -3], [150, 100, -5], [220, 40, -3], [280, 100, -1]]), 'edges')], (es) => [
+      OP('curve', ids(es, 1), follow({ smooth: true, ...lv({ depth: 1, cuts: 2 }) })),
+    ]),
+    part('f3d03', 'Closed 3D loop', [300, 300, 25], [E(C(rect(0, 0, 300, 300))), E(P3([[60, 60, -2], [240, 60, -6], [240, 240, -2], [60, 240, -6], [60, 60, -2]]), 'edges')], (es) => [OP('curve', ids(es, 1), follow({ smooth: true }))]),
+    part('zw01', 'Sine wave along a straight groove', [400, 200, 25], [E(C(rect(0, 0, 400, 200))), E(C(polyline([pt(20, 100), pt(380, 100)], false)), 'machining')], (es) => [OP('curve', ids(es, 1), wave())]),
+    part('zw02', 'Triangle wave round a circle', [300, 300, 25], [E(C(rect(0, 0, 300, 300))), E({ t: 'circle', c: pt(150, 150), r: 100 }, 'machining')], (es) => [
+      OP('curve', ids(es, 1), wave({ wave: { min: 0.5, max: 3, length: 50, shape: 'triangle' } })),
+    ]),
+    part('zw03', 'Deep wave in 2 mm layers round a rectangle', [400, 300, 25], [E(C(rect(0, 0, 400, 300))), E(C(rect(50, 50, 300, 200)), 'machining')], (es) => [
+      OP('curve', ids(es, 1), wave({ wave: { min: 1, max: 6, length: 60, shape: 'sine' }, ...lv({ depth: 0, passDepth: 2 }) })),
+    ]),
+  ]
+}

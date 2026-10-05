@@ -1,0 +1,26 @@
+[
+ {
+  "op": "Cut along 3D curve",
+  "kind": "curve",
+  "tool": 105,
+  "moves": {
+   "rapid": 7,
+   "feed": 2,
+   "arc": 0,
+   "drill": 0,
+   "poly": 2,
+   "points": 268
+  },
+  "cutMm": 732,
+  "box": [
+   20,
+   40,
+   -6,
+   280,
+   160,
+   -1.5
+  ],
+  "warnings": [],
+  "hash": "3e6886c5"
+ }
+]

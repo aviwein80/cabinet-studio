@@ -1,0 +1,28 @@
+[
+ {
+  "op": "Z-wave",
+  "kind": "curve",
+  "tool": 105,
+  "moves": {
+   "rapid": 10,
+   "feed": 3,
+   "arc": 0,
+   "drill": 0,
+   "poly": 3,
+   "points": 1800
+  },
+  "cutMm": 3043,
+  "box": [
+   50,
+   50,
+   -6,
+   350,
+   250,
+   -1
+  ],
+  "warnings": [
+   "A closed shape gets a whole number of waves: 58.82 mm each."
+  ],
+  "hash": "919a1a1a"
+ }
+]

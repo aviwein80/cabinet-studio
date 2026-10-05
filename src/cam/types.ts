@@ -477,7 +477,50 @@ export interface Rough3dOp extends OpBase {
   flats: boolean
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp
+/**
+ * Chamfer (2D-13): a V cutter's flank cuts a bevel along the edge of the picked shapes (2D shapes
+ * on face 1, or level 3D edges of a solid at their height). The tip runs `tipOffset` below the
+ * chamfer's bottom so the flank, not the point, makes it.
+ */
+export interface ChamferOp extends OpBase {
+  kind: 'chamfer'
+  /** Side the cutter runs on (the waste side): outside or inside a closed shape, left or right of an open one. */
+  side: 'outside' | 'inside' | 'left' | 'right'
+  /** The size is the chamfer's width on the face, or its depth down the edge. */
+  drive: 'width' | 'depth'
+  /** Width or depth, mm. */
+  size: number
+  /** Tip below the chamfer's bottom, mm (0 = the tip runs on the edge's bottom line). */
+  tipOffset: number
+  direction: Direction
+}
+
+/**
+ * Curve cuts (2D-15). Between: the surface ruled between two curves (`geometry[0]` and `[1]`;
+ * 3D polylines at their heights, 2D shapes at `depthA` / `depthB`), finished with passes from one
+ * curve to the other, the tool dropped onto that surface. Along a 3D curve: the tool tip follows 3D
+ * polylines (optionally smoothed into a curve through their points), `levels.depth` below them in
+ * passes. Z-wave: 2D shapes cut with the depth rising and falling along them.
+ */
+export interface CurveOp extends OpBase {
+  kind: 'curve'
+  mode: 'between' | 'follow3d' | 'zwave'
+  /** Between: largest distance between passes, mm. */
+  stepover: number
+  /** Between: depth of a 2D first / second curve below face 1, mm. */
+  depthA: number
+  depthB: number
+  /** Between: every other pass runs back. */
+  zigzag: boolean
+  /** Along a 3D curve: a smooth curve through the polyline's points instead of straight pieces. */
+  smooth: boolean
+  /** Z-wave: depth from `min` to `max` and back every `length` mm along the shape (closed shapes get a whole number of waves). */
+  wave: { min: number; max: number; length: number; shape: 'sine' | 'triangle' }
+  /** Largest gap between the straight moves and the true path or surface, mm. */
+  tolerance: number
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

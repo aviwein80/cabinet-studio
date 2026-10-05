@@ -1,0 +1,28 @@
+[
+ {
+  "op": "Cut between curves",
+  "kind": "curve",
+  "tool": 105,
+  "moves": {
+   "rapid": 97,
+   "feed": 32,
+   "arc": 0,
+   "drill": 0,
+   "poly": 32,
+   "points": 31945
+  },
+  "cutMm": 7343,
+  "box": [
+   40,
+   40,
+   -9.992,
+   260,
+   160,
+   -2
+  ],
+  "warnings": [
+   "32 passes between the curves, at most 3.878 mm apart."
+  ],
+  "hash": "b52955ee"
+ }
+]

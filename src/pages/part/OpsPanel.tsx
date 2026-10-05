@@ -119,6 +119,10 @@ export function OpsPanel({
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-[11px] text-muted-foreground">More 2.5D</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={() => add('face')}>{OP_LABEL.face}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('chamfer')}>{OP_LABEL.chamfer}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('curve', { mode: 'between' } as Partial<CamOp>)}>Cut between two curves</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('curve', { mode: 'follow3d' } as Partial<CamOp>)}>Cut along a 3D curve</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('curve', { mode: 'zwave' } as Partial<CamOp>)}>Z-wave along a shape</DropdownMenuItem>
               </>
             )}
             {on3d && (
@@ -190,6 +194,10 @@ export function OpsPanel({
                             : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
+                        : op.kind === 'chamfer'
+                          ? `chamfer ${formatLength(op.size, units)} ${op.drive === 'width' ? 'wide' : 'deep'}`
+                          : op.kind === 'curve'
+                            ? { between: 'between two curves', follow3d: 'along 3D curves', zwave: `wave ${formatLength(op.wave.min, units)} to ${formatLength(op.wave.max, units)}` }[op.mode]
                         : op.levels.through
                           ? 'through'
                           : formatLength(op.levels.depth, units)}
@@ -355,7 +363,21 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && !OPS_3D.has(op.kind) && (
+      {(op.kind === 'chamfer' || op.kind === 'curve') && (
+        <Group title="Passes">
+          {op.kind === 'curve' && op.mode === 'follow3d' && <NumField label="Depth below the curve" value={op.levels.depth} min={0} step={0.1} onChange={(v) => lv({ depth: v })} />}
+          {!(op.kind === 'curve' && op.mode === 'between') && (
+            <>
+              <NumField label="Depth per pass" value={op.levels.passDepth} min={0} onChange={(v) => lv({ passDepth: v })} hint={op.kind === 'curve' && op.mode === 'zwave' ? '0 = one pass to the full wave' : '0 = tool stepdown'} />
+              <NumField label="Number of cuts" suffix="" value={op.levels.cuts ?? 0} min={0} onChange={(v) => lv({ cuts: Math.round(v) || undefined })} hint="0 = from depth per pass" />
+            </>
+          )}
+          <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} />
+          <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => lv({ rapidZ: v })} />
+        </Group>
+      )}
+
+      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -721,6 +743,58 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
       )
     case 'saw':
       return <SawFields op={op} onChange={onChange} />
+    case 'chamfer':
+      return (
+        <Group title="Chamfer">
+          <SelectField label="Size is the" value={op.drive} options={[{ value: 'width', label: 'Width on the face' }, { value: 'depth', label: 'Depth down the edge' }]} onChange={(v) => onChange({ ...op, drive: v })} />
+          <NumField label={op.drive === 'width' ? 'Width' : 'Depth'} value={op.size} min={0} step={0.5} onChange={(v) => onChange({ ...op, size: v })} />
+          <SelectField label="Cutter side" value={op.side} options={[{ value: 'outside', label: 'Outside' }, { value: 'inside', label: 'Inside' }, { value: 'left', label: 'Left of path' }, { value: 'right', label: 'Right of path' }]} onChange={(v) => onChange({ ...op, side: v })} />
+          <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+          <NumField label="Tip below the chamfer" value={op.tipOffset} min={0} step={0.25} onChange={(v) => onChange({ ...op, tipOffset: v })} hint="So the flank, not the point, cuts it" />
+          <div className="self-end pb-1.5 text-[11px] text-stone-400">V cutter. Shapes on the face, or level 3D edges of a solid at their height.</div>
+        </Group>
+      )
+    case 'curve':
+      return (
+        <Group title={{ between: 'Between two curves', follow3d: 'Along 3D curves', zwave: 'Z-wave' }[op.mode]}>
+          <SelectField
+            className="col-span-2"
+            label="Cut"
+            value={op.mode}
+            options={[
+              { value: 'between', label: 'Between two curves: the surface joining them' },
+              { value: 'follow3d', label: 'Along 3D curves: the tip follows them' },
+              { value: 'zwave', label: 'Z-wave: depth rising and falling along shapes' },
+            ]}
+            onChange={(v) => onChange({ ...op, mode: v })}
+          />
+          {op.mode === 'between' && (
+            <>
+              <NumField label="First curve depth" value={op.depthA} min={0} step={0.5} onChange={(v) => onChange({ ...op, depthA: v })} hint="When it is drawn in 2D" />
+              <NumField label="Second curve depth" value={op.depthB} min={0} step={0.5} onChange={(v) => onChange({ ...op, depthB: v })} hint="3D polylines keep their heights" />
+              <NumField label="Step-over" value={op.stepover} min={0.05} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint="Largest gap between passes · placeholder default" />
+              <div className="self-end pb-1.5">
+                <SwitchField label="Back and forth" checked={op.zigzag} onChange={(v) => onChange({ ...op, zigzag: v })} />
+              </div>
+            </>
+          )}
+          {op.mode === 'follow3d' && (
+            <div className="col-span-2">
+              <SwitchField label="Smooth curve through the points" checked={op.smooth} onChange={(v) => onChange({ ...op, smooth: v })} hint="Off: straight pieces between the polyline's points" />
+            </div>
+          )}
+          {op.mode === 'zwave' && (
+            <>
+              <NumField label="Shallowest" value={op.wave.min} min={0} step={0.25} onChange={(v) => onChange({ ...op, wave: { ...op.wave, min: v } })} />
+              <NumField label="Deepest" value={op.wave.max} min={0} step={0.25} onChange={(v) => onChange({ ...op, wave: { ...op.wave, max: v } })} />
+              <NumField label="Wave length" value={op.wave.length} min={0.5} step={1} onChange={(v) => onChange({ ...op, wave: { ...op.wave, length: v } })} hint="Closed shapes get a whole number of waves" />
+              <SelectField label="Shape" value={op.wave.shape} options={[{ value: 'sine', label: 'Smooth' }, { value: 'triangle', label: 'Straight up and down' }]} onChange={(v) => onChange({ ...op, wave: { ...op.wave, shape: v } })} />
+            </>
+          )}
+          <NumField label="Tolerance" value={op.tolerance} min={0.001} max={0.5} step={0.005} onChange={(v) => onChange({ ...op, tolerance: v })} />
+          <div className="self-end pb-1.5 text-[11px] text-stone-400">Simulated only: the tool moves up and down along the path (true 3D output stays off).</div>
+        </Group>
+      )
     case 'face':
       return (
         <Group title="Facing">

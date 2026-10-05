@@ -343,10 +343,10 @@ describe('goldens: 3 reference parts per operation', () => {
   const check = (f: string, text: string) => {
     if (UPDATE) {
       fs.mkdirSync(path.dirname(f), { recursive: true })
-      fs.writeFileSync(f, text, 'latin1')
+      fs.writeFileSync(f, text, f.endsWith('.json') ? 'utf8' : 'latin1')
     }
     expect(fs.existsSync(f), `${f} missing; run UPDATE_GOLDEN=1 once to create it`).toBe(true)
-    expect(text).toBe(fs.readFileSync(f, 'latin1'))
+    expect(text).toBe(fs.readFileSync(f, f.endsWith('.json') ? 'utf8' : 'latin1'))
   }
   const m = sawMachine(machine)
   for (const p of [...sawParts(), ...faceParts()]) {

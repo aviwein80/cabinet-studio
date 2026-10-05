@@ -1,0 +1,58 @@
+[
+ {
+  "op": "Chamfer",
+  "kind": "chamfer",
+  "tool": 104,
+  "moves": {
+   "rapid": 7,
+   "feed": 2,
+   "arc": 40,
+   "drill": 0
+  },
+  "cutMm": 758,
+  "box": [
+   151.915,
+   141.246,
+   259.5,
+   258.151
+  ],
+  "zMin": -2.5,
+  "intents": {
+   "contour": 1
+  },
+  "warnings": [
+   "Chamfer 2.00 mm wide and 2.00 mm deep with T104 (90°)."
+  ],
+  "first": [
+   {
+    "t": "rapid",
+    "x": 259.5,
+    "y": 200,
+    "z": 20
+   },
+   {
+    "t": "rapid",
+    "x": 259.5,
+    "y": 200,
+    "z": 3
+   },
+   {
+    "t": "feed",
+    "x": 259.5,
+    "y": 200,
+    "z": -1.5,
+    "f": "plunge"
+   },
+   {
+    "t": "arc",
+    "x": 187.401,
+    "y": 258.151,
+    "z": -1.5,
+    "cx": 200,
+    "cy": 200,
+    "ccw": true,
+    "f": "cut"
+   }
+  ]
+ }
+]

@@ -1,0 +1,26 @@
+[
+ {
+  "op": "Z-wave",
+  "kind": "curve",
+  "tool": 105,
+  "moves": {
+   "rapid": 4,
+   "feed": 1,
+   "arc": 0,
+   "drill": 0,
+   "poly": 1,
+   "points": 288
+  },
+  "cutMm": 369,
+  "box": [
+   20,
+   100,
+   -4,
+   380,
+   100,
+   -1
+  ],
+  "warnings": [],
+  "hash": "5dbe32fb"
+ }
+]

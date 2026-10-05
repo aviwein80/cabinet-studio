@@ -8,6 +8,7 @@
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
 import { entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
 import { cutFloor, planSawCuts, type SawCut } from './more25d/saw'
+import { betweenCurves, type Chain3, smooth3, zWave } from './more25d/curves'
 import {
   add,
   arc,
@@ -39,6 +40,7 @@ import {
   unit,
   closestOnContour,
   atLength,
+  polyline,
 } from './geom'
 import { breakAt, clipPolys, inflatePolys, normaliseWinding, offset, offsetChain } from './kernel'
 import { RAPID_RATE, simpleMoves } from './moves'
@@ -59,7 +61,7 @@ import { modelClearance } from './collision/model'
 import { cutterOutline, holderOf } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -1280,6 +1282,205 @@ function genFace(op: FaceOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   tp.warnings.push(`The cutter reaches ${(r + Math.max(0, op.overhang)).toFixed(1)} mm past the facing boundary${closed.length ? '' : ' (the panel edge)'}: on a nested sheet the export checker keeps it off neighbouring parts.`)
 }
 
+/** A shape to chamfer: a 2D contour at a height (0 = face 1; a level 3D edge at its own height). */
+function chamferShapes(op: ChamferOp, ctx: GenContext, tp: Toolpath): { c: Contour; h: number }[] {
+  const out: { c: Contour; h: number }[] = []
+  let tilted = 0
+  for (const { e, contours } of geometryOf(op, ctx.part)) {
+    if (e.face !== 1) continue
+    if (e.g.t === 'poly3d') {
+      const pts = e.g.pts
+      if (pts.length < 2) continue
+      const zs = pts.map((p) => p[2])
+      if (Math.max(...zs) - Math.min(...zs) > 0.01) {
+        tilted++
+        continue
+      }
+      const first = pts[0]
+      const last = pts[pts.length - 1]
+      const closed = pts.length > 2 && Math.hypot(first[0] - last[0], first[1] - last[1]) < 0.01
+      const plan = (closed ? pts.slice(0, -1) : pts).map(([x, y]) => ({ x, y }))
+      out.push({ c: polyline(plan, closed), h: zs.reduce((n, z) => n + z, 0) / zs.length })
+    } else for (const c of contours) if (c.segs.length) out.push({ c, h: 0 })
+  }
+  if (tilted) tp.warnings.push(`${tilted} 3D edge(s) are not level and were left out: a chamfer runs along a level edge.`)
+  return out
+}
+
+/**
+ * Chamfer (2D-13): the V cutter's flank lies on the bevel. For a cutter of half-angle a, a chamfer
+ * w wide is w / tan(a) deep; the tip runs `tipOffset` below the bottom of the bevel and that much
+ * x tan(a) to the waste side of the edge, so the flank (not the point) cuts it.
+ */
+function genChamfer(op: ChamferOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const tool = tp.tool
+  if (!tool || tool.shape !== 'v' || !(tool.angle && tool.angle > 0 && tool.angle < 180)) {
+    tp.warnings.push('Chamfers need a V cutter (shape "v" with an included angle) in the tool table.')
+    return
+  }
+  const tan = Math.tan(((tool.angle / 2) * Math.PI) / 180)
+  const d = op.drive === 'width' ? Math.max(0, op.size) / tan : Math.max(0, op.size)
+  if (!(d > 0)) {
+    tp.warnings.push('Chamfer size is 0: nothing to cut.')
+    return
+  }
+  const c = Math.max(0, op.tipOffset)
+  const R = tool.diameter / 2
+  if ((d + c) * tan > R + 1e-9) {
+    tp.warnings.push(`A chamfer ${(d * tan).toFixed(2)} wide x ${d.toFixed(2)} deep (tip ${c} mm lower) needs ${((d + c) * tan).toFixed(2)} mm of cutter radius; T${tool.number} has ${R} mm. Use a larger V cutter or a smaller chamfer.`)
+    return
+  }
+  const off = c * tan
+  const depths = depthsFor(op, tool, d)
+  const shapes = chamferShapes(op, ctx, tp)
+  if (!shapes.length) tp.warnings.push('Pick the edges to chamfer: shapes on face 1 or level 3D edges.')
+  for (const { c: c0, h } of shapes) {
+    let g = c0
+    let path: Contour | null
+    if (g.closed) {
+      const outside = op.side === 'outside' || op.side === 'left'
+      const wantCw = outside ? op.direction === 'climb' : op.direction !== 'climb'
+      if (wantCw !== area(g) < 0) g = reverse(g)
+      g = startAtLength(g, defaultStart(g))
+      if (off > 1e-9) {
+        const res = offset([g], outside ? off : -off, 'round')
+        path = res.length ? rotateToNearest(area(res[0]) < 0 === area(g) < 0 ? res[0] : reverse(res[0]), startOf(g)) : null
+      } else path = g
+    } else {
+      let left = op.side === 'left' || op.side === 'outside'
+      if (op.direction === 'conventional') {
+        g = reverse(g)
+        left = !left
+      }
+      path = off > 1e-9 ? offsetChain(g, left ? off : -off) : g
+    }
+    if (!path || !path.segs.length) {
+      tp.warnings.push('A shape is too small for the tip offset and was left out.')
+      continue
+    }
+    const S = startOf(path)
+    const top = Math.max(0, h)
+    for (const dk of depths) {
+      const z = h - (dk + c)
+      b.rapid(S.x, S.y, op.levels.safeZ + top)
+      b.rapid(S.x, S.y, top + op.levels.rapidZ)
+      b.feed(S.x, S.y, z, 'plunge')
+      for (const sg of path.segs) b.seg(sg, z)
+      b.rapid(b.x, b.y, top + op.levels.rapidZ)
+    }
+    tp.intents.push({ k: 'contour', segs: path.segs, closed: path.closed, rk: 'NOWRK', approach: 'SEN', ramp: false, tool, label: op.name, passes: depths.map((dk) => ({ depth: Math.round((dk + c - h) * 1e6) / 1e6, from: 0, to: path!.segs.length - 1 })) })
+  }
+  b.rapid(b.x, b.y, op.levels.safeZ)
+  if (shapes.length) tp.warnings.push(`Chamfer ${(d * tan).toFixed(2)} mm wide and ${d.toFixed(2)} mm deep with T${tool.number} (${tool.angle}°).`)
+}
+
+const CURVE_NO_OUTPUT = 'curve cuts move the tool up and down along the path, which needs true 3D output (off until the format is confirmed)'
+
+/** Tool-tip chains as 3D moves: down to each chain's start, along it, up again. */
+function emitChains(chains: Chain3[], op: CamOp, b: Builder) {
+  for (const ch of chains) {
+    if (ch.length < 2) continue
+    const [x0, y0, z0] = ch[0]
+    const top = Math.max(0, ...ch.map((p) => p[2]))
+    b.rapid(x0, y0, op.levels.safeZ + top)
+    b.rapid(x0, y0, top + op.levels.rapidZ)
+    b.feed(x0, y0, z0, 'plunge')
+    const pts = new Float64Array((ch.length - 1) * 3)
+    for (let i = 1; i < ch.length; i++) pts.set(ch[i], (i - 1) * 3)
+    b.moves.push({ t: 'poly', pts, f: 'cut' })
+    const [x1, y1, z1] = ch[ch.length - 1]
+    Object.assign(b, { x: x1, y: y1, z: z1 })
+    b.rapid(x1, y1, top + op.levels.rapidZ)
+  }
+  b.rapid(b.x, b.y, op.levels.safeZ)
+}
+
+/** Curve cuts (2D-15): between two curves, along 3D curves, Z-waves. All true 3D: simulated, not written. */
+function genCurve(op: CurveOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const tool = tp.tool
+  if (!tool) {
+    tp.warnings.push('No router for this curve cut.')
+    return
+  }
+  const shapes = geometryOf(op, ctx.part).filter(({ e }) => e.face === 1)
+  const tol = Math.max(0.001, op.tolerance || 0.01)
+  let chains: Chain3[] = []
+  if (op.mode === 'between') {
+    const ct = cutterOfTool(tool)
+    if ('error' in ct) {
+      tp.warnings.push(ct.error)
+      return
+    }
+    if (shapes.length < 2) {
+      tp.warnings.push('Pick two curves: the first and second picked shapes (2D shapes or 3D polylines).')
+      return
+    }
+    if (shapes.length > 2) tp.warnings.push('Only the first two picked shapes are used.')
+    const curve = ({ e, contours }: (typeof shapes)[number], depth: number): { pts: [number, number, number][]; closed: boolean } | null => {
+      if (e.g.t === 'poly3d') {
+        const p = e.g.pts
+        const closed = p.length > 2 && Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1], p[0][2] - p[p.length - 1][2]) < 0.01
+        return { pts: p.map((q) => [...q] as [number, number, number]), closed }
+      }
+      const c = contours.find((k) => k.segs.length)
+      if (!c) return null
+      const pts = toPoints(c, tol).map((q) => [q.x, q.y, -depth] as [number, number, number])
+      return { pts: c.closed ? [...pts, pts[0]] : pts, closed: c.closed }
+    }
+    const A = curve(shapes[0], op.depthA)
+    const B = curve(shapes[1], op.depthB)
+    if (!A || !B) {
+      tp.warnings.push('A picked shape has no curve to use.')
+      return
+    }
+    if (A.closed !== B.closed) tp.warnings.push('One curve is closed and the other open: both are treated as open.')
+    const r = betweenCurves(A.pts, B.pts, A.closed && B.closed, ct.cutter, { stepover: op.stepover, zigzag: op.zigzag, tol })
+    tp.warnings.push(...r.warnings)
+    chains = r.chains
+  } else if (op.mode === 'follow3d') {
+    const lines = shapes.filter(({ e }) => e.g.t === 'poly3d')
+    if (!lines.length) {
+      tp.warnings.push('Pick 3D polylines to follow (made in the 3D tab, or from the edges of a solid).')
+      return
+    }
+    if (lines.length < shapes.length) tp.warnings.push(`${shapes.length - lines.length} picked shape(s) are not 3D polylines and were left out.`)
+    const D = Math.max(0, op.levels.depth)
+    const depths = D > 0 ? depthsFor(op, tool, D) : [0]
+    for (const { e } of lines) {
+      const p = (e.g as { pts: [number, number, number][] }).pts
+      if (p.length < 2) continue
+      const closed = p.length > 2 && Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1], p[0][2] - p[p.length - 1][2]) < 0.01
+      const path = op.smooth ? smooth3(closed ? p.slice(0, -1) : p, closed, tol) : p.map((q) => [...q] as [number, number, number])
+      for (const dk of depths) chains.push(path.map(([x, y, z]) => [x, y, z - dk]))
+    }
+  } else {
+    const w = op.wave
+    if (!(w.length > 0)) {
+      tp.warnings.push('Z-wave length must be more than 0.')
+      return
+    }
+    const deepest = Math.max(w.min, w.max)
+    const floors = op.levels.passDepth > 0 || op.levels.cuts ? depthsFor(op, tool, deepest) : [deepest]
+    for (const { contours } of shapes)
+      for (const c of contours) {
+        if (!c.segs.length) continue
+        const zw = zWave(toPoints(c, tol), c.closed, w, tol)
+        if (c.closed && Math.abs(zw.length - w.length) > 1e-6) tp.warnings.push(`A closed shape gets a whole number of waves: ${zw.length.toFixed(2)} mm each.`)
+        for (const f of floors) chains.push(zw.chain.map(([x, y, z]) => [x, y, Math.max(z, -f)]))
+      }
+    if (!chains.length) tp.warnings.push('Pick the shapes to turn into a Z-wave.')
+  }
+  emitChains(chains, op, b)
+  let minZ = Infinity
+  for (const ch of chains) for (const p of ch) minZ = Math.min(minZ, p[2])
+  if (Number.isFinite(minZ)) {
+    const flute = tool.fluteLength ?? tool.maxDepth
+    if (-minZ > flute + 1e-9) tp.warnings.push(`Cuts ${(-minZ).toFixed(2)} mm below face 1 but T${tool.number} cuts only ${flute} mm deep: check in simulation.`)
+    if (minZ < -ctx.part.thickness - 1e-9) tp.warnings.push(`Goes ${(-minZ - ctx.part.thickness).toFixed(2)} mm below the part's underside.`)
+  }
+  tp.noOutput = CURVE_NO_OUTPUT
+}
+
 /**
  * Re-set stock top (2D-16): a toolpath made for the panel below a faced top is moved down by
  * `top`, so its depths count from the faced surface.
@@ -1380,10 +1581,11 @@ export const isAdaptive = (op: CamOp) => (op.kind === 'pocket' && op.pattern ===
 
 /**
  * Operations that can take seconds, so screens calculate them in the compute worker: 3D
- * operations, adaptive clearing, and rest machining that follows adaptive clearing.
+ * operations, adaptive clearing, rest machining that follows adaptive clearing, and cuts between
+ * two curves (drop-cutter on the surface between them).
  */
 export function inBackground(op: CamOp, part: CamPart): boolean {
-  if (OPS_3D.has(op.kind) || isAdaptive(op)) return true
+  if (OPS_3D.has(op.kind) || isAdaptive(op) || (op.kind === 'curve' && op.mode === 'between')) return true
   return op.kind === 'pocket' && !!op.rest && restSources(op, part).some(isAdaptive)
 }
 
@@ -1400,10 +1602,10 @@ export function isFlatLayer(op: CamOp): boolean {
 
 /**
  * M2.6 operations that have a woodWOP form (contour passes, saw grooves) but are written only
- * behind their own switch (`cam25dMprOutput`): facing, and saw cuts with the M2.6 settings.
+ * behind their own switch (`cam25dMprOutput`): facing, chamfers, and saw cuts with the M2.6 settings.
  */
 export function isMore25d(op: CamOp): boolean {
-  return op.kind === 'face' || (op.kind === 'saw' && !!op.saw)
+  return op.kind === 'face' || op.kind === 'chamfer' || (op.kind === 'saw' && !!op.saw)
 }
 
 /** woodWOP's point limit per contour is not confirmed; contours longer than this get a warning. */
@@ -1631,6 +1833,12 @@ function generateAt(op: CamOp, ctx: GenContext): Toolpath {
       case 'face':
         genFace(op, ctx, tp, b)
         break
+      case 'chamfer':
+        genChamfer(op, ctx, tp, b)
+        break
+      case 'curve':
+        genCurve(op, ctx, tp, b)
+        break
     }
   tp.stats = stats(b.moves, feeds.feed)
   tp.moves = b.moves
@@ -1665,7 +1873,18 @@ export function generatePart(part: CamPart, machine: MachineProfile, meshes?: Re
       const tp: Toolpath =
         pre ??
         (skip
-          ? { opId: op.id, kind: op.kind, name: op.name, tool, feeds: feedsFor(op, tool, part.materialId, machine), moves: [], intents: [], warnings: ['Not calculated for export (adaptive clearing is calculated in the part designer).'], stats: { cut: 0, rapid: 0, minutes: 0 } }
+          ? {
+              opId: op.id,
+              kind: op.kind,
+              name: op.name,
+              tool,
+              feeds: feedsFor(op, tool, part.materialId, machine),
+              moves: [],
+              intents: [],
+              warnings: [op.kind === 'curve' ? 'Not calculated for export (it is never written; it is calculated in the part designer).' : 'Not calculated for export (adaptive clearing is calculated in the part designer).'],
+              stats: { cut: 0, rapid: 0, minutes: 0 },
+              ...(op.kind === 'curve' ? { noOutput: CURVE_NO_OUTPUT } : {}),
+            }
           : generateOp(op, { part, machine, meshes, done }))
       done.set(op.id, tp)
       return tp

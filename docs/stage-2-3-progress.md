@@ -14,12 +14,13 @@ Read this first at the start of every run. Sources:
 | M2.1 3D foundation | **Done** (October 2026) | Includes the approved additions: machine-model data, `StockModel` and the bull-nose cutter, and the WASM/CSP groundwork. |
 | M2.2a CL-surface engine, parallel finishing, boundaries, independent gouge checker | **Done** (October 2026) | See below. |
 | M2.2b Z-level roughing, waterline | **Done** (October 2026) | Flat-layer output as `<105>` contours (decision 2), behind its own switch, off. See below. |
-| M2.2c Projection finishing, performance | **Next** | |
-| M2.3 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.2c Projection finishing, performance | **Done** (October 2026) | See below. M2.2 complete. |
+| M2.3 Adaptive clearing, rest machining, pencil | **Next** | |
+| M2.4 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
-(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped).
+(295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -209,12 +210,64 @@ Other changes:
 - **Very narrow pockets in the tool-centre surface** (narrower than the grid, 1/3 of the tool
   radius) are not entered: material is left, never cut wrongly.
 
-## Next run: M2.2c
+## M2.2c projection finishing and performance: what was built
 
-- **Projection finishing (3D-04):** project drawn 2D shapes and text onto the surface
-  (drop-cutter along 2D paths), with depth below the surface for engraving on a 3D face.
-- **Performance:** waterline on dense meshes (40 levels on the 51 k-facet test dome take 7 s);
-  a pencil pass is listed under M2.2 too.
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-04 | Projection finishing: the picked shapes on face 1 (lines, arcs, curves, circles, text) dropped onto the model; the tool centre follows them in plan; optional depth below the surface (engraving on a 3D face), in passes like 2D engraving (depth per pass, number of cuts); closed shapes stay down between passes; parts of shapes off the model are skipped with a warning; protected groups and groups not chosen are never cut, also below the surface (a second exact drop on just those facets); stock to leave; ball, bull, flat or V tool (auto: smallest ball-nose) | `src/cam/3d/projection.ts`, `genFinish3d` in `src/cam/toolpath.ts` |
+| Shared | The drop-and-refine routine of parallel finishing is now shared with projection (moved, not changed: the parallel goldens are byte-identical) | `src/cam/3d/chain.ts` |
+| 3D-12 (speed) | The drop-cutter's "does the tool clear the model here?" test stops at the first contact, skips grid cells wholly below the height or too far from the tool to reach it, and uses finer cells. Same answers (new test against the full drop at four cell sizes); every 3D golden unchanged | `src/cam/3d/dropcutter.ts` |
+
+Other changes:
+
+- **Designer:** "3D finishing (projection)" in the Add operation menu (all selected shapes are
+  projected); the 3D finishing editor has the strategy, depth below the surface, depth per pass
+  and number of cuts. The Machine page text says projection is never written to woodWOP.
+- **Export checker:** projection is not a flat layer, so it is always blocked with
+  `CAM_3D_NO_OUTPUT` (tested with both output switches on).
+- **Bug fixed:** in the browser preview (React's development double mount) 3D toolpaths were
+  cancelled on opening a part and never restarted; the part kept saying "Calculating in the
+  background". The hook now forgets cancelled runs so they start again. Production builds were
+  not affected.
+
+### Acceptance (M2.2 criteria that apply to projection)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| No gouge > 0.005 mm, independent check | `tests/cam-3d-projection.test.ts` | Ball-nose (exact) on hemisphere, sine, raised panel and cove, each with a circle, a zig-zag line and lettering: under 0.005, and the ball touches the surface at every point (distance error < 0.0001 mm). Bull-nose (sine), flat (raised panel), V-bit (sine, cove), sampled: under 0.005 |
+| Tool centre on the drawn shape | same | Within 0.002 mm of a 30 mm circle in plan; a closed shape is one unbroken chain back to its start |
+| Stock to leave ±0.01 mm | same | Points 0.5 ± 0.01 mm from the surface on sine and hemisphere; no move closer (independent) |
+| Engraving depth | same | 1.5 mm in 3 passes on the dome: raised by its pass depth, every point touches the surface again (independent distance, error < 0.0001 mm); deepest cut into the surface seen by the gouge checker 1.4946 mm (measured square to the surface, so a little under 1.5 on slopes; test limit 1.505). On a flat field: exactly -1 and -2 mm |
+| Protected / unchosen groups below the surface | same | Engraving 1 mm across a raised panel with the bevel protected (and, separately, only the field chosen): the bevel's facets alone are never cut (exact check, under 0.005), and the cut reaches within 1.5 mm of the bevel |
+| Golden digests | `tests/golden/cam3d/projection-*` | 3 new cases (lettering on sine, V-bit engraving on the dome, bull-nose with stock on the raised panel). All earlier 3D and Stage 1 goldens unchanged |
+| Export blocked | same | `CAM_3D_NO_OUTPUT` with custom-part and 3D output both on |
+
+### Performance (cloud container, Linux x64, with the full suite running)
+
+| Case | Before | After |
+|---|---|---|
+| Waterline, 51 k-facet dome, 6 mm ball, 40 levels | 5.7 s | 3.3 s (new perf test, limit 8 s) |
+| Z-level roughing, 200 k relief, 12 mm bull-nose, 3 mm step-down | 6.4 s | 4.3-4.8 s |
+| Parallel finishing, 200 k relief, 6 mm ball, 0.6 mm step-over | 7.6 s | 7.3-7.7 s (uses the full drop, unchanged) |
+
+Time it on the shop Mac: `npx vitest run tests/perf.test.ts`.
+
+### Limits recorded
+
+- **Projection follows the shapes in plan**: on steep walls the groove is drawn straight down,
+  so letters on a steep face look stretched. Engraving depth is measured straight down too.
+- **Shapes are cut in drawn order**, each at every depth before the next shape; the tool lifts to
+  the safe height between shapes.
+- **Waterline is still about 16 drop tests per output point** (bisection onto the level line to
+  0.0025 mm). A further 2-3x would need either fewer bisection steps (points move by less than
+  the precision, but the waterline and roughing goldens would change) or levels calculated in
+  parallel workers. Not done: the speed is fine in the background worker today.
+
+## Next run: M2.3
+
+- **Adaptive clearing (NEW-01):** constant-engagement clearing in pockets and per Z level.
+- **2D rest machining (2D-07):** cut only what earlier tools left, minimum path length.
+- **3D rest and pencil (3D-06):** material left by a larger tool; pencil pass along valleys.
 - Owner check: one Z-level roughing program in woodWOP before switching flat-layer output on.
 
 ## Run log
@@ -224,3 +277,4 @@ Other changes:
   `9d7e411`.
 - **Run 3 (M2.2a)**: parallel finishing. Commit `c1bc896`.
 - **Run 3 (M2.2b)**: Z-level roughing, waterline, flat-layer output (switch off). See `git log`.
+- **Run 4 (M2.2c)**: projection finishing, faster clearance test, browser-preview fix. See `git log`.

@@ -9,6 +9,7 @@ import type { Mesh } from '../mesh/types'
 import { meshBounds } from '../mesh/types'
 import type { Move } from '../toolpath'
 import type { Finish3dOp, Levels } from '../types'
+import { cutChains, type Pt, refineAlong, simplify } from './chain'
 import { type Cutter3D, grownCutter } from './cutter'
 import { DropCutter } from './dropcutter'
 import { clipLine, extent, insideRegion, type Region } from './region'
@@ -22,22 +23,10 @@ export interface Finish3dResult {
   spacing: number
 }
 
-interface Pt {
-  x: number
-  y: number
-  z: number
-  ok: boolean
-  cut: boolean
-  /** On a protected facet group: links must not ride over it. */
-  prot: boolean
-}
-
 /** Steepest a point may be and still count as flat (skip flats). */
 const FLAT_DEG = 0.5
 /** A link between passes stays down only up to this many step-overs. */
 const LINK_STEPOVERS = 2
-/** Points this close to the straight line through their neighbours are dropped (mm). */
-const COLLINEAR = 0.0005
 
 export function parallelFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, region: Region, levels: Levels, work?: Work): Finish3dResult {
   const warnings: string[] = []
@@ -73,60 +62,7 @@ export function parallelFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, reg
   const spacing = nPass > 0 ? (hi - lo - 2e-6) / nPass : 0
 
   /** Points along one interval, refined to the tolerance and split where cutting stops. */
-  const pass = (s0: number, t0: number, t1: number): Pt[][] => {
-    const at = (t: number) => sample(ux * t - uy * s0, uy * t + ux * s0)
-    const pts: Pt[] = []
-    const n = Math.max(1, Math.ceil((t1 - t0) / step0))
-    let prev = at(t0)
-    let prevT = t0
-    pts.push(prev)
-    const refine = (pa: Pt, ta: number, pb: Pt, tb: number, depth: number) => {
-      const tm = (ta + tb) / 2
-      const m = at(tm)
-      const mixed = pa.cut !== pb.cut || m.cut !== pa.cut
-      let deeper = false
-      if (mixed) deeper = depth < 7
-      else if (pa.cut && depth < 9) {
-        const lin = (pa.z + pb.z) / 2
-        deeper = m.z - lin > gougeTol || Math.abs(m.z - lin) > tol
-        // A kink in the tool-centre surface can hide from the midpoint. Where the midpoint is
-        // not clearly straight, or the pass is steep, test the quarter points too.
-        const len = Math.abs(tb - ta)
-        if (!deeper && (Math.abs(m.z - lin) > gougeTol / 8 || Math.abs(pb.z - pa.z) > 0.5 * len)) {
-          for (const f of [0.25, 0.75]) {
-            const q = at(ta + (tb - ta) * f)
-            if (q.cut && q.z - (pa.z + (pb.z - pa.z) * f) > gougeTol) deeper = true
-          }
-        }
-      }
-      if (!deeper) {
-        if (mixed || pa.cut) pts.push(m)
-        return
-      }
-      refine(pa, ta, m, tm, depth + 1)
-      pts.push(m)
-      refine(m, tm, pb, tb, depth + 1)
-    }
-    for (let i = 1; i <= n; i++) {
-      const t = i === n ? t1 : t0 + ((t1 - t0) * i) / n
-      const p = at(t)
-      if (prev.cut || p.cut) refine(prev, prevT, p, t, 0)
-      pts.push(p)
-      prev = p
-      prevT = t
-    }
-    const chains: Pt[][] = []
-    let cur: Pt[] = []
-    for (const p of pts) {
-      if (p.cut) cur.push(p)
-      else if (cur.length) {
-        chains.push(cur)
-        cur = []
-      }
-    }
-    if (cur.length) chains.push(cur)
-    return chains.filter((c) => c.length >= 2).map(simplify)
-  }
+  const pass = (s0: number, t0: number, t1: number): Pt[][] => cutChains(refineAlong((t) => sample(ux * t - uy * s0, uy * t + ux * s0), t0, t1, step0, tol, gougeTol))
 
   // all passes, in order across the region
   const passes: Pt[][][] = []
@@ -227,30 +163,4 @@ export function parallelFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, reg
   }
   if (last) moves.push({ t: 'rapid', x: last.x, y: last.y, z: clear })
   return { moves, warnings, minZ, spacing }
-}
-
-/** Drop points that lie within `COLLINEAR` of the straight line through the kept neighbours. */
-function simplify(c: Pt[]): Pt[] {
-  if (c.length <= 2) return c
-  const out: Pt[] = [c[0]]
-  let anchor = 0
-  for (let i = 2; i < c.length; i++) {
-    const a = c[anchor]
-    const b = c[i]
-    let ok = i - anchor <= 64
-    for (let k = anchor + 1; ok && k < i; k++) if (dist3ToSeg(c[k], a, b) > COLLINEAR) ok = false
-    if (!ok) {
-      out.push(c[i - 1])
-      anchor = i - 1
-    }
-  }
-  out.push(c[c.length - 1])
-  return out
-}
-
-function dist3ToSeg(p: Pt, a: Pt, b: Pt) {
-  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z
-  const l2 = dx * dx + dy * dy + dz * dz
-  const t = l2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / l2)) : 0
-  return Math.hypot(a.x + dx * t - p.x, a.y + dy * t - p.y, a.z + dz * t - p.z)
 }

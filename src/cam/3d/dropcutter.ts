@@ -26,6 +26,8 @@ export class DropCutter {
   private readonly ny: number
   private readonly start: Int32Array
   private readonly items: Int32Array
+  /** Highest facet corner in each cell: a cell wholly below a `clears` height is skipped unread. */
+  private readonly cellTop: Float64Array
   private readonly stamp: Int32Array
   private mark = 0
   /** Corners and edges are shared by several facets: test each once per drop. */
@@ -117,7 +119,7 @@ export class DropCutter {
       maxX = maxY = 1
     }
     const area = Math.max(1e-6, (maxX - minX) * (maxY - minY))
-    this.cell = cell ?? Math.max(cutter.R, Math.sqrt(area / Math.max(1, n)) * 2, 0.5)
+    this.cell = cell ?? Math.max(cutter.R / 3, Math.sqrt(area / Math.max(1, n)) * 2, 0.5)
     this.ox = minX
     this.oy = minY
     this.nx = Math.max(1, Math.ceil((maxX - minX) / this.cell) + 1)
@@ -136,7 +138,13 @@ export class DropCutter {
     this.start = counts
     this.items = new Int32Array(counts[counts.length - 1])
     const fill = counts.slice()
-    for (let t = 0; t < n; t++) each(t, (c) => (this.items[fill[c]++] = t))
+    const cellTop = new Float64Array(this.nx * this.ny).fill(-Infinity)
+    for (let t = 0; t < n; t++)
+      each(t, (c) => {
+        this.items[fill[c]++] = t
+        if (tri[t * STRIDE + 13] > cellTop[c]) cellTop[c] = tri[t * STRIDE + 13]
+      })
+    this.cellTop = cellTop
     this.stamp = new Int32Array(n)
     const nv = mesh.positions.length / 3
     const edges = buildEdges(ix, nv)
@@ -157,7 +165,7 @@ export class DropCutter {
    * `hitTri` and `hitNz` hold the tip height, the facet touched and the contact normal's Z.
    */
   drop(x: number, y: number): boolean {
-    return this.run(x, y, -Infinity)
+    return this.run(x, y, -Infinity, false)
   }
 
   /**
@@ -166,10 +174,14 @@ export class DropCutter {
    * are skipped at once, so it is much faster near the floor. Leaves `z`/`hitTri` undefined.
    */
   clears(x: number, y: number, z: number): boolean {
-    return !this.run(x, y, z)
+    return !this.run(x, y, z, true)
   }
 
-  private run(x: number, y: number, above: number): boolean {
+  /**
+   * Highest contact above `above` at (x, y). `any`: stop at the first contact found above it
+   * (enough to answer `clears`; `z` and `hitTri` are then not the highest).
+   */
+  private run(x: number, y: number, above: number, any: boolean): boolean {
     const R = this.cutter.R
     const tri = this.tri
     const i0 = Math.max(0, Math.floor((x - R - this.ox) / this.cell))
@@ -195,6 +207,20 @@ export class DropCutter {
     for (let j = j0; j <= j1; j++)
       for (let i = i0; i <= i1; i++) {
         const c = j * this.nx + i
+        // every facet in the cell is lower than `above`, so none can touch above it
+        if (this.cellTop[c] <= above) continue
+        if (any) {
+          // No facet of this cell, seen from this cell, can touch above `above`. A facet that
+          // reaches nearer the axis than the cell does is also listed in the cell that holds its
+          // nearest point (inside the visited square), where it is tested; only the yes/no
+          // answer of `clears` is needed, so the order does not matter.
+          const cx = this.ox + i * this.cell
+          const cy = this.oy + j * this.cell
+          const ex = Math.max(0, cx - x, x - cx - this.cell)
+          const ey = Math.max(0, cy - y, y - cy - this.cell)
+          const d = Math.sqrt(ex * ex + ey * ey) - 1e-9
+          if (d > R || this.cellTop[c] - this.h(Math.max(0, d)) <= above) continue
+        }
         for (let q = this.start[c]; q < this.start[c + 1]; q++) {
           const t = this.items[q]
           if (this.stamp[t] === this.mark) continue
@@ -225,7 +251,12 @@ export class DropCutter {
       }
     // test the most promising facet first, then every other one that could still beat it
     if (best >= 0) this.test(this.cand[best], x, y)
-    for (let q = 0; q < n; q++) if (q !== best && this.candZ[q] > this.z) this.test(this.cand[q], x, y)
+    if (any && this.hitTri >= 0) return true
+    for (let q = 0; q < n; q++)
+      if (q !== best && this.candZ[q] > this.z) {
+        this.test(this.cand[q], x, y)
+        if (any && this.hitTri >= 0) return true
+      }
     return this.hitTri >= 0
   }
 

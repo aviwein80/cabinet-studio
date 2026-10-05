@@ -285,7 +285,7 @@ export interface CodeOp extends OpBase {
  * Where a 3D operation cuts on a model. The tool always keeps clear of every facet of the model
  * (protected and unmachined ones included); `groups` and `protect` only decide where it cuts.
  * The op's `geometry` holds the boundary shapes (closed contours on face 1; none = the model's
- * footprint).
+ * footprint); for projection finishing it holds the shapes to project instead.
  */
 export interface Surface3D {
   modelId: string
@@ -301,11 +301,21 @@ export interface Surface3D {
   tolerance: number
 }
 
-/** 3D finishing on a model. Stage 2 strategies: parallel (M2.2a), waterline (M2.2b), projection, pencil. */
+/**
+ * 3D finishing on a model. Stage 2 strategies: parallel (M2.2a), waterline (M2.2b), projection
+ * (M2.2c).
+ *
+ * Projection: `geometry` holds the shapes to project (not a boundary); `levels.depth` is the depth
+ * below the surface (0 = on the surface), cut in passes like 2D engraving (`levels.passDepth`,
+ * `levels.cuts`). Step-over, angle, pattern, slope limits and skip flats do not apply to it.
+ */
 export interface Finish3dOp extends OpBase {
   kind: 'finish3d'
-  /** Parallel: straight passes dropped onto the surface. Waterline: passes at constant heights around the model. */
-  strategy: 'parallel' | 'waterline'
+  /**
+   * Parallel: straight passes dropped onto the surface. Waterline: passes at constant heights
+   * around the model. Projection: drawn shapes and text dropped onto the surface.
+   */
+  strategy: 'parallel' | 'waterline' | 'projection'
   surface: Surface3D
   /** Distance between passes, mm (parallel passes, and the shallow-area fill of waterline). */
   stepover: number

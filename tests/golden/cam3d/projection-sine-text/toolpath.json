@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (projection)",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 12,
+  "feed": 4,
+  "arc": 0,
+  "drill": 0,
+  "poly": 4,
+  "points": 1022
+ },
+ "cutMm": 674,
+ "box": [
+  10,
+  10,
+  -5.479,
+  140,
+  90,
+  -0.731
+ ],
+ "warnings": [],
+ "hash": "5f651698"
+}

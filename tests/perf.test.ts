@@ -8,6 +8,9 @@
  *   Z section of that mesh:  85 ms alone, 130 ms with the full suite
  *   Parallel finishing, 200k facets, 0.6 mm step-over: 9.9 s alone, 10.3 s with the full suite
  *     (spec target 30 s; limit 20 s)
+ *   M2.2c (faster clearance test in the drop-cutter, same results):
+ *   Waterline, 51k-facet dome, 40 levels: 5.7 s before, 3.3 s after (limit 8 s)
+ *   Z-level roughing of the 200k relief: 6.4 s before, 4.3 s after; parallel finishing 7.3 s
  */
 import { describe, expect, it } from 'vitest'
 import { buildMesh } from '@/cam/mesh/build'
@@ -18,9 +21,10 @@ import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { meshBounds } from '@/cam/mesh/types'
 import { defaultOp } from '@/cam/ops'
 import { generateOp } from '@/cam/toolpath'
-import type { Finish3dOp, Rough3dOp } from '@/cam/types'
+import type { CamOp, Finish3dOp, Rough3dOp } from '@/cam/types'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { relief, stlBinary } from './mesh-fixtures'
+import { SURFACES } from './surfaces'
 
 /** Binary STL of a UV sphere with about `n` facets, written straight into the buffer. */
 function bigSphereStl(n: number, r = 300): Uint8Array {
@@ -111,6 +115,24 @@ describe('M2.2 performance', () => {
   }, 120_000)
 })
 
+describe('M2.2c performance', () => {
+  it('waterline: 51 k-facet dome, 6 mm ball, 40 levels (0.5 mm step-down)', () => {
+    const mesh = buildMesh(parseStl(stlBinary(SURFACES.hemisphere.soup())), { gapTol: 0 }).mesh
+    const b = meshBounds(mesh)
+    const part = { ...newPart({ length: 80, width: 80, thickness: 45 }), models: [{ id: 'm', name: 'dome', kind: 'mesh' as const, blob: 'd', source: 'd.stl', units: 'mm' as const, place: { ...DEFAULT_PLACEMENT, at: [0, 0, b.max[2]] as [number, number, number] }, layer: 'models', visible: true, triangles: mesh.indices.length / 3, size: [80, 80, b.max[2] - b.min[2]] as [number, number, number] }] }
+    const base = defaultOp('finish3d', [], { strategy: 'waterline' } as Partial<CamOp>) as Finish3dOp
+    const op: Finish3dOp = { ...base, toolId: 't105', stepdown: 0.5, fillShallow: false, slope: { min: 0, max: 90 }, surface: { ...base.surface, modelId: 'm' } }
+    const t0 = performance.now()
+    const tp = generateOp(op, { part, machine: PLACEHOLDER_MACHINE, meshes: new Map([['d', mesh]]) })
+    const ms = performance.now() - t0
+    const pts = tp.moves.reduce((n, m) => n + (m.t === 'poly' ? m.pts.length / 3 : 0), 0)
+    log(`waterline, ${(mesh.indices.length / 3).toLocaleString('en')} facets, 40 levels: ${pts.toLocaleString('en')} points in ${Math.round(ms)} ms`)
+    expect(tp.warnings).toEqual([])
+    expect(ms).toBeLessThan(PERF_LIMIT_WATERLINE_MS)
+  }, 120_000)
+})
+
+const PERF_LIMIT_WATERLINE_MS = 8000
 const PERF_LIMIT_ROUGHING_MS = 20_000
 
 const PERF_LIMIT_PARALLEL_MS = 20_000

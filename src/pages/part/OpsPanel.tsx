@@ -77,9 +77,10 @@ export function OpsPanel({
     }
     let op = defaultOp(kind, kind === 'code' ? [] : geometry, extra)
     if (op.kind === 'finish3d' || op.kind === 'rough3d') {
-      // boundary: the selected closed shapes (none = the whole model); first model on the part
+      // boundary: the selected closed shapes (none = the whole model); projection: every selected
+      // shape is projected. First model on the part.
       const closed = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
-      op = { ...op, geometry: closed, surface: { ...op.surface, modelId: part.models?.[0]?.id ?? '' } }
+      op = { ...op, geometry: op.kind === 'finish3d' && op.strategy === 'projection' ? sel : closed, surface: { ...op.surface, modelId: part.models?.[0]?.id ?? '' } }
     }
     setOps([...part.ops, op])
     setSelectedOp(op.id)
@@ -114,6 +115,7 @@ export function OpsPanel({
                 <DropdownMenuItem onSelect={() => add('rough3d')}>{OP_LABEL.rough3d}</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d')}>{OP_LABEL.finish3d} (parallel)</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'waterline' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (waterline)</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'projection' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (projection)</DropdownMenuItem>
               </>
             )}
             {rulesOn && lib && (
@@ -168,7 +170,9 @@ export function OpsPanel({
                     : op.kind === 'finish3d'
                       ? op.strategy === 'waterline'
                         ? `3D waterline, every ${formatLength(op.stepdown ?? 1, units)} down`
-                        : `3D, every ${formatLength(op.stepover, units)}`
+                        : op.strategy === 'projection'
+                          ? `3D projection, ${op.levels.depth > 0 ? `${formatLength(op.levels.depth, units)} below the surface` : 'on the surface'}`
+                          : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
                         : op.levels.through
@@ -309,7 +313,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && op.strategy === 'projection' ? 'Pick automatically (smallest ball-nose first)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -401,22 +405,28 @@ const LEADS = [
 ]
 
 /** Model, boundary, stock and groups: shared by the 3D operations. */
-function SurfaceGroup({ op, part, onSurface, walls }: { op: CamOp & { surface: Surface3D }; part: CamPart; onSurface: (s: Surface3D) => void; walls?: boolean }) {
+function SurfaceGroup({ op, part, onSurface, walls, pattern }: { op: CamOp & { surface: Surface3D }; part: CamPart; onSurface: (s: Surface3D) => void; walls?: boolean; pattern?: boolean }) {
   const sf = (patch: Partial<Surface3D>) => onSurface({ ...op.surface, ...patch })
   return (
     <Group title="Surface">
       <SelectField className="col-span-2" label="Model" value={op.surface.modelId || NONE} options={[{ value: NONE, label: 'Choose a model' }, ...(part.models ?? []).map((m) => ({ value: m.id, label: m.name }))]} onChange={(v) => sf({ modelId: v === NONE ? '' : v })} />
-      <SelectField
-        label="Boundary"
-        value={op.surface.boundaryMode}
-        options={[
-          { value: 'centre', label: 'Tool centre inside' },
-          { value: 'contained', label: 'Whole tool inside' },
-          { value: 'touching', label: 'Tool may overhang' },
-        ]}
-        onChange={(v) => sf({ boundaryMode: v })}
-      />
-      <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole model'}</div>
+      {pattern ? (
+        <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} shape(s) to project: the tool centre follows them in plan` : 'Select the shapes or text to project, then Use selection'}</div>
+      ) : (
+        <>
+          <SelectField
+            label="Boundary"
+            value={op.surface.boundaryMode}
+            options={[
+              { value: 'centre', label: 'Tool centre inside' },
+              { value: 'contained', label: 'Whole tool inside' },
+              { value: 'touching', label: 'Tool may overhang' },
+            ]}
+            onChange={(v) => sf({ boundaryMode: v })}
+          />
+          <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole model'}</div>
+        </>
+      )}
       <NumField label={walls ? 'Leave on walls' : 'Leave on surface'} value={op.surface.stockToLeave} min={0} step={0.1} onChange={(v) => sf({ stockToLeave: v })} />
       <NumField label="Tolerance" value={op.surface.tolerance} min={0.001} max={0.5} step={0.005} onChange={(v) => sf({ tolerance: v })} hint="Largest gap to the true surface" />
       <TextField label="Protect groups (numbers)" value={(op.surface.protect ?? []).join(', ')} onChange={(v) => sf({ protect: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
@@ -429,20 +439,39 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
   switch (op.kind) {
     case 'finish3d': {
       const waterline = op.strategy === 'waterline'
+      const strategy = (
+        <SelectField
+          className="col-span-2"
+          label="Strategy"
+          value={op.strategy}
+          options={[
+            { value: 'parallel', label: 'Parallel: straight passes over the surface' },
+            { value: 'waterline', label: 'Waterline: passes at constant heights' },
+            { value: 'projection', label: 'Projection: drawn shapes and text onto the surface' },
+          ]}
+          onChange={(v) => onChange({ ...op, strategy: v })}
+        />
+      )
+      if (op.strategy === 'projection') {
+        const lv = (patch: Partial<typeof op.levels>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} pattern />
+            <Group title="Projected shapes">
+              {strategy}
+              <NumField label="Depth below the surface" value={op.levels.depth} min={0} step={0.1} onChange={(v) => lv({ depth: v })} hint="0 = on the surface; measured straight down" />
+              <NumField label="Depth per pass" value={op.levels.passDepth} min={0} onChange={(v) => lv({ passDepth: v })} hint="0 = tool stepdown" />
+              <NumField label="Number of cuts" suffix="" value={op.levels.cuts ?? 0} min={0} onChange={(v) => lv({ cuts: Math.round(v) || undefined })} hint="0 = from depth per pass" />
+              <div className="self-end pb-1.5 text-[11px] text-stone-400">Below the surface, protected groups and groups not chosen are kept clear.</div>
+            </Group>
+          </>
+        )
+      }
       return (
         <>
           <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
           <Group title={waterline ? 'Waterline passes' : 'Parallel passes'}>
-            <SelectField
-              className="col-span-2"
-              label="Strategy"
-              value={op.strategy}
-              options={[
-                { value: 'parallel', label: 'Parallel: straight passes over the surface' },
-                { value: 'waterline', label: 'Waterline: passes at constant heights' },
-              ]}
-              onChange={(v) => onChange({ ...op, strategy: v })}
-            />
+            {strategy}
             {waterline && <NumField label="Step-down" value={op.stepdown ?? 1} min={0.05} step={0.1} onChange={(v) => onChange({ ...op, stepdown: v })} hint="Placeholder default; set your own" />}
             {waterline && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
             <NumField label={waterline ? 'Fill step-over' : 'Step-over'} value={op.stepover} min={0.01} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint={waterline ? 'For the shallow-area fill' : 'Placeholder default; set your own'} />

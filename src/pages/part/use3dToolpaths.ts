@@ -67,7 +67,14 @@ export function use3dToolpaths(part: CamPart, machine: MachineProfile) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [part, machine])
 
-  useEffect(() => () => running.current.forEach((r) => r.abort.abort()), [])
+  // Forget cancelled runs too, so a remount (React's development double mount) starts them again.
+  useEffect(
+    () => () => {
+      running.current.forEach((r) => r.abort.abort())
+      running.current.clear()
+    },
+    [],
+  )
 
   /** The current toolpath of a 3D op, or a placeholder while it is being calculated. */
   const pathOf = useCallback(

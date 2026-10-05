@@ -44,6 +44,7 @@ import { feedsFor, passDepths, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
+import { projectionFinish } from './3d/projection'
 import { centreRegion } from './3d/region'
 import { type Layer, waterlineFinish } from './3d/waterline'
 import { zLevelRough } from './3d/zlevel'
@@ -1107,6 +1108,18 @@ function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolea
 function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const m = model3d(op, ctx, tp)
   if (!m) return
+  if (op.strategy === 'projection') {
+    // the picked shapes on face 1 are the pattern; the depth below the surface is cut like engraving
+    const paths = geometryOf(op, ctx.part)
+      .filter(({ e }) => e.face === 1)
+      .flatMap(({ contours }) => contours.filter((c) => c.segs.length).map((c) => ({ pts: toPoints(c), closed: c.closed })))
+    const D = Math.max(0, op.levels.depth)
+    const r = projectionFinish(op, m.placed, m.cutter, paths, D > 0 ? depthsFor(op, tp.tool, D) : [0], op.levels, ctx.work)
+    tp.warnings.push(...r.warnings)
+    b.moves.push(...r.moves)
+    depthWarnings(r.minZ, ctx, tp)
+    return
+  }
   const region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed))
   if (op.strategy === 'waterline') {
     const r = waterlineFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)

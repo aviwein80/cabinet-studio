@@ -103,6 +103,8 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
         // PLACEHOLDER: waterline on slopes of 30° and steeper, parallel passes on the rest
         Object.assign(op, { name: '3D finishing (waterline)', stepdown: 0.5, fillShallow: true, slope: { min: 30, max: 90 } })
       }
+      // projection: on the surface until a depth is set
+      if ((extra as { strategy?: string }).strategy === 'projection') Object.assign(op, { name: '3D finishing (projection)' })
       break
     case 'rough3d':
       // PLACEHOLDER cutting values until the shop supplies its own
@@ -161,6 +163,11 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     case 'code':
       return null
     case 'finish3d': {
+      // projection follows drawn shapes like engraving: smallest ball-nose first, then smallest V
+      if (op.strategy === 'projection') {
+        const fine = routers(machine).filter((t) => t.shape === 'ball' || t.shape === 'v')
+        return fine.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || a.diameter - b.diameter || a.number - b.number)[0] ?? null
+      }
       // ball-nose first (largest), then bull-nose
       const shaped = routers(machine).filter((t) => t.shape === 'ball' || t.shape === 'bull')
       return shaped.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || b.diameter - a.diameter || a.number - b.number)[0] ?? null

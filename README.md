@@ -123,6 +123,11 @@ export checker. Tool numbers are still placeholders.
   - **Parallel**: passes across the model at any angle, back and forth or one way.
   - **Waterline**: passes at constant heights around the model, best on steep walls. It can
     fill the flatter areas with parallel passes.
+  - **Projection**: drawn lines, arcs, curves and text dropped straight down onto the model. The
+    tool centre follows each shape in plan while the tool rides the surface. Set a depth to
+    engrave below the surface (lettering on a carved or curved face), in passes like 2D
+    engraving. Below the surface, protected facet groups and groups not chosen are kept clear.
+    The smallest ball-nose is picked unless you choose a tool (a V-bit works too).
 
   You set:
   - the step-over (or step-down), stock to leave and tolerance;
@@ -138,8 +143,8 @@ export checker. Tool numbers are still placeholders.
   Z-level roughing and waterline are written as ordinary contour-milling macros, one per pass
   per level, so each one can be edited in woodWOP. The machine makes its own approach for each
   pass. The job page calculates the 3D toolpaths in the background before export.
-  - Parallel finishing, and waterline with the shallow-area fill, need true 3D output. The
-    export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is confirmed with a
+  - Parallel and projection finishing, and waterline with the shallow-area fill, need true 3D
+    output. The export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is confirmed with a
     program from the machine.
   - With the switch off, the checker blocks the flat-layer operations too (`CAM_3D_OUTPUT_OFF`).
   - Batch runs cannot calculate 3D toolpaths yet (`CAM_3D_NOT_READY`).

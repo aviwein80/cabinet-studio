@@ -121,6 +121,28 @@ describe('M2.2b drop-cutter: the fast clearance test', () => {
       expect(d.clears(-50, -50, -100)).toBe(true)
     }
   })
+
+  it('M2.2c: the faster clearance test (early stop, cells skipped by height and distance) agrees with the full drop at any cell size', () => {
+    const r = rng(11)
+    // dense facets (0.25 mm) with a sharp ridge, so contacts come from facets, edges and corners
+    const f = (x: number, y: number) => -6 + 2 * Math.sin(x / 3) * Math.cos(y / 4) + (x > 9 && x < 11 ? 2 : 0)
+    const m = meshOf(relief(20, 20, 80, 80, f))
+    for (const c of ALL)
+      for (const cell of [0.3, 1, 2.5, undefined]) {
+        const d = new DropCutter(m, c, cell)
+        const ref = new DropCutter(m, c, 50)
+        for (let i = 0; i < 400; i++) {
+          const x = -2 + r() * 24
+          const y = -2 + r() * 24
+          const hit = ref.drop(x, y)
+          const z = ref.z
+          // the same drop whatever the cells
+          expect(d.drop(x, y)).toBe(hit)
+          if (hit) expect(d.z).toBe(z)
+          for (const dz of [-0.3, -1e-6, 1e-6, 0.3]) expect(d.clears(x, y, z + dz), `${c.kind} cell ${cell} at ${x}, ${y}`).toBe(!hit || dz >= 0)
+        }
+      }
+  }, 60_000)
 })
 
 describe('M2.2a cutters from the tool table', () => {

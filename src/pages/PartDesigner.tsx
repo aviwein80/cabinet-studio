@@ -9,7 +9,7 @@ import { serializePartFile } from '@/cam/model/partFile'
 import { evalLength, parseCoord, resolveVariables } from '@/cam/expr'
 import { dist, type P } from '@/cam/geom'
 import { ALL_SNAPS, SNAP_LABEL, type SnapMode, type SnapResult } from '@/cam/snap'
-import { generateOp, toolpathContours, type Toolpath } from '@/cam/toolpath'
+import { generateOp, OPS_3D, toolpathContours, type Toolpath } from '@/cam/toolpath'
 import { exportDxf } from '@/cam/dxf'
 import type { CamPart } from '@/cam/types'
 import { EmptyState } from '@/components/PageHeader'
@@ -32,6 +32,7 @@ import { LayersPanel, PropertiesPanel } from './part/SidePanels'
 import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
+import { use3dToolpaths } from './part/use3dToolpaths'
 import { type Click, DEFAULT_PARAMS, GROUP_LABEL, measureText, stepTool, TOOL_BY_ID, TOOLS, type ToolDef, type ToolGroup, type ToolId, type ToolParams } from './part/tools'
 
 const PARAM_LABEL: Record<keyof ToolParams, string> = {
@@ -118,18 +119,21 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
 
   const change = useCallback((next: CamPart) => setHist((h) => commit(h, { ...next, updatedAt: new Date().toISOString() })), [])
 
+  // 3D operations are calculated in the background; everything else right here
+  const { pathOf: path3dOf, busy: busy3d } = use3dToolpaths(part, machine)
   const toolpaths = useMemo<Toolpath[]>(
     () =>
       part.ops
         .filter((o) => o.enabled)
         .map((op) => {
+          if (OPS_3D.has(op.kind)) return path3dOf(op)
           try {
             return generateOp(op, { part, machine })
           } catch (e) {
             return { opId: op.id, kind: op.kind, name: op.name, tool: null, feeds: { rpm: 0, feed: 0, plunge: 0 }, moves: [], intents: [], warnings: [`Could not compute this toolpath: ${e instanceof Error ? e.message : String(e)}`], stats: { cut: 0, rapid: 0, minutes: 0 } }
           }
         }),
-    [part, machine],
+    [part, machine, path3dOf],
   )
 
   const ctx = { part, sel: sel.filter((id) => part.entities.some((e) => e.id === id)), layer, params }
@@ -566,6 +570,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
                   part={part}
                   machine={machine}
                   toolpaths={toolpaths}
+                  busy={busy3d}
                   sel={ctx.sel}
                   selectedOp={selectedOp}
                   setSelectedOp={(id) => {

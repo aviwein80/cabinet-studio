@@ -20,6 +20,7 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   saw: 'Saw groove',
   sweep: 'Profiled sweep',
   code: 'Program note',
+  finish3d: '3D finishing',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -82,6 +83,22 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
     case 'code':
       op = { ...base, kind, text: '', stop: false }
       break
+    case 'finish3d':
+      // PLACEHOLDER cutting values (10 % of a 6 mm ball) until the shop supplies its own.
+      op = {
+        ...base,
+        kind,
+        strategy: 'parallel',
+        surface: { modelId: '', boundaryMode: 'centre', stockToLeave: 0, tolerance: 0.01 },
+        stepover: 0.6,
+        angle: 0,
+        pattern: 'zigzag',
+        direction: 'climb',
+        slope: { min: 0, max: 90 },
+        skipFlats: false,
+        levels: { ...DEFAULT_LEVELS, depth: 0 },
+      }
+      break
   }
   return { ...op, ...extra } as CamOp
 }
@@ -119,6 +136,11 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
       return hint?.diameter ? findDrill(machine, hint.diameter, 0, op.face === 1 ? 'drill-vertical' : 'drill-horizontal') : null
     case 'code':
       return null
+    case 'finish3d': {
+      // ball-nose first (largest), then bull-nose
+      const shaped = routers(machine).filter((t) => t.shape === 'ball' || t.shape === 'bull')
+      return shaped.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || b.diameter - a.diameter || a.number - b.number)[0] ?? null
+    }
   }
 }
 

@@ -12,13 +12,14 @@ Read this first at the start of every run. Sources:
 |---|---|---|
 | M2.0 Audit | **Done** | `docs/stage-2-3-audit.md`. |
 | M2.1 3D foundation | **Done** (October 2026) | Includes the approved additions: machine-model data, `StockModel` and the bull-nose cutter, and the WASM/CSP groundwork. |
-| M2.2a CL-surface engine, parallel finishing, boundaries, independent gouge checker | **Next** | |
-| M2.2b Z-level roughing, waterline | Not started | Flat-layer output as `<105>` contours (decision 2). |
+| M2.2a CL-surface engine, parallel finishing, boundaries, independent gouge checker | **Done** (October 2026) | See below. |
+| M2.2b Z-level roughing, waterline | **Next** | Flat-layer output as `<105>` contours (decision 2), behind its own switch, off. |
 | M2.2c Projection finishing, performance | Not started | |
 | M2.3 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
-Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1 (262 + 1 skipped).
+Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
+(295 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -115,21 +116,66 @@ npx vitest run tests/perf.test.ts
 - **The simulator screen still uses the heightfield directly.** It moves onto the `StockModel`
   interface in M2.4.
 
-## Next run: M2.2a
+## M2.2a parallel finishing: what was built
 
-Work from the audit sections 5.3-5.4:
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-02 | Parallel finishing: angle, step-over (span divided evenly, never wider), back and forth or one way, direction, slope limits, skip flats, stock to leave, tolerance; links stay down when short and safe, otherwise lift | `src/cam/3d/parallel.ts` |
+| 3D-11 | Boundaries (tool centre inside, whole tool inside, overhang); protected facet groups (the tool lifts over them); machine only chosen groups; the tool keeps clear of every facet whatever is chosen | `src/cam/3d/region.ts`, `parallel.ts` |
+| Engine | Exact drop-cutter for flat, ball, bull-nose and V cutters (facet, corner and edge contacts; closed forms, golden-section search for the bull-nose edge) on an XY grid with best-first pruning | `src/cam/3d/dropcutter.ts`, `cutter.ts` |
+| Check | Independent gouge checker: exact for ball-nose (point-to-facet distance), sampled for the others (simulator's `cutterZ`) | `src/cam/3d/check.ts` |
 
-- Add the `finish3d` op kind with a parallel strategy, the shared `Surface3D` block and the
-  compact `{ t: 'poly' }` move.
-- Build the exact drop-cutter for flat, ball, bull-nose and V cutters.
-- Add the boundary and protected-surface options (3D-11).
-- Write the independent gouge checker.
-- Make golden digests under `tests/golden/cam3d/`.
-- Feed the model blob hash and placement into `opInputHash`.
-- Let the batch runner read model blobs.
+Other changes:
+
+- **IR:** a new `finish3d` op kind and a compact `poly` move. `simpleMoves()` expands it for the
+  simulator, the posts, the stats and the 2D drawing.
+- **Stale flag:** `opInputHash` now includes the model's blob hash and placement.
+- **Export checker:** new `CAM_3D_NO_OUTPUT` error, whether custom-part output is on or off.
+- **Designer:** 3D toolpaths are calculated in the compute worker (`use3dToolpaths`) with
+  progress, and a newer request cancels an older one. There is an editor for the new operation.
+
+### Acceptance (M2.2 criteria that apply to finishing)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| No gouge > 0.005 mm, independent check | `tests/cam-3d-parallel.test.ts` | Ball-nose (exact) on the hemisphere, sine relief, raised panel and cove. Bull-nose and flat (sampled) on sine, raised panel and cove. Deepest seen 0.002 mm |
+| Drop-cutter exact | `tests/cam-3d-dropcutter.test.ts` | Closed forms for each shape on planes, edges and spikes; random bumpy meshes vs brute force, never below it |
+| Stock to leave ±0.01 mm | `tests/cam-3d-parallel.test.ts` | CL points 0.5 ± 0.01 mm from the surface; no move closer than 0.495 mm |
+| Scallop within ±10 % on flat-to-gentle areas | `tests/cam-3d-parallel.test.ts` | Flat: 0.01489 mm against 0.01489 mm in theory. 5° slope: 0.01506 against 0.01506 (cross-section of the actual passes) |
+| Boundaries clip right | `tests/cam-3d-parallel.test.ts` | Centre / contained / touching on a 30 mm circle: max reach 30 / 27 / 33 mm |
+| Golden digests stable | `tests/golden/cam3d/parallel-*` | 4 cases, hash of every move to 0.001 mm; a missing golden fails |
+| 200 k triangles, 600 x 400, 6 mm ball, 10 % step-over < 30 s | `tests/perf.test.ts` | 9.9 s alone, 10.3 s with the full suite (limit 20 s) |
+
+Roughing criteria (stock >= requested, <= stock + one step-down on walls) belong to M2.2b.
+
+### Limits recorded
+
+- **Slope limits use the mesh's facets**, so on a coarse mesh a limit can be off by the facet
+  angle (under 1° on the test dome).
+- **Protected groups at a shared edge:** an edge contact is credited to one of the two facets
+  sharing it, so along the border between a protected and a machined group the tool may count
+  the edge as machined.
+- **The simulator shows 3D finishing on the heightfield.** Collision checks of the shank and
+  holder come in M2.4. For now the generator warns when a cut is deeper than the flute length.
+- **The everyday suite checks fewer positions with the sampled checker.** `THOROUGH=1 npx vitest
+  run tests/cam-3d-parallel.test.ts` checks six times more.
+
+## Next run: M2.2b
+
+- **Z-level roughing (3D-01):**
+  - slice the CL surface into levels;
+  - clear each level with the existing pocket strategies;
+  - entry by helix, ramp or plunge, honouring `centreCutting` and `maxPlunge`;
+  - stock to leave in XY and Z;
+  - extra levels on flats;
+  - account for earlier operations.
+- **Waterline finishing (3D-03).**
+- **Flat-layer output** as `<105>` contours behind a new switch, off by default.
+- **The batch runner reads model data.**
 
 ## Run log
 
 - **Run 1 (M2.0)**: audit and this file. Pushed `9492d66`; merged to `main` in run 2.
 - **Run 2 (M2.1)**: commits `00b8c71`, `23ead2d`, `a96c23d`, `5998e05`, `40c481f`, `e3e9095`,
-  and the docs commit at the end of the run.
+  `9d7e411`.
+- **Run 3 (M2.2a)**: parallel finishing; see `git log` for the commit.

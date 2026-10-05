@@ -41,7 +41,13 @@ import {
 } from './geom'
 import { breakAt, normaliseWinding, offset, offsetChain } from './kernel'
 import { feedsFor, passDepths, resolveTool } from './ops'
-import type { CamOp, CamPart, DrillOp, Entity, FaceId, PocketOp, ProfileOp, SweepOp, VCarveOp } from './types'
+import type { Work } from '@/core/cancel'
+import { cutterOfTool } from './3d/cutter'
+import { parallelFinish } from './3d/parallel'
+import { centreRegion } from './3d/region'
+import { placeMesh } from './mesh/place'
+import { type Mesh, meshBounds } from './mesh/types'
+import type { CamOp, CamPart, DrillOp, Entity, FaceId, Finish3dOp, PocketOp, ProfileOp, SweepOp, VCarveOp } from './types'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -49,6 +55,22 @@ export type Move =
   | { t: 'feed'; x: number; y: number; z: number; f: FeedKind }
   | { t: 'arc'; x: number; y: number; z: number; cx: number; cy: number; ccw: boolean; f: FeedKind }
   | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number }
+  /** 3D chain: straight feed moves through each (x, y, z) in `pts` in turn, from the current position. */
+  | { t: 'poly'; pts: Float64Array; f: FeedKind }
+
+/** A move that is not a 3D chain. */
+export type SimpleMove = Exclude<Move, { t: 'poly' }>
+
+/** Every move with 3D chains expanded into single feed moves (generated on the fly, not stored). */
+export function* simpleMoves(moves: Move[]): Generator<SimpleMove> {
+  for (const m of moves) {
+    if (m.t !== 'poly') {
+      yield m
+      continue
+    }
+    for (let i = 0; i + 2 < m.pts.length; i += 3) yield { t: 'feed', x: m.pts[i], y: m.pts[i + 1], z: m.pts[i + 2], f: m.f }
+  }
+}
 
 export interface ContourPass {
   depth: number
@@ -91,6 +113,10 @@ export interface Toolpath {
 export interface GenContext {
   part: CamPart
   machine: MachineProfile
+  /** 3D model meshes by blob hash (as stored, before placement). Needed by 3D operations only. */
+  meshes?: ReadonlyMap<string, Mesh>
+  /** Progress and cancel for long 3D operations. */
+  work?: Work
 }
 
 export const RAPID_RATE = 40000
@@ -169,7 +195,7 @@ function stats(moves: Move[], feed: number) {
   let x = 0
   let y = 0
   let z = 50
-  for (const m of moves) {
+  for (const m of simpleMoves(moves)) {
     if (m.t === 'drill') {
       rapid += Math.hypot(m.x - x, m.y - y)
       cut += 2 * Math.abs(m.r - m.z)
@@ -1008,6 +1034,42 @@ function genSweep(op: SweepOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// 3D finishing
+// ---------------------------------------------------------------------------------------------
+
+/** 3D operation kinds: they need a model's mesh and write no native woodWOP macro (yet). */
+export const OPS_3D: ReadonlySet<CamOp['kind']> = new Set(['finish3d'])
+
+function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const model = ctx.part.models?.find((m) => m.id === op.surface.modelId)
+  if (!model) {
+    tp.warnings.push('Pick the 3D model this operation machines.')
+    return
+  }
+  const mesh = ctx.meshes?.get(model.blob)
+  if (!mesh) {
+    tp.warnings.push(`The 3D model "${model.name}" is not loaded, so no toolpath was calculated.`)
+    return
+  }
+  const ct = cutterOfTool(tp.tool)
+  if ('error' in ct) {
+    tp.warnings.push(ct.error)
+    return
+  }
+  const placed = placeMesh(mesh, model.place)
+  const region = centreRegion(ctx.part, op.geometry, op.surface, ct.cutter.R, meshBounds(placed))
+  const r = parallelFinish(op, placed, ct.cutter, region, op.levels, ctx.work)
+  tp.warnings.push(...r.warnings)
+  b.moves.push(...r.moves)
+  const tool = tp.tool!
+  if (Number.isFinite(r.minZ)) {
+    const flute = tool.fluteLength ?? tool.maxDepth
+    if (-r.minZ > flute + 1e-9) tp.warnings.push(`Cuts ${(-r.minZ).toFixed(2)} mm below face 1 but T${tool.number} cuts only ${flute} mm deep: the shank or holder may rub. Check in simulation.`)
+    if (r.minZ < -ctx.part.thickness - 1e-9) tp.warnings.push(`Goes ${(-r.minZ - ctx.part.thickness).toFixed(2)} mm below the part's underside: check the model's placement and the part thickness.`)
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------------------------
 
@@ -1045,6 +1107,9 @@ export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
         tp.intents.push({ k: 'comment', text: op.text, stop: op.stop })
         if (op.stop) tp.warnings.push('woodWOP has no program-stop macro here; the stop is written as a comment.')
         break
+      case 'finish3d':
+        genFinish3d(op, ctx, tp, b)
+        break
     }
   tp.stats = stats(b.moves, feeds.feed)
   tp.moves = b.moves
@@ -1061,8 +1126,8 @@ function minWidth(op: CamOp, ctx: GenContext) {
   return Math.min(bx.maxX - bx.minX, bx.maxY - bx.minY)
 }
 
-export function generatePart(part: CamPart, machine: MachineProfile): Toolpath[] {
-  return part.ops.filter((o) => o.enabled).map((op) => generateOp(op, { part, machine }))
+export function generatePart(part: CamPart, machine: MachineProfile, meshes?: ReadonlyMap<string, Mesh>): Toolpath[] {
+  return part.ops.filter((o) => o.enabled).map((op) => generateOp(op, { part, machine, meshes }))
 }
 
 
@@ -1075,7 +1140,7 @@ export function toolpathContours(tp: Toolpath): Contour[] {
     if (segs.length) out.push({ closed: Math.hypot(segs[0].a.x - segs[segs.length - 1].b.x, segs[0].a.y - segs[segs.length - 1].b.y) < 1e-6, segs })
     segs = []
   }
-  for (const m of tp.moves) {
+  for (const m of simpleMoves(tp.moves)) {
     if (m.t === 'rapid' || m.t === 'drill') {
       flush()
       at = { x: m.x, y: m.y }

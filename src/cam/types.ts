@@ -281,7 +281,46 @@ export interface CodeOp extends OpBase {
   stop: boolean
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp
+/**
+ * Where a 3D operation cuts on a model. The tool always keeps clear of every facet of the model
+ * (protected and unmachined ones included); `groups` and `protect` only decide where it cuts.
+ * The op's `geometry` holds the boundary shapes (closed contours on face 1; none = the model's
+ * footprint).
+ */
+export interface Surface3D {
+  modelId: string
+  /** Facet groups to machine; empty or absent = all. */
+  groups?: number[]
+  /** Facet groups the tool must not cut (it lifts over them). */
+  protect?: number[]
+  /** Tool centre inside the boundary, whole tool inside it, or tool allowed to overhang it. */
+  boundaryMode: 'centre' | 'contained' | 'touching'
+  /** Material left on the surface, mm (measured along the surface normal). */
+  stockToLeave: number
+  /** Largest gap between the straight moves and the true tool-centre surface, mm. */
+  tolerance: number
+}
+
+/** 3D finishing on a model. Stage 2 strategies: parallel (M2.2a), waterline, projection, pencil. */
+export interface Finish3dOp extends OpBase {
+  kind: 'finish3d'
+  strategy: 'parallel'
+  surface: Surface3D
+  /** Distance between passes, mm. */
+  stepover: number
+  /** Pass direction in degrees from +X. */
+  angle: number
+  /** Back and forth, or every pass the same way (with a lift between). */
+  pattern: 'zigzag' | 'oneway'
+  /** One-way passes: climb runs along +angle, conventional against it. */
+  direction: Direction
+  /** Cut only where the surface slope (degrees from flat) is within these limits. */
+  slope: { min: number; max: number }
+  /** Leave flat areas (slope under 0.5°) for a flat-area pass. */
+  skipFlats: boolean
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

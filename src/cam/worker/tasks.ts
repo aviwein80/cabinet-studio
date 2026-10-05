@@ -13,7 +13,9 @@ import { deleteFacets, type FacetFilter, featureEdges, projectOutline, sectionAt
 import type { Mesh, MeshReport, MeshUnits } from '../mesh/types'
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
-import type { ModelPlacement, UpAxis } from '../types'
+import type { CamPart, ModelPlacement, UpAxis } from '../types'
+import { generateOp, type Toolpath } from '../toolpath'
+import type { MachineProfile } from '@/core/types'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -39,6 +41,8 @@ export interface TaskMap {
   'mesh.size': { in: { mesh: Mesh; place: ModelPlacement }; out: [number, number, number] }
   'blob.pack': { in: { mesh: Mesh }; out: Packed }
   'blob.unpack': { in: { gz: Uint8Array; hash: string }; out: Mesh }
+  /** Toolpaths of the given (3D) operations; meshes by blob hash. */
+  'cam.generate': { in: { part: CamPart; machine: MachineProfile; opIds: string[]; meshes: Record<string, Mesh> }; out: Toolpath[] }
 }
 
 export type TaskName = keyof TaskMap
@@ -77,6 +81,11 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
   async 'blob.pack'({ mesh }) {
     const raw = encodeMesh(mesh)
     return { hash: await sha256Hex(raw), gz: await gzip(raw) }
+  },
+  'cam.generate'({ part, machine, opIds, meshes }, work) {
+    const map = new Map(Object.entries(meshes))
+    const ops = part.ops.filter((o) => opIds.includes(o.id))
+    return ops.map((op, i) => generateOp(op, { part, machine, meshes: map, work: { isCancelled: work.isCancelled, progress: (f, n) => work.progress?.((i + f) / ops.length, n) } }))
   },
   async 'blob.unpack'({ gz, hash }) {
     const raw = await gunzip(gz)

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { parsePart, serializePart } from '../src/cam/doc'
 import { writePartMpr } from '../src/cam/mpr'
 import { readMpr } from '../src/cam/mprRead'
-import { generatePart } from '../src/cam/toolpath'
+import { generatePart, simpleMoves } from '../src/cam/toolpath'
 import { digest } from './cam-digest'
 export { digest }
 import { PLACEHOLDER_MACHINE } from '../src/core/defaults'
@@ -46,9 +46,9 @@ describe('20 reference parts: geometry JSON in, toolpaths and MPR out', () => {
       expect(doc.errors).toEqual([])
       expect(doc.ended).toBe(true)
       const floor = -(input.thickness + machine.throughDepth) - 1e-6
-      for (const tp of paths) for (const m of tp.moves) expect(m.z).toBeGreaterThanOrEqual(floor)
+      for (const tp of paths) for (const m of simpleMoves(tp.moves)) expect(m.z).toBeGreaterThanOrEqual(floor)
       for (const tp of paths)
-        for (const m of tp.moves) {
+        for (const m of simpleMoves(tp.moves)) {
           if (m.t === 'rapid') continue
           const slack = (tp.tool?.diameter ?? 12) * 3 + 15
           expect(m.x).toBeGreaterThanOrEqual(-slack)
@@ -67,7 +67,7 @@ describe('reference part checks that do not depend on goldens', () => {
   it('spiral pocket stays inside the circle less the tool radius', () => {
     const [tp] = get('ref10')
     let max = 0
-    for (const m of tp.moves) {
+    for (const m of simpleMoves(tp.moves)) {
       if (m.t === 'rapid') continue
       max = Math.max(max, Math.hypot(m.x - 150, m.y - 150))
       if (m.t === 'arc') max = Math.max(max, Math.hypot(m.cx - 150, m.cy - 150) + Math.hypot(m.x - m.cx, m.y - m.cy))
@@ -83,7 +83,7 @@ describe('reference part checks that do not depend on goldens', () => {
 
   it('peck drilling retracts between pecks of decreasing size', () => {
     const [tp] = get('ref17')
-    const zs = tp.moves.filter((m) => m.t === 'feed' && m.z < 0).map((m) => -m.z)
+    const zs = [...simpleMoves(tp.moves)].filter((m) => m.t === 'feed' && m.z < 0).map((m) => -m.z)
     const pecks = zs.slice(0, zs.length / 2).map((z, i, a) => z - (a[i - 1] ?? 0))
     expect(pecks[0]).toBeCloseTo(10)
     for (let i = 1; i < pecks.length - 1; i++) expect(pecks[i]).toBeLessThanOrEqual(pecks[i - 1] + 1e-9)
@@ -92,7 +92,7 @@ describe('reference part checks that do not depend on goldens', () => {
 
   it('three-cut profile with roughing goes through the sheet', () => {
     const [tp] = get('ref18')
-    const levels = new Set(tp.moves.filter((m) => m.t !== 'rapid').map((m) => Math.round(m.z * 1000) / 1000))
+    const levels = new Set([...simpleMoves(tp.moves)].filter((m) => m.t !== 'rapid').map((m) => Math.round(m.z * 1000) / 1000))
     expect([...levels].filter((z) => z < 0).length).toBeGreaterThanOrEqual(3)
     expect(Math.min(...levels)).toBeCloseTo(-(38 + machine.throughDepth))
   })

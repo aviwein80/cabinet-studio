@@ -35,6 +35,27 @@ function toolpathPaths(tp: Toolpath) {
   const drills: P[] = []
   const f = (n: number) => (Math.round(n * 1000) / 1000).toString()
   for (const m of tp.moves) {
+    if (m.t === 'poly') {
+      // 3D chains can hold millions of points: draw a point once it is 0.25 mm from the last one
+      const p = m.pts
+      let d = first ? '' : `M${f(x)} ${f(y)}`
+      for (let i = 0; i + 2 < p.length; i += 3) {
+        const last = i + 3 >= p.length
+        if (first) {
+          x = p[i]
+          y = p[i + 1]
+          first = false
+          d = `M${f(x)} ${f(y)}`
+          continue
+        }
+        if (!last && Math.hypot(p[i] - x, p[i + 1] - y) < 0.25) continue
+        x = p[i]
+        y = p[i + 1]
+        d += `L${f(x)} ${f(y)}`
+      }
+      cut += d
+      continue
+    }
     if (m.t === 'drill') {
       drills.push({ x: m.x, y: m.y })
       x = m.x
@@ -62,7 +83,8 @@ function toolpathPaths(tp: Toolpath) {
     x = m.x
     y = m.y
   }
-  const start = tp.moves.find((m) => m.t !== 'rapid')
+  const m0 = tp.moves.find((m) => m.t !== 'rapid')
+  const start = m0?.t === 'poly' ? (m0.pts.length >= 2 ? { x: m0.pts[0], y: m0.pts[1] } : undefined) : m0
   return { cut, rapid, drills, start }
 }
 

@@ -6,11 +6,21 @@
  * Measured when set (October 2026, cloud container, Linux x64):
  *   1M-triangle STL import: 1.45 s alone, 2.4 s with the full suite (spec target 5 s)
  *   Z section of that mesh:  85 ms alone, 130 ms with the full suite
+ *   Parallel finishing, 200k facets, 0.6 mm step-over: 9.9 s alone, 10.3 s with the full suite
+ *     (spec target 30 s; limit 20 s)
  */
 import { describe, expect, it } from 'vitest'
 import { buildMesh } from '@/cam/mesh/build'
-import { readMeshFile } from '@/cam/mesh/read'
+import { parseStl, readMeshFile } from '@/cam/mesh/read'
 import { sectionAt } from '@/cam/mesh/tools'
+import { newPart } from '@/cam/doc'
+import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
+import { meshBounds } from '@/cam/mesh/types'
+import { defaultOp } from '@/cam/ops'
+import { generateOp } from '@/cam/toolpath'
+import type { Finish3dOp } from '@/cam/types'
+import { PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { relief, stlBinary } from './mesh-fixtures'
 
 /** Binary STL of a UV sphere with about `n` facets, written straight into the buffer. */
 function bigSphereStl(n: number, r = 300): Uint8Array {
@@ -67,5 +77,25 @@ describe('M2.1 performance', () => {
   }, 60_000)
 })
 
+describe('M2.2 performance', () => {
+  it('parallel finishing: 200 k-triangle 600 x 400 mm relief, 6 mm ball, 10 % step-over, in under 30 s', () => {
+    // carved-panel style relief: rosettes and waves, 316 x 316 grid = 199,712 facets
+    const f = (x: number, y: number) => -6 + 2.5 * Math.sin(x / 23) * Math.cos(y / 17) + 1.5 * Math.exp(-((x - 300) ** 2 + (y - 200) ** 2) / 3000)
+    const mesh = buildMesh(parseStl(stlBinary(relief(600, 400, 316, 316, f))), { gapTol: 0 }).mesh
+    const b = meshBounds(mesh)
+    const part = { ...newPart({ length: 600, width: 400, thickness: 19 }), models: [{ id: 'm', name: 'relief', kind: 'mesh' as const, blob: 'r', source: 'r.stl', units: 'mm' as const, place: { ...DEFAULT_PLACEMENT, at: [0, 0, b.max[2]] as [number, number, number] }, layer: 'models', visible: true, triangles: mesh.indices.length / 3, size: [600, 400, b.max[2] - b.min[2]] as [number, number, number] }] }
+    const base = defaultOp('finish3d') as Finish3dOp
+    const op: Finish3dOp = { ...base, toolId: 't105', stepover: 0.6, surface: { ...base.surface, modelId: 'm' } }
+    const t0 = performance.now()
+    const tp = generateOp(op, { part, machine: PLACEHOLDER_MACHINE, meshes: new Map([['r', mesh]]) })
+    const ms = performance.now() - t0
+    const pts = tp.moves.reduce((n, m) => n + (m.t === 'poly' ? m.pts.length / 3 : 0), 0)
+    log(`parallel finishing, ${(mesh.indices.length / 3).toLocaleString('en')} facets, 0.6 mm step-over: ${pts.toLocaleString('en')} points in ${Math.round(ms)} ms`)
+    expect(tp.warnings).toEqual([])
+    expect(ms).toBeLessThan(PERF_LIMIT_PARALLEL_MS)
+  }, 120_000)
+})
+
+const PERF_LIMIT_PARALLEL_MS = 20_000
 const PERF_LIMIT_IMPORT_MS = 5000
 const PERF_LIMIT_SECTION_MS = 400

@@ -107,8 +107,20 @@ export checker. Tool numbers are still placeholders.
 
   The 3D view shows the stock, the models and the drawing. Model data is stored as compressed
   files in `data/blobs` next to the shop file, never inside it. Part files (`.csp.json`) carry
-  their models with them. Unused model files are removed after 30 days. 3D toolpaths come next
-  (M2.2); nothing 3D is written to MPR yet.
+  their models with them. Unused model files are removed after 30 days.
+- **3D finishing** (Machining → Add operation → 3D finishing, when the part has a model):
+  parallel passes across the model at any angle, back and forth or one way. You set:
+  - the step-over, stock to leave and tolerance;
+  - slope limits, and skip flat areas;
+  - a boundary (tool centre inside, whole tool inside, or allowed to overhang);
+  - facet groups to protect or to machine only.
+
+  The tool (ball-nose, bull-nose or flat) is dropped exactly onto the model at every point, and
+  the moves are refined until they stay within the tolerance. An independent check in the tests
+  measures how far the tool goes below the surface (limit 0.005 mm). The toolpath is calculated
+  in the background and can be simulated. **3D operations are not written to woodWOP**: the
+  export checker blocks them (`CAM_3D_NO_OUTPUT`) until the 3D output format is confirmed with a
+  program from the machine.
 - **Simulate**: plays the toolpaths in program order, with cutting moves, rapids and a ghost tool.
   A 2.5D heightfield of the material is shown as a shaded top view or in 3D, with depth readouts.
   It checks for rapids into uncut material, shows pieces cut free, and has a through-cuts-only

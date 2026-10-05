@@ -9,7 +9,7 @@
  * {NAME:4} forces 4 decimals. A line starting with "?NAME " is written only when NAME is set.
  * Words listed in `modal` are dropped when their value did not change.
  */
-import type { Move, Toolpath } from './toolpath'
+import { simpleMoves, type Toolpath } from './toolpath'
 
 export interface PostTemplate {
   name: string
@@ -117,7 +117,7 @@ export function runPost(template: PostTemplate, name: string, paths: Toolpath[],
   for (const tp of paths) {
     if (tp.tool) emit('toolchange', { T: String(tp.tool.number), S: String(Math.round(tp.feeds.rpm)), TOOLNAME: tp.tool.name })
     emit('comment', { TEXT: tp.name })
-    for (const m of tp.moves as Move[]) {
+    for (const m of simpleMoves(tp.moves)) {
       const Z = m.z + zTop
       if (m.t === 'rapid') emit('rapid', { X: m.x, Y: m.y, Z })
       else if (m.t === 'feed') emit('feed', { X: m.x, Y: m.y, Z, F: String(Math.round(m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed)) })

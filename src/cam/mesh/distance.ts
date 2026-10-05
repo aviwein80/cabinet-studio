@@ -44,7 +44,7 @@ export function pointTriDist2(px: number, py: number, pz: number, ax: number, ay
 }
 
 /** Uniform 3D grid of triangle boxes for nearest-surface queries. */
-class TriGrid {
+export class TriGrid {
   readonly cell: number
   readonly n: [number, number, number]
   readonly o: [number, number, number]

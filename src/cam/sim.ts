@@ -7,7 +7,7 @@
  * Horizontal (edge) drilling runs below the surface, so it is backplotted but not carved.
  */
 import type { ToolShape } from '@/core/types'
-import { RAPID_RATE, type Toolpath } from './toolpath'
+import { RAPID_RATE, simpleMoves, type Toolpath } from './toolpath'
 
 export interface V3 {
   x: number
@@ -157,7 +157,7 @@ export function buildTimeline(toolpaths: Toolpath[]): SimTimeline {
       else cutLength += l
       at = b
     }
-    for (const m of tp.moves) {
+    for (const m of simpleMoves(tp.moves)) {
       if (m.t === 'drill') {
         const d = drillD(m.x, m.y)
         cutter = d ? { ...base, r: d / 2 } : base

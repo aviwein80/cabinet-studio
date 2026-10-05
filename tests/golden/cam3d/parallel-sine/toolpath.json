@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 3,
+  "feed": 1,
+  "arc": 0,
+  "drill": 0,
+  "poly": 163,
+  "points": 8854
+ },
+ "cutMm": 7797,
+ "box": [
+  0,
+  0,
+  -5.499,
+  150,
+  100,
+  -0.501
+ ],
+ "warnings": [],
+ "hash": "efe3b3a0"
+}

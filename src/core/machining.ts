@@ -1,6 +1,6 @@
 import type { Seg } from '@/cam/geom'
 import { partProgramOps } from '@/cam/mpr'
-import { generatePart, type Intent } from '@/cam/toolpath'
+import { generatePart, type Intent, OPS_3D } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
@@ -191,7 +191,7 @@ export interface SheetProgram {
   /** Horizontal holes left out of the program because the machine has no horizontal unit. */
   skipped: HDrill[]
   /** Custom parts on this sheet: toolpath warnings, underside drilling, and whether machining was written. */
-  custom?: { partUid: string; partNo: number; written: boolean; machiningOps: number; backHoles: number; warnings: string[] }[]
+  custom?: { partUid: string; partNo: number; written: boolean; machiningOps: number; backHoles: number; warnings: string[]; ops3d?: number }[]
 }
 
 export interface ProgramOptions {
@@ -288,7 +288,8 @@ export function buildSheetProgram(
       const all = partProgramOps(inst.cam, paths, tf, inst.uid, inst.no, machine, true)
       const backHoles = paths.reduce((n, tp) => n + tp.intents.filter((it) => it.k === 'vdrill' && it.back).length, 0)
       const machining = all.filter((o) => o.kind === 'cam')
-      custom.push({ ...base, written: !!opts.camOutput, machiningOps: machining.length, backHoles, warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)) })
+      const ops3d = inst.cam.ops.filter((o) => o.enabled && OPS_3D.has(o.kind)).length
+      custom.push({ ...base, written: !!opts.camOutput, machiningOps: machining.length, backHoles, warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)), ...(ops3d ? { ops3d } : {}) })
       for (const o of all) {
         if (o.kind === 'contour') contours.push(o)
         else if (o.kind !== 'cam' || !opts.camOutput) continue

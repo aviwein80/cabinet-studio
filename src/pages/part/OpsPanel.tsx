@@ -36,6 +36,7 @@ export function OpsPanel({
   hiddenOps,
   toggleHidden,
   onChange,
+  busy,
 }: {
   part: CamPart
   machine: MachineProfile
@@ -46,10 +47,13 @@ export function OpsPanel({
   hiddenOps: Set<string>
   toggleHidden: (id: string) => void
   onChange: (p: CamPart) => void
+  /** Progress of 3D toolpaths being calculated in the background. */
+  busy?: Map<string, { fraction: number; note?: string }>
 }) {
   const units = useStore((s) => s.data?.settings.units ?? 'mm')
   const lib = useStore((s) => s.data?.library)
   const rulesOn = useStore((s) => featuresOf(s.data?.settings).camRules)
+  const on3d = useStore((s) => featuresOf(s.data?.settings).cam3d) && !!part.models?.length
   const runRules = (setId: string) => {
     if (!lib) return
     const set = ruleSetsOf(lib).find((x) => x.id === setId)
@@ -71,7 +75,12 @@ export function OpsPanel({
       const outline = partOutline(part).entity
       geometry = kind === 'profile' ? (outline ? [outline.id] : []) : part.entities.filter((e) => e.g.t === 'circle' || e.g.t === 'point').map((e) => e.id)
     }
-    const op = defaultOp(kind, kind === 'code' ? [] : geometry)
+    let op = defaultOp(kind, kind === 'code' ? [] : geometry)
+    if (op.kind === 'finish3d') {
+      // boundary: the selected closed shapes (none = the whole model); first model on the part
+      const closed = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
+      op = { ...op, geometry: closed, surface: { ...op.surface, modelId: part.models?.[0]?.id ?? '' } }
+    }
     setOps([...part.ops, op])
     setSelectedOp(op.id)
   }
@@ -99,6 +108,12 @@ export function OpsPanel({
                 {OP_LABEL[k]}
               </DropdownMenuItem>
             ))}
+            {on3d && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => add('finish3d')}>{OP_LABEL.finish3d} (parallel)</DropdownMenuItem>
+              </>
+            )}
             {rulesOn && lib && (
               <>
                 <DropdownMenuSeparator />
@@ -145,7 +160,8 @@ export function OpsPanel({
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-stone-100">{op.name}</div>
                 <div className="truncate text-[10px] text-stone-400">
-                  {tp?.tool ? `T${tp.tool.number} ${tp.tool.name}` : op.kind === 'drill' ? 'Drill per hole' : op.kind === 'code' ? 'Note' : 'No tool'} · {op.levels.through ? 'through' : formatLength(op.levels.depth, units)}
+                  {tp?.tool ? `T${tp.tool.number} ${tp.tool.name}` : op.kind === 'drill' ? 'Drill per hole' : op.kind === 'code' ? 'Note' : 'No tool'} ·{' '}
+                  {op.kind === 'finish3d' ? (busy?.get(op.id) ? `calculating ${Math.round(busy.get(op.id)!.fraction * 100)} %` : `3D, every ${formatLength(op.stepover, units)}`) : op.levels.through ? 'through' : formatLength(op.levels.depth, units)}
                   {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : null}
                 </div>
               </div>
@@ -275,7 +291,21 @@ function OpEditor({
         </div>
       )}
 
-      {op.kind !== 'code' && (
+      {op.kind === 'finish3d' && (
+        <Group title="Tool">
+          <SelectField
+            className="col-span-2"
+            label="Tool"
+            value={op.toolId ?? NONE}
+            options={[{ value: NONE, label: 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            onChange={(v) => set('toolId', v === NONE ? null : v)}
+          />
+          <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
+          <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => lv({ rapidZ: v })} hint="Above the surface" />
+        </Group>
+      )}
+
+      {op.kind !== 'code' && op.kind !== 'finish3d' && (
         <Group title="Tool">
           <SelectField
             className="col-span-2"
@@ -293,7 +323,7 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && (
+      {op.kind !== 'code' && op.kind !== 'finish3d' && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -307,7 +337,7 @@ function OpEditor({
         </Group>
       )}
 
-      <StrategyFields op={op} onChange={onChange} />
+      <StrategyFields op={op} part={part} onChange={onChange} />
 
       {op.kind === 'profile' && (
         <>
@@ -358,8 +388,44 @@ const LEADS = [
   { value: 'centre' as const, label: 'From hole centre' },
 ]
 
-function StrategyFields({ op, onChange }: { op: CamOp; onChange: (o: CamOp) => void }) {
+function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
   switch (op.kind) {
+    case 'finish3d': {
+      const sf = (patch: Partial<typeof op.surface>) => onChange({ ...op, surface: { ...op.surface, ...patch } })
+      return (
+        <>
+          <Group title="Surface">
+            <SelectField className="col-span-2" label="Model" value={op.surface.modelId || NONE} options={[{ value: NONE, label: 'Choose a model' }, ...(part.models ?? []).map((m) => ({ value: m.id, label: m.name }))]} onChange={(v) => sf({ modelId: v === NONE ? '' : v })} />
+            <SelectField
+              label="Boundary"
+              value={op.surface.boundaryMode}
+              options={[
+                { value: 'centre', label: 'Tool centre inside' },
+                { value: 'contained', label: 'Whole tool inside' },
+                { value: 'touching', label: 'Tool may overhang' },
+              ]}
+              onChange={(v) => sf({ boundaryMode: v })}
+            />
+            <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} boundary shape(s)` : 'No boundary: the whole model'}</div>
+            <NumField label="Leave on surface" value={op.surface.stockToLeave} min={0} step={0.1} onChange={(v) => sf({ stockToLeave: v })} />
+            <NumField label="Tolerance" value={op.surface.tolerance} min={0.001} max={0.5} step={0.005} onChange={(v) => sf({ tolerance: v })} hint="Largest gap to the true surface" />
+            <TextField label="Protect groups (numbers)" value={(op.surface.protect ?? []).join(', ')} onChange={(v) => sf({ protect: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
+            <TextField label="Only groups (empty = all)" value={(op.surface.groups ?? []).join(', ')} onChange={(v) => sf({ groups: v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0) })} />
+          </Group>
+          <Group title="Parallel passes">
+            <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} onChange={(v) => onChange({ ...op, stepover: v })} hint="Placeholder default; set your own" />
+            <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />
+            <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
+            {op.pattern === 'oneway' && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Along the angle' }, { value: 'conventional', label: 'Against the angle' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
+            <NumField label="Slope from" suffix="°" value={op.slope.min} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, min: v } })} />
+            <NumField label="Slope to" suffix="°" value={op.slope.max} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, max: v } })} />
+            <div className="col-span-2">
+              <SwitchField label="Skip flat areas" checked={op.skipFlats} onChange={(v) => onChange({ ...op, skipFlats: v })} hint="Leaves surfaces under 0.5° for a flat-area pass" />
+            </div>
+          </Group>
+        </>
+      )
+    }
     case 'profile':
       return (
         <Group title="Strategy">

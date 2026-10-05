@@ -241,6 +241,13 @@ export function validateJob(
           code: 'CAM_OUTPUT_OFF',
           message: `Custom part #${c.partNo} ${name}: ${c.machiningOps} machining operation(s) are not written to MPR because custom-part MPR output is off (Machine > Features). Only its cut-out would be cut.`,
         })
+      if (c.ops3d)
+        add({
+          ...ref,
+          severity: 'error',
+          code: 'CAM_3D_NO_OUTPUT',
+          message: `Custom part #${c.partNo} ${name}: ${c.ops3d} 3D operation(s) cannot be written to woodWOP yet (3D output stays off until the format is confirmed with a program from the machine). Only simulate them.`,
+        })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
       if (c.written && c.backHoles > 0)
         add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })

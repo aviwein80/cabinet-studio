@@ -28,7 +28,7 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
 
 - **M2.0 audit: done.** **M2.1 3D foundation: done** (October 2026). It covers 3D model import,
   mesh tools, the work volume from a model, the machine model, tool holder fields, the stock
-  model, background workers, and part format version 2. Next: **M2.2a**, parallel finishing.
+  model, background workers, and part format version 2. **M2.2a parallel finishing: done.** Next: M2.2b (Z-level roughing, waterline).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

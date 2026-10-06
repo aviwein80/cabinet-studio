@@ -91,8 +91,14 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   columns, the tool kept to one side of a surface). Same tolerances as Stage 2 (no gouge over
   0.005 mm by an independent check, stock to leave within ±0.01 mm). Screens and simulation
   only, behind the "More 3D finishing" switch; the export checker refuses all of them
-  (`CAM_3D_NO_OUTPUT`) until true 3D output is confirmed with a woodWOP sample program. Next:
-  M3.2 (small extras: threads, wrapping, prints to scale and the rest of its list).
+  (`CAM_3D_NO_OUTPUT`) until true 3D output is confirmed with a woodWOP sample program.
+  **M3.1g owner follow-ups: done** (October 2026): flat-area finishing on level flats written as
+  ordinary contour passes behind the 3D flat-layer switch (still off); lollipop sizes stay badged
+  placeholders; undercut roughing with a lollipop (simulation only, part format 6); rows and
+  columns of an imported solid's face from a full OpenCascade B-rep kernel (replicad-opencascadejs,
+  LGPL-2.1, separate 23 MB file loaded on first use, offline; occt-import-js stays the reader);
+  the plan view draws very large toolpaths (a 472,100-point roughing draws in well under a second
+  instead of stopping the screen).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

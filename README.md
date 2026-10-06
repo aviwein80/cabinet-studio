@@ -228,20 +228,36 @@ export checker. Tool numbers are still placeholders.
       target over the whole test surface.
     - **Flat areas**: offset passes only where the tool rests on a face flatter than 0.5°, the
       first one following the edge of each flat area (found to 0.01 mm). A flat-bottomed tool
-      is picked first.
+      is picked first. On level flats every pass runs at one height, so it can go to woodWOP as
+      an ordinary contour pass (see 3D output below); a face flatter than 0.5° but not level
+      keeps it simulation only.
     - **Helical**: one continuous descent round steep walls (a hill or a hollow), one step-down
       per round, no step-down in one place; where walls split or join it cuts waterline passes.
     - **Undercut**: a **lollipop** tool (a ball on a narrower neck; new tool shape with its neck
       diameter, placeholder T108) reaches under overhangs. Its neck keeps the collision margin
-      clear of the model; it goes in and out sideways. It finishes only: the material under the
-      overhang must be cleared first. The simulator then keeps material under overhangs (a
-      stock with several layers per column) and checks the neck too.
+      clear of the model; it goes in and out sideways. The simulator then keeps material under
+      overhangs (a stock with several layers per column) and checks the neck too. The ball, neck,
+      flute and stick-out of every lollipop keep their Configure badges until each is confirmed
+      (the sizes are not known yet).
+    - **Undercut roughing** (3D roughing → pattern "Undercuts (lollipop)"): clears the material
+      under overhangs that roughing from above leaves, before undercut finishing. Level by level,
+      the ball works in from the open side (passes a step-over apart, then one along the edge of
+      where it can go); it goes down and up only beside the overhang and leaves sideways. It
+      reaches in as far as its radius less its neck and the collision margin (2 mm for the
+      placeholder T108). Its own placeholder step-down and step-over with Configure badges.
+      Simulation only: never written to a machine.
     - **Curve-driven**: passes guided by one drive curve and copies of it a step-over apart, by
       two drive curves (passes blended from one to the other), by an earlier operation's
       toolpath, along the line where two surfaces (two sets of facet groups) meet (a ball-nose
       touching both), or along the rows or columns of a surface made in the app (Surfaces:
-      revolve, ruled, loft, sweep, extrude, or a solid's face untrimmed). Optionally the tool is
-      kept on one side of chosen facet groups, which are never cut.
+      revolve, ruled, loft, sweep, extrude, or a solid's face untrimmed) or of an imported
+      solid's face (below). Optionally the tool is kept on one side of chosen facet groups,
+      which are never cut.
+    - **Rows and columns of an imported solid's face** (solid's faces → pick one face → Rows and
+      columns): the face's own parameter lines, true to its surface (free-form faces too), from
+      a full OpenCascade B-rep kernel (replicad-opencascadejs, LGPL-2.1, about 23 MB) that loads
+      only the first time, in the background, from the app's own files (works offline). The
+      lines stop at the face's edges and holes. STEP and BREP files (IGES: save as STEP first).
   - **Rest machining** (every finishing strategy except projection): a smaller tool cuts only
     where the earlier operations left material it can reach. The earlier toolpaths are
     simulated to find what they left; rest thinner than a set amount is left out.
@@ -255,16 +271,20 @@ export checker. Tool numbers are still placeholders.
   The tool (ball-nose, bull-nose or flat) is placed exactly against the model at every point,
   and the moves are refined until they stay within the tolerance. An independent check in the
   tests measures how far the tool goes below the surface (limit 0.005 mm). Toolpaths are
-  calculated in the background and can be simulated.
-- **3D output to woodWOP** (switch: Write 3D roughing and waterline to MPR, **off** by default):
-  Z-level roughing and waterline are written as ordinary contour-milling macros, one per pass
-  per level, so each one can be edited in woodWOP. The machine makes its own approach for each
-  pass. The job page calculates the 3D toolpaths in the background before export.
-  - Parallel, projection and pencil finishing, the M3.1 strategies (radial, spiral, scallop, flat
-    areas, helical, undercut, curve-driven), and waterline with the shallow-area fill, need true
-    3D output. The export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is
-    confirmed with a program from the machine. Adaptive Z-level roughing is blocked as adaptive
-    clearing (`CAM_ADAPTIVE_NO_OUTPUT`).
+  calculated in the background and can be simulated. In the drawing, very large toolpaths are
+  drawn simplified for the screen (within a stated tolerance, prepared in the background); the
+  simulation, the checks and every program use every point.
+- **3D output to woodWOP** (switch: Write 3D roughing, waterline and flat areas to MPR, **off**
+  by default): Z-level roughing, waterline and flat-area finishing on level flats are written as
+  ordinary contour-milling macros, one per pass (per level), so each one can be edited in woodWOP.
+  The machine makes its own approach for each pass. The job page calculates the 3D toolpaths in
+  the background before export.
+  - Parallel, projection and pencil finishing, the other M3.1 strategies (radial, spiral,
+    scallop, helical, undercut, curve-driven), undercut roughing, and waterline with the
+    shallow-area fill, need true 3D output. The export checker always blocks them
+    (`CAM_3D_NO_OUTPUT`) until the format is confirmed with a program from the machine. A
+    flat-area pass on a face that is not quite level is blocked too (`CAM_NO_OUTPUT`). Adaptive
+    Z-level roughing is blocked as adaptive clearing (`CAM_ADAPTIVE_NO_OUTPUT`).
   - With the switch off, the checker blocks the flat-layer operations too (`CAM_3D_OUTPUT_OFF`).
   - Batch runs cannot calculate 3D toolpaths yet (`CAM_3D_NOT_READY`).
 - **More 2.5D machining** (switch: More 2.5D machining, on; Machining → Add operation → More 2.5D):

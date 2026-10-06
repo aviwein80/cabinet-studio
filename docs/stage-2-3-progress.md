@@ -93,11 +93,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.1d Undercut finishing with lollipop tools (3D-08, second part) and a dexel stock | **Done** (October 2026) | See below. Simulation only. |
 | M3.1e Curve-driven finishing (3D-09) | **Done** (October 2026) | See below. Simulation only. |
 | M3.1f Screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.1 complete.** |
-| M3.2 - M3.7 | Not started | |
+| M3.1g Owner follow-ups: flat-area flat layers, lollipop badges, undercut roughing, solid face rows and columns, plan view | **Done** (October 2026) | See below. Output switches all off; undercut roughing simulation only. |
+| M3.2 Small extras (NEW-08, NEW-07, NEW-21, NEW-24, 2D-18) | In progress | See below. |
+| M3.3 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -151,6 +153,16 @@ files present; fixed in M2.8e, back to 17.)
     stick-outs, holders, aggregates and the T140 blade stay badged placeholders, no aggregate
     fitted; every machine output switch stays off; reliefs are imported, never modelled.
 
+20. With the M3.2 go-ahead, on the M3.1 report: (1) flat-area finishing on level flats goes out
+    as ordinary contour passes behind the existing 3D flat-layer switch, which stays off, the
+    checker blocking it by default; (2) lollipop sizes are unknown: keep the placeholder ball,
+    neck, flute and stick-out with Configure badges; (3) build undercut roughing, with gouge and
+    collision checks and dexel simulation, simulation only (output blocked); (4) rows and columns
+    on imported solids with a full OpenCascade B-rep WASM (LGPL, about 23 MB) loaded on first
+    use as a separate replaceable file, offline, with notices; keep occt-import-js for import
+    unless one kernel can cleanly replace both; (5) fix the plan view freezing on very large
+    toolpaths without changing the toolpath data.
+
 ## Open questions for the owner
 
 1. **N-200 figures** (machine model): travel limits, table size, origin, spoilboard thickness,
@@ -160,8 +172,8 @@ files present; fixed in M2.8e, back to 17.)
    lengths; stick-outs; holder outlines.
 3. **3D feeds, speeds, step-downs and step-overs** for the shop's materials.
 4. **A small 3D program saved from woodWOP**, needed for true 3D output (decision 2).
-5. **3D flat-layer output on the machine**: before switching on "Write 3D roughing and waterline
-   to MPR", load one roughing program in woodWOP and check how many points a contour may hold
+5. **3D flat-layer output on the machine**: before switching on "Write 3D roughing, waterline
+   and flat areas to MPR", load one roughing program in woodWOP and check how many points a contour may hold
    (not confirmed; the app warns over 2,000 points per contour).
 6. **Solid models (M2.5)**: open one STEP file in the installed app on the Windows PC and on the
    Mac with the network off. (The rebate reach of 6 mm and drilling pointed holes to the
@@ -174,7 +186,9 @@ files present; fixed in M2.8e, back to 17.)
 11. **M2.10**: answered (decision 18); still to come: the result of simulating one full circle
     from our MPR in woodWOP.
 12. **M2.11 (relief import)**: see "M2.11 decisions needed" below.
-13. **M3.1 (more 3D finishing)**: see "M3.1 decisions needed" below.
+13. **M3.1 (more 3D finishing)**: answered (decision 20); still to come: real lollipop sizes
+    (see "M3.1g decisions needed").
+14. **M3.1g / M3.2**: see "M3.1g decisions needed" and "M3.2 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -2095,9 +2109,102 @@ recorded as a risk.
 5. Unchanged: placeholder step-overs (finishing 0.6 mm, with Configure badges), the helical slope
    limit (30°) and the 3D tools; true 3D output waits for a woodWOP sample program (decision 2).
 
+## M3.1g owner follow-ups: what was built
+
+The five decisions on the M3.1 report (decision 20), each pushed to `main` when green: items 1-2
+`077d6d3`, item 3 `3ea2283`, items 4-5 `f0a258d`.
+
+| Item | What | Where |
+|---|---|---|
+| 1 Flat-area flat layers | Flat-area finishing is a flat-layer operation (`isFlatLayer`): each level pass becomes one contour-milling pass at its depth, behind the existing switch "Write 3D roughing, waterline and flat areas to MPR" (off). Points in line with their neighbours are left out of the contour (within 0.0005 mm); passes at face 1 are not written (nothing to cut there), with a note. A pass on a face flatter than 0.5° but not level changes height: the whole toolpath is blocked (`noOutput`, `CAM_NO_OUTPUT`) whatever the switches say | `src/cam/3d/flat.ts` (`levelPasses`), `genFinish3d` in `src/cam/toolpath.ts`, checker texts in `src/core/validator.ts` |
+| 2 Lollipop badges | A lollipop's "number, ball Ø and depth" and "neck Ø, flute and stick-out" keep their Configure badges until each is confirmed, even once the rest of the tool table is real (the badges name the ball and the neck; a missing neck says so) | `toolUnconfirmed` in `src/core/confirm.ts` |
+| 3 Undercut roughing | New Z-level roughing pattern "Undercuts (lollipop)": see below | `src/cam/3d/undercutRough.ts`, `genRough3d`, `lollipopOf` in `src/cam/toolpath.ts` |
+| 4 Solid face rows and columns | The B-rep kernel reads the solid's own file again (in the solid worker), finds the picked face and samples its true surface on its own parameters; added as a surface model with rows and columns that curve-driven passes follow, stopping at the face's edges | `src/cam/solid/brep.ts`, `src/cam/solid/faceGrid.ts`, task `solid.faceGrid`, `gridPasses` in `src/cam/3d/curve.ts`, "Rows and columns" in `src/pages/part/SolidFacesPanel.tsx` |
+| 5 Plan view | Toolpaths drawn simplified for the screen, built once per toolpath (large ones in the compute worker), runs of straight feeds simplified too; the tool-width band is left out above 20,000 drawn points; a note says when a drawing is simplified or still being made | `src/cam/display.ts`, `src/pages/part/displayPaths.ts`, `src/pages/part/Canvas.tsx`, task `toolpath.display` |
+
+**Undercut roughing (item 3).** At each level (ball-centre heights from the highest underside the
+ball can touch down to the lowest floor beneath an overhang, the step-down apart) the ball's centre
+goes only where the ball (radius + stock) and its neck (radius + collision margin + stock, from
+the centre up) are both clear of the model: exactly per grid node from the heights where the ball
+touches each facet (`BallLine`) and a flat-cutter drop for the neck. Where it could rise straight
+up is open; elsewhere it is under the overhang. Passes run along the lines a step-over, two
+step-overs, ... in from the open side (distance measured through the clear set, so a pass is made
+only where the tool can get to it sideways), then one along the edge of the clear set. Every
+point is checked exactly and every move every 0.05 mm. The tool comes down and goes up only in
+the open; under the overhang it moves level and leaves sideways (down the distance field, or back
+the way it came). Ball centres stay inside the part's own outline (the default "touching" boundary
+would otherwise let passes wrap round the part's ends, where its neighbours are on a sheet). A
+warning asks for roughing from above first if no Z-level roughing comes before it. Own placeholder
+step-down (1 mm) and step-over (10 % of the ball) with Configure badges (`undercutStepdown`,
+`undercutStepover`). Never a flat layer; `noOutput` set, so no post writes it. Part file format 6.
+
+**Kernel choice (item 4).** `replicad-opencascadejs` 1.1.0 (LGPL-2.1-only, 22.98 MB WebAssembly +
+60 KB script), the build already reviewed in M2.5. It cannot cleanly replace occt-import-js: it
+has no XDE STEP reader (no face colours, product names or assembly tree, which M2.5's faces to
+layers by colour and assembly split rely on) and no IGES reader; occt-import-js is also a third
+of the size and is what every solid import loads. So the reader stays, and the B-rep kernel loads
+only when a face's rows and columns are asked for. Loading: two unmodified files in
+`vendor/opencascade-brep/` (copied from the package by `vite.config.ts`, unpacked in the desktop
+app by the existing `asarUnpack: dist/vendor/**`), imported by URL inside the solid worker. Its
+script makes small functions at run time (`new Function`, embind); the page's security policy
+forbids that and is unchanged; a worker loaded from the app's own files has no such policy. Checked
+in Chromium 141 (Electron 44 is the same engine): the page refuses it (EvalError), the worker runs
+it. The start-up bundle grew 14.7 KB (0.4 %) for all of M3.1g; the kernel is not in it.
+
+**Face found again.** Faces are matched by where they lie, not by their order in the file (the
+reader and the kernel walk files differently): the kernel's face whose own triangles all lie on
+the stored face's triangles (box and area first), within 0.2 mm. The unit is taken from the file
+as the reader did (`readStepMeta`). The grid: as many rows and columns as keep the straight pieces
+between grid points within 0.01 mm of the surface (checked at a spread of cells; at most 250,000
+points, otherwise a warning with the gap reached). Points outside the trimmed face (its own
+triangles in its parameter plane) are left out of the facets; such grids are marked `trimmed`, and
+lines along them stop where they leave the face.
+
+### Acceptance
+
+| Item | Proof | Measured |
+|---|---|---|
+| 1 | `tests/cam-3d-flat-helical.test.ts` (M3.1g block) | Raised panel, 8 mm flat: 437 level passes become 437 contours (47 on the border floor at 10 mm; the rest on the test mesh's tiny level hip facets, a recorded limit); every corner is a point of the toolpath at the contour's depth. Default (switches off): `CAM_3D_OUTPUT_OFF`, nothing written; switches on, not calculated: `CAM_3D_NOT_READY`; calculated: written as `<105>` contours. A 0.23° pocket floor: blocked (`CAM_NO_OUTPUT`) even with both switches on |
+| 2 | `tests/confirm.test.ts` (M3.1g block) | T108: ball Ø12 / 40 deep and neck Ø4, flute 12, stick-out 60 badged; still badged with a real tool table; gone only when confirmed; listed in the undercut editor and by the export checker; confirming switches nothing on |
+| 3 | `tests/cam-3d-undercut-rough.test.ts` | Exact distance along every move: T108 with 0.3 mm stock, ball 0.3000 mm from the model, neck 2.3000 mm (margin 2 + stock), reach exactly at the neck's limit (centre x 42.300, 2.000 mm under the lip's edge); no stock: 0.0000 / 2.0000; 20 mm test lollipop: 0.3000 / 2.3008, 4.999 mm under. Vertical moves only where the ball is clear all the way up. Levels the step-down apart down to the floor (+0.3). Dexel stock (0.1 mm cells), stock the shape left by roughing from above: 2,880 mm³ removed under the lip, the lip kept; where undercut finishing then touches, at most 0.420 mm left (0.3 stock + 0.084 cusp + probe), from 1.980 mm before; no false collision alarms; a 0 mm margin case is caught (shank). Refusals: ball-nose, neck too thick, no overhang; warning without roughing from above. Placeholder step-down/step-over badged; format 6 round trip. Export: `CAM_3D_NO_OUTPUT` with both switches on |
+| 4 | `tests/cam-3d-brep-grid.test.ts` | Kernel cold start 0.24-0.30 s in Node (1.15 s in the browser incl. the 23 MB download; 0.32 s warm). Dome face (B-spline): 168 rows × 246 columns, 0.49 mm apart, chord 0.0004 mm, every grid point within 0.000002 mm of the true surface, rows on one y and columns on one x (0.000000), nothing in the hole, every point 2 spacings from the hole in the face. BREP file: same. IGES and missing faces refused with the reason. Curve-driven along rows: 29 lines, columns: 42 lines (a step-over or less apart on the surface); the ball touching the solid's facets (0.0000 mm; 0.047 mm from the true surface, the import's facet tolerance), contacts within 0.0001 mm of a line, gouge 0.0025 / 0.0021 mm, none over the hole. Same result through the worker task |
+| 5 | `tests/cam-display.test.ts`; browser check | The lip part's default Z-level roughing: 472,100 points drawn as 2,964 within 0.01 mm (worst real point 0.0095 mm from the drawing), every point drawn a real point, the toolpath unchanged, 85 ms once (before: 4.1 MB of path data built in 128 ms on every redraw, twice per render, and stroked with a 12 mm band). In the browser (dev build): drawn with the note "drawn simplified (within 0.01 mm)"; while panning and zooming over it every main-thread task stays under 100 ms (max 89 ms) |
+
+### Limits recorded
+
+- **Flat layers**: tiny level facets a mesh's triangulation makes along ridges (the raised-panel test
+  mesh's corner hips) are level flats too and get their own small contours. Two border rings of
+  the raised panel have more than 2,000 points (the edge traced to 0.005 mm along a faceted
+  bevel): the existing warning about woodWOP's unconfirmed point limit says so.
+- **Undercut roughing** reaches in only as far as the ball radius less the neck and the collision
+  margin (2 mm for the placeholder T108; 4 mm margin: no reach at all); material further in stays
+  (warning). Between levels it leaves the ball's cusp (0.08 mm at 2 mm step-down with a 12 mm
+  ball). It needs roughing from above first (warning otherwise). Simulation only.
+- **Solid face rows and columns**: STEP and BREP only (no IGES reader in the kernel build: save as
+  STEP). Lines stop up to one grid spacing (about 0.5 mm) short of a face's trimmed edges. The
+  passes are dropped onto the solid's facets (made within 0.05 mm of the surface at import), so
+  they follow the true surface within that. A face too large for 250,000 grid points gets a coarser
+  grid and a warning with the gap reached. Relies on the worker having no content policy of its
+  own: if a server ever sends one with `script-src` and no `'unsafe-eval'`, the kernel stops
+  loading (the page's policy is not loosened).
+- **Plan view**: while a very large 3D toolpath is being calculated the page still re-renders on
+  each progress step (about 100 ms per render in the development build), and the moment the
+  finished toolpath arrives from the worker takes about 0.25 s (unpacking hundreds of thousands
+  of move objects; the toolpath format is unchanged). Above 20,000 drawn points the drawing shows
+  the centre line only (no tool-width band).
+
+## M3.1g decisions needed
+
+1. **Lollipop tools**: still to come when known: ball and neck diameters, flute length and
+   stick-out of any lollipop the shop gets. Until then T108 stays a badged placeholder and
+   undercut work is simulation only.
+2. **Flat-area output on the machine**: before switching on "Write 3D roughing, waterline and flat
+   areas to MPR", load one flat-area program in woodWOP (as for roughing and waterline, open
+   question 5).
+
 ## Next run
 
-- M3.2 (small extras: NEW-08, NEW-07, NEW-21, NEW-24, 2D-18), when the owner says go.
+- M3.3 (rotary), when the owner says go.
 
 ## Run log
 
@@ -2145,3 +2252,5 @@ recorded as a risk.
 - **Run 14 (M3.1d)**: undercut finishing with lollipop tools, dexel stock. See `git log`.
 - **Run 14 (M3.1e)**: curve-driven finishing. See `git log`.
 - **Run 14 (M3.1f)**: screenshots, README, ROADMAP. **M3.1 complete.** See `git log`.
+- **Run 15 (M3.1g)**: flat-area flat layers and lollipop badges (`077d6d3`); undercut roughing
+  (`3ea2283`); solid face rows and columns and the plan view (`f0a258d`); docs. See `git log`.

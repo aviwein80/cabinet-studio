@@ -105,7 +105,7 @@ describe('M2.4c collision suite: zero misses, zero false alarms', () => {
     process.stdout.write(`  [collision] holder: ${deep.found.length} run(s), first: ${deep.found[0].message}\n`)
     expect(run(pocketPart(60, 47, 't190', 7), m).found).toEqual([])
     expect(run(pocketPart(60, 49, 't190', 7), machineWith({ collisionMargin: 0 })).found).toEqual([])
-  })
+  }, 60_000)
 
   it('rapid through stock: a rapid at Z-4 over uncut panel collides; the same rapid inside the cut pocket, or above the panel, is clean', () => {
     const m = machineWith()

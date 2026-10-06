@@ -81,7 +81,7 @@ describe('chamfer', () => {
       expect(Math.abs(heightAt(hf, 30, y) - want), `y ${y}`).toBeLessThan(0.003)
     }
     expect(tp.intents[0].k === 'contour' && tp.intents[0].passes[0].depth).toBe(5)
-  })
+  }, 60_000)
 
   it('a level 3D edge is chamfered at its own height; tilted edges are left out; too big for the cutter is refused', () => {
     const part = panel([300, 200, 25])

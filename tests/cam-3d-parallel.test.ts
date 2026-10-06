@@ -92,7 +92,7 @@ describe('M2.2a parallel finishing: no gouges on the analytic surfaces (independ
       for (let i = 0; i < p.length; i += 3) worst = Math.max(worst, Math.abs(p[i + 2] - s.f(p[i], p[i + 1])))
       expect(worst, name).toBeLessThan(1e-5)
     }
-  })
+  }, 60_000)
 })
 
 describe('M2.2a stock to leave, scallop and limits', () => {

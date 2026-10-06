@@ -22,7 +22,7 @@ const machine = structuredClone(PLACEHOLDER_MACHINE)
 const NOW = '2026-10-06T10:00:00.000Z'
 
 /** The template post exactly as it was before M2.10b (kept here to prove the change of path changed nothing). */
-function legacyRunPost(template: PostTemplate, name: string, paths: Toolpath[], zTop = 0): { ext: string; text: string } {
+function legacyRunPost(template: PostTemplate, name: string, paths: Toolpath[], zTop = 0, plungeFix = true): { ext: string; text: string } {
   const t = parseTemplate(template.text)
   const lines: string[] = []
   const last: Record<string, string> = {}
@@ -58,7 +58,8 @@ function legacyRunPost(template: PostTemplate, name: string, paths: Toolpath[], 
       const Z = m.z + zTop
       if (m.t === 'rapid') emit('rapid', { X: m.x, Y: m.y, Z })
       else if (m.t === 'feed') emit('feed', { X: m.x, Y: m.y, Z, F: String(Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1))) })
-      else if (m.t === 'arc') emit(m.ccw ? 'arc_ccw' : 'arc_cw', { X: m.x, Y: m.y, Z, I: m.cx - x, J: m.cy - y, F: String(Math.round(tp.feeds.feed * (m.k ?? 1))) })
+      // the one deliberate change since (M2.10c): arcs that plunge (helical entries) at the plunge feed
+      else if (m.t === 'arc') emit(m.ccw ? 'arc_ccw' : 'arc_cw', { X: m.x, Y: m.y, Z, I: m.cx - x, J: m.cy - y, F: String(Math.round((plungeFix && m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1))) })
       else emit(m.peck > 0 ? 'peck' : 'drill', { X: m.x, Y: m.y, Z, R: m.r + zTop, Q: m.peck, F: String(Math.round(tp.feeds.plunge)) })
       x = m.x
       y = m.y
@@ -85,17 +86,25 @@ function withRouter(d: AppData, post: MachineSetup['post']): MachineSetup {
 }
 
 describe('M2.10b one post path', () => {
-  it('the template post reads the shared post input and writes exactly what it wrote before', () => {
+  it('the template post reads the shared post input and writes exactly what it wrote before (except the plunge-feed fix)', () => {
     let lines = 0
+    const changed: string[] = []
     for (const p of allParts()) {
       const tps = pathsOf(p)
       for (const zTop of [0, 19]) {
         const now = runPost(SAMPLE_TEMPLATE, p.name, tps, zTop)
         expect(now, `${p.id} z${zTop}`).toEqual(legacyRunPost(SAMPLE_TEMPLATE, p.name, tps, zTop))
         lines += now.text.split('\r\n').length
+        // what the plunge-feed fix changed: only arc lines (helical entries), only their F
+        const old = legacyRunPost(SAMPLE_TEMPLATE, p.name, tps, zTop, false).text.split('\r\n')
+        const cur = now.text.split('\r\n')
+        if (old.length === cur.length) cur.forEach((l, i) => l !== old[i] && changed.push(`${p.id}: ${old[i]} -> ${l}`))
+        else changed.push(`${p.id}: line count`)
       }
     }
     expect(lines).toBeGreaterThan(5000)
+    expect(changed.every((c) => /: G[23] .* -> G[23] /.test(c) || /: [GXY].*F\d+ -> /.test(c) || /-> G1 /.test(c))).toBe(true)
+    process.stdout.write(`  [template post] plunge-feed fix: ${changed.length} lines differ from the Stage 1 post, all feed words of helical entries and the next feed word: ${[...new Set(changed.map((c) => c.split(':')[0]))].join(', ') || 'none'}\n`)
   })
 
   it('the post input carries every move, with feeds per move and arc centres both ways', () => {
@@ -155,13 +164,15 @@ describe('M2.10b where text posts may write', () => {
     expect(checkTextPost(tmpl, { switchOn: true, toolpaths: [] }).map((i) => i.code)).toEqual(['POST_N200'])
     const router = withRouter(d, { kind: 'template', ...SAMPLE_TEMPLATE })
     expect(isN200(router)).toBe(false)
-    expect(checkTextPost(router, { switchOn: true, toolpaths: tpOf(referenceParts()[0]) })).toEqual([])
+    expect(checkTextPost(router, { switchOn: true, toolpaths: tpOf(referenceParts()[1]) })).toEqual([])
+    // holes drilled by diameter have no single tool: the program would drill with whatever is loaded
+    expect(checkTextPost(router, { switchOn: true, toolpaths: tpOf(referenceParts()[0]) }).map((i) => i.message)).toEqual(['Drill: has no single tool from the tool table (for example holes drilled by diameter); a text post needs one tool number per operation.'])
   })
 
   it('switch off, a missing, switched-off or ungranted plugin, a missing post: each blocks writing', () => {
     const d = data()
     const router = withRouter(d, { kind: 'script', plugin: 'iso-router-post', post: 'iso-router' })
-    const tps = tpOf(referenceParts()[0])
+    const tps = tpOf(referenceParts()[1])
     const codes = (plugin: PluginRecord | null, on = true) => checkTextPost(router, { switchOn: on, plugin, toolpaths: tps }).map((i) => i.code)
     const ok = { ...install(POST, { machineOutput: true }), contributes: { menu: [], steps: [], posts: [{ id: 'iso-router', name: 'x', ext: 'nc', description: '' }] } }
     expect(codes(ok)).toEqual([])
@@ -175,7 +186,7 @@ describe('M2.10b where text posts may write', () => {
   it('work a G-code post cannot describe is refused: edge drilling, turned-over drilling, aggregates, saws without a saw unit, 3D without 3D milling', () => {
     const d = data()
     const router = withRouter(d, { kind: 'template', ...SAMPLE_TEMPLATE })
-    const fake = (patch: Partial<Toolpath>): Toolpath => ({ opId: 'o', kind: 'drill', name: 'Op', tool: null, feeds: { rpm: 1, feed: 1, plunge: 1 }, moves: [], intents: [], warnings: [], stats: { cut: 0, rapid: 0, minutes: 0 }, ...patch })
+    const fake = (patch: Partial<Toolpath>): Toolpath => ({ opId: 'o', kind: 'drill', name: 'Op', tool: PLACEHOLDER_MACHINE.tools[0], feeds: { rpm: 1, feed: 1, plunge: 1 }, moves: [], intents: [], warnings: [], stats: { cut: 0, rapid: 0, minutes: 0 }, ...patch })
     const msg = (tp: Toolpath) => checkTextPost(router, { switchOn: true, toolpaths: [tp] }).map((i) => i.message)
     expect(msg(fake({ intents: [{ k: 'hdrill', x: 0, y: 0, z: 9, d: 8, depth: 30, dir: 'XP' as never, face: 5, tool: null, label: '' }] }))).toEqual(['Op: edge (horizontal) drilling cannot be written by a text post.'])
     expect(msg(fake({ intents: [{ k: 'vdrill', x: 0, y: 0, d: 5, depth: 10, through: false, tool: null, label: '', back: true }] }))).toEqual(['Op: drilling from the underside (part turned over) cannot be written by a text post.'])
@@ -196,6 +207,9 @@ describe('M2.10b where text posts may write', () => {
     const h = await PluginHost.start(install(POST))
     d.plugins = [{ ...install(POST, { machineOutput: true }), contributes: h.contributes }]
     const part = referenceParts()[0]
+    // drill with one tool, so the post can name it
+    const drill = d.machines![0].profile.tools.find((t) => t.type === 'drill-vertical' && t.diameter === 8)!
+    part.ops[0] = { ...part.ops[0], toolId: drill.id }
     const mat = d.library.materials[0]
     part.materialId = mat.id
     part.thickness = mat.thickness
@@ -209,7 +223,7 @@ describe('M2.10b where text posts may write', () => {
     expect(on.writable).toBe(true)
     const text = (await runScriptPost(h, 'iso-router', on.input)).text
     expect(text).toBe(runTemplate(SAMPLE_TEMPLATE, on.input).text)
-    expect(text).toMatch(/G81 X40\.000 Y40\.000/)
+    expect(text).toMatch(new RegExp(`T${drill.number} M6[\\s\\S]*G81 X40\\.000 Y40\\.000`))
     // the main machine never: its post is the woodWOP writer
     expect(planPartPost(d, MAIN_MACHINE, part).writable).toBe(false)
     h.dispose()

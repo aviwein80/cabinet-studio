@@ -126,7 +126,8 @@ export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number
       const z = m.z + zTop
       if (m.t === 'rapid') moves.push({ t: 'rapid', x: m.x, y: m.y, z })
       else if (m.t === 'feed') moves.push({ t: 'feed', x: m.x, y: m.y, z, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)), kind: m.f })
-      else if (m.t === 'arc') moves.push({ t: 'arc', x: m.x, y: m.y, z, i: m.cx - x, j: m.cy - y, cx: m.cx, cy: m.cy, ccw: m.ccw, f: Math.round(tp.feeds.feed * (m.k ?? 1)) })
+      // arcs that plunge (helical entries) run at the plunge feed, as the toolpath and the simulator say (M2.10c fix)
+      else if (m.t === 'arc') moves.push({ t: 'arc', x: m.x, y: m.y, z, i: m.cx - x, j: m.cy - y, cx: m.cx, cy: m.cy, ccw: m.ccw, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)) })
       else moves.push({ t: 'drill', x: m.x, y: m.y, z, r: m.r + zTop, peck: m.peck, dwell: m.dwell, f: Math.round(tp.feeds.plunge) })
       x = m.x
       y = m.y

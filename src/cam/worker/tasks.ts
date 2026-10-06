@@ -31,6 +31,7 @@ import type { Entity, Layer } from '../types'
 import { holderEnvelope, type HolderFromModel } from '../tools/holder'
 import { isSolidFile } from '../solid/format'
 import { type ImagePixels, traceImage, type TraceOptions, type TraceResult } from '../trace'
+import { readProgram, type ReadProgram } from '../programRead'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -61,6 +62,8 @@ export interface TaskMap {
   'solid.pack': { in: { solid: SolidData }; out: Packed }
   /** Trace a picture into closed contours (NEW-06). */
   'image.trace': { in: { img: ImagePixels; opt: TraceOptions }; out: TraceResult }
+  /** Read a program back (M2.10, NEW-22): G-code or our MPR into toolpaths. */
+  'program.read': { in: { text: string; machine?: Pick<MachineProfile, 'tools'>; zTop?: number }; out: ReadProgram }
   /** A holder's revolved outline from a model of it (TOOL-04): mesh or solid file, its axis along the file's `up`. */
   'holder.fromModel': { in: { bytes: Uint8Array; name: string; units?: MeshUnits; up?: UpAxis; step?: number; vendor?: string }; out: HolderFromModel & { triangles: number } }
   'blob.unpackSolid': { in: { gz: Uint8Array; hash: string }; out: SolidData }
@@ -162,6 +165,7 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     return readSolid(reader, bytes, name, opt, work)
   },
   'image.trace': ({ img, opt }) => traceImage(img, opt),
+  'program.read': ({ text, machine, zTop }) => readProgram(text, { machine, zTop }),
   async 'holder.fromModel'({ bytes, name, units, up, step, vendor }, work) {
     let mesh: Mesh
     if (isSolidFile(name)) {

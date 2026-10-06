@@ -83,13 +83,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | **Done** (October 2026) | See below. M2.9 complete. |
 | M2.10a Plugin sandbox and API (API-01) | **Done** (October 2026) | See below. Plugins run sandboxed; nothing granted until the owner grants it. |
 | M2.10b Script posts (PST-02) | **Done** (October 2026) | See below. Output switch off; never the N-200. |
-| M2.10c - M2.10d | Not started | Reading programs back (NEW-22); program manager (PST-04), screenshots, docs. See "M2.10 split". |
+| M2.10c Reading programs back (NEW-22) | **Done** (October 2026) | See below. Also fixes the template post's feed on helical entries, and text posts now refuse operations without one tool. |
+| M2.10d | Not started | Program manager and editor (PST-04), screenshots, README, ROADMAP. See "M2.10 split". |
 | M2.11 | Not started | ART-01. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1616,10 +1617,47 @@ dependency `@jitl/quickjs-ffi-types` 0.32.0 is MIT. The WebAssembly ships unmodi
 - The template post's I/J can read `-0.000` for tiny negative values (as before M2.10; unchanged on purpose so the output stays identical).
 - Rotary, tilted (3+2) and 5-axis work do not exist yet (Stage 3); `checkTextPost` is where their machine-model checks go.
 
-## Next: M2.10c reading programs back
+## M2.10c reading programs back: what was built
 
-- NEW-22: G-code and our own MPR back into toolpaths, split at tool changes, for the backplot and
-  the simulator.
+| Spec ID | What | Where |
+|---|---|---|
+| NEW-22 | **G-code reader**: G0/G1/G2/G3 (I/J relative or absolute with G90.1, or R for short and long arcs), helical arcs, G17, G20 inches, G21, G90/G91, canned drilling G81/G82/G83 with G98/G99, repeats and G80, T and M6 tool changes (or T alone when a program has no M6), S, F per move, comments in brackets (brackets inside a comment, as in our tool names, stay with it) or after ";", line numbers, "%", block delete, M30/M2 end. Into the one toolpath IR: **one toolpath per tool change**, named from its comment, the tool taken from the tool table by number, feeds kept per move. Where it would draw wrongly it refuses with the line (arcs in G18/G19, G92/G52 shifts, incremental drilling cycles, arcs without a centre, unreadable words); what it ignores is listed (work offsets, G28/G53, cutter compensation G41/G42 drawn on the programmed line, unknown codes, an arc end off its circle, a tool not in the table) | `src/cam/programRead.ts` |
+| NEW-22 | **Our own MPR read back** (`mprRead.ts` underneath): contour milling with its radius correction applied (the tool centre offset by the tool radius to the side RK says), heights from woodWOP's (above the table) to ours (below the top), passes, vertical and horizontal drilling, rectangular pockets as clearing rings, saw grooves; the workpiece size (also when given through the program's variables L, B, D); consecutive macros on one tool share a toolpath. woodWOP's own approach and leave moves are drawn as a straight plunge and lift (said) | same |
+| NEW-22 | **Read a program** (Custom parts page): pick a G-code or MPR file; it is read in the background worker; the toolpaths, tools, moves, cutting length and minutes, the refusals and warnings, the stock size (from the MPR's workpiece, or as far as the G-code's cutting moves reach, editable) and where the G-code's Z0 is (top of the stock or the table); then the simulator (backplot, stock, collision check) on it | `ProgramReadDialog.tsx`, compute task `program.read` |
+| Fix | **Template post: helical entries at the plunge feed.** Arcs the toolpath marks as plunging (helical entries of pockets) were written with the cutting feed, faster than the toolpath and the simulator use. Now the plunge feed (the safe direction). Measured on the 44 reference parts: 184 lines differ from the Stage 1 template post, all feed words of helical entries in ref07, ref08, ref10 and face01 and the feed word right after them; nothing else changed. The N-200's MPR output is not affected | `postInput` |
+| Fix | **Text posts refuse an operation without one tool** (for example holes drilled by diameter): the template post writes no tool change for it, so a G-code machine would drill with whatever tool is loaded. Found while reading programs back | `checkTextPost` |
+
+### Acceptance (G-code reads back and simulates)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Reads back | `tests/program-read.test.ts` | All **44 reference parts** through the template post and back: 7,244 lines, 6,627 moves, every move the same kind within 0.0005 mm (3 decimals written), arc centres within 0.0015 mm, drill R and peck exact, **every feed the same**; in the 38 programs where every operation has its tool, each operation is its own toolpath with its tool and name, and **writing it again gives the same program byte for byte**. The one extra move is the post's own lift to Z50 after the spindle stops |
+| Simulates | same | 8 parts (one tool per operation): the same number of operations, cutting length within 10 ppm, time within 1 % (drill dwells are not in the template's G-code), **removed volume within 0.1 %** (ref02 32.9 cm³ ... ref08 502.0 cm³). Browser check: a 782-line pocket program read and simulated with the collision check |
+| Hand-written G-code | same | Inches, incremental moves, R arcs both ways, absolute centres, a peck cycle with repeats and G99: positions, feeds (2,540 / 508 mm/min) and three holes where expected; it simulates. Tool changes split and name the toolpaths; refusals and warnings as listed above |
+| Our MPR | same | Reference parts: every vertical hole at its place and depth; 14,103 contour points on the tool-centre path woodWOP follows (profiles: the toolpath; pockets: the native contour passes the MPR holds), at the passes' depths, worst 0.054 mm (see the note below). Full circles read back exactly round. The sample job's sheet programs read back with no errors, every drilling macro a drill move, and simulate |
+
+### Note for the owner: half circles in MPR (decision 1 in the report)
+
+MPR arcs are written with their end points and radius only, to 4 decimals. Our writer writes every
+full circle as two exact half circles, and splits every arc over 180 degrees into two arcs just
+under 180 degrees. For such arcs the centre is poorly fixed by end points and radius: rounding alone
+can move it by about **0.05 to 0.07 mm** (measured: 0.067 mm on an 80 mm half circle, 0.054 mm on a
+9 mm ring of a spiral pocket). Our reader treats exact half circles as exact; how woodWOP treats them
+is not known. Writing such arcs in pieces of at most 90 degrees would remove the doubt, but changes
+the MPR output and its approved golden files, so it waits for the owner. Nothing changed in the
+writer.
+
+### Limits recorded
+
+- **G-code is one plane (G17)**, no coordinate shifts, absolute drilling cycles only; cutter compensation is drawn on the programmed line (warned).
+- **Programs from other software** read as far as these codes go; dialects with macros, variables or subprograms are not read (their words are refused with the line).
+- **MPR: our own macros only** (what our writer produces); other woodWOP macros are listed as not drawn.
+- **Large programs**: read in the background worker; the simulator's limits are those of M2.4.
+
+## Next: M2.10d program manager and editor
+
+- PST-04: list generated programs, edit with line numbers and simple maths on values, copy to the
+  machine folder; screenshots, README, ROADMAP.
 
 ## Run log
 
@@ -1657,4 +1695,4 @@ dependency `@jitl/quickjs-ffi-types` 0.32.0 is MIT. The WebAssembly ships unmodi
   (`bc4bcb2`); assemblies, fittings by face and batch steps (`1fafaee`); wizards, admin tools,
   screenshots, README, ROADMAP. M2.9 complete. See `git log`.
 - **Run 12 (M2.10a-b)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and
-  API (`0d80ba4`); script posts. See `git log`.
+  API (`0d80ba4`); script posts (`eeb407d`); reading programs back. See `git log`.

@@ -593,6 +593,7 @@ export const isN200 = (setup: Pick<import('./types').MachineSetup, 'id' | 'profi
  * results for the part on that machine (`issues`, all kept), a text post is refused:
  * - for the N-200 (it takes woodWOP only; nothing goes to it through a script post);
  * - while "Write programs through script posts" is off, or without the plugin's machine-output grant;
+ * - for an operation without one tool number (the program would cut with whatever tool is loaded);
  * - for work a G-code style post cannot describe: edge (horizontal) drilling, drilling from the
  *   underside after turning the part, edge work with an aggregate, saw cuts without a saw unit,
  *   anything not on face 1, 3D or rotary / tilted work the machine model does not declare, and
@@ -619,6 +620,8 @@ export function checkTextPost(
   for (const tp of opts.toolpaths) {
     const what = (why: string) => err('POST_UNSUPPORTED', `${tp.name}: ${why}`)
     if (tp.noOutput) what(tp.noOutput)
+    // a text post changes tools per operation: without one tool the machine would cut with whatever is in the spindle
+    if (!tp.tool) what('has no single tool from the tool table (for example holes drilled by diameter); a text post needs one tool number per operation.')
     if (tp.intents.some((i) => i.k === 'hdrill')) what('edge (horizontal) drilling cannot be written by a text post.')
     if (tp.intents.some((i) => i.k === 'vdrill' && i.back)) what('drilling from the underside (part turned over) cannot be written by a text post.')
     if (tp.kind === 'edge' || tp.edge) what('edge work with an aggregate cannot be written by a text post.')

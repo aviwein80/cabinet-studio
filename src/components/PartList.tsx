@@ -1,4 +1,4 @@
-import { Boxes, Copy, DoorOpen, FileInput, FileUp, MoreHorizontal, PenTool, Plus, ScanText, Trash2 } from 'lucide-react'
+import { Boxes, Copy, DoorOpen, FileInput, FileSearch, FileUp, MoreHorizontal, PenTool, Plus, ScanText, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -19,6 +19,7 @@ import { SolidImportDialog } from '@/components/SolidImportDialog'
 import { useStore } from '@/app/store'
 import { featuresOf } from '@/core/features'
 import { contourPath } from '@/pages/part/hit'
+import { ProgramReadDialog } from '@/pages/part/ProgramReadDialog'
 
 export function PartThumb({ part, className }: { part: CamPart; className?: string }) {
   const cs = part.entities.filter((e) => e.face === 1 && !layerOf(part, e.layer)?.construction).map((e) => ({ e, cs: entityContours(e) }))
@@ -71,6 +72,8 @@ export function PartList({
   const [solids, setSolids] = useState(false)
   const doorsOn = useStore((s) => featuresOf(s.data?.settings).camParametric)
   const solidsOn = useStore((s) => featuresOf(s.data?.settings).camSolids)
+  const programsOn = useStore((s) => featuresOf(s.data?.settings).plugins && featuresOf(s.data?.settings).camBackplot)
+  const [reading, setReading] = useState(false)
   const create = () => {
     const p = newPart({ name: `Part ${parts.length + 1}` })
     onSave(p)
@@ -128,6 +131,12 @@ export function PartList({
             <DoorOpen /> Doors
           </Button>
         )}
+        {programsOn && (
+          <Button variant="outline" onClick={() => setReading(true)}>
+            <FileSearch /> Read a program
+          </Button>
+        )}
+        {reading && <ProgramReadDialog open={reading} onOpenChange={setReading} />}
         <Button variant="outline" onClick={() => file.current?.click()}>
           <FileUp /> Open part file
         </Button>

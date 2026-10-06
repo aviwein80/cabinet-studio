@@ -26,3 +26,9 @@ export const SURFACES: Record<string, { soup: () => Soup; f: (x: number, y: numb
  * surface curves both ways (and in between, saddle-like) with slopes up to about 22°.
  */
 export const bumps = (x: number, y: number) => -10 + 8 * Math.exp(-((x - 45) ** 2 + (y - 45) ** 2) / 300) - 8 * Math.exp(-((x - 105) ** 2 + (y - 55) ** 2) / 300)
+
+/** M3.1 helical test surface (not in SURFACES): a round bowl 20 mm deep in a flat top, 80 x 80 mm. */
+export const bowl = (x: number, y: number) => {
+  const r = Math.hypot(x - 40, y - 40)
+  return r < 25 ? -Math.sqrt(625 - r * r) * 0.8 : 0
+}

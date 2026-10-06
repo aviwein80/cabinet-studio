@@ -76,7 +76,7 @@ export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
   zwave: 'Z-wave depths and length',
   betweenStepover: 'Cut between curves: step-over',
   finishStepover: '3D finishing step-over',
-  waterlineStepdown: 'Waterline step-down',
+  waterlineStepdown: 'Waterline and helical step-down',
   roughStepdown: 'Z-level roughing step-down',
   roughStepover: 'Z-level roughing step-over',
   adaptiveWidth: 'Adaptive width of cut',
@@ -288,7 +288,7 @@ export const OP_FIELDS: OpField[] = [
   },
   { key: 'betweenStepover', applies: (o) => o.kind === 'curve' && o.mode === 'between', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'finishStepover', applies: (o) => o.kind === 'finish3d' && o.strategy !== 'projection' && o.strategy !== 'pencil', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
-  { key: 'waterlineStepdown', applies: (o) => o.kind === 'finish3d' && o.strategy === 'waterline', get: (o) => (o as { stepdown?: number }).stepdown ?? 1, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
+  { key: 'waterlineStepdown', applies: (o) => o.kind === 'finish3d' && (o.strategy === 'waterline' || o.strategy === 'helical'), get: (o) => (o as { stepdown?: number }).stepdown ?? 1, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
   { key: 'roughStepdown', applies: (o) => o.kind === 'rough3d', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
   { key: 'roughStepover', applies: (o) => o.kind === 'rough3d' && o.pattern !== 'adaptive', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
 ]
@@ -353,7 +353,7 @@ export function newOpDefaults(kind: CamOp['kind'], m: MachineProfile, extra: Par
     case 'curve':
       return mode === 'between' ? ({ stepover: d.betweenStepover } as Partial<CamOp>) : mode === 'zwave' || !mode ? ({ wave: { ...d.zwave, shape: 'sine' } } as Partial<CamOp>) : {}
     case 'finish3d':
-      return strategy === 'waterline' ? ({ stepover: d.finishStepover, stepdown: d.waterlineStepdown } as Partial<CamOp>) : strategy === 'projection' || strategy === 'pencil' ? {} : ({ stepover: d.finishStepover } as Partial<CamOp>)
+      return strategy === 'waterline' || strategy === 'helical' ? ({ stepover: d.finishStepover, stepdown: d.waterlineStepdown } as Partial<CamOp>) : strategy === 'projection' || strategy === 'pencil' ? {} : ({ stepover: d.finishStepover } as Partial<CamOp>)
     case 'rough3d':
       return { stepdown: d.roughStepdown, stepover: d.roughStepover } as Partial<CamOp>
     default:

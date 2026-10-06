@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (helical)",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 18,
+  "feed": 6,
+  "arc": 0,
+  "drill": 0,
+  "poly": 6,
+  "points": 2484
+ },
+ "cutMm": 2384,
+ "box": [
+  23.629,
+  23.629,
+  -9,
+  176.371,
+  126.371,
+  -1.5
+ ],
+ "warnings": [],
+ "hash": "b6d80f06"
+}

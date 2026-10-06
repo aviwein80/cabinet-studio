@@ -145,6 +145,9 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       if ((extra as { strategy?: string }).strategy === 'spiral') Object.assign(op, { name: '3D finishing (spiral)', travel: 'outward' })
       // scallop: in from the boundary until start shapes are picked
       if ((extra as { strategy?: string }).strategy === 'scallop') Object.assign(op, { name: '3D finishing (scallop)', travel: 'inward' })
+      if ((extra as { strategy?: string }).strategy === 'flat') Object.assign(op, { name: '3D finishing (flat areas)', travel: 'inward' })
+      // PLACEHOLDER: helical on slopes of 30° and steeper, like waterline
+      if ((extra as { strategy?: string }).strategy === 'helical') Object.assign(op, { name: '3D finishing (helical)', stepdown: 0.5, slope: { min: 30, max: 90 } })
       break
     case 'rough3d':
       // PLACEHOLDER cutting values until the shop supplies its own
@@ -221,6 +224,13 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     case 'code':
       return null
     case 'finish3d': {
+      // flat areas: the widest flat-bottomed tool (bull-nose first, then flat end mills other
+      // than the cut-out tool)
+      if (op.strategy === 'flat') {
+        const cut = cutoutTool(machine)
+        const flatBottom = routers(machine).filter((t) => t.id !== cut?.id && (t.shape === 'bull' || squareEnd(t)))
+        return flatBottom.sort((a, b) => Number(a.shape !== 'bull') - Number(b.shape !== 'bull') || b.diameter - a.diameter || a.number - b.number)[0] ?? null
+      }
       // projection follows drawn shapes like engraving, pencil gets into the valleys: smallest
       // ball-nose first, then smallest V
       if (op.strategy === 'projection' || op.strategy === 'pencil') {

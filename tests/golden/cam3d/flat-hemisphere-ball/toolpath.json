@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (flat areas)",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 327,
+  "feed": 109,
+  "arc": 0,
+  "drill": 0,
+  "poly": 117,
+  "points": 3397
+ },
+ "cutMm": 5085,
+ "box": [
+  0.005,
+  0.005,
+  -20,
+  79.991,
+  79.991,
+  0
+ ],
+ "warnings": [],
+ "hash": "281bfe6d"
+}

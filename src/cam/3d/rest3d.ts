@@ -39,7 +39,22 @@ export function simCutter(c: Cutter3D): Cutter {
  * little high between them (by under 0.01 mm for a 3 mm ball at 0.25 mm cells). See `carve` for
  * how close the earlier operations' stock is.
  */
-export function restArea(mesh: Mesh, sources: Toolpath[], panel: { length: number; width: number; thickness: number }, opt: { cutter: Cutter3D; stock: number; min: number; cell: number }): RestArea {
+export function restArea(
+  mesh: Mesh,
+  sources: Toolpath[],
+  panel: { length: number; width: number; thickness: number },
+  opt: {
+    cutter: Cutter3D
+    stock: number
+    min: number
+    cell: number
+    /**
+     * Flat faces only (cosine of the steepest slope that counts as flat), for flat-area finishing:
+     * rest counts only on such faces, and only where the tool can reach resting on one.
+     */
+    flatter?: number
+  },
+): RestArea {
   const { cutter, stock, min, cell } = opt
   const hf = createHeightfield(panel.length, panel.width, panel.thickness, cell)
   for (const s of buildTimeline(sources).segs) if (s.kind !== 'rapid' && !s.side) carve(hf, s.a, s.b, s.cutter, min / 4)
@@ -53,7 +68,7 @@ export function restArea(mesh: Mesh, sources: Toolpath[], panel: { length: numbe
   const cand = new Uint8Array(nx * ny)
   let any = false
   for (let k = 0; k < nx * ny; k++)
-    if ((hf.top[k] - (model[k] + stock)) * cos(k) > min) {
+    if ((hf.top[k] - (model[k] + stock)) * cos(k) > min && (opt.flatter === undefined || nz[k] >= opt.flatter)) {
       cand[k] = 1
       any = true
     }
@@ -76,7 +91,8 @@ export function restArea(mesh: Mesh, sources: Toolpath[], panel: { length: numbe
           drop[k] = 1
           const x = (a + 0.5) * cell
           const y = (b + 0.5) * cell
-          if (dc.drop(x, y)) stamp(reach, { x, y, z: dc.z + stock }, sim)
+          // (flat faces only: positions where the tool rests on one)
+          if (dc.drop(x, y) && (opt.flatter === undefined || dc.hitNz >= opt.flatter)) stamp(reach, { x, y, z: dc.z + stock }, sim)
         }
     }
   // rest: the stock more than `min` above what this tool reaches

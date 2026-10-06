@@ -139,6 +139,8 @@ export interface LinkOptions {
   /** Links between chains stay down only up to this long (plan, mm). */
   linkMax: number
   levels: Levels
+  /** Links stay down only where every point of them would be cut (e.g. only over flat faces). */
+  onCutOnly?: boolean
 }
 
 /**
@@ -171,7 +173,7 @@ export function chainMoves(ordered: Pt[][], smp: Sampler, region: Region, mesh: 
     const out: Pt[] = []
     for (let i = 1; i < n; i++) {
       const p = sample(from.x + ((to.x - from.x) * i) / n, from.y + ((to.y - from.y) * i) / n)
-      if (!p.ok || p.prot) return null
+      if (!p.ok || p.prot || (opt.onCutOnly && !p.cut)) return null
       out.push(p)
     }
     // refine the link like a pass so it cannot dig in either
@@ -186,13 +188,13 @@ export function chainMoves(ordered: Pt[][], smp: Sampler, region: Region, mesh: 
   }
   const refineLink = (pa: Pt, pb: Pt, depth: number): Pt[] | null => {
     const m = sample((pa.x + pb.x) / 2, (pa.y + pb.y) / 2)
-    if (!m.ok || m.prot) return null
+    if (!m.ok || m.prot || (opt.onCutOnly && !m.cut)) return null
     const lin = (pa.z + pb.z) / 2
     let fine = m.z - lin <= gougeTol && Math.abs(m.z - lin) <= tol
     if (fine && (Math.abs(m.z - lin) > gougeTol / 8 || Math.abs(pb.z - pa.z) > 0.5 * Math.hypot(pb.x - pa.x, pb.y - pa.y)))
       for (const f of [0.25, 0.75]) {
         const q = sample(pa.x + (pb.x - pa.x) * f, pa.y + (pb.y - pa.y) * f)
-        if (!q.ok || q.prot) return null
+        if (!q.ok || q.prot || (opt.onCutOnly && !q.cut)) return null
         if (q.z - (pa.z + (pb.z - pa.z) * f) > gougeTol) fine = false
       }
     if (depth >= 9 || fine) return [m]

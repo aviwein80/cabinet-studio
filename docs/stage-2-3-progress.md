@@ -89,12 +89,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.11b Stage 2 exit test, screenshots, docs | **Done** (October 2026) | See below. **M2.11 complete. Stage 2 complete.** |
 | M3.1a Radial and spiral finishing (3D-05), format v5, switch | **Done** (October 2026) | See below. Simulation only (true 3D output stays off). |
 | M3.1b Scallop finishing (3D-07) | **Done** (October 2026) | See below. Cusp within ±10 % measured independently. Simulation only. |
-| M3.1c-f Flat-area and helical; undercut; curve-driven; screenshots and docs | In progress | See "M3.1 split". |
+| M3.1c Flat-area and helical finishing (3D-08, first part) | **Done** (October 2026) | See below. Simulation only. |
+| M3.1d-f Undercut with lollipop tools; curve-driven; screenshots and docs | In progress | See "M3.1 split". |
 | M3.2 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1929,9 +1930,41 @@ Speed (cloud container): 150 x 100 mm hill-and-hollow, 6 mm ball, 1.2 mm step-ov
 - **Bull-nose**: spaced for the corner radius only, so on flats (where the flat bottom cuts) the
   passes are closer than they need to be.
 
+## M3.1c flat-area and helical finishing: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-08 | Flat-area finishing: offset passes only where the tool rests on a face flatter than 0.5° (and in the groups chosen, inside the boundary). The flat areas come from a grid of exact drops; their edges are traced to 0.005 mm by bisection with exact drops; the first ring runs 0.005 mm inside the edge, the next ones step in by the step-over (from the edge in, or from the middle out; counter-clockwise or clockwise). Every pass is dropped exactly and kept only where the tool still rests on a flat face; links stay down only over flat faces. The widest flat-bottomed tool is picked automatically (bull-nose first) | `src/cam/3d/flat.ts`, `onCutOnly` in `src/cam/3d/passes.ts` |
+| 3D-08 | Flat-area rest: with rest machining on, rest counts only on flat faces and only where the tool can reach resting on one | `flatter` in `restArea` (`src/cam/3d/rest3d.ts`) |
+| 3D-08 | Helical finishing: one continuous descent round steep walls. Waterline level lines every step-down; a closed line with exactly one closed line below it (round a hill, inside a hollow) is a stack; round each level the tool sinks one step-down, every point found exactly on the wall at its interpolated height (bisection with exact drops towards the line below), each piece checked at its middle and quarters and split until within tolerance; one level round at the bottom. Lines that split, join, open or leave the slope limits are cut as waterline passes. Short slope-only misses (under the tool radius, where the facet read at a corner of the model is not the real contact) do not break a stack | `src/cam/3d/helical.ts` |
+| Screens | Add operation: "(flat areas)" and "(helical)"; editors: step-over, order and ring direction (flat areas); step-down per round (the shop's waterline step-down, now "Waterline and helical step-down", with its Configure badge), direction and slope limits (helical); rest machining for both | `src/pages/part/OpsPanel.tsx`, `src/core/confirm.ts` |
+
+### Acceptance (M2.2 tolerances)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Flat areas only, at the face | `tests/cam-3d-flat-helical.test.ts` | Every CL point on the hemisphere's base (6 mm ball) and the raised panel (8 mm flat): the exact drop rests on a face flatter than 0.5°, at the point's height (< 0.002 mm) |
+| Edge traced to 0.01 mm | same | Round the dome: 406 of 406 points of the ring nearest the dome are within 0.011 mm of where the ball stops resting on the base (found by exact drops in the test) |
+| Floors finished | same | Raised panel, 8 mm flat, 4 mm step-over, simulated at 0.5 mm: 27,280 floor cells more than the tool radius from the bevel, most left 0.0000 mm |
+| Rest | same | After the same pass: nothing left, no moves. After a 6 mm ball parallel finish at 3 mm: the base is cut again (only at -20) |
+| No gouge > 0.005 mm | same | Flat areas: ball (exact) on the hemisphere; flat and bull-nose (sampled) on the raised panel. Helical, 6 mm ball (exact): bowl 0.0022, hemisphere 0.0019, raised panel 0.0019, cove (falls back to waterline passes) under 0.005 |
+| Stock to leave ±0.01 mm | same | Bull-nose flat areas, 0.3 mm: the tool sits 0.300 mm above the face it touches. Helical, 0.5 mm on the hemisphere: 0.5 ± 0.01 |
+| One continuous descent | same | Bowl: one descent of 15.000 mm (16 levels, 1 mm a round), one feed-down for the whole operation; hemisphere and raised panel: one descent each; never rises more than 0.003 mm; every point within 0.0042 mm of the surface (exact distance) |
+| Golden digests | `tests/golden/cam3d/{flat-raised-panel,flat-hemisphere-ball,helical-bowl,helical-raised-panel-conventional}` | 4 new; every existing golden unchanged |
+| Export blocked | same | `CAM_3D_NO_OUTPUT` for both with both output switches on; neither is a flat layer |
+
+### Limits recorded
+
+- **Flat-area passes on level flats are true 3D for now.** They run at constant heights and could go
+  out as flat layers like waterline; that is a decision for the owner (see the report).
+- **Tiny level facets** that a mesh's triangulation makes along ridges (e.g. the corner hips of the
+  raised-panel test mesh) count as flats where the tool can rest on them, and get passes.
+- **Helical** is made for walls steeper than the slope limit (placeholder 30°); on gentle slopes the
+  levels are far apart in plan and waterline or scallop finish better.
+
 ## Next run
 
-- Continue M3.1 (M3.1c-f), then M3.2.
+- Continue M3.1 (M3.1d-f), then M3.2.
 
 ## Run log
 
@@ -1975,3 +2008,4 @@ Speed (cloud container): 150 x 100 mm hill-and-hollow, 6 mm ball, 1.2 mm step-ov
   ROADMAP. M2.11 complete; Stage 2 complete. See `git log`.
 - **Run 14 (M3.1a)**: radial and spiral finishing, shared pass code, format 5, switch. See `git log`.
 - **Run 14 (M3.1b)**: scallop finishing with an independent cusp check. See `git log`.
+- **Run 14 (M3.1c)**: flat-area and helical finishing. See `git log`.

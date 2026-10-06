@@ -53,6 +53,9 @@ import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
 import { radialFinish, spiralFinish } from './3d/radial'
 import { scallopFinish } from './3d/scallop'
+import { flatAreaFinish } from './3d/flat'
+import { FLAT_DEG } from './3d/passes'
+import { helicalFinish } from './3d/helical'
 import { pencilFinish } from './3d/pencil'
 import { projectionFinish } from './3d/projection'
 import { centreRegion, type Region } from './3d/region'
@@ -1956,7 +1959,8 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     const paths = sources.map((s) => ctx.done?.get(s.id) ?? generateOp(s, { part: ctx.part, machine: ctx.machine, meshes: ctx.meshes, done: ctx.done }))
     const cell = Math.min(0.25, Math.max(0.05, m.cutter.R / 6))
     const min = Math.max(0.01, op.rest.minThickness)
-    const ra = restArea(m.placed, paths, ctx.part, { cutter: m.cutter, stock: Math.max(0, op.surface.stockToLeave), min, cell })
+    // (flat-area finishing only ever cuts flat faces: rest counts there only)
+    const ra = restArea(m.placed, paths, ctx.part, { cutter: m.cutter, stock: Math.max(0, op.surface.stockToLeave), min, cell, flatter: op.strategy === 'flat' ? Math.cos((FLAT_DEG * Math.PI) / 180) : undefined })
     if (!ra.rest.length) {
       tp.warnings.push(`Rest machining: the earlier operations left nothing thicker than ${min} mm that this tool can reach.`)
       return null
@@ -1997,7 +2001,11 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
           ? spiralFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
           : op.strategy === 'scallop'
             ? scallopFinish(op, m.placed, m.cutter, region, op.levels, scallopStarts(op, ctx.part, tp), ctx.work)
-            : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+            : op.strategy === 'flat'
+              ? flatAreaFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+              : op.strategy === 'helical'
+                ? helicalFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+                : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)

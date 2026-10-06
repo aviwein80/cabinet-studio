@@ -169,6 +169,8 @@ export function OpsPanel({
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'radial' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (radial)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'spiral' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (spiral)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'scallop' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (scallop)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'flat' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (flat areas)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'helical' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (helical)</DropdownMenuItem>
                   </>
                 )}
               </>
@@ -231,6 +233,10 @@ export function OpsPanel({
                             ? `3D pencil, valleys over ${op.pencilAngle ?? PENCIL_MIN_ANGLE}°`
                             : op.strategy === 'radial' || op.strategy === 'spiral' || op.strategy === 'scallop'
                               ? `3D ${op.strategy}, every ${formatLength(op.stepover, units)}`
+                              : op.strategy === 'flat'
+                                ? `3D flat areas, every ${formatLength(op.stepover, units)}`
+                                : op.strategy === 'helical'
+                                  ? `3D helical, ${formatLength(op.stepdown ?? 1, units)} a round`
                               : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
@@ -411,7 +417,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -630,7 +636,7 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
 }
 
 /** Finishing strategies added in M3.1 (shown while their switch is on, or when an operation uses one). */
-const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop'])
+const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop', 'flat', 'helical'])
 
 /** Rest machining settings of a 3D finishing operation. */
 function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adaptiveOn: boolean, onChange: (o: CamOp) => void) {
@@ -683,12 +689,43 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
                   { value: 'radial' as const, label: 'Radial: straight passes out from a centre' },
                   { value: 'spiral' as const, label: 'Spiral: one spiral round a centre' },
                   { value: 'scallop' as const, label: 'Scallop: the same cusp height everywhere' },
+                  { value: 'flat' as const, label: 'Flat areas: offset passes on flats only' },
+                  { value: 'helical' as const, label: 'Helical: one continuous descent round walls' },
                 ]
               : []),
           ]}
           onChange={(v) => onChange({ ...op, strategy: v })}
         />
       )
+      if (op.strategy === 'flat')
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Flat-area passes">
+              {strategy}
+              <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} hint="Between the rings, mm" />
+              <SelectField label="Order" value={op.travel ?? 'inward'} options={[{ value: 'inward', label: 'From the edge in' }, { value: 'outward', label: 'From the middle out' }]} onChange={(v) => onChange({ ...op, travel: v })} />
+              <SelectField label="Rings run" value={op.direction} options={[{ value: 'climb', label: 'Counter-clockwise' }, { value: 'conventional', label: 'Clockwise' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Only where the tool rests on a face flatter than 0.5°: the first ring follows the edge of each flat area (traced to 0.01 mm), the next ones step in. A flat-bottomed tool is picked first.</div>
+            </Group>
+            {restGroup(op, part, adaptiveOn, onChange)}
+          </>
+        )
+      if (op.strategy === 'helical')
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Helical passes">
+              {strategy}
+              <NumField label="Step-down per round" value={op.stepdown ?? 1} min={0.05} step={0.1} cfg={c('waterlineStepdown').cfg} badge={c('waterlineStepdown').badge} onChange={(v) => c('waterlineStepdown').set({ ...op, stepdown: v })} />
+              <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Climb' }, { value: 'conventional', label: 'Conventional' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+              <NumField label="Slope from" suffix="°" value={op.slope.min} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, min: v } })} />
+              <NumField label="Slope to" suffix="°" value={op.slope.max} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, max: v } })} />
+              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Round each hill or hollow the tool sinks one step-down per round without stepping down in one place; where the walls split, join or stop, it cuts waterline passes.</div>
+            </Group>
+            {restGroup(op, part, adaptiveOn, onChange)}
+          </>
+        )
       if (op.strategy === 'scallop') {
         // cusp from the rounded end of the tool picked (ball radius, or corner radius of a bull-nose)
         const r = tool?.shape === 'ball' ? tool.diameter / 2 : tool?.shape === 'bull' ? (tool.cornerRadius ?? 0) : 0

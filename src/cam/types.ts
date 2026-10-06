@@ -563,16 +563,17 @@ export interface Finish3dOp extends OpBase {
    * around the model. Projection: drawn shapes and text dropped onto the surface. Pencil: along
    * the valleys and inside corners, where the tool touches two surfaces at once. Radial: straight
    * passes out from a centre. Spiral: one continuous spiral round a centre. Scallop: passes offset
-   * across the surface for the same cusp height everywhere.
+   * across the surface for the same cusp height everywhere. Flat areas: offset passes only where
+   * the tool rests on a flat face. Helical: one continuous descent round steep walls.
    */
-  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop'
+  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop' | 'flat' | 'helical'
   surface: Surface3D
   /**
    * Distance between passes, mm (parallel passes, the shallow-area fill of waterline; radial: the
    * largest gap between neighbouring passes, at the outer edge; spiral: between turns).
    */
   stepover: number
-  /** Waterline: height between passes, mm (default 1). */
+  /** Waterline and helical: height between passes (helical: per round), mm (default 1). */
   stepdown?: number
   /** Waterline: also finish the areas flatter than the minimum slope with parallel passes. */
   fillShallow?: boolean
@@ -585,7 +586,8 @@ export interface Finish3dOp extends OpBase {
   /**
    * Radial one-way passes and the spiral: run out from the centre (default) or in towards it.
    * Scallop: inward (default) works away from the start (in from the boundary), outward works back
-   * towards it.
+   * towards it. Flat areas: inward (default) from the edge of each flat area in, outward from its
+   * middle out.
    */
   travel?: 'outward' | 'inward'
   /**

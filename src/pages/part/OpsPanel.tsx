@@ -12,7 +12,7 @@ import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { compareOpTool, toolSnapshot, updateOpTool } from '@/core/toolData'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
-import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, FaceId, Surface3D } from '@/cam/types'
+import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, CurveDrive, FaceId, Surface3D } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -172,6 +172,7 @@ export function OpsPanel({
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'flat' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (flat areas)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'helical' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (helical)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'undercut' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (undercut)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'curve' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (curve-driven)</DropdownMenuItem>
                   </>
                 )}
               </>
@@ -240,6 +241,8 @@ export function OpsPanel({
                                   ? `3D helical, ${formatLength(op.stepdown ?? 1, units)} a round`
                                   : op.strategy === 'undercut'
                                     ? `3D undercut, every ${formatLength(op.stepover, units)}`
+                                  : op.strategy === 'curve'
+                                    ? `3D ${DRIVE_LABEL[op.drive?.mode ?? 'curves']}`
                               : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
@@ -639,7 +642,13 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
 }
 
 /** Finishing strategies added in M3.1 (shown while their switch is on, or when an operation uses one). */
-const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop', 'flat', 'helical', 'undercut'])
+const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop', 'flat', 'helical', 'undercut', 'curve'])
+
+/** What guides curve-driven passes, for the operation list. */
+const DRIVE_LABEL: Record<CurveDrive['mode'], string> = { curves: 'along drive curves', toolpath: 'along an earlier toolpath', intersection: 'along where two surfaces meet', parameter: "along a surface's rows or columns" }
+
+const groupList = (g?: number[]) => (g ?? []).join(', ')
+const parseGroups = (v: string) => v.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 0)
 
 /** Rest machining settings of a 3D finishing operation. */
 function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adaptiveOn: boolean, onChange: (o: CamOp) => void) {
@@ -695,6 +704,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
                   { value: 'flat' as const, label: 'Flat areas: offset passes on flats only' },
                   { value: 'helical' as const, label: 'Helical: one continuous descent round walls' },
                   { value: 'undercut' as const, label: 'Undercut: a lollipop under overhangs' },
+                  { value: 'curve' as const, label: 'Curve-driven: guided by curves, a toolpath or a surface' },
                 ]
               : []),
           ]}
@@ -715,6 +725,82 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
             {restGroup(op, part, adaptiveOn, onChange)}
           </>
         )
+      if (op.strategy === 'curve') {
+        const d: CurveDrive = op.drive ?? { mode: 'curves' }
+        const setDrive = (patch: Partial<CurveDrive>) => onChange({ ...op, drive: { ...d, ...patch } })
+        const lines = sel.filter((id) => part.entities.some((e) => e.id === id && e.face === 1))
+        const shapes = d.shapes ?? []
+        const earlier = part.ops.slice(0, Math.max(0, part.ops.findIndex((o) => o.id === op.id))).filter((o) => o.enabled && o.face === 1 && o.kind !== 'code')
+        const gridModels = (part.models ?? []).filter((m) => m.grid && m.grid.blob === m.blob)
+        const copies = d.mode === 'toolpath' || (d.mode === 'curves' && shapes.length !== 2)
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Curve-driven passes">
+              {strategy}
+              <SelectField
+                label="Guided by"
+                value={d.mode}
+                options={[
+                  { value: 'curves', label: 'Drive curves (one or two shapes)' },
+                  { value: 'toolpath', label: 'An earlier toolpath' },
+                  { value: 'intersection', label: 'Where two surfaces meet' },
+                  { value: 'parameter', label: "A surface's rows or columns" },
+                ]}
+                onChange={(v) => setDrive({ mode: v })}
+              />
+              <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} hint={d.mode === 'parameter' ? 'Between lines, measured on the surface' : d.mode === 'intersection' ? 'Not used: one pass along each line' : 'Between passes, in plan'} />
+              {d.mode === 'curves' && (
+                <div className="col-span-2 flex items-center gap-2 text-[11px] text-stone-400">
+                  <span className="min-w-0 flex-1">{shapes.length === 2 ? '2 drive shapes: passes blended from one to the other' : shapes.length === 1 ? '1 drive shape: the shape and copies offset from it' : shapes.length ? `${shapes.length} shapes picked: pick one or two` : 'No drive shapes yet: select one or two shapes on face 1'}</span>
+                  <Button size="sm" variant="outline" className="h-6 border-white/15 bg-transparent px-2 text-[11px]" disabled={!lines.length} onClick={() => setDrive({ shapes: lines })}>
+                    Use selection as drive
+                  </Button>
+                </div>
+              )}
+              {d.mode === 'toolpath' && (
+                <SelectField className="col-span-2" label="Follow the toolpath of" value={d.opId ?? NONE} options={[{ value: NONE, label: 'Choose an earlier operation' }, ...earlier.map((o) => ({ value: o.id, label: o.name }))]} onChange={(v) => setDrive({ opId: v === NONE ? undefined : v })} />
+              )}
+              {copies && (
+                <>
+                  <SelectField label="Copies" value={d.side ?? 'both'} options={[{ value: 'both', label: 'Both sides' }, { value: 'left', label: 'Left side only' }, { value: 'right', label: 'Right side only' }]} onChange={(v) => setDrive({ side: v })} />
+                  {d.copies !== undefined && <NumField label="Copies each side" suffix="" value={d.copies} min={0} step={1} onChange={(v) => setDrive({ copies: Math.max(0, Math.round(v)) })} hint="0 = the drive only" />}
+                  <div className="col-span-2">
+                    <SwitchField label="As many copies as the boundary holds" checked={d.copies === undefined} onChange={(v) => setDrive({ copies: v ? undefined : 0 })} hint="Copies a step-over apart (in plan) until they leave the boundary; open drives' copies stop square to their ends." />
+                  </div>
+                </>
+              )}
+              {d.mode === 'intersection' && (
+                <>
+                  <TextField label="First surface: groups" value={groupList(d.groupsA)} onChange={(v) => setDrive({ groupsA: parseGroups(v) })} />
+                  <TextField label="Second surface: groups" value={groupList(d.groupsB)} onChange={(v) => setDrive({ groupsB: parseGroups(v) })} />
+                  <div className="col-span-2 text-[11px] text-stone-400">One pass along each line where facets of the two meet. A ball-nose touches both where they make a valley and rides over the edge where they make a ridge. Lines running nearly upright are left out.</div>
+                </>
+              )}
+              {d.mode === 'parameter' && (
+                <>
+                  <SelectField label="Surface" value={d.modelId ?? NONE} options={[{ value: NONE, label: 'The model machined' }, ...gridModels.filter((m) => m.id !== op.surface.modelId).map((m) => ({ value: m.id, label: m.name }))]} onChange={(v) => setDrive({ modelId: v === NONE ? undefined : v })} />
+                  <SelectField label="Along its" value={d.along ?? 'rows'} options={[{ value: 'rows', label: 'Rows' }, { value: 'columns', label: 'Columns' }]} onChange={(v) => setDrive({ along: v })} />
+                  <div className="col-span-2 text-[11px] text-stone-400">Surfaces made in the app (Surfaces: revolve, ruled, loft, sweep, extrude; or a solid's face untrimmed) keep their rows and columns. The tool is placed to touch each line.</div>
+                </>
+              )}
+              <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
+              {op.pattern === 'oneway' && <SelectField label="Direction" value={op.direction} options={[{ value: 'climb', label: 'Along the drive' }, { value: 'conventional', label: 'Against the drive' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
+              <NumField label="Slope from" suffix="°" value={op.slope.min} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, min: v } })} />
+              <NumField label="Slope to" suffix="°" value={op.slope.max} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, max: v } })} />
+            </Group>
+            <Group title="Keep to one side">
+              <TextField label="Of groups (empty = off)" value={groupList(op.keepSide?.groups)} onChange={(v) => {
+                const g = parseGroups(v)
+                onChange({ ...op, keepSide: g.length ? { groups: g, side: op.keepSide?.side ?? 'front' } : undefined })
+              }} />
+              {op.keepSide && <SelectField label="Side" value={op.keepSide.side} options={[{ value: 'front', label: 'In front (the side they face)' }, { value: 'back', label: 'Behind them' }]} onChange={(v) => onChange({ ...op, keepSide: { ...op.keepSide!, side: v } })} />}
+              <div className="col-span-2 text-[11px] text-stone-400">These groups are never cut, and the passes stop where the tool would touch them or reach their other side.</div>
+            </Group>
+            {restGroup(op, part, adaptiveOn, onChange)}
+          </>
+        )
+      }
       if (op.strategy === 'undercut')
         return (
           <>

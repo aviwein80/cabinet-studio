@@ -115,6 +115,8 @@ export type SolidFacesJob = { k: 'mesh'; faces: number[] } | { k: 'untrim'; face
 
 /** Several meshes as one (for extruding several curves). */
 function joinMeshes(ms: Mesh[]): Mesh {
+  // (one keeps its rows and columns)
+  if (ms.length === 1) return ms[0]
   let nv = 0
   const pos: number[] = []
   const idx: number[] = []

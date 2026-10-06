@@ -149,6 +149,8 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       if ((extra as { strategy?: string }).strategy === 'undercut') Object.assign(op, { name: '3D finishing (undercut)', undercut: 'both' })
       // PLACEHOLDER: helical on slopes of 30° and steeper, like waterline
       if ((extra as { strategy?: string }).strategy === 'helical') Object.assign(op, { name: '3D finishing (helical)', stepdown: 0.5, slope: { min: 30, max: 90 } })
+      // curve-driven: along the picked drive shape only, until copies are asked for
+      if ((extra as { strategy?: string }).strategy === 'curve') Object.assign(op, { name: '3D finishing (curve-driven)', drive: { mode: 'curves', shapes: [], side: 'both', copies: 0 } })
       break
     case 'rough3d':
       // PLACEHOLDER cutting values until the shop supplies its own
@@ -238,6 +240,8 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
         const flatBottom = routers(machine).filter((t) => t.id !== cut?.id && (t.shape === 'bull' || squareEnd(t)))
         return flatBottom.sort((a, b) => Number(a.shape !== 'bull') - Number(b.shape !== 'bull') || b.diameter - a.diameter || a.number - b.number)[0] ?? null
       }
+      // along an intersection the ball touches both surfaces: the smallest ball-nose
+      if (op.strategy === 'curve' && op.drive?.mode === 'intersection') return routers(machine).filter((t) => t.shape === 'ball').sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
       // projection follows drawn shapes like engraving, pencil gets into the valleys: smallest
       // ball-nose first, then smallest V
       if (op.strategy === 'projection' || op.strategy === 'pencil') {

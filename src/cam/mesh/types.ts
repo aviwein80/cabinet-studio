@@ -9,6 +9,19 @@ export interface Mesh {
   /** Optional per-triangle group (OBJ group, 3MF object, STEP face); names in `groupNames`. */
   groups?: Uint32Array
   groupNames?: string[]
+  /**
+   * Set on surfaces made of rows and columns of points (`gridMesh`): `rows` rows of `cols` points,
+   * one row after the other in `positions`; closed rows wrap round to the first row, closed
+   * columns (each row a loop) to the first point. Not stored with the mesh.
+   */
+  grid?: MeshGrid
+}
+
+export interface MeshGrid {
+  rows: number
+  cols: number
+  closedRows: boolean
+  closedCols: boolean
 }
 
 export interface Box3 {

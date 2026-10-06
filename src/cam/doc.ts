@@ -326,9 +326,26 @@ export function stockTopShift(op: CamOp, part: CamPart): number {
   return shift
 }
 
-/** The 3D models an op's toolpath needs: its own, and those of the earlier operations its rest machining follows. */
+/**
+ * The earlier operation (enabled, on face 1) whose toolpath a curve-driven finishing follows, or
+ * null. Only an earlier one, so operations can never follow each other round in a circle.
+ */
+export function driveSource(op: CamOp, part: CamPart): CamOp | null {
+  if (op.kind !== 'finish3d' || op.strategy !== 'curve' || op.drive?.mode !== 'toolpath' || !op.drive.opId) return null
+  const id = op.drive.opId
+  const i = part.ops.findIndex((o) => o.id === op.id)
+  return (i < 0 ? part.ops : part.ops.slice(0, i)).find((o) => o.id === id && o.enabled && o.face === 1 && o.kind !== 'code') ?? null
+}
+
+/**
+ * The 3D models an op's toolpath needs: its own, those of the earlier operations its rest
+ * machining or its drive follows, and the surface whose rows and columns it follows.
+ */
 export function modelsFor(op: CamOp, part: CamPart): string[] {
-  return [...new Set([op, ...restSources(op, part)].flatMap((o) => (o.kind === 'finish3d' || o.kind === 'rough3d' ? [o.surface.modelId] : [])))]
+  const own = [op, ...restSources(op, part)].flatMap((o) => (o.kind === 'finish3d' || o.kind === 'rough3d' ? [o.surface.modelId] : []))
+  const surface = op.kind === 'finish3d' && op.strategy === 'curve' && op.drive?.mode === 'parameter' && op.drive.modelId ? [op.drive.modelId] : []
+  const src = driveSource(op, part)
+  return [...new Set([...own, ...surface, ...(src ? modelsFor(src, part) : [])])]
 }
 
 /**
@@ -354,9 +371,18 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   }
   // scallop start shapes (not in `geometry`, which holds the boundary)
   if (op.kind === 'finish3d' && op.startFrom?.length) deps.push({ starts: op.startFrom.map((id) => part.entities.find((e) => e.id === id) ?? id) })
-  // rest machining: everything the earlier operations' toolpaths depend on (and the tool table
-  // when one of them picks its tool automatically)
-  const sources = restSources(op, part)
+  // curve-driven: the drive shapes, and the surface whose rows and columns it follows
+  if (op.kind === 'finish3d' && op.strategy === 'curve' && op.drive) {
+    if (op.drive.mode === 'curves') deps.push({ drive: (op.drive.shapes ?? []).map((id) => part.entities.find((e) => e.id === id) ?? id) })
+    if (op.drive.mode === 'parameter') {
+      const m = part.models?.find((x) => x.id === (op.drive!.modelId || op.surface.modelId))
+      deps.push({ grid: m ? { blob: m.blob, place: m.place, grid: m.grid ?? null } : null })
+    }
+  }
+  // rest machining and a toolpath followed: everything the earlier operations' toolpaths depend
+  // on (and the tool table when one of them picks its tool automatically)
+  const src = driveSource(op, part)
+  const sources = [...restSources(op, part), ...(src ? [src] : [])]
   if (sources.length) {
     deps.push(sources.map((o) => opInputHash(o, part, machine?.tools?.find((t) => t.id === o.toolId) ?? o.toolId, machine)))
     if (sources.some((o) => !o.toolId) && machine?.tools) deps.push(machine.tools.filter((t) => t.type === 'router'))

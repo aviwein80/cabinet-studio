@@ -95,6 +95,8 @@ export async function addSurfaceModel(part: import('@/cam/types').CamPart, mesh:
     visible: true,
     triangles: mesh.indices.length / 3,
     size: [r3(hi[0] - lo[0]), r3(hi[1] - lo[1]), r3(hi[2] - lo[2])],
+    // rows and columns of a surface made of them (curve-driven finishing can follow them)
+    ...(mesh.grid && mesh.grid.rows * mesh.grid.cols * 3 === mesh.positions.length ? { grid: { blob: hash, ...mesh.grid } } : {}),
   }
   return { ...part, layers: part.layers.some((l) => l.id === MODEL_LAYER.id) ? part.layers : [...part.layers, { ...MODEL_LAYER }], models: [...(part.models ?? []), model] }
 }

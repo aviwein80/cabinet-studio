@@ -91,12 +91,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.1b Scallop finishing (3D-07) | **Done** (October 2026) | See below. Cusp within ±10 % measured independently. Simulation only. |
 | M3.1c Flat-area and helical finishing (3D-08, first part) | **Done** (October 2026) | See below. Simulation only. |
 | M3.1d Undercut finishing with lollipop tools (3D-08, second part) and a dexel stock | **Done** (October 2026) | See below. Simulation only. |
-| M3.1e-f Curve-driven finishing; screenshots and docs | In progress | See "M3.1 split". |
+| M3.1e Curve-driven finishing (3D-09) | **Done** (October 2026) | See below. Simulation only. |
+| M3.1f Screenshots, README, ROADMAP | In progress | See "M3.1 split". |
 | M3.2 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -2002,9 +2003,54 @@ Test model: an 80 × 60 × 50 block with a lip overhanging a recess (`tests/unde
   simulator may show a little cut material as still there (never the reverse). Not seen in tests.
 - T108 is a placeholder: its ball, neck and lengths are not a real tool (Configure badge).
 
+## M3.1e curve-driven finishing: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-09 | Curve-driven finishing: a new 3D finishing strategy whose passes are guided by a drive. The drive only says where in plan each pass runs; every point is an exact drop-cutter position refined to the tolerance by the shared pass code, so no drive can make the tool dig in | `src/cam/3d/curve.ts`, `CurveDrive` in `src/cam/types.ts` |
+| 3D-09 | One drive curve (a shape on face 1): the curve and copies of it a step-over apart in plan, to both sides or one, a set number each side or as many as the boundary holds. Open drives' copies stop square to their ends; closed ones stay closed and start level with the drive's start | `offsetDrive` |
+| 3D-09 | Two drive curves: passes blended from the first to the second, as many as keep neighbouring passes no more than a step-over apart (in plan); the two curves are the first and last passes | `blendPasses` |
+| 3D-09 | An earlier toolpath: the cutting moves of an earlier, enabled operation on face 1 (arcs followed to 0.005 mm), with copies as for one curve. Changing that operation marks this one stale; a later operation cannot be followed (no circles) | `toolpathRuns`; `driveSource`, `modelsFor` and `opInputHash` in `src/cam/doc.ts` |
+| 3D-09 | Where two surfaces meet: the lines where facets of two sets of facet groups share an edge (corners welded to 0.001 mm), chained. A ball-nose (picked automatically: the smallest) touches both where they make a valley (its centre the same distance from both, refined against the true facets square to the line) and sits on the edge where they make a ridge. Stretches running nearly upright are left out with a warning | `seamLines`, `seamCentre` |
+| 3D-09 | A surface's rows and columns: surfaces made in the app now keep their layout (`gridMesh` → `Mesh.grid` → `ModelRef.grid`, tied to the stored data). Lines along the rows or the columns, spaced so neighbouring lines are never more than a step-over apart on the surface; the tool placed to touch each line (moved out along the surface normal by its rounded end, and by its flat bottom square to the line). The surface can be the machined model or another surface made in the app | `gridLines`; `src/cam/mesh/surface.ts`, `src/pages/part/modelData.ts` |
+| 3D-09 | Tool kept on one side of a surface: chosen facet groups are never cut, and no point is cut where the tool's centre is on their other side (judged by the facet nearest it); links never run over them. Front is the side the facets face (the outside of a solid) | `sideKeeper` |
+| Screens | Add operation: "(curve-driven)"; editor: guided by, step-over (with its Configure badge), drive shapes from the selection, the earlier operation to follow, copies (side, count or as many as fit), the two surfaces' groups, the surface and rows or columns, pattern, direction, slope limits; "Keep to one side" (groups, front or behind); rest machining. The switch text lists it | `src/pages/part/OpsPanel.tsx`, `src/pages/MachinePage.tsx` |
+
+### Acceptance (M2.2 tolerances)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| No gouge > 0.005 mm | `tests/cam-3d-curve.test.ts` | Ball-nose, checked exactly, on every drive: one curve with copies 0.0013 mm worst; blended passes, a toolpath followed, intersections, rows and columns, kept to one side all within 0.005. Bull-nose on rows and columns (sampled check) within 0.005 |
+| Stock to leave ±0.01 mm | same | One drive, 0.3 mm left: 0.3000 to 0.3000 mm. Rows and columns, and intersections: the ball 0.0000 mm off the surface |
+| Copies where they belong | same | Copies at 1.5, 4 and 9 mm: every point within 0.002 mm of that distance, on its side, from square off the start to square off the end. On the hemisphere, every cutting point within 0.01 mm of the drive or one of its three copies each side (the stay-down links between passes aside: never longer than two step-overs, always from pass to pass) |
+| Blended passes | same | Each pass within a step-over of the one before; the first and last are the two curves; every cutting point within 0.01 mm of a pass |
+| A toolpath followed | same | An engraved circle (r 26) with two copies each side: every cutting point within 0.01 mm of r 20, 23, 26, 29 or 32 (links aside); stale when the circle changes; a later operation is refused |
+| Where two surfaces meet | same | Floor and 45° wall: the ball 0.0000 mm from touching both, its centre at x 53.757 (exact: 53.757). Floor and a round wall (radius 30): 0.0000 mm, x 32.861 on the faceted model (the true circle: 32.863). Over a ridge: touching the edge within 0.01 mm. A bull-nose, groups that do not meet or that overlap: refused with the reason |
+| Rows and columns | same | A dome made by revolving: along its rows (meridians) every contact within 0.0001 mm of a line, along its columns (circles) 0.0057 mm; neighbouring lines never more than a step-over apart; a model with no rows and columns, or whose data changed, refused with the reason |
+| Kept to one side | same | A thin upright sheet at x 50, 6 mm ball: kept in front, the passes reach x 47.0000; kept behind, 53.0000; never on the sheet, nothing crosses it |
+| Golden digests | `tests/golden/cam3d/{curve-copies-hemisphere,curve-toolpath-hemisphere-oneway,curve-intersection-valley,curve-keepside-front}` | 4 new; every existing golden unchanged |
+| Export blocked | same | `CAM_3D_NO_OUTPUT` with both output switches on; not a flat layer |
+| File | same | The drive, the side kept and a model's rows and columns are saved and read back (format 5, which already covers all of M3.1) |
+
+### Limits recorded
+
+- **Copies and blends are spaced in plan.** On steep ground they are further apart over the
+  surface. Scallop finishing keeps an even finish on slopes; rows and columns are spaced on the
+  surface.
+- **Where two surfaces meet = where their facets share an edge** (faces of a solid, groups of one
+  mesh). Two separate surface models that cross are not intersected; draw the line and use it as
+  a drive curve instead. Ball-nose only.
+- **Rows and columns only on surfaces made in the app** (revolve, ruled, loft, sweep, extrude, a
+  solid's face untrimmed). Imported meshes and solids have none (the solid reader gives facets
+  only). Surfaces made before this change must be made again to get theirs. On upright stretches
+  a 3-axis tool cannot follow a line down the wall: it rides at the top.
+- **Keep to one side** judges the side by the facet nearest the tool's centre; beyond the edge of
+  an open surface that is the plane of its last facet.
+- **Simulation only**: no curve-driven pass is written to woodWOP (export checker).
+
 ## Next run
 
-- Continue M3.1 (M3.1e-f), then M3.2.
+- Finish M3.1 (M3.1f: screenshots, README, ROADMAP, report), then M3.2.
 
 ## Run log
 
@@ -2050,3 +2096,4 @@ Test model: an 80 × 60 × 50 block with a lip overhanging a recess (`tests/unde
 - **Run 14 (M3.1b)**: scallop finishing with an independent cusp check. See `git log`.
 - **Run 14 (M3.1c)**: flat-area and helical finishing. See `git log`.
 - **Run 14 (M3.1d)**: undercut finishing with lollipop tools, dexel stock. See `git log`.
+- **Run 14 (M3.1e)**: curve-driven finishing. See `git log`.

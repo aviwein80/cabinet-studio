@@ -118,6 +118,12 @@ export interface ModelRef {
   /** Solids: faces sent to layers (face id -> layer id). */
   faceLayers?: Record<string, string>
   /**
+   * Surfaces made in the app (NEW-19) whose facets are rows and columns of points: the layout of
+   * the stored mesh `blob` (row after row, `cols` points each), so passes can follow its rows or
+   * columns (curve-driven finishing). Ignored once the blob changes.
+   */
+  grid?: { blob: string; rows: number; cols: number; closedRows: boolean; closedCols: boolean }
+  /**
    * Set when the model is a relief (ART-01): the stored mesh is already made to its size (X and Y
    * from 0, highest point at Z 0). Operations on it stay inside its outline, and the panel face
    * round it is never cut.
@@ -565,9 +571,11 @@ export interface Finish3dOp extends OpBase {
    * passes out from a centre. Spiral: one continuous spiral round a centre. Scallop: passes offset
    * across the surface for the same cusp height everywhere. Flat areas: offset passes only where
    * the tool rests on a flat face. Helical: one continuous descent round steep walls. Undercut:
-   * a lollipop tool under overhangs, entering and leaving sideways.
+   * a lollipop tool under overhangs, entering and leaving sideways. Curve-driven: passes guided by
+   * drive curves, an earlier toolpath, the line where two surfaces meet or a surface's own rows
+   * and columns (`drive`).
    */
-  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop' | 'flat' | 'helical' | 'undercut'
+  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop' | 'flat' | 'helical' | 'undercut' | 'curve'
   surface: Surface3D
   /**
    * Distance between passes, mm (parallel passes, the shallow-area fill of waterline; radial: the
@@ -611,11 +619,49 @@ export interface Finish3dOp extends OpBase {
   undercut?: 'underside' | 'floor' | 'both'
   /** Pencil: valleys sharper than this (degrees between the two surfaces) get a pass (default 5). */
   pencilAngle?: number
+  /** Curve-driven: what guides the passes. */
+  drive?: CurveDrive
+  /**
+   * Curve-driven: keep the tool on one side of these facet groups: in front of them (the side
+   * their facets face, the outside of a solid) or behind. They are never cut; passes stop where
+   * the tool would touch them or reach the other side.
+   */
+  keepSide?: { groups: number[]; side: 'front' | 'back' }
   /**
    * 3D rest machining: cut only where earlier operations (ids; empty = every earlier milling
    * operation) left more than `minThickness` mm on the model, as their toolpaths simulate.
    */
   rest?: { from: string[]; minThickness: number }
+}
+
+/**
+ * What guides curve-driven finishing (3D-09). Every pass is dropped onto the model like any other
+ * 3D finishing pass; the drive only says where in plan it runs.
+ */
+export interface CurveDrive {
+  /**
+   * Curves: one or two shapes on face 1 (one: the shape and copies offset from it; two: passes
+   * blended from the first to the second). Toolpath: the cutting moves of an earlier operation
+   * (and copies offset from them). Intersection: along the line where two sets of the model's
+   * facet groups meet, the tool touching both (ball-nose). Parameter: along the rows or columns
+   * of a surface made in the app.
+   */
+  mode: 'curves' | 'toolpath' | 'intersection' | 'parameter'
+  /** Curves: the shape(s) on face 1. */
+  shapes?: string[]
+  /** Toolpath: the earlier operation whose toolpath guides the passes. */
+  opId?: string
+  /** Intersection: the facet groups of the two surfaces. */
+  groupsA?: number[]
+  groupsB?: number[]
+  /** Parameter: the surface whose rows or columns guide the passes (absent = the machined model). */
+  modelId?: string
+  /** Parameter: along its rows or along its columns. */
+  along?: 'rows' | 'columns'
+  /** One curve and toolpath: copies offset to both sides of the drive, or to one side only. */
+  side?: 'both' | 'left' | 'right'
+  /** One curve and toolpath: copies each side (0 = the drive only; absent = as many as the boundary holds). */
+  copies?: number
 }
 
 /**

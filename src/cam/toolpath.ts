@@ -6,7 +6,7 @@
  *    geometry with radius correction, drilling macros, rectangular pockets, saw grooves).
  */
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
-import { entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
+import { driveSource, entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
 import { cutFloor, planSawCuts, type SawCut } from './more25d/saw'
 import { betweenCurves, type Chain3, smooth3, zWave } from './more25d/curves'
 import { applyEdits, movesHash } from './more25d/edits'
@@ -49,7 +49,8 @@ import { contourPolys, PolySet, restAt, restPieces, type SweepSource, sweptAt } 
 import { planAdaptive } from './adaptive/adaptive'
 import { DEFAULT_ADAPTIVE, feedsFor, passDepths, PLACEHOLDER_BLADE, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
-import { cutterOfTool } from './3d/cutter'
+import { type CurveInputs, curveFinish, type DrivePath, toolpathRuns } from './3d/curve'
+import { type Cutter3D, cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
 import { radialFinish, spiralFinish } from './3d/radial'
 import { scallopFinish } from './3d/scallop'
@@ -1946,6 +1947,42 @@ function undercutOf(op: Finish3dOp, mesh: Mesh, region: Region, ctx: GenContext,
   return undercutFinish(op, mesh, { R, neck: neck + margin }, region, op.levels, ctx.work)
 }
 
+/**
+ * Curve-driven finishing: the drive shapes or the earlier toolpath as plan paths, or the rows and
+ * columns of the surface it follows (in part coordinates).
+ */
+function curveOf(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, region: Region, ctx: GenContext, tp: Toolpath) {
+  const d = op.drive
+  const inputs: CurveInputs = {}
+  if (d?.mode === 'curves') {
+    let missing = 0
+    const paths: DrivePath[] = []
+    for (const id of d.shapes ?? []) {
+      const e = ctx.part.entities.find((x) => x.id === id)
+      if (!e || e.face !== 1) {
+        missing++
+        continue
+      }
+      for (const c of entityContours(e)) if (c.segs.length) paths.push({ pts: toPoints(c, 0.005), closed: c.closed })
+    }
+    if (missing) tp.warnings.push(`${missing} drive shape(s) are missing or not on face 1.`)
+    inputs.paths = paths
+  } else if (d?.mode === 'toolpath') {
+    const src = driveSource(op, ctx.part)
+    if (!src) return { moves: [] as Move[], warnings: ['Pick the earlier operation (enabled, on face 1) whose toolpath the passes follow.'], minZ: NaN, spacing: 0 }
+    const path = ctx.done?.get(src.id) ?? generateOp(src, { part: ctx.part, machine: ctx.machine, meshes: ctx.meshes, done: ctx.done })
+    inputs.paths = toolpathRuns(path.moves)
+  } else if (d?.mode === 'parameter') {
+    const model = ctx.part.models?.find((x) => x.id === (d.modelId || op.surface.modelId))
+    const dm = model && ctx.meshes?.get(model.blob)
+    if (model && !dm) tp.warnings.push(`The 3D model "${model.name}" is not loaded, so its rows and columns cannot be followed.`)
+    const g = model?.grid
+    if (model && dm && g && g.blob === model.blob && g.rows * g.cols * 3 === dm.positions.length)
+      inputs.grid = { positions: placeMesh(dm, model.place).positions, layout: { rows: g.rows, cols: g.cols, closedRows: g.closedRows, closedCols: g.closedCols } }
+  }
+  return curveFinish(op, mesh, cutter, region, inputs, op.levels, ctx.work)
+}
+
 /** Scallop start shapes (face 1) as plan polylines; missing ones are reported. */
 function scallopStarts(op: Finish3dOp, part: CamPart, tp: Toolpath): { pts: P[]; closed: boolean }[] {
   const out: { pts: P[]; closed: boolean }[] = []
@@ -2024,7 +2061,9 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
                 ? helicalFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
                 : op.strategy === 'undercut'
                   ? undercutOf(op, m.placed, region, ctx, tp)
-                  : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+                  : op.strategy === 'curve'
+                    ? curveOf(op, m.placed, m.cutter, region, ctx, tp)
+                    : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)

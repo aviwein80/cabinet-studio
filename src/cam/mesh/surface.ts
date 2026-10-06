@@ -28,7 +28,10 @@ export function segmentsFor(r: number, angle: number, tol = 0.01): number {
   return Math.max(1, Math.ceil(Math.abs(angle) / step))
 }
 
-/** Quads between rows of points (each row the same length) as triangles. */
+/**
+ * Quads between rows of points (each row the same length) as triangles. The mesh keeps its layout
+ * (`grid`): its points are the rows' points in order, so passes can follow rows and columns.
+ */
 export function gridMesh(rows: V3[][], closeRows = false, closeCols = false): Mesh {
   const nr = rows.length
   const nc = rows[0]?.length ?? 0
@@ -45,7 +48,7 @@ export function gridMesh(rows: V3[][], closeRows = false, closeCols = false): Me
       const d = ((i + 1) % nr) * nc + ((j + 1) % nc)
       idx.push(a, b, d, a, d, c)
     }
-  return dropDegenerate({ positions, indices: Uint32Array.from(idx) })
+  return { ...dropDegenerate({ positions, indices: Uint32Array.from(idx) }), grid: { rows: nr, cols: nc, closedRows: closeRows, closedCols: closeCols } }
 }
 
 /** Remove zero-area triangles (an axis point repeated in a revolve, for example). */

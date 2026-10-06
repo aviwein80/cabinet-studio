@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (curve-driven)",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 9,
+  "feed": 3,
+  "arc": 0,
+  "drill": 0,
+  "poly": 3,
+  "points": 24
+ },
+ "cutMm": 249,
+ "box": [
+  32.861,
+  0,
+  -25,
+  68.852,
+  60,
+  -10.228
+ ],
+ "warnings": [],
+ "hash": "28a81273"
+}

@@ -9,7 +9,10 @@ import * as THREE from 'three'
 import { backend } from '@/app/backend'
 import { writeStl } from '@/cam/mesh/tools'
 import { buildTimeline, cellRect, cutSummary, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
-import { HeightfieldStock, type StockMeshRange, stockMesh, stockMeshTops } from '@/cam/stock/heightfield'
+import { type StockMeshRange, stockMesh, stockMeshTops } from '@/cam/stock/heightfield'
+import type { HeightfieldStock } from '@/cam/stock/heightfield'
+import type { DexelStock } from '@/cam/stock/dexel'
+import { needsDexel, stockFor } from '@/cam/stock/choose'
 import { cutFreePieces, dropMask } from '@/cam/stock/pieces'
 import { entityContours } from '@/cam/doc'
 import { type P, toPoints } from '@/cam/geom'
@@ -28,7 +31,7 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
 import { formatLength } from '@/core/units'
-import type { MachineProfile, UnitSystem } from '@/core/types'
+import type { MachineProfile, Tool, UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
 const SPEEDS = [1, 4, 16, 64, 256]
@@ -72,8 +75,13 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const ordered = useMemo(() => programOrder(toolpaths), [toolpaths])
   const tl = useMemo(() => buildTimeline(ordered), [ordered])
   const cell = simCell(part.length, part.width)
-  const sim = useMemo(() => new StockSimulation(tl, new HeightfieldStock(part.length, part.width, part.thickness, cell)), [part.length, part.width, part.thickness, cell, tl])
-  const stock = sim.stock as HeightfieldStock
+  // (a lollipop under an overhang needs the dexel stock, which keeps the lip)
+  const dexel = needsDexel(ordered)
+  const sim = useMemo(
+    () => new StockSimulation(tl, stockFor({ length: part.length, width: part.width, thickness: part.thickness }, dexel ? [{ tool: { shape: 'lollipop' } as Tool }] : [], cell)),
+    [part.length, part.width, part.thickness, dexel, cell, tl],
+  )
+  const stock = sim.stock as HeightfieldStock | DexelStock
   // collision check: the whole program replayed in the background
   const [checked, setCheck] = useState<{ for: unknown; found: Collision[] | null; fraction: number; error?: string } | null>(null)
   const checkKey = useMemo(() => ({ toolpaths, machine }), [toolpaths, machine])
@@ -201,8 +209,8 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const saveStl = async () => {
     sim.syncTo(t)
     const { hf } = stock
-    const step = Math.max(1, Math.ceil(Math.sqrt((hf.nx * hf.ny) / STL_MAX_CELLS)))
-    const data = writeStl(stockMesh(hf, { step, exact: true }), `${part.name} stock`)
+    const step = stock.kind === 'dexel' ? 1 : Math.max(1, Math.ceil(Math.sqrt((hf.nx * hf.ny) / STL_MAX_CELLS)))
+    const data = writeStl(stock.kind === 'dexel' ? stock.toMesh() : stockMesh(hf, { step, exact: true }), `${part.name} stock`)
     const where = await backend.saveFile({ name: `${part.name.replace(/[^\w-]+/g, '-') || 'part'}-stock.stl`, data }, [{ name: 'STL model', extensions: ['stl'] }])
     if (where) toast.success(`Stock saved${step > 1 ? ` (every ${step} cells, ${fmt(step * hf.cell)} grid; nothing shown that was cut)` : ''}.`)
   }
@@ -479,7 +487,7 @@ function drawBackplot(ctx: CanvasRenderingContext2D, tl: SimTimeline, from: numb
 function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg, r, rapid, playing, onCarved, outline, onPieces }: ViewProps & { through: boolean; showPaths: boolean; showRapids: boolean; seg: number; playing: boolean; outline?: P[][]; onPieces: (p: { scrap: number; offcut: number }) => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const plot = useRef<HTMLCanvasElement>(null)
-  const stock = sim.stock as HeightfieldStock
+  const stock = sim.stock as HeightfieldStock | DexelStock
   const { hf } = stock
   const { tl } = sim
   const L = part.length
@@ -712,7 +720,55 @@ function ToolModel({ pos, outline, r, rapid }: { pos: { x: number; y: number; z:
   )
 }
 
-function StockMesh({ sim, t, base, opacity, section, onCarved }: Pick<ViewProps, 'sim' | 't' | 'base' | 'onCarved'> & { opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number } }) {
+function StockMesh(props: Pick<ViewProps, 'sim' | 't' | 'base' | 'onCarved'> & { opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number } }) {
+  return props.sim.stock.kind === 'dexel' ? <DexelStockMesh {...props} /> : <HeightfieldStockMesh {...props} />
+}
+
+/**
+ * The dexel stock in 3D: cell-sized blocks, built again whenever the stock changes (at most four
+ * times a second while playing). Shows material under an overhang.
+ */
+function DexelStockMesh({ sim, t, base, opacity, section, onCarved }: Pick<ViewProps, 'sim' | 't' | 'base' | 'onCarved'> & { opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number } }) {
+  const stock = sim.stock as DexelStock
+  const [geo, setGeo] = useState<THREE.BufferGeometry | null>(null)
+  const [tick, setTick] = useState(0)
+  const last = useRef(0)
+  const pending = useRef(false)
+  const built = useRef<string | null>(null)
+  const key = `${section.on}:${section.axis}:${section.at}`
+  useLayoutEffect(() => {
+    sim.syncTo(t)
+    const changed = !!stock.takeDirty() || pending.current
+    if (!changed && built.current === key) return
+    const now = performance.now()
+    if (built.current === key && now - last.current < 250) {
+      // at most four times a second: build again shortly
+      pending.current = true
+      const id = setTimeout(() => setTick((k) => k + 1), 260 - (now - last.current))
+      return () => clearTimeout(id)
+    }
+    pending.current = false
+    last.current = now
+    built.current = key
+    const m = stock.toMesh(section.on ? (section.axis === 'y' ? { j1: Math.max(1, Math.round(section.at * stock.ny)) } : { i1: Math.max(1, Math.round(section.at * stock.nx)) }) : {})
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.BufferAttribute(m.positions, 3))
+    g.setIndex(new THREE.BufferAttribute(m.indices, 1))
+    g.computeVertexNormals()
+    setGeo(g)
+    onCarved()
+  }, [sim, stock, t, key, section, tick, onCarved])
+  useEffect(() => () => geo?.dispose(), [geo])
+  const color = useMemo(() => new THREE.Color(base[0] / 255, base[1] / 255, base[2] / 255), [base])
+  if (!geo) return null
+  return (
+    <mesh geometry={geo}>
+      <meshStandardMaterial color={color} roughness={0.85} transparent={opacity < 1} opacity={opacity} depthWrite={opacity >= 1} side={opacity < 1 ? THREE.FrontSide : THREE.DoubleSide} />
+    </mesh>
+  )
+}
+
+function HeightfieldStockMesh({ sim, t, base, opacity, section, onCarved }: Pick<ViewProps, 'sim' | 't' | 'base' | 'onCarved'> & { opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number } }) {
   const stock = sim.stock as HeightfieldStock
   const { hf } = stock
   const step = Math.max(1, Math.ceil(Math.max(hf.nx, hf.ny) / 240))

@@ -564,9 +564,10 @@ export interface Finish3dOp extends OpBase {
    * the valleys and inside corners, where the tool touches two surfaces at once. Radial: straight
    * passes out from a centre. Spiral: one continuous spiral round a centre. Scallop: passes offset
    * across the surface for the same cusp height everywhere. Flat areas: offset passes only where
-   * the tool rests on a flat face. Helical: one continuous descent round steep walls.
+   * the tool rests on a flat face. Helical: one continuous descent round steep walls. Undercut:
+   * a lollipop tool under overhangs, entering and leaving sideways.
    */
-  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop' | 'flat' | 'helical'
+  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop' | 'flat' | 'helical' | 'undercut'
   surface: Surface3D
   /**
    * Distance between passes, mm (parallel passes, the shallow-area fill of waterline; radial: the
@@ -606,6 +607,8 @@ export interface Finish3dOp extends OpBase {
   slope: { min: number; max: number }
   /** Leave flat areas (slope under 0.5°) for a flat-area pass. */
   skipFlats: boolean
+  /** Undercut: the undersides of overhangs, the floors beneath them, or both (default). */
+  undercut?: 'underside' | 'floor' | 'both'
   /** Pencil: valleys sharper than this (degrees between the two surfaces) get a pass (default 5). */
   pencilAngle?: number
   /**

@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (undercut)",
+ "kind": "finish3d",
+ "tool": 108,
+ "moves": {
+  "rapid": 93,
+  "feed": 62,
+  "arc": 0,
+  "drill": 0,
+  "poly": 31,
+  "points": 369
+ },
+ "cutMm": 2738,
+ "box": [
+  42,
+  0,
+  -40,
+  44.5,
+  60,
+  3
+ ],
+ "warnings": [],
+ "hash": "329d0718"
+}

@@ -137,7 +137,7 @@ export const keyOf = (t: ConfigTarget): string => {
 export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) => !!m.confirmed?.includes(key)
 
 /** Tools whose lengths matter to collision checks: 3D shapes, and every router in a holder (M2.7). */
-const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || !!effectiveHolder(m, t))
+const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || t.shape === 'lollipop' || !!effectiveHolder(m, t))
 const fmt = (n: number) => String(Math.round(n * 1000) / 1000)
 
 function factValue(m: MachineProfile, f: ModelFact): string {

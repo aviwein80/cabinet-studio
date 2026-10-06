@@ -26,6 +26,8 @@ export interface Cutter {
   angle: number
   /** Corner radius for bull-nose cutters. */
   cornerRadius?: number
+  /** Lollipop: neck radius (narrower than the ball `r`). */
+  neck?: number
 }
 
 export interface SimSeg {
@@ -88,13 +90,14 @@ export function cutterOf(tp: Toolpath, d?: number): Cutter {
     dia = w && w.k === 'saw' ? w.width : (t?.kerf ?? 4)
   }
   if (!dia) dia = tp.kind === 'vcarve' ? 20 : 6
-  return { r: dia / 2, shape, angle: t?.angle ?? 90, ...(shape === 'bull' ? { cornerRadius: t?.cornerRadius ?? 0 } : {}) }
+  return { r: dia / 2, shape, angle: t?.angle ?? 90, ...(shape === 'bull' ? { cornerRadius: t?.cornerRadius ?? 0 } : {}), ...(shape === 'lollipop' ? { neck: Math.min(dia, t?.shankDiameter ?? dia) / 2 } : {}) }
 }
 
 /** Cutter bottom height at horizontal distance `d` from the tool axis, tool tip at `z`. */
 export function cutterZ(c: Cutter, z: number, d: number): number {
   if (d > c.r + 1e-9) return Infinity
-  if (c.shape === 'ball') return z + c.r - Math.sqrt(Math.max(0, c.r * c.r - d * d))
+  // (a lollipop's lowest point at d is its ball's)
+  if (c.shape === 'ball' || c.shape === 'lollipop') return z + c.r - Math.sqrt(Math.max(0, c.r * c.r - d * d))
   if (c.shape === 'v') return z + d / Math.tan(((c.angle || 90) * Math.PI) / 360)
   if (c.shape === 'bull') {
     const rc = Math.min(Math.max(0, c.cornerRadius ?? 0), c.r)

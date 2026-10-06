@@ -38,6 +38,8 @@ export function cutterOfTool(t: Tool | null): { cutter: Cutter3D } | { error: st
   if (!(R > 0)) return { error: `T${t.number} has no diameter.` }
   switch (t.shape ?? 'flat') {
     case 'ball':
+    // a lollipop meets the model from above with its ball (the neck is narrower)
+    case 'lollipop':
       return { cutter: { kind: 'torus', R, rc: R } }
     case 'bull':
       return { cutter: { kind: 'torus', R, rc: Math.min(R, Math.max(0, t.cornerRadius ?? 0)) } }

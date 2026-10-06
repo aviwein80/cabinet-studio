@@ -176,7 +176,7 @@ export function sweepLevel(hf: Heightfield, a: V3, b: V3, c: Cutter) {
   const dx = b.x - a.x
   const dy = b.y - a.y
   const l2 = dx * dx + dy * dy
-  const flat = c.shape !== 'ball' && c.shape !== 'v' && c.shape !== 'bull'
+  const flat = c.shape !== 'ball' && c.shape !== 'v' && c.shape !== 'bull' && c.shape !== 'lollipop'
   const z0 = Math.max(floor, a.z)
   for (let j = j0; j <= j1; j++) {
     const py = (j + 0.5) * hf.cell

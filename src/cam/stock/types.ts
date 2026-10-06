@@ -1,7 +1,8 @@
 /**
  * Stock model: the simulated material left after each move. One interface, several
- * implementations: the heightfield (exact for a vertical 3-axis tool) now; a tri-dexel or voxel
- * stock for rotary, 3+2 and 5-axis later (Stage 3) behind the same calls.
+ * implementations: the heightfield (exact for a vertical 3-axis tool), the dexel stock (intervals
+ * per cell: material under an overhang, for lollipop tools, M3.1); tilted tools for 3+2 and 5-axis
+ * later (Stage 3) behind the same calls.
  *
  * Part frame: X along the length, Y along the width, Z = 0 at face 1 and negative into the material.
  */
@@ -14,7 +15,8 @@ export interface StockSnapshot {
 }
 
 export interface StockModel {
-  readonly kind: 'heightfield'
+  /** Heightfield: one height per cell (vertical tools). Dexel: intervals per cell (material under overhangs too). */
+  readonly kind: 'heightfield' | 'dexel'
   /** Material extents before any cutting. */
   bounds(): Box3
   /** Remove what the cutter sweeps moving in a straight line from `a` to `b` (tip positions). */

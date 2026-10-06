@@ -171,6 +171,7 @@ export function OpsPanel({
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'scallop' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (scallop)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'flat' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (flat areas)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'helical' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (helical)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'undercut' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (undercut)</DropdownMenuItem>
                   </>
                 )}
               </>
@@ -237,6 +238,8 @@ export function OpsPanel({
                                 ? `3D flat areas, every ${formatLength(op.stepover, units)}`
                                 : op.strategy === 'helical'
                                   ? `3D helical, ${formatLength(op.stepdown ?? 1, units)} a round`
+                                  : op.strategy === 'undercut'
+                                    ? `3D undercut, every ${formatLength(op.stepover, units)}`
                               : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
@@ -417,7 +420,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : op.kind === 'finish3d' && op.strategy === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -636,7 +639,7 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
 }
 
 /** Finishing strategies added in M3.1 (shown while their switch is on, or when an operation uses one). */
-const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop', 'flat', 'helical'])
+const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop', 'flat', 'helical', 'undercut'])
 
 /** Rest machining settings of a 3D finishing operation. */
 function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adaptiveOn: boolean, onChange: (o: CamOp) => void) {
@@ -691,6 +694,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
                   { value: 'scallop' as const, label: 'Scallop: the same cusp height everywhere' },
                   { value: 'flat' as const, label: 'Flat areas: offset passes on flats only' },
                   { value: 'helical' as const, label: 'Helical: one continuous descent round walls' },
+                  { value: 'undercut' as const, label: 'Undercut: a lollipop under overhangs' },
                 ]
               : []),
           ]}
@@ -707,6 +711,21 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
               <SelectField label="Order" value={op.travel ?? 'inward'} options={[{ value: 'inward', label: 'From the edge in' }, { value: 'outward', label: 'From the middle out' }]} onChange={(v) => onChange({ ...op, travel: v })} />
               <SelectField label="Rings run" value={op.direction} options={[{ value: 'climb', label: 'Counter-clockwise' }, { value: 'conventional', label: 'Clockwise' }]} onChange={(v) => onChange({ ...op, direction: v })} />
               <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Only where the tool rests on a face flatter than 0.5°: the first ring follows the edge of each flat area (traced to 0.01 mm), the next ones step in. A flat-bottomed tool is picked first.</div>
+            </Group>
+            {restGroup(op, part, adaptiveOn, onChange)}
+          </>
+        )
+      if (op.strategy === 'undercut')
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Undercut passes">
+              {strategy}
+              <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} />
+              <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} hint="Best square to the overhang's edge" />
+              <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
+              <SelectField label="Cut" value={op.undercut ?? 'both'} options={[{ value: 'both', label: 'Undersides and floors beneath' }, { value: 'underside', label: 'Undersides of overhangs' }, { value: 'floor', label: 'Floors beneath overhangs' }]} onChange={(v) => onChange({ ...op, undercut: v })} />
+              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Needs a lollipop tool (a ball on a narrower neck). Its neck keeps the collision margin (Machine page) clear of the model, so the ball reaches under by its radius less the neck's radius and the margin. The tool goes in and out sideways at the pass's height, where the way up is clear. The simulator keeps the material under the overhang.</div>
             </Group>
             {restGroup(op, part, adaptiveOn, onChange)}
           </>
@@ -728,7 +747,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
         )
       if (op.strategy === 'scallop') {
         // cusp from the rounded end of the tool picked (ball radius, or corner radius of a bull-nose)
-        const r = tool?.shape === 'ball' ? tool.diameter / 2 : tool?.shape === 'bull' ? (tool.cornerRadius ?? 0) : 0
+        const r = tool?.shape === 'ball' || tool?.shape === 'lollipop' ? tool.diameter / 2 : tool?.shape === 'bull' ? (tool.cornerRadius ?? 0) : 0
         const cusp = r > 0 && op.stepover < 2 * r ? r - Math.sqrt(r * r - (op.stepover / 2) ** 2) : NaN
         const starts = op.startFrom ?? []
         const lines = sel.filter((id) => part.entities.some((e) => e.id === id && e.face === 1))

@@ -345,7 +345,8 @@ export interface SavedSheet {
 
 export type ToolType = 'router' | 'drill-vertical' | 'drill-horizontal' | 'saw'
 /** Cutting-edge shape, used by custom-part machining. Cabinet machining only reads `type`. */
-export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile'
+/** `lollipop`: a ball (the diameter) on a narrower neck (`shankDiameter`), for undercuts (M3.1). */
+export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile' | 'lollipop'
 
 export interface Tool {
   id: string

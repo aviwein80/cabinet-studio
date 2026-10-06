@@ -21,7 +21,7 @@ import { checkCancel, type Work } from '@/core/cancel'
 import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
 import type { MachineProfile } from '@/core/types'
 import { buildTimeline, cutterZ, programOrder, type SimTimeline, type V3 } from '../sim'
-import { HeightfieldStock } from '../stock/heightfield'
+import { stockFor } from '../stock/choose'
 import { simCell } from '../stock/simulation'
 import type { Toolpath } from '../toolpath'
 import type { CamPart } from '../types'
@@ -221,6 +221,7 @@ export function partCollisions(part: Pick<CamPart, 'length' | 'width' | 'thickne
   const paths = programOrder(toolpaths)
   const tl = buildTimeline(paths)
   const cell = Math.max(0.5, simCell(part.length, part.width))
-  const stock = new HeightfieldStock(part.length, part.width, part.thickness, cell)
+  // (a lollipop under an overhang needs the dexel stock: the lip stays in it)
+  const stock = stockFor(part, paths, cell)
   return { found: checkCollisions(tl, stock, collisionSetup(tl, paths, machine, part.thickness), work), tl }
 }

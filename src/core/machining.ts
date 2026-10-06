@@ -27,7 +27,7 @@ export function cutoutTool(machine: MachineProfile): Tool | undefined {
 
 /** Flat-bottomed router: what 2D pockets, grooves and engraving are calculated for (not V, ball or bull-nose). */
 export function squareEnd(t: Tool) {
-  return t.type === 'router' && t.shape !== 'v' && t.shape !== 'ball' && t.shape !== 'bull'
+  return t.type === 'router' && t.shape !== 'v' && t.shape !== 'ball' && t.shape !== 'bull' && t.shape !== 'lollipop'
 }
 
 export function partSpacing(machine: MachineProfile, settings: ShopSettings) {

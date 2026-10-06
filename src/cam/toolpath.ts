@@ -56,6 +56,7 @@ import { scallopFinish } from './3d/scallop'
 import { flatAreaFinish } from './3d/flat'
 import { FLAT_DEG } from './3d/passes'
 import { helicalFinish } from './3d/helical'
+import { undercutFinish } from './3d/undercut'
 import { pencilFinish } from './3d/pencil'
 import { projectionFinish } from './3d/projection'
 import { centreRegion, type Region } from './3d/region'
@@ -1903,7 +1904,8 @@ function clearanceWarnings(mesh: Mesh, moves: Move[], stock: number, ctx: GenCon
 function depthWarnings(minZ: number, ctx: GenContext, tp: Toolpath) {
   const tool = tp.tool!
   if (!Number.isFinite(minZ)) return
-  const flute = tool.fluteLength ?? tool.maxDepth
+  // (a lollipop's neck is meant to be in the cut: its usable depth counts, not its ball)
+  const flute = tool.shape === 'lollipop' ? tool.maxDepth : (tool.fluteLength ?? tool.maxDepth)
   if (-minZ > flute + 1e-9) tp.warnings.push(`Cuts ${(-minZ).toFixed(2)} mm below face 1 but T${tool.number} cuts only ${flute} mm deep: the shank or holder may rub. Check in simulation.`)
   if (minZ < -ctx.part.thickness - 1e-9) tp.warnings.push(`Goes ${(-minZ - ctx.part.thickness).toFixed(2)} mm below the part's underside: check the model's placement and the part thickness.`)
 }
@@ -1927,6 +1929,21 @@ function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolea
   }
   if (above) tp.warnings.push(`${above} pass(es) above face 1 are not written to woodWOP (they cut only where the model stands above the panel).`)
   if (long) tp.warnings.push(`${long} contour(s) have more than ${CONTOUR_POINT_WARN} points: woodWOP's limit per contour is not confirmed yet. Check the program loads on the machine.`)
+}
+
+/**
+ * Undercut finishing needs a lollipop: its ball reaches under overhangs while its neck (with the
+ * collision margin round it) keeps clear of the model.
+ */
+function undercutOf(op: Finish3dOp, mesh: Mesh, region: Region, ctx: GenContext, tp: Toolpath) {
+  const t = tp.tool
+  const none = (w: string) => ({ moves: [] as Move[], warnings: [w], minZ: NaN, spacing: 0 })
+  if (!t || t.shape !== 'lollipop') return none(`Undercut finishing needs a lollipop tool (a ball on a narrower neck)${t ? `: T${t.number} is not one` : ''}. Add one in the tool table (shape Lollipop, with its neck diameter).`)
+  const R = t.diameter / 2
+  const neck = (t.shankDiameter ?? t.diameter) / 2
+  const margin = ctx.machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN
+  if (neck + margin >= R) return none(`T${t.number}'s ball (Ø${t.diameter}) reaches no further than its neck (Ø${t.shankDiameter ?? t.diameter}) and the ${margin} mm collision margin round it, so it cannot get under an overhang.`)
+  return undercutFinish(op, mesh, { R, neck: neck + margin }, region, op.levels, ctx.work)
 }
 
 /** Scallop start shapes (face 1) as plan polylines; missing ones are reported. */
@@ -2005,7 +2022,9 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
               ? flatAreaFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
               : op.strategy === 'helical'
                 ? helicalFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
-                : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+                : op.strategy === 'undercut'
+                  ? undercutOf(op, m.placed, region, ctx, tp)
+                  : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)

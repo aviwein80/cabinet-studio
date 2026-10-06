@@ -29,7 +29,7 @@ export interface ToolField {
 }
 
 export const TOOL_TYPES: ToolType[] = ['router', 'drill-vertical', 'drill-horizontal', 'saw']
-export const TOOL_SHAPES: ToolShape[] = ['flat', 'ball', 'bull', 'v', 'drill', 'saw', 'profile']
+export const TOOL_SHAPES: ToolShape[] = ['flat', 'ball', 'bull', 'v', 'drill', 'saw', 'profile', 'lollipop']
 
 export const TOOL_FIELDS: ToolField[] = [
   { key: 'number', label: 'Tool no.', kind: 'num', part: 'data', positive: true, grid: true, width: 70 },

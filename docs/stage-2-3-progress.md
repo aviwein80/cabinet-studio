@@ -90,12 +90,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.1a Radial and spiral finishing (3D-05), format v5, switch | **Done** (October 2026) | See below. Simulation only (true 3D output stays off). |
 | M3.1b Scallop finishing (3D-07) | **Done** (October 2026) | See below. Cusp within ±10 % measured independently. Simulation only. |
 | M3.1c Flat-area and helical finishing (3D-08, first part) | **Done** (October 2026) | See below. Simulation only. |
-| M3.1d-f Undercut with lollipop tools; curve-driven; screenshots and docs | In progress | See "M3.1 split". |
+| M3.1d Undercut finishing with lollipop tools (3D-08, second part) and a dexel stock | **Done** (October 2026) | See below. Simulation only. |
+| M3.1e-f Curve-driven finishing; screenshots and docs | In progress | See "M3.1 split". |
 | M3.2 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1962,9 +1963,48 @@ Speed (cloud container): 150 x 100 mm hill-and-hollow, 6 mm ball, 1.2 mm step-ov
 - **Helical** is made for walls steeper than the slope limit (placeholder 30°); on gentle slopes the
   levels are far apart in plan and waterline or scallop finish better.
 
+## M3.1d undercut finishing with lollipop tools: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-08 | Lollipop tool shape: a ball on a thinner neck ("Neck Ø" in the tool dialog). New placeholder tool T108, 12 mm ball on a 4 mm neck, with the Configure badge like every placeholder tool | `src/core/types.ts`, `src/core/defaults.ts`, `src/pages/machine/ToolDialog.tsx`, `src/core/confirm.ts` |
+| 3D-08 | Undercut finishing: parallel passes that run in under an overhang. For each point the exact heights where the ball would touch the model are found (vertical line against every triangle: vertex spheres, edge cylinders, face slabs); the ball sits on the surface in the gaps. The neck (with the machine's collision margin) is checked against the model as a cylinder down to the ball, and a point is only used where both are clear. Passes come in and go out sideways, inside the boundary; the tool only goes up or down where the way up is clear. Passes with no way out inside the boundary are left out with a warning | `src/cam/3d/undercut.ts` |
+| 3D-08 | Tool choice: the lollipop that reaches furthest under is picked automatically; a ball-nose, a lollipop whose neck (plus margin) is as thick as its ball, or a model with no overhang give a clear warning | `resolveTool` in `src/cam/ops.ts`, `src/cam/toolpath.ts` |
+| Stock | Dexel stock: each column of the stock holds up to 6 pieces of material (bottom to top), so material left over a lollipop's cut (an overhang) is kept. It keeps a heightfield copy for the top view. A vertical tool carves it exactly as the heightfield does. Used automatically when a lollipop is in the operations; otherwise the heightfield stock is used as before | `src/cam/stock/dexel.ts`, `src/cam/stock/choose.ts` |
+| Simulator and collision | The simulator and the collision checker use the dexel stock when needed; the neck is part of the simulated cutter; the stock mesh (and its STL) shows material under overhangs | `src/pages/part/SimulateDialog.tsx`, `src/cam/sim.ts`, `src/cam/collision/collision.ts` |
+| Screens | Add operation: "(lollipop undercuts)"; editor: angle, step-over, direction, rest; the switch text lists it | `src/pages/part/OpsPanel.tsx`, `src/pages/MachinePage.tsx` |
+
+### Acceptance (M2.2 tolerances)
+
+Test model: an 80 × 60 × 50 block with a lip overhanging a recess (`tests/undercut-fixtures.ts`).
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| No gouge > 0.005 mm | `tests/cam-3d-undercut.test.ts` | Ball, checked exactly at every point: −0.0005 mm worst (T108 and a 20 mm test lollipop) |
+| Neck clear with the margin | same | Neck against the model with the 2 mm margin: 0.0000 mm worst (it reaches exactly to the margin, never into it) |
+| On the surface (stock to leave ±0.01 mm) | same | Every cutting point within 0.011 mm of the surface (exact distance) |
+| Reach under the overhang | same | T108 reaches the underside to x 36.393 mm, the geometry allows 36.393; the 20 mm test lollipop 33.655, allows 33.655 |
+| Way in and out | same | Every point inside the part's 80 × 60 outline; every vertical move has nothing above it the ball could touch |
+| Dexel stock | same | A vertical tool carves it the same as the heightfield (top within 0.0001 mm, volume within 0.01 %). A lollipop slot inside a block: 5513.6 mm³ removed, analytic 5506.5 (0.13 %); the mesh is closed |
+| Simulation | same | On a stock the shape of the part: the lip stays (two pieces of material in its columns), under 5 mm³ of slivers cut; the same moves on a heightfield would cut the lip away. No false collision alarms |
+| A real collision is caught | same | Passes made with a 0 mm margin, checked with the 2 mm margin: shank warnings found |
+| Golden digests | `tests/golden/cam3d/{undercut-lip-t108,undercut-lip-lolly20-underside}` | 2 new; every existing golden unchanged |
+| Export blocked | same | `CAM_3D_NO_OUTPUT` with both output switches on; not a flat layer |
+
+### Limits recorded
+
+- **Reach** is limited by the neck: contact gets no further under than the neck radius plus the
+  collision margin from the overhang's edge (minus the ball's own reach). A bigger margin means
+  less reach; with a 4 mm margin T108 cannot get under at all (warning).
+- **Passes that cannot get out inside the boundary** (e.g. passes running along the lip) are left
+  out with a warning rather than lifting the tool through the overhang. Cut them at another angle.
+- **Dexel stock** holds up to 6 pieces per column; beyond that the smallest gap is filled, so the
+  simulator may show a little cut material as still there (never the reverse). Not seen in tests.
+- T108 is a placeholder: its ball, neck and lengths are not a real tool (Configure badge).
+
 ## Next run
 
-- Continue M3.1 (M3.1d-f), then M3.2.
+- Continue M3.1 (M3.1e-f), then M3.2.
 
 ## Run log
 
@@ -2009,3 +2049,4 @@ Speed (cloud container): 150 x 100 mm hill-and-hollow, 6 mm ball, 1.2 mm step-ov
 - **Run 14 (M3.1a)**: radial and spiral finishing, shared pass code, format 5, switch. See `git log`.
 - **Run 14 (M3.1b)**: scallop finishing with an independent cusp check. See `git log`.
 - **Run 14 (M3.1c)**: flat-area and helical finishing. See `git log`.
+- **Run 14 (M3.1d)**: undercut finishing with lollipop tools, dexel stock. See `git log`.

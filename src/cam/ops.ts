@@ -146,6 +146,7 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       // scallop: in from the boundary until start shapes are picked
       if ((extra as { strategy?: string }).strategy === 'scallop') Object.assign(op, { name: '3D finishing (scallop)', travel: 'inward' })
       if ((extra as { strategy?: string }).strategy === 'flat') Object.assign(op, { name: '3D finishing (flat areas)', travel: 'inward' })
+      if ((extra as { strategy?: string }).strategy === 'undercut') Object.assign(op, { name: '3D finishing (undercut)', undercut: 'both' })
       // PLACEHOLDER: helical on slopes of 30° and steeper, like waterline
       if ((extra as { strategy?: string }).strategy === 'helical') Object.assign(op, { name: '3D finishing (helical)', stepdown: 0.5, slope: { min: 30, max: 90 } })
       break
@@ -224,6 +225,12 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     case 'code':
       return null
     case 'finish3d': {
+      // undercuts: the lollipop whose ball reaches furthest past its neck
+      if (op.strategy === 'undercut') {
+        const lolly = routers(machine).filter((t) => t.shape === 'lollipop')
+        const reach = (t: Tool) => t.diameter - (t.shankDiameter ?? t.diameter)
+        return lolly.sort((a, b) => reach(b) - reach(a) || a.number - b.number)[0] ?? null
+      }
       // flat areas: the widest flat-bottomed tool (bull-nose first, then flat end mills other
       // than the cut-out tool)
       if (op.strategy === 'flat') {

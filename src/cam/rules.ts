@@ -2,10 +2,13 @@
  * Layer rules: a table that maps drawing layer names (and simple geometry tests) to saved
  * machining recipes, so an imported drawing gets its operations without hand picking.
  */
-import { entityContours, layerOf, partOutline } from './doc'
-import { area, boxOf } from './geom'
+import { layerOf, partOutline } from './doc'
+import { claimShapes, entityFacts, runAutoQueries } from './query'
 import { defaultOp, fromTemplate, toTemplate } from './ops'
-import type { CamOp, CamOpKind, CamPart, Entity, LayerRule, LayerRuleSet, OpTemplate, QueryTest, Recipe } from './types'
+import type { CamOp, CamOpKind, CamPart, LayerRule, LayerRuleSet, OpTemplate, Recipe } from './types'
+
+export { entityFacts, layerMatches, testPasses, type EntityFacts } from './query'
+import { layerMatches } from './query'
 
 const tpl = (kind: CamOpKind, name: string, extra: Partial<CamOp> = {}): OpTemplate => ({ ...toTemplate(defaultOp(kind, [], extra)), name })
 const lv = (depth: number, through = false) => ({ safeZ: 20, rapidZ: 3, depth, through, stockZ: 0, passDepth: 0 })
@@ -52,25 +55,6 @@ export const BUILTIN_RULESETS: LayerRuleSet[] = [
 export const recipesOf = (lib: { recipes?: Recipe[] }) => lib.recipes ?? BUILTIN_RECIPES
 export const ruleSetsOf = (lib: { layerRules?: LayerRuleSet[] }) => lib.layerRules ?? BUILTIN_RULESETS
 
-/** Exact (case-insensitive), glob with * and ?, or /regex/ (case-insensitive). */
-export function layerMatches(pattern: string, name: string): boolean {
-  const p = pattern.trim()
-  if (!p) return false
-  if (p.length > 2 && p.startsWith('/') && p.lastIndexOf('/') > 0) {
-    const end = p.lastIndexOf('/')
-    try {
-      return new RegExp(p.slice(1, end), p.slice(end + 1).replace(/[^gimsuy]/g, '') + (p.slice(end + 1).includes('i') ? '' : 'i')).test(name)
-    } catch {
-      return false
-    }
-  }
-  if (/[*?]/.test(p)) {
-    const re = new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i')
-    return re.test(name)
-  }
-  return p.toLowerCase() === name.toLowerCase()
-}
-
 /** Depth from a layer name: the last number, e.g. POCKET_D6.5 -> 6.5, DRILL_5_12 -> 12, ENGRAVE_0.04IN -> 1.016. */
 export function depthFromLayerName(name: string): number | null {
   const all = [...name.matchAll(/(\d+(?:[.,]\d+)?)\s*(mm|in|")?/gi)]
@@ -80,55 +64,6 @@ export function depthFromLayerName(name: string): number | null {
   if (!Number.isFinite(n) || n <= 0) return null
   const unit = (last[2] ?? '').toLowerCase()
   return unit === 'in' || unit === '"' ? Math.round(n * 25.4 * 1000) / 1000 : n
-}
-
-export interface EntityFacts {
-  layer: string
-  type: string
-  closed: boolean
-  diameter: number
-  width: number
-  height: number
-  area: number
-  face: number
-}
-
-export function entityFacts(part: CamPart, e: Entity): EntityFacts {
-  const cs = entityContours(e)
-  const b = cs.length && cs.some((c) => c.segs.length) ? boxOf(cs) : { minX: 0, minY: 0, maxX: 0, maxY: 0 }
-  return {
-    layer: layerOf(part, e.layer)?.name ?? e.layer,
-    type: e.g.t,
-    closed: e.g.t === 'circle' || cs.some((c) => c.closed),
-    diameter: e.g.t === 'circle' ? e.g.r * 2 : 0,
-    width: Math.round((b.maxX - b.minX) * 1000) / 1000,
-    height: Math.round((b.maxY - b.minY) * 1000) / 1000,
-    area: Math.round(cs.filter((c) => c.closed).reduce((n, c) => n + Math.abs(area(c)), 0) * 1000) / 1000,
-    face: e.face,
-  }
-}
-
-export function testPasses(t: QueryTest, f: EntityFacts): boolean {
-  const v = f[t.field]
-  const want = t.value
-  switch (t.op) {
-    case '=':
-      return typeof v === 'string' ? v.toLowerCase() === String(want).toLowerCase() : v === (typeof v === 'number' ? Number(want) : want === true || want === 'true')
-    case '!=':
-      return !testPasses({ ...t, op: '=' }, f)
-    case '<':
-      return Number(v) < Number(want)
-    case '<=':
-      return Number(v) <= Number(want) + 1e-9
-    case '>':
-      return Number(v) > Number(want)
-    case '>=':
-      return Number(v) >= Number(want) - 1e-9
-    case 'contains':
-      return String(v).toLowerCase().includes(String(want).toLowerCase())
-    case 'matches':
-      return layerMatches(String(want), String(v))
-  }
 }
 
 export interface RuleReport {
@@ -155,16 +90,13 @@ const KIND_ORDER: Record<CamOpKind, number> = { face: -1, code: 0, curve: 4.5, m
  * layer and tests. Ops made by an earlier run of the rules are replaced; hand-made ops stay.
  * Through profiles that machine the outline run last.
  */
-export function applyRules(part: CamPart, set: LayerRuleSet, recipes: Recipe[]): ApplyResult {
+export function applyRules(input: CamPart, set: LayerRuleSet, recipes: Recipe[]): ApplyResult {
+  // auto-queries first (CAD-17): shapes they find move to their result layers
+  const part = set.queries?.length ? runAutoQueries(input, set.queries).part : input
   const rules = [...set.rules].sort((a, b) => a.order - b.order)
-  const claimed = new Map<string, LayerRule>()
+  // each shape is claimed by the first rule whose query (layer pattern and tests) it passes
+  const claimed: Map<string, LayerRule> = claimShapes(part, rules)
   const facts = new Map(part.entities.map((e) => [e.id, entityFacts(part, e)]))
-  for (const e of part.entities) {
-    if (layerOf(part, e.layer)?.construction || e.g.t === 'point') continue
-    const f = facts.get(e.id)!
-    const r = rules.find((rr) => layerMatches(rr.layer, f.layer) && (rr.where ?? []).every((t) => testPasses(t, f)))
-    if (r) claimed.set(e.id, r)
-  }
 
   const report: RuleReport[] = []
   const missing = new Set<string>()

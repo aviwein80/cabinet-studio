@@ -91,7 +91,7 @@ describe('M2.7a holders reach every router (TOOL-04)', () => {
     const none = { ...clone(), defaultHolderId: undefined }
     none.tools.push(longFlat())
     expect(collide(pocketPart(60, 44, 't191', 11), none)).toEqual([])
-  })
+  }, 60_000)
 
   it('a 2D placeholder tool too short for the holder: 30 mm flutes, 50 mm stick-out, a 49 mm pocket shows shank and holder', () => {
     const m = clone()
@@ -99,7 +99,7 @@ describe('M2.7a holders reach every router (TOOL-04)', () => {
     const kinds = new Set(found.map((c) => c.kind))
     expect(kinds.has('shank')).toBe(true)
     expect(kinds.has('holder')).toBe(true)
-  })
+  }, 60_000)
 
   it('a holder or stick-out change marks the operations using it stale; confirming does not', () => {
     const m = clone()

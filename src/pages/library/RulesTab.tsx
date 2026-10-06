@@ -214,6 +214,25 @@ export function RulesTab() {
             </label>
           </div>
         </div>
+        {(set?.queries?.length ?? 0) > 0 && (
+          <div className="rounded-xl border bg-background" data-testid="auto-queries">
+            <div className="border-b px-3 py-2 text-xs font-medium">Auto-queries (run before the rules; what each finds moves to its layer)</div>
+            <ul className="divide-y text-xs">
+              {set!.queries!.map((q) => (
+                <li key={q.id} className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-medium">{q.name}</span>
+                  <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
+                    {q.tests.map((t) => `${t.field} ${t.op} ${String(t.value)}${t.op === 'between' ? `..${t.value2}` : ''}`).join(q.match === 'any' ? ' or ' : ' and ')}
+                  </span>
+                  <Badge variant="outline">→ {q.resultLayer}</Badge>
+                  <Button size="icon-xs" variant="ghost" aria-label="Delete auto-query" onClick={() => editSet((x) => void (x.queries = (x.queries ?? []).filter((y) => y.id !== q.id)))}>
+                    <Trash2 />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Each shape goes to the first rule, top to bottom, whose layer name and shape test match. Patterns are exact names, wildcards (<span className="font-mono">POCKET*</span>,{' '}
           <span className="font-mono">DR?LL</span>) or <span className="font-mono">/regular expressions/</span>, never case-sensitive. With depth from name on, the last number in the layer name is the depth in mm

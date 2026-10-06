@@ -70,13 +70,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.6e Unconfirmed values: Configure badges, confirmation tracking | **Done** (October 2026) | Owner request before M2.7. See below. |
 | M2.7a Holders and aggregates, tool data compare, spreadsheet, tool grid | **Done** (October 2026) | See below. |
 | M2.7b Turn-by-turn sketch, dimensions, print to scale | **Done** (October 2026) | See below. |
-| M2.7c - M2.7d | Not started | Queries, fill with holes, panelling; image trace, screenshots, docs. |
+| M2.7c Geometry queries, fill with holes, panelling | **Done** (October 2026) | See below. |
+| M2.7d | Not started | Image trace, screenshots, docs. |
 | M2.8 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -1084,6 +1085,38 @@ dimensions in inches; one with mm beside it), `08-turn-by-turn-sketch.png` (the 
 unknowns worked out, shown in blue), `09-print-to-scale.png` (the print preview at 1:10 with the
 check bar).
 
+## M2.7c queries, fill with holes, panelling: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| CAD-17 | Query engine: tests (field, operator, value) on **shapes** (the Stage 1 fields plus length round it, radius, depth given, segments, arcs, closed shapes inside it, lies inside another, is the outline, tag, made-from-solid role, middle X/Y), on **faces of solid models** (type, diameter, area, facing up/down/side/sloped and depth below the top as the part lies, colour, layer, body) and on **models** (name, kind, faces, triangles, size, format, file, layer); operators =, ≠, <, ≤, >, ≥, between, one of, contains / not, matches pattern / not; all tests or any. Results: select, move shapes to a layer, send faces to a layer (as shapes, M2.5c), put models on a layer. **Auto-queries** kept in a rule table run before its rules on every import (shapes they find move to their result layer; Library → Rules lists them). The Stage 1 layer rules now run on this engine: a rule is the query "layer matches the pattern and its extra tests", each shape going to the first that passes | `src/cam/query.ts`, `applyRules` in `src/cam/rules.ts`, `QueryDialog.tsx`, `RulesTab.tsx` |
+| CAD-18 | Fill with holes: the selected closed shapes (shapes inside are islands) filled with a grid (any angle), a staggered grid or rings round the middle; hole diameter, margin from every edge (to the hole's edge), spacing; the pattern centred; holes on a layer (`DRILL_<Ø>` by default) with an optional drilling operation; spacing tighter than a hole refused | `src/cam/holeFill.ts`, `FillHolesDialog.tsx` |
+| NEW-05 | Panelling: shapes bigger than a sheet split into equal panels no bigger than the given size (default: the part's material sheet less the edge trim), neighbours overlapping by exactly the overlap; closed shapes cut by a join are closed again along it (Clipper2 intersection, arcs refitted), open shapes cut into pieces, circles and text whole where they fit; each panel a new part starting at 0,0 with the operations that machine its pieces | `src/cam/panelling.ts`, `PanelDialog.tsx` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Full queries reproduce the Stage 1 rule results | `tests/cam-query-fill-panel.test.ts` | The Stage 1 claim (written out in the test as it was) and the query engine agree on every shape of 40 mixed parts (shop layer names, circles, rectangles, open shapes, text, points), the 20 reference parts and an imported DXF: 2,400+ shapes, 1,000+ claimed. `applyRules` makes operations on exactly the shapes Stage 1 claimed. All Stage 1 rule tests and goldens unchanged |
+| Queries add solid and face tests | same | STEP cabinet side (stands on edge in the file): "hole, Ø5" finds the 26 shelf-pin holes; flat faces facing up between 0.1 and 18.9 deep (over 200 mm²) give the pocket floors at 3, 4, 9.5 and 10 mm; model query by kind and thickness |
+| Auto-queries | same | "Ø5 circles → DRILL_5_12" before the shop rules: the two 5 mm circles drilled 12 deep, the 35 mm one left |
+| Fill with holes | same | 300 x 200 panel, Ø5, margin 10, pitch 20: 14 x 9 = 126 holes, symmetric, all at least 10 mm from the edge; staggered rows offset by half a pitch, island clear; a 30° grid stays inside with no two holes closer than the pitch; rings 0/30/60/90 mm with 1/6/12/18 holes |
+| Panelling | same | 5000 x 1200 sign in 2440 x 1220 panels with 50 mm overlap: 3 equal panels; every panel's outline piece is closed; the pieces add up to the sign plus the two overlap strips; the cut-out and engraving operations follow their pieces |
+
+### Limits recorded
+
+- **Face facts "facing" and "depth"** use the model's lay-flat turn when it has one (feature
+  recognition), else the same panel alignment recognition uses (thickness along Z).
+- **Auto-queries in rule tables are on shapes**; face and model queries run from the designer.
+- **Panelling** gives each panel the original's operations on its pieces; joins get no extra
+  machining (a dowel or biscuit joint at the join is not drawn).
+
+### Screenshots
+
+`10-geometry-query.png` (circles of 5 mm diameter: 3 found, result layer DRILL_5_12, keep as
+auto-query), `11-fill-with-holes.png` (a staggered fill of a 4200 x 1300 sign with a window and a
+ring kept clear), `12-split-into-panels.png` (the sign split into two panels with the overlap).
+
 ## M2.7 decisions needed (see the report)
 
 1. **Real stick-outs and holders** for every router (2D ones now too), and which holder is the
@@ -1120,3 +1153,4 @@ check bar).
 - **Run 8 (M2.6e)**: Configure badges and confirmation tracking for every unconfirmed value. See `git log`.
 - **Run 9 (M2.7a)**: holders and aggregates, tool data compare, spreadsheet, tool grid. See `git log`.
 - **Run 9 (M2.7b)**: turn-by-turn sketch, dimensions, print to scale. See `git log`.
+- **Run 9 (M2.7c)**: geometry queries, fill with holes, panelling. See `git log`.

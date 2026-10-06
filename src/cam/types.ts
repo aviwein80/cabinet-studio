@@ -697,12 +697,43 @@ export interface Recipe {
   ops: OpTemplate[]
 }
 
-export type QueryField = 'layer' | 'type' | 'closed' | 'diameter' | 'width' | 'height' | 'area' | 'face'
-export type QueryOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'contains' | 'matches'
+/**
+ * Facts a query can test. Shapes (Stage 1): layer, type, closed, diameter, width, height, area,
+ * face; added in M2.7 (CAD-17): length, radius, depth, segments, arcs, holes (closed shapes inside
+ * it), inside (lies inside another closed shape), outline (is the part outline), tag, role (made
+ * from a solid as ...), x, y (middle of its box). Faces of solids and whole models have their own
+ * fields (`src/cam/query.ts`).
+ */
+export type QueryField = 'layer' | 'type' | 'closed' | 'diameter' | 'width' | 'height' | 'area' | 'face' | 'length' | 'radius' | 'depth' | 'segments' | 'arcs' | 'holes' | 'inside' | 'outline' | 'tag' | 'role' | 'x' | 'y'
+export type QueryOp = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'contains' | 'matches' | 'between' | 'in' | '!contains' | '!matches'
 export interface QueryTest {
   field: QueryField
   op: QueryOp
   value: string | number | boolean
+  /** Upper end for 'between' (inclusive). */
+  value2?: number
+}
+
+/** A test on any target's facts (faces and models have fields of their own). */
+export interface GeoTest {
+  field: string
+  op: QueryOp
+  value: string | number | boolean
+  value2?: number
+}
+
+/**
+ * A geometry query (CAD-17): tests on shapes, on the faces of solid models, or on whole models;
+ * all of them must pass ('all') or any one ('any'). With a result layer, what it finds goes there
+ * (shapes are moved; faces are sent to the layer as shapes; models are put on it).
+ */
+export interface GeoQuery {
+  id: string
+  name: string
+  target: 'shapes' | 'faces' | 'models'
+  match: 'all' | 'any'
+  tests: GeoTest[]
+  resultLayer?: string
 }
 
 export interface LayerRule {
@@ -727,6 +758,11 @@ export interface LayerRuleSet {
   outlineLayer?: string
   /** Rotate the drawing so its longest edge runs along X. */
   alignLongestEdge: boolean
+  /**
+   * Auto-queries (CAD-17), run before the rules: the shapes each finds are moved to its result
+   * layer, so the rules then machine them by that layer name.
+   */
+  queries?: GeoQuery[]
 }
 
 // ---------------------------------------------------------------------------------------------

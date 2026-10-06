@@ -32,6 +32,9 @@ import { LayersPanel, PropertiesPanel } from './part/SidePanels'
 import { DimsPanel } from './part/DimsPanel'
 import { TurnSketchDialog } from './part/TurnSketchDialog'
 import { PrintDialog } from './part/PrintDialog'
+import { QueryDialog } from './part/QueryDialog'
+import { FillHolesDialog } from './part/FillHolesDialog'
+import { PanelDialog } from './part/PanelDialog'
 import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
@@ -86,7 +89,7 @@ export function PartDesignerPage({ partId, jobId }: { partId: string; jobId?: st
 }
 
 function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string; onSave: (p: CamPart) => void }) {
-  const { data, go } = useStore()
+  const { data, go, savePart } = useStore()
   const units = data!.settings.units
   const machine = data!.machine
   const job = jobId ? data!.jobs.find((j) => j.id === jobId) : undefined
@@ -95,7 +98,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [sel, setSel] = useState<string[]>([])
   const [toolId, setToolId] = useState<ToolId>('select')
   const [clicks, setClicks] = useState<Click[]>([])
-  const [cadDialog, setCadDialog] = useState<{ k: 'sketch' | 'print'; edit?: string } | null>(null)
+  const [cadDialog, setCadDialog] = useState<{ k: 'sketch' | 'print' | 'query' | 'fill' | 'panels'; edit?: string } | null>(null)
   const [params, setParams] = useState<ToolParams>(DEFAULT_PARAMS)
   const [cursor, setCursor] = useState<SnapResult | null>(null)
   const [message, setMessage] = useState('')
@@ -381,6 +384,10 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
                 <DropdownMenuItem onSelect={() => setCadDialog({ k: 'sketch' })}>Turn-by-turn sketch…</DropdownMenuItem>
                 {sketchSel && <DropdownMenuItem onSelect={() => setCadDialog({ k: 'sketch', edit: sketchSel })}>Edit the selected shape's sketch…</DropdownMenuItem>}
                 <DropdownMenuItem onSelect={() => setCadDialog({ k: 'print' })}>Print to scale…</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setCadDialog({ k: 'query' })}>Geometry query…</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setCadDialog({ k: 'fill' })}>Fill with holes…</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setCadDialog({ k: 'panels' })}>Split into panels…</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -483,6 +490,37 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
         />
       )}
       {cadDialog?.k === 'print' && <PrintDialog part={part} units={units} onClose={() => setCadDialog(null)} />}
+      {cadDialog?.k === 'query' && <QueryDialog part={part} units={units} onClose={() => setCadDialog(null)} onChange={change} onSelect={(ids) => setSel(ids)} />}
+      {cadDialog?.k === 'fill' && (
+        <FillHolesDialog
+          part={part}
+          sel={ctx.sel}
+          units={units}
+          drilling={feat.camMachining}
+          onClose={() => setCadDialog(null)}
+          onChange={(p, msg) => {
+            change(p)
+            toast.success(msg)
+          }}
+        />
+      )}
+      {cadDialog?.k === 'panels' && (
+        <PanelDialog
+          part={part}
+          sel={ctx.sel}
+          units={units}
+          sheet={(() => {
+            const m = data!.library.materials.find((x) => x.id === part.materialId)
+            const trim = data!.settings.nesting.edgeTrim
+            return { length: (m?.sheetLength ?? 3658) - 2 * trim, width: (m?.sheetWidth ?? 1524) - 2 * trim }
+          })()}
+          onClose={() => setCadDialog(null)}
+          onMake={(parts) => {
+            for (const p of parts) savePart(p, jobId)
+            toast.success(`${parts.length} panel part(s) made`, { description: parts.map((p) => p.name).join(', ') })
+          }}
+        />
+      )}
       <SimulateDialog open={simOpen} onOpenChange={setSimOpen} part={part} toolpaths={toolpaths} machine={machine} units={units} color={data!.library.materials.find((m) => m.id === part.materialId)?.color} />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">

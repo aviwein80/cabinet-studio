@@ -150,10 +150,67 @@ export interface CamPart {
   review?: { status: 'draft' | 'approved'; file: string; drafter: string; reviewedBy?: string; reviewedAt?: string }
   /** 3D models (meshes) placed on the part. */
   models?: ModelRef[]
+  /** Dimensions on face 1 (CAD-08): notes only, never machined or exported to a machine. */
+  dims?: Dimension[]
+  /** Origin of ordinate dimensions (absent = the part's corner 0,0). */
+  dimOrigin?: P
+  /** Turn-by-turn sketches (CAD-02) kept so their shapes can be opened and solved again, by entity id. */
+  sketches?: Record<string, TurnSketch>
   /** Work volume was fitted to a model with this oversize (mm); kept so it can be refitted. */
   workVolume?: { modelId: string; oversize: { xy: number; top: number; bottom: number } }
   /** Keep ops on unchanged geometry ids when imports refresh. */
   updatedAt: string
+}
+
+/** What a dimension end refers to: a node of a shape, the centre of a circle or arc (segment `index`), or a fixed point. */
+export type DimRef = { entity: string; at: 'node' | 'centre'; index: number } | { p: P }
+
+/**
+ * A dimension (CAD-08). Linear: two ends, the dimension line `offset` mm from the first end
+ * (sideways to the measured direction). Angular: vertex and two arm points, arc radius `offset`,
+ * `side` 'other' for the angle the other way round. Radius / diameter: one circle or arc, leader
+ * at angle `offset` (radians). Ordinate: one point, leader `offset` mm long, along X (`axis` 'x',
+ * the default) or Y, measured from `CamPart.dimOrigin`.
+ */
+export interface Dimension {
+  id: string
+  kind: 'aligned' | 'horizontal' | 'vertical' | 'angular' | 'radius' | 'diameter' | 'ordinate'
+  refs: DimRef[]
+  offset: number
+  side?: 'other'
+  axis?: 'x' | 'y'
+  /** Also show the other unit (mm beside inches, or inches beside mm). */
+  alt?: boolean
+  /** Text instead of the measured value. */
+  text?: string
+}
+
+/**
+ * A turn-by-turn sketch (CAD-02): a closed outline described element by element from a start
+ * point. Values left null are unknowns the solver works out.
+ */
+export interface TurnSketch {
+  start: P
+  elements: TurnElement[]
+  /** Close back to the start (the outline is closed). */
+  closed: boolean
+}
+
+export interface TurnElement {
+  kind: 'line' | 'arc'
+  /** Line: length; arc: sweep in degrees (positive). null = unknown. */
+  length: number | null
+  /**
+   * Direction at the element's start, degrees from +X (absolute), or the turn from the end of the
+   * element before ('turn'); null = unknown. A turn of 0 is tangent.
+   */
+  angle: number | null
+  angleMode: 'absolute' | 'turn'
+  /** Arcs: radius (null = unknown) and which way they turn. */
+  radius?: number | null
+  ccw?: boolean
+  /** Corner at the end of this element: a blend (round) or a chamfer of this size, mm. */
+  corner?: { kind: 'blend' | 'chamfer'; size: number }
 }
 
 // ---------------------------------------------------------------------------------------------

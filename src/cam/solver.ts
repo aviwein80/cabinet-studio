@@ -33,6 +33,15 @@ export type Constraint =
   | { k: 'tangentCircles'; c1: string; r1: number | string; c2: string; r2: number | string; inside?: boolean }
   /** Scalar relation: value(a) = factor * value(b) + offset. */
   | { k: 'ratio'; a: string; b: string; factor: number; offset?: number }
+  /** b = a + len (cos ang, sin ang), `ang` in degrees: a straight element of a chain (CAD-02). */
+  | { k: 'polar'; a: string; b: string; len: number | string; ang: number | string }
+  /**
+   * b is the end of an arc that starts at a heading `ang` (degrees), with radius `r` and sweep
+   * `sweep` (degrees, 0-360), turning left (`ccw`) or right: an arc element of a chain (CAD-02).
+   */
+  | { k: 'chord'; a: string; b: string; ang: number | string; r: number | string; sweep: number | string; ccw: boolean }
+  /** Linear relation between scalars: sum of coefficient x value = `value` (headings along a chain). */
+  | { k: 'lin'; terms: { v: number | string; c: number }[]; value: number }
 
 export interface Sketch {
   points: SPoint[]
@@ -148,6 +157,23 @@ export function solve(sk: Sketch, opts: { tol?: number; maxIter?: number } = {})
         }
         case 'ratio':
           return [S(x, c.a) - (c.factor * S(x, c.b) + (c.offset ?? 0))]
+        case 'polar': {
+          const a = P(x, c.a)
+          const b = P(x, c.b)
+          const L = S(x, c.len)
+          const t = rad(S(x, c.ang))
+          return [b.x - a.x - L * Math.cos(t), b.y - a.y - L * Math.sin(t)]
+        }
+        case 'chord': {
+          const a = P(x, c.a)
+          const b = P(x, c.b)
+          const sw = rad(S(x, c.sweep))
+          const t = rad(S(x, c.ang)) + (c.ccw ? sw / 2 : -sw / 2)
+          const L = 2 * S(x, c.r) * Math.sin(sw / 2)
+          return [b.x - a.x - L * Math.cos(t), b.y - a.y - L * Math.sin(t)]
+        }
+        case 'lin':
+          return [c.terms.reduce((n, t) => n + t.c * S(x, t.v), 0) - c.value]
       }
     })
   const flat = (x: number[]) => residuals(x).flat()
@@ -212,6 +238,7 @@ function refs(c: Constraint): string[] {
     case 'tangentCircles':
       return [c.c1, c.c2]
     case 'ratio':
+    case 'lin':
       return []
     case 'equal':
     case 'parallel':

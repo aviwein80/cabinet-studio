@@ -69,13 +69,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.6d Edge work with a rotating aggregate, screenshots, docs | **Done** (October 2026) | See below. M2.6 complete. |
 | M2.6e Unconfirmed values: Configure badges, confirmation tracking | **Done** (October 2026) | Owner request before M2.7. See below. |
 | M2.7a Holders and aggregates, tool data compare, spreadsheet, tool grid | **Done** (October 2026) | See below. |
-| M2.7b - M2.7d | Not started | Turn-by-turn sketch and dimensions; queries, fill with holes, panelling; image trace, screenshots, docs. |
+| M2.7b Turn-by-turn sketch, dimensions, print to scale | **Done** (October 2026) | See below. |
+| M2.7c - M2.7d | Not started | Queries, fill with holes, panelling; image trace, screenshots, docs. |
 | M2.8 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -1049,6 +1050,40 @@ holder); nothing else changed.
 `06-simulate-2d-tool-holder.png` (T102 drawn with its holder in a 49 mm pocket; shank and holder
 collisions in the log).
 
+## M2.7b turn-by-turn sketch and dimensions: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| CAD-02 | Turn-by-turn sketch: from a start point, lines (length, direction) and arcs (radius, sweep, turning left or right), each direction from +X or as the turn from the element before (0 = tangent); any value can be "?" and is worked out by the constraint solver so the outline closes (a closed outline works out two). Blends and chamfers on the corners after solving. More than one answer (two unknown directions): every answer found, in a fixed order, "Next answer" to switch. Too many unknowns, conflicting values or impossible sizes are refused in plain words. The sketch is kept with the shape (`CamPart.sketches`), so it can be opened, changed and solved again; the shape keeps its id and its operations | `src/cam/turnSketch.ts`, new solver constraints `polar`, `chord`, `lin` in `src/cam/solver.ts`, `TurnSketchDialog.tsx` |
+| CAD-08 | Dimensions: linear (horizontal, vertical or aligned, chosen by where the line is put), angle, radius, diameter, ordinate (from a set origin). Ends snap to nodes and to centres of circles and arcs and refer to them, so every dimension measures again when the shapes change (moved, edited node by node, transformed); a dimension whose shape is gone is listed, not drawn. Shown in the shop unit, inches as fractions to 1/16 in, the other unit beside it on request. "Measure angle" at a vertex (distance and angle were already measured). Dimensions are notes: never machined or exported | `src/cam/dims.ts`, the Dimension tools in `src/pages/part/tools.ts`, `DimsLayer` in `Canvas.tsx`, `DimsPanel.tsx` |
+| CAD-08 print | Print to scale: face 1 and its dimensions as a PDF at 1:1 to 1:50 on Letter, Tabloid, A4 or A3; big drawings over several sheets with crop marks and a 10 mm overlap strip; each sheet has a check bar (100 mm, or 4 in when in inches) and says "print at actual size". Deterministic output | `src/cam/print.ts`, `PrintDialog.tsx` |
+
+Part file: dimensions, the ordinate origin and kept sketches are optional fields (notes only, nothing
+an older app needs to machine); `CAM_FILE_VERSION` stays 4.
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| A turn-by-turn sketch solves a door outline with two unknowns | `tests/cam-sketch-dims.test.ts` | Raked-top door 450 wide, 600 right, 700 left: top worked out as 460.977 mm at 167.471° (exact to 1e-9). Arched door with the arch tangent to both sides: right side 600 mm and radius 225 mm worked out (area exact to 1e-6). Pointed door of two R400 arcs: right side 500 and the 210° start of the second arc worked out, a blend and a chamfer added. Two unknown directions: both answers found, the same every run |
+| Dimensions update live and show inch fractions | same, browser screenshot 07 | 450.85 mm shows `17-3/4"`, with the other unit `17-3/4" [450.85 mm]`; moving the corner to 609.6 mm: `24"`; moving the shape 30/40 mm: same value, the dimension moved with it; Ø35 hole `Ø1-3/8"` |
+| Print to scale | same | 1:10: the 1200 x 600 outline is 120 x 60 mm on paper; full size: 6+ sheets, nothing outside the drawing area, sheets one area less the overlap apart; in the PDF itself the 100 mm check bar is 283.46 pt and the 1200 mm edge at 1:5 is 240 mm |
+
+### Limits recorded
+
+- **Dimensions measure on face 1** (top view); there are no dimensions on edge faces.
+- **A shape edited by hand after a sketch** is replaced by the sketch's answer when the sketch is
+  opened and solved again.
+- **Print** draws face 1 shapes and dimensions only (no toolpaths, no hatch: hatch and line types
+  are NEW-21 in M3.2).
+
+### Screenshots
+
+`07-dimensions-inches.png` (an arched door with linear, radius, diameter, angle and ordinate
+dimensions in inches; one with mm beside it), `08-turn-by-turn-sketch.png` (the door with two
+unknowns worked out, shown in blue), `09-print-to-scale.png` (the print preview at 1:10 with the
+check bar).
+
 ## M2.7 decisions needed (see the report)
 
 1. **Real stick-outs and holders** for every router (2D ones now too), and which holder is the
@@ -1084,3 +1119,4 @@ collisions in the log).
 - **Run 7 (M2.6d)**: edge work with a rotating aggregate, screenshots, README, ROADMAP. M2.6 complete.
 - **Run 8 (M2.6e)**: Configure badges and confirmation tracking for every unconfirmed value. See `git log`.
 - **Run 9 (M2.7a)**: holders and aggregates, tool data compare, spreadsheet, tool grid. See `git log`.
+- **Run 9 (M2.7b)**: turn-by-turn sketch, dimensions, print to scale. See `git log`.

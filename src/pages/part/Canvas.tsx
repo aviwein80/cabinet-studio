@@ -7,6 +7,8 @@ import { snap, type SnapMode, type SnapResult } from '@/cam/snap'
 import type { Toolpath } from '@/cam/toolpath'
 import type { CamPart, Entity } from '@/cam/types'
 import { cn } from '@/lib/utils'
+import { useStore } from '@/app/store'
+import { dimText, measureDim } from '@/cam/dims'
 import { contourPath, entitiesInBox, hitEntity } from './hit'
 import type { Click, ToolDef } from './tools'
 
@@ -207,7 +209,7 @@ export function PartCanvas(props: CanvasProps) {
   const snapPoints = useMemo(() => part.entities.flatMap((e) => (e.g.t === 'point' ? [e.g.p] : [])), [part])
 
   const snapAt = (w: P): SnapResult => {
-    const drawing = tool.group === 'draw' || tool.id === 'measure' || ((tool.group === 'change' || tool.group === 'area') && !tool.pick?.includes(clicks.length))
+    const drawing = tool.group === 'draw' || tool.id === 'measure' || ((tool.group === 'change' || tool.group === 'area' || tool.group === 'dims') && !tool.pick?.includes(clicks.length))
     if (!drawing) return { p: w, kind: 'free', guides: [] }
     return snap(
       {
@@ -498,6 +500,7 @@ export function PartCanvas(props: CanvasProps) {
           const q = px(c.p)
           return <circle key={i} cx={q.x} cy={q.y} r={3} fill="#fbbf24" />
         })}
+        <DimsLayer part={shown} px={px} />
         {cursor &&
           cursor.guides.map((g, i) => {
             const a = px(g.from)
@@ -514,5 +517,50 @@ export function PartCanvas(props: CanvasProps) {
         )}
       </svg>
     </div>
+  )
+}
+
+/**
+ * Dimensions drawn on screen (CAD-08): measured from the shapes as they are now, so they follow
+ * every change; text kept readable and the same size at any zoom.
+ */
+function DimsLayer({ part, px }: { part: CamPart; px: (p: P) => P }) {
+  const units = useStore((s) => s.data?.settings.units ?? 'mm')
+  if (!part.dims?.length) return null
+  return (
+    <g pointerEvents="none" data-testid="dims">
+      {part.dims.map((d) => {
+        const g = measureDim(part, d)
+        if (!g) return null
+        const seg = (a: P, b: P, k: string) => {
+          const A = px(a)
+          const B = px(b)
+          return <line key={k} x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#facc15" strokeWidth={1} />
+        }
+        const t = px(g.text)
+        let ang = (-g.textDir * 180) / Math.PI
+        ang = ((ang % 360) + 360) % 360
+        if (ang > 90 && ang <= 270) ang -= 180
+        return (
+          <g key={d.id}>
+            {g.lines.map(([a, b], i) => seg(a, b, `l${i}`))}
+            {g.arcs.map((a, i) => {
+              const n = 32
+              const pts = Array.from({ length: n + 1 }, (_, k) => px({ x: a.c.x + a.r * Math.cos(a.a0 + ((a.a1 - a.a0) * k) / n), y: a.c.y + a.r * Math.sin(a.a0 + ((a.a1 - a.a0) * k) / n) }))
+              return <polyline key={`a${i}`} points={pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#facc15" strokeWidth={1} />
+            })}
+            {g.arrows.map((a, i) => {
+              const tip = px(a.at)
+              // world direction to screen (y is flipped)
+              const r = (-a.dir * 180) / Math.PI
+              return <path key={`r${i}`} d="M0 0L-8 -3L-8 3Z" transform={`translate(${tip.x} ${tip.y}) rotate(${r})`} fill="#facc15" />
+            })}
+            <text x={t.x} y={t.y} transform={`rotate(${ang} ${t.x} ${t.y})`} dy={-4} textAnchor="middle" fontSize={12} fill="#fde68a" stroke="#16181d" strokeWidth={3} paintOrder="stroke">
+              {dimText(d, g, units)}
+            </text>
+          </g>
+        )
+      })}
+    </g>
   )
 }

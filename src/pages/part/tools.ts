@@ -38,6 +38,11 @@ import {
   Dot,
   Spool,
   CornerUpRight,
+  Ruler as RulerIcon,
+  MoveDiagonal,
+  Radius,
+  TriangleRight,
+  ListOrdered,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -66,7 +71,9 @@ import { makeEntity } from '@/cam/doc'
 import { angleOf, arc3, circle, type Contour, dist, ellipse, near, type P, polyline, rect, regularPolygon, roundedRect, slot, type ReliefStyle } from '@/cam/geom'
 import { splineToContour } from '@/cam/doc'
 import { strokeText } from '@/cam/font'
-import type { CamPart, Entity } from '@/cam/types'
+import type { CamPart, Dimension, Entity } from '@/cam/types'
+import { circleRefAt, linearAxis, measureAngle, measureDim, refAt, refPoint } from '@/cam/dims'
+import { nanoid } from 'nanoid'
 
 export interface Click {
   p: P
@@ -90,6 +97,9 @@ export interface ToolParams {
   spacingX: number
   spacingY: number
   gap: number
+  /** Dimensions: radius or diameter; also show the other unit. */
+  dimRadial: 'radius' | 'diameter'
+  dimAlt: boolean
 }
 
 export const DEFAULT_PARAMS: ToolParams = {
@@ -109,6 +119,8 @@ export const DEFAULT_PARAMS: ToolParams = {
   spacingX: 100,
   spacingY: 100,
   gap: 0.1,
+  dimRadial: 'diameter',
+  dimAlt: false,
 }
 
 export interface ToolCtx {
@@ -128,7 +140,7 @@ export interface ToolResult {
 }
 
 /** 'pick': picking points for something other than drawing (hand-drawn toolpaths); not on the toolbar. */
-export type ToolGroup = 'select' | 'draw' | 'change' | 'area' | 'pick'
+export type ToolGroup = 'select' | 'draw' | 'change' | 'area' | 'dims' | 'pick'
 export type ToolId =
   | 'pathpick'
   | 'select'
@@ -165,6 +177,11 @@ export type ToolId =
   | 'subtract'
   | 'intersect'
   | 'measure'
+  | 'dimlinear'
+  | 'dimangle'
+  | 'dimradius'
+  | 'dimordinate'
+  | 'measureangle'
 
 export interface ToolDef {
   id: ToolId
@@ -503,7 +520,110 @@ export const TOOLS: ToolDef[] = [
   },
   { id: 'pathpick', label: 'Pick toolpath points', group: 'pick', icon: Route, prompts: ['Pick the next point of the toolpath'], apply: () => null },
   { id: 'measure', label: 'Measure', group: 'area', icon: Ruler, key: 'd', prompts: ['First point', 'Second point'], preview: (cs, cur) => (cs.length ? [polyline([cs[0].p, cur], false)] : []), apply: () => null },
+
+  // Dimensions (CAD-08): ends snap to nodes and centres and follow them when the shapes change
+  {
+    id: 'dimlinear',
+    label: 'Linear dimension',
+    group: 'dims',
+    icon: RulerIcon,
+    prompts: ['First point', 'Second point', 'Place the dimension line (above or below: horizontal, beside: vertical, at an angle: aligned)'],
+    params: ['dimAlt'],
+    preview: (cs, cur, ctx) => dimPreview(cs.length >= 2 ? linearDim(cs[0].p, cs[1].p, cur, ctx) : null, cs, cur, ctx),
+    apply: (cs, ctx) => addDim(ctx, linearDim(cs[0].p, cs[1].p, cs[2].p, ctx)),
+  },
+  {
+    id: 'dimangle',
+    label: 'Angle dimension',
+    group: 'dims',
+    icon: TriangleRight,
+    prompts: ['Corner (vertex)', 'A point on the first arm', 'A point on the second arm', 'Place the arc'],
+    params: ['dimAlt'],
+    preview: (cs, cur, ctx) => dimPreview(cs.length >= 3 ? angleDim(cs[0].p, cs[1].p, cs[2].p, cur, ctx) : null, cs, cur, ctx),
+    apply: (cs, ctx) => addDim(ctx, angleDim(cs[0].p, cs[1].p, cs[2].p, cs[3].p, ctx)),
+  },
+  {
+    id: 'dimradius',
+    label: 'Radius or diameter',
+    group: 'dims',
+    icon: Radius,
+    prompts: ['Pick a circle or arc', 'Place the text'],
+    pick: [0],
+    params: ['dimRadial', 'dimAlt'],
+    preview: (cs, cur, ctx) => dimPreview(cs.length >= 1 ? radialDim(cs[0], cur, ctx) : null, cs, cur, ctx),
+    apply: (cs, ctx) => {
+      const d = radialDim(cs[0], cs[1].p, ctx)
+      return d ? addDim(ctx, d) : { message: 'Pick a circle or a shape with an arc.' }
+    },
+  },
+  {
+    id: 'dimordinate',
+    label: 'Ordinate dimension',
+    group: 'dims',
+    icon: ListOrdered,
+    prompts: ['Point', 'Place the leader end (up or down: X, sideways: Y)'],
+    params: ['dimAlt'],
+    preview: (cs, cur, ctx) => dimPreview(cs.length >= 1 ? ordinateDim(cs[0].p, cur, ctx) : null, cs, cur, ctx),
+    apply: (cs, ctx) => addDim(ctx, ordinateDim(cs[0].p, cs[1].p, ctx)),
+  },
+  {
+    id: 'measureangle',
+    label: 'Measure angle',
+    group: 'dims',
+    icon: MoveDiagonal,
+    prompts: ['Corner (vertex)', 'A point on the first arm', 'A point on the second arm'],
+    preview: (cs, cur) => (cs.length ? [polyline([...(cs.length > 1 ? [cs[1].p] : []), cs[0].p, cur], false)] : []),
+    apply: (cs) => {
+      const m = measureAngle(cs[0].p, cs[1].p, cs[2].p)
+      return { message: `Angle ${m.inside.toFixed(2)}° (the other way ${m.outside.toFixed(2)}°)`, repeat: true }
+    },
+  },
 ]
+
+/** Snap tolerance for dimension ends: picked points land on nodes exactly when snapping is on. */
+const DIM_TOL = 0.05
+
+function linearDim(a: P, b: P, place: P, ctx: ToolCtx): Dimension {
+  const ra = refAt(ctx.part, a, DIM_TOL)
+  const rb = refAt(ctx.part, b, DIM_TOL)
+  const kind = linearAxis(a, b, place)
+  let u = kind === 'horizontal' ? { x: 1, y: 0 } : kind === 'vertical' ? { x: 0, y: 1 } : { x: b.x - a.x, y: b.y - a.y }
+  const l = Math.hypot(u.x, u.y) || 1
+  u = { x: u.x / l, y: u.y / l }
+  const offset = (place.x - a.x) * -u.y + (place.y - a.y) * u.x
+  return { id: nanoid(8), kind, refs: [ra, rb], offset, ...(ctx.params.dimAlt ? { alt: true } : {}) }
+}
+
+function angleDim(v: P, a: P, b: P, place: P, ctx: ToolCtx): Dimension {
+  const TAU = Math.PI * 2
+  const n = (x: number) => ((x % TAU) + TAU) % TAU
+  const a0 = angleOf(v, a)
+  const inside = n(angleOf(v, place) - a0) <= n(angleOf(v, b) - a0)
+  return { id: nanoid(8), kind: 'angular', refs: [refAt(ctx.part, v, DIM_TOL), refAt(ctx.part, a, DIM_TOL), refAt(ctx.part, b, DIM_TOL)], offset: Math.max(1, dist(v, place)), ...(inside ? {} : { side: 'other' as const }), ...(ctx.params.dimAlt ? { alt: true } : {}) }
+}
+
+function radialDim(pick: Click, place: P, ctx: ToolCtx): Dimension | null {
+  const r = pick.hit ? circleRefAt(ctx.part, pick.hit, pick.p) : null
+  if (!r) return null
+  const c = refPoint(ctx.part, r)
+  if (!c) return null
+  return { id: nanoid(8), kind: ctx.params.dimRadial, refs: [r], offset: angleOf(c, place), ...(ctx.params.dimAlt ? { alt: true } : {}) }
+}
+
+function ordinateDim(q: P, place: P, ctx: ToolCtx): Dimension {
+  const alongY = Math.abs(place.y - q.y) >= Math.abs(place.x - q.x)
+  return { id: nanoid(8), kind: 'ordinate', refs: [refAt(ctx.part, q, DIM_TOL)], axis: alongY ? 'x' : 'y', offset: alongY ? place.y - q.y : place.x - q.x, ...(ctx.params.dimAlt ? { alt: true } : {}) }
+}
+
+function addDim(ctx: ToolCtx, d: Dimension): ToolResult {
+  return { part: { ...ctx.part, dims: [...(ctx.part.dims ?? []), d] }, repeat: true }
+}
+
+function dimPreview(d: Dimension | null, cs: Click[], cur: P, ctx: ToolCtx): Contour[] {
+  if (!d) return cs.length ? [polyline([...cs.map((c) => c.p), cur], false)] : []
+  const g = measureDim(ctx.part, d)
+  return g ? [...g.lines.map(([a, b]) => polyline([a, b], false)), ...g.arcs.map((a) => polyline(Array.from({ length: 25 }, (_, i) => ({ x: a.c.x + a.r * Math.cos(a.a0 + ((a.a1 - a.a0) * i) / 24), y: a.c.y + a.r * Math.sin(a.a0 + ((a.a1 - a.a0) * i) / 24) })), false))] : []
+}
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>
 
@@ -514,7 +634,7 @@ function rounded(a: P, b: P, r: number) {
   return rr > 1e-6 ? roundedRect(Math.min(a.x, b.x), Math.min(a.y, b.y), w, h, rr) : box(a, b)
 }
 
-export const GROUP_LABEL: Record<ToolGroup, string> = { select: 'Pick', draw: 'Draw', change: 'Change', area: 'Area', pick: 'Toolpath' }
+export const GROUP_LABEL: Record<ToolGroup, string> = { select: 'Pick', draw: 'Draw', change: 'Change', area: 'Area', dims: 'Dimension', pick: 'Toolpath' }
 
 /** Run a tool step. Returns the result when the tool has all its clicks, else null. */
 export function stepTool(tool: ToolDef, clicks: Click[], ctx: ToolCtx, finish = false): ToolResult | null {

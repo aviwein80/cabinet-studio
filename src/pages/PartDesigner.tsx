@@ -1,4 +1,4 @@
-import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box, Rotate3d } from 'lucide-react'
+import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box, Rotate3d, PenLine } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
@@ -14,7 +14,7 @@ import { exportDxf } from '@/cam/dxf'
 import type { CamPart } from '@/cam/types'
 import { EmptyState } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -29,6 +29,9 @@ import { SimulateDialog } from './part/SimulateDialog'
 import { PatternDialog } from './part/PatternDialog'
 import { usablePatterns } from '@/core/hardware/patterns'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
+import { DimsPanel } from './part/DimsPanel'
+import { TurnSketchDialog } from './part/TurnSketchDialog'
+import { PrintDialog } from './part/PrintDialog'
 import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
@@ -55,6 +58,8 @@ const PARAM_LABEL: Record<keyof ToolParams, string> = {
   spacingX: 'Spacing X',
   spacingY: 'Spacing Y',
   gap: 'Gap',
+  dimRadial: 'Show',
+  dimAlt: 'Also the other unit',
 }
 const fileBase = (s: string) => s.replace(/[^\w-]+/g, '-') || 'part'
 const LENGTH_PARAMS = new Set<keyof ToolParams>(['radius', 'distance', 'width', 'height', 'spacingX', 'spacingY', 'gap'])
@@ -90,6 +95,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [sel, setSel] = useState<string[]>([])
   const [toolId, setToolId] = useState<ToolId>('select')
   const [clicks, setClicks] = useState<Click[]>([])
+  const [cadDialog, setCadDialog] = useState<{ k: 'sketch' | 'print'; edit?: string } | null>(null)
   const [params, setParams] = useState<ToolParams>(DEFAULT_PARAMS)
   const [cursor, setCursor] = useState<SnapResult | null>(null)
   const [message, setMessage] = useState('')
@@ -320,10 +326,11 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  const sketchSel = ctx.sel.length === 1 && part.sketches?.[ctx.sel[0]] ? ctx.sel[0] : null
   const preview = cursor && tool.preview && (clicks.length || tool.id === 'text') ? tool.preview(clicks, cursor.p, ctx) : []
   const stepPrompt = tool.prompts.length ? tool.prompts[Math.min(clicks.length, tool.prompts.length - 1)] : ''
   const feat = featuresOf(data!.settings)
-  const groups: ToolGroup[] = ['select', 'draw', 'change', 'area']
+  const groups: ToolGroup[] = feat.camCadTools ? ['select', 'draw', 'change', 'area', 'dims'] : ['select', 'draw', 'change', 'area']
   const back = () => go(jobId ? { page: 'job', jobId, tab: 'parts' } : { page: 'parts' })
 
   return (
@@ -363,6 +370,20 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TooltipTrigger>
             <TooltipContent>Zoom to fit (Z)</TooltipContent>
           </Tooltip>
+          {feat.camCadTools && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent">
+                  <PenLine className="size-3.5" /> CAD
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={() => setCadDialog({ k: 'sketch' })}>Turn-by-turn sketch…</DropdownMenuItem>
+                {sketchSel && <DropdownMenuItem onSelect={() => setCadDialog({ k: 'sketch', edit: sketchSel })}>Edit the selected shape's sketch…</DropdownMenuItem>}
+                <DropdownMenuItem onSelect={() => setCadDialog({ k: 'print' })}>Print to scale…</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {feat.cam3d && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setModelOpen(true)}>
               <Box className="size-3.5" /> 3D model
@@ -448,6 +469,20 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
           }}
         />
       )}
+      {cadDialog?.k === 'sketch' && (
+        <TurnSketchDialog
+          part={part}
+          layer={layer}
+          units={units}
+          editing={cadDialog.edit && part.sketches?.[cadDialog.edit] ? { entityId: cadDialog.edit, sketch: part.sketches[cadDialog.edit] } : undefined}
+          onClose={() => setCadDialog(null)}
+          onInsert={(p, msg) => {
+            change(p)
+            toast.success(msg)
+          }}
+        />
+      )}
+      {cadDialog?.k === 'print' && <PrintDialog part={part} units={units} onClose={() => setCadDialog(null)} />}
       <SimulateDialog open={simOpen} onOpenChange={setSimOpen} part={part} toolpaths={toolpaths} machine={machine} units={units} color={data!.library.materials.find((m) => m.id === part.materialId)?.color} />
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -631,6 +666,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             )}
             <TabsContent value="layers" className="min-h-0 flex-1 overflow-auto">
               <LayersPanel part={part} current={layer} setCurrent={setLayer} sel={ctx.sel} onChange={change} />
+              {feat.camCadTools && <DimsPanel part={part} units={units} onChange={change} />}
             </TabsContent>
             <TabsContent value="props" className="min-h-0 flex-1 overflow-auto">
               <PropertiesPanel part={part} sel={ctx.sel} units={units} materials={data!.library.materials} nodeSeg={nodeSeg} onChange={change} onFit={() => setFitKey((k) => k + 1)} />
@@ -661,6 +697,16 @@ function ParamInput({ k, params, setParams, units }: { k: keyof ToolParams; para
           <option value="tbone-in">T-bone along first edge</option>
           <option value="tbone-out">T-bone along second edge</option>
           <option value="dogbone">Dog-bone (on the diagonal)</option>
+        </select>
+      </label>
+    )
+  if (k === 'dimRadial')
+    return (
+      <label className="flex items-center gap-1.5 text-stone-400">
+        {PARAM_LABEL[k]}
+        <select className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-stone-100" value={params.dimRadial} onChange={(e) => setParams({ ...params, dimRadial: e.target.value as ToolParams['dimRadial'] })}>
+          <option value="diameter">Diameter</option>
+          <option value="radius">Radius</option>
         </select>
       </label>
     )

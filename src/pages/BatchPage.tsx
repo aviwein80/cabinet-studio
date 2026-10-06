@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { activeBatchSetup, updateActiveSetup, type BatchResult, type BatchStatus as OrderStatus } from '@/core/batch'
 import { featuresOf } from '@/core/features'
+import { batchSteps } from '@/core/batchSteps'
 import { machineSetups } from '@/core/machines'
 import { cn } from '@/lib/utils'
 
@@ -27,13 +28,20 @@ const COLUMNS: [string, string][] = [
   ['material', 'Material code from the library, e.g. MDF18.'],
   ['length, width, thickness', 'Shop units; inch fractions work (15 1/2). Doors: length = height.'],
   ['qty, grain, priority, kit, nest', 'grain yes keeps it along the sheet; higher priority nests first; nest N skips the row.'],
+  ['assembly', 'Panels with the same assembly name (a cabinet, a unit) are kept together on a sheet and their labels show it.'],
+  [
+    'type fitting: hardware, panel, face, edge, at, mirror',
+    'A hardware item (library code) on a panel (its item number, same assembly). Face: top, bottom (underside), front (Y = 0 edge), back, left (X = 0 edge) or right, as the panel lies face up. Top and bottom fittings are placed from an edge (default front). at = distance along that edge from its left end seen from outside the panel (as the Parts designer shows). Only approved drilling patterns are drilled; others go in the BOM only. qty = how many at that place.',
+  ],
 ]
 
 const EXAMPLE = [
-  'order,customer,item,name,type,file,style,material,length,width,qty,grain,priority,kit,hinge,pull',
-  'K2041,Weinreb,1,Pantry shelf,part,,,MDF18,762,304.8,4,no,,,,',
-  'K2041,Weinreb,2,Sign blank,drawing,sign.dxf,,MDF18,,,1,,5,,,',
-  'K2041,Weinreb,3,Pantry door,door,,Shaker,MDF18,1219.2,457.2,2,yes,,Pantry,left,128',
+  'order,customer,assembly,item,name,type,file,style,material,length,width,qty,grain,priority,kit,hinge,pull,hardware,panel,face,edge,at',
+  'K2041,Weinreb,,1,Pantry shelf,part,,,MDF18,762,304.8,4,no,,,,,,,,,',
+  'K2041,Weinreb,,2,Sign blank,drawing,sign.dxf,,MDF18,,,1,,5,,,,,,,,',
+  'K2041,Weinreb,,3,Pantry door,door,,Shaker,MDF18,1219.2,457.2,2,yes,,Pantry,left,128,,,,,',
+  'K2041,Weinreb,Base B1,4,Left side,part,,,PB18-WHT,720,560,1,,,,,,,,,,',
+  'K2041,Weinreb,Base B1,,Hinge plate,fitting,,,,,,1,,,,,,SALICE-B2VGV-H3,4,top,front,100',
 ].join('\r\n')
 
 const STATUS: Record<OrderStatus, { label: string; cls: string }> = {
@@ -120,6 +128,21 @@ function SetupCard() {
             </span>
           </label>
         ))}
+        <div className="mt-2 border-t pt-2 font-medium">Extra steps on each order</div>
+        {batchSteps().map((st) => (
+          <label key={st.id} className="flex items-start gap-2">
+            <Checkbox
+              checked={(setup.steps ?? []).includes(st.id)}
+              onCheckedChange={(v) => updateSettings((s) => updateActiveSetup(s, { steps: v === true ? batchSteps().map((x) => x.id).filter((x) => x === st.id || (setup.steps ?? []).includes(x)) : (setup.steps ?? []).filter((x) => x !== st.id) }))}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-medium">{st.name}</span>
+              <span className="text-muted-foreground"> · {st.description}</span>
+            </span>
+          </label>
+        ))}
+        <p className="text-[11px] text-muted-foreground">Steps run after nesting and before the files are written. They can report, hold an order back and add report files; they never change the programs.</p>
         {machines.length === 1 && (
           <p className="text-muted-foreground">
             Only the main machine is set up.{' '}

@@ -79,14 +79,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.8e Manual nesting (NST-09), screenshots, docs | **Done** (October 2026) | See below. M2.8 complete. | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
 | M2.9a Other machines and process steps (AM-08) | **Done** (October 2026) | See below. Output switch for other machines off. |
 | M2.9b SQLite storage option (AM-06) | **Done** (October 2026) | See below. JSON stays the default. |
-| M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | Not started | |
+| M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | **Done** (October 2026) | See below. |
 | M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | Not started | |
 | M2.10 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1419,6 +1419,35 @@ programs for other machines" (`batchMachinesOutput`), **off**.
 - **Only one program should write the database at a time.** Another program may read it any time; if it changes rows while the app is open, the app's next save overwrites them (the app reads the database when it starts).
 - **Backups stay JSON** (every 10 minutes of saving, as before): they hold the same data.
 
+## M2.9c assemblies, fittings by face and batch steps: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| AM-09 | **Assemblies** in part lists: an `assembly` column; panels of one assembly are kept together on a sheet when they fit (as a kit, unless a kit is given) and their labels show the assembly instead of "Custom" | `parseBatchCsv`, `CamPart.assembly`, `expandJob` |
+| AM-09 | **Fittings by face**: a row of type `fitting` puts a library hardware item (`hardware`, by code) on a panel (`panel` = its item number, same assembly) on a face: `top`, `bottom` (underside), `front` (the Y = 0 edge), `back`, `left` (the X = 0 edge) or `right`, as the panel lies face up on the machine. Top and bottom fittings are placed from an `edge` (default front); `at` is the distance along that edge, in the same running direction as the Parts designer's "Place hardware holes"; `mirror` gives the other hand. The holes come **only** from the hardware's verified or approved drilling pattern, placed by the same function the designer uses (bottom: the pattern's top-face holes go to the underside, same places), with the same drilling operation. A fitting with no approved pattern goes in the BOM only (said in the report). Nothing is assumed: a drilled fitting without `at`, an unknown face, edge, panel or hardware is a row problem | `src/core/fittings.ts`, `patternDrillOp` (shared with `PatternDialog`) |
+| AM-09 | BOM counts every fitting (its quantity x the panel's); the report lists each assembly with its panels and fittings | `fittingBom`, `orderReport` |
+| AM-10 | **Batch steps** at two points of the one engine, for every machine of the setup: **after nesting** (they can report or hold the order back) and **before output** (they can add report files). They get a frozen copy of the job, nest and programs, so they cannot change what is cut; a step that tries, fails, or adds a program file (`.mpr`, `.nc`, ...), a file with a folder or one that already exists, holds the order back with the reason | `src/core/batchSteps.ts`, `runBatchCsv` |
+| AM-10 | Built-in step **Waste areas**: each sheet's sheet, parts, remnant and scrap areas, scrap percent and the remnant pieces (sizes) in `<order>_waste-areas.csv`; a warning when a sheet is over half scrap. It does not cut the waste (that would be new machine output) | `WASTE_AREAS_STEP` |
+| AM-10 | **Plugin-provided steps**: `registerBatchStep` adds a step to the list the Batch page shows; M2.10's plugin API will call it from its sandbox | `registerBatchStep`, `batchSteps` |
+| Screens | Batch page: steps per setup (check boxes), the new columns explained, the example list has an assembly and a fitting | `BatchPage.tsx` |
+
+### Acceptance (spec: batch input carries assemblies and fittings placed by panel face; hooks after nesting and before output; waste areas; plugin steps)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Holes where hand numbers put them | `tests/batch-assemblies.test.ts` | Cruciform plate (±16, 37 in, Ø5 x 11) on a 720 x 560 side, top face from the front edge at 100: holes at (84, 37) and (116, 37), face 1. On the bottom face: same places, face 6. On a 720 x 300 side's left edge at 100: (37, 184) and (37, 216). Hinge cups (20.5 in, Ø35 x 13.5) on a door's front edge at 100 and 616: (100, 20.5) and (616, 20.5). The designer's placement of the same pattern gives the identical holes |
+| Rows checked, nothing assumed | same | Unknown hardware, bad face, bad edge, drilled fitting without `at`, missing panel, panel number in two assemblies: each a row problem with a plain message |
+| Batch run | same | Order written; every program reads back clean; BOM: plate 4 (2 sides x 1 + 1 side x 2 copies), cups 2, dowels 4; report lists assemblies and fittings ("BOM only" for the dowels); labels show "Base B1" / "Wall W1"; with custom-part output off the order is held back as before |
+| Waste areas add up | `tests/batch-steps.test.ts` | Per sheet the CSV equals the area module on the same nest (to 0.001 m²); parts 2.6928 m² by hand; every other file byte-identical to a run without the step |
+| Hooks | same | After nesting: a step holds the order back with its reason (report only). Before output: a step adds a report file and a warning. A step that changes the programs fails (frozen copy) and holds the order; adding `extra.mpr`, an existing name or `../escape.txt` is refused. Steps run for each machine (waste areas in the order folder and in `Second/`). Unknown step: warning. Registration adds and removes a step |
+
+### Limits recorded
+
+- **Face words follow the part model's own face numbers** (`src/cam/types.ts`: 1 top, 2 front edge at Y = 0, 3 right edge, 4 back edge, 5 left edge, 6 underside), and `at` runs along an edge from its left end seen from outside the panel, as edge faces and the designer already do. A part list from another program may still name faces differently (decision 3 below).
+- **Edge fittings** (front/back/left/right with edge bores) are drilled only if the machine has a horizontal drill unit; the N-200 profile has none, so the export checker treats them as today (edge holes listed for manual drilling).
+- **Waste areas are reported, not cut.** Cutting waste into small pieces would be new machine output with its own switch; not built (decision 4 below).
+- **Plugin steps** need the plugin API and sandbox of M2.10; today only built-in steps (and steps registered in code) exist.
+
 ## M2.9 decisions needed (see the report)
 
 1. **Other machines**: does the shop have, or plan, a second machine or a separate drilling step?
@@ -1426,6 +1455,12 @@ programs for other machines" (`batchMachinesOutput`), **off**.
    placeholder with a Configure badge.
 2. **Process steps that share the work** (for example drilling on one machine, cut-out on the
    other): wanted? Today each step gets the whole program set.
+3. **Face words in part lists**: they follow the app's own face numbers (top = face 1, face up;
+   bottom = face 6, underside; front = face 2, the Y = 0 edge; right = 3; back = 4; left = 5).
+   If the shop's part lists will come from another program, send one sample so we can check it
+   uses the same words. Custom-part output stays off until then.
+4. **Waste areas**: report only (as built), or also cut large scrap into pieces for the vacuum and
+   dust extraction? Cutting would be a new output with its own switch, off.
 
 ## Run log
 

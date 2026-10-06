@@ -165,7 +165,7 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
         no,
         partId: `${job.number}-${String(no).padStart(3, '0')}`,
         cabinetId: '',
-        cabinetNumber: 'Custom',
+        cabinetNumber: cp.assembly ?? 'Custom',
         cabinetName: cp.name,
         part,
         materialId: part.materialId,

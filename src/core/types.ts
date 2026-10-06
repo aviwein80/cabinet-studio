@@ -629,6 +629,8 @@ export interface BatchSetup {
   machines: string[]
   /** Outputs per order (absent = programs, labels, sheet maps, cut list, BOM). */
   kinds?: import('./output').ExportKind[]
+  /** Batch steps run on each order, in this order (ids from `batchSteps()`, M2.9). */
+  steps?: string[]
 }
 
 export interface FeatureFlags {

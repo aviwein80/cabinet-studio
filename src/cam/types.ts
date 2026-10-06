@@ -141,6 +141,8 @@ export interface CamPart {
   priority?: number
   /** Parts sharing a kit name are kept on one sheet when they fit. */
   kit?: string
+  /** Assembly the part belongs to (batch part lists, M2.9); printed on its label instead of "Custom". */
+  assembly?: string
   notes?: string
   source?: string
   /**

@@ -4,19 +4,22 @@
  * screen. The same export checker applies: an order with errors gets its report only.
  *
  * CSV columns (any order, case-insensitive, our names or common aliases):
- *   order, customer, job name, item, name, type (part/drawing/door), file, rules, style,
- *   material, length, width, thickness, qty, grain, priority, kit, hinge, pull, pull at, nest
+ *   order, customer, job name, item, name, type (part/drawing/door/fitting), file, rules, style,
+ *   material, length, width, thickness, qty, grain, priority, kit, hinge, pull, pull at, nest,
+ *   assembly, and for fittings (M2.9): hardware, panel, face, edge, at, mirror
  * Lengths use the shop units and accept inch fractions (15 1/2).
  */
 import Papa from 'papaparse'
 import { newPart } from '@/cam/doc'
 import { buildDoor, doorStylesOf, type DoorSpec, type HingeSide, type PullKind } from '@/cam/doors'
 import { dxfToPart } from '@/cam/dxf'
+import { findHardware, fittingPattern, parseEdge, parseFace, placeFitting, type Fitting } from './fittings'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import type { CamPart } from '@/cam/types'
 import { Cancelled, checkCancel, type CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import { dataFor, machineFolder, machineSetup, MAIN_MACHINE } from './machines'
+import { runSteps, type BatchStepMessage } from './batchSteps'
 import { buildFiles, type ExportKind, type OutFile } from './output'
 import { runJob } from './pipeline'
 import type { AppData, BatchSetup, Job, ShopSettings, UnitSystem } from './types'
@@ -46,6 +49,10 @@ export interface BatchItem {
   hinge: HingeSide
   pull: PullKind
   pullAt: DoorSpec['pullAt']
+  /** Assembly the panel belongs to (M2.9). */
+  assembly?: string
+  /** Fittings placed on this panel by face (M2.9). */
+  fittings: Fitting[]
 }
 
 export interface BatchOrder {
@@ -74,6 +81,13 @@ const HEAD: Record<string, keyof RawRow> = {
   priority: 'priority', kit: 'kit',
   hinge: 'hinge', hand: 'hinge', pull: 'pull', handle: 'pull', 'pull at': 'pullAt',
   nest: 'nest',
+  assembly: 'assembly', assy: 'assembly', cabinet: 'assembly',
+  hardware: 'hardware', fitting: 'hardware', 'hardware code': 'hardware',
+  panel: 'panel', on: 'panel', 'panel item': 'panel',
+  face: 'face', 'panel face': 'face',
+  edge: 'edge', 'reference edge': 'edge',
+  at: 'at', position: 'at',
+  mirror: 'mirror', 'other hand': 'mirror',
 }
 
 interface RawRow {
@@ -99,6 +113,13 @@ interface RawRow {
   pull: string
   pullAt: string
   nest: string
+  assembly: string
+  hardware: string
+  panel: string
+  face: string
+  edge: string
+  at: string
+  mirror: string
 }
 
 const yes = (s: string) => /^(y|yes|true|1|on|x)$/i.test(s.trim())
@@ -118,6 +139,7 @@ export function parseBatchCsv(text: string, data: AppData, opts: { defaultOrder:
   const lib = data.library
   const styles = doorStylesOf(lib)
   const orders = new Map<string, BatchOrder>()
+  const pendingFittings: { order: string; assembly: string; f: Fitting }[] = []
   for (let i = 1; i < rows.length; i++) {
     const rowNo = i + 1
     const raw = Object.fromEntries(Object.keys(HEAD).map((k) => [HEAD[k], ''])) as unknown as RawRow
@@ -127,6 +149,21 @@ export function parseBatchCsv(text: string, data: AppData, opts: { defaultOrder:
     })
     if (raw.nest && no(raw.nest)) continue
     const type = raw.type.toLowerCase()
+    const number = raw.order || opts.defaultOrder
+    const orderOf = () => {
+      let o = orders.get(number)
+      if (!o) {
+        o = { number, name: raw.jobName || `Batch ${number}`, customer: raw.customer, items: [] }
+        orders.set(number, o)
+      }
+      return o
+    }
+    // M2.9: a fitting row puts a hardware item on a panel of the same order, by face
+    if (type.startsWith('fit') || type === 'hardware' || (!type && raw.hardware && raw.face)) {
+      const f = parseFittingRow(raw, rowNo, data, units, errors)
+      if (f) pendingFittings.push({ order: number, assembly: raw.assembly, f })
+      continue
+    }
     const kind: BatchItem['kind'] = type.startsWith('door') || (!type && raw.style) ? 'door' : type.startsWith('draw') || type === 'dxf' || (!type && raw.file) ? 'drawing' : 'part'
     const len = (s: string, what: string, required: boolean) => {
       if (!s) {
@@ -163,12 +200,7 @@ export function parseBatchCsv(text: string, data: AppData, opts: { defaultOrder:
     const hinge = (raw.hinge.toLowerCase().startsWith('r') ? 'right' : raw.hinge.toLowerCase().startsWith('n') || raw.hinge === '0' ? 'none' : 'left') as HingeSide
     const pullRaw = (raw.pull || 'none').toLowerCase().replace(/\s*mm$/, '')
     const pull = (['none', 'knob', '96', '128', '160'].includes(pullRaw) ? pullRaw : 'none') as PullKind
-    const number = raw.order || opts.defaultOrder
-    let order = orders.get(number)
-    if (!order) {
-      order = { number, name: raw.jobName || `Batch ${number}`, customer: raw.customer, items: [] }
-      orders.set(number, order)
-    }
+    const order = orderOf()
     order.items.push({
       row: rowNo,
       kind,
@@ -188,15 +220,96 @@ export function parseBatchCsv(text: string, data: AppData, opts: { defaultOrder:
       hinge,
       pull,
       pullAt: raw.pullAt.toLowerCase().startsWith('b') ? 'bottom' : raw.pullAt.toLowerCase().startsWith('m') ? 'middle' : 'top',
+      ...(raw.assembly ? { assembly: raw.assembly } : {}),
+      fittings: [],
     })
+  }
+  // fittings find their panel by item number (within the same assembly when they name one)
+  for (const { order: number, assembly, f } of pendingFittings) {
+    const items = (orders.get(number)?.items ?? []).filter((it) => it.item === f.panel && (!assembly || it.assembly === assembly))
+    if (items.length === 1) items[0].fittings.push(f)
+    else errors.push({ row: f.row, message: items.length ? `Panel item ${f.panel} is in more than one assembly; name the assembly on the fitting row.` : `Panel item ${f.panel}${assembly ? ` in assembly ${assembly}` : ''} not found in order ${number}.` })
   }
   return { orders: [...orders.values()], errors }
 }
 
-/** Custom part for one CSV row. Drawings are read through `readFile` (path as written in the CSV). */
+/** One fitting row (M2.9). Problems go to `errors`; null when the row cannot be used. */
+function parseFittingRow(raw: RawRow, rowNo: number, data: AppData, units: UnitSystem, errors: BatchRowError[]): Fitting | null {
+  const bad = (message: string) => (errors.push({ row: rowNo, message }), null)
+  const hw = findHardware(data.library, raw.hardware)
+  if (!raw.hardware) return bad('Fitting without a hardware code.')
+  if (!hw) return bad(`Hardware "${raw.hardware}" is not in the library.`)
+  if (!raw.panel) return bad('Fitting without a panel (the item number of the panel it goes on).')
+  const face = parseFace(raw.face)
+  if (!face) return bad(`Face "${raw.face}" is not one of top, bottom, front, back, left, right.`)
+  const edge = raw.edge ? parseEdge(raw.edge) : 'front'
+  if (!edge) return bad(`Edge "${raw.edge}" is not one of front, back, left, right.`)
+  if (raw.edge && face !== 'top' && face !== 'bottom' && edge !== face) errors.push({ row: rowNo, message: `A fitting on the ${face} edge is placed from that edge; edge "${raw.edge}" is ignored.` })
+  // a drilled fitting needs its place; nothing is assumed
+  let at: number | null = null
+  if (fittingPattern(data.library, { hardwareId: hw.id, face })) {
+    if (!raw.at) return bad(`${hw.code} is drilled: give its position along the edge (at).`)
+    at = parseLength(raw.at, units)
+    if (at === null || at < 0) return bad(`Position "${raw.at}" is not a length.`)
+  }
+  const qty = raw.qty ? Math.round(Number(raw.qty)) : 1
+  if (!(qty >= 1)) errors.push({ row: rowNo, message: `Quantity "${raw.qty}" is not a whole number; using 1.` })
+  return { row: rowNo, hardwareId: hw.id, panel: raw.panel, face, edge, at: at === null ? null : r6(at), mirror: !!raw.mirror && yes(raw.mirror), qty: qty >= 1 ? qty : 1 }
+}
+
+/**
+ * Custom part for one CSV row, with its fittings drilled (M2.9). Drawings are read through
+ * `readFile` (path as written in the CSV).
+ */
 export function itemPart(it: BatchItem, data: AppData, readFile: (path: string) => string | null): { part: CamPart | null; warnings: string[] } {
+  const r = basePart(it, data, readFile)
+  if (!r.part) return r
+  let part: CamPart = it.assembly ? { ...r.part, assembly: it.assembly } : r.part
+  const warnings = [...r.warnings]
+  for (const f of it.fittings ?? []) {
+    const placed = placeFitting(part, f, data.library)
+    part = placed.part
+    warnings.push(...placed.warnings.map((w) => `fitting (row ${f.row}): ${w}`))
+  }
+  return { part, warnings }
+}
+
+/** Report lines: each assembly, its panels and the fittings on them. */
+function assemblyLines(order: BatchOrder, data: AppData): string[] {
+  const groups = new Map<string, BatchItem[]>()
+  for (const it of order.items) if (it.assembly || it.fittings.length) groups.set(it.assembly ?? '', [...(groups.get(it.assembly ?? '') ?? []), it])
+  const lines: string[] = []
+  for (const [name, items] of groups) {
+    lines.push(`  ${name || '(no assembly)'}: ${items.length} panel${items.length === 1 ? '' : 's'}`)
+    for (const it of items)
+      for (const f of it.fittings) {
+        const hw = data.library.hardware.find((h) => h.id === f.hardwareId)
+        const where = f.face === 'top' || f.face === 'bottom' ? `${f.face} face, from the ${f.edge} edge` : `${f.face} edge`
+        lines.push(`    ${it.item} ${it.name}: ${f.qty} x ${hw?.code ?? f.hardwareId} on the ${where}${f.at === null ? ' (BOM only)' : ` at ${f.at} mm`}${f.mirror ? ', mirrored' : ''}`)
+      }
+  }
+  return lines
+}
+
+/** Fittings for the BOM: each fitting row's quantity times its panel's quantity. */
+export function fittingBom(order: BatchOrder, data: AppData) {
+  const out = new Map<string, { code: string; name: string; qty: number }>()
+  for (const it of order.items)
+    for (const f of it.fittings ?? []) {
+      const hw = data.library.hardware.find((h) => h.id === f.hardwareId)
+      if (!hw) continue
+      const cur = out.get(hw.code) ?? { code: hw.code, name: hw.name, qty: 0 }
+      cur.qty += f.qty * it.qty
+      out.set(hw.code, cur)
+    }
+  return [...out.values()]
+}
+
+function basePart(it: BatchItem, data: AppData, readFile: (path: string) => string | null): { part: CamPart | null; warnings: string[] } {
   const lib = data.library
-  const common = { materialId: it.materialId, qty: it.qty, grain: it.grain, ...(it.priority ? { priority: it.priority } : {}), ...(it.kit ? { kit: it.kit } : {}) }
+  // panels of an assembly are kept together on a sheet when they fit, unless a kit is given
+  const kit = it.kit ?? it.assembly
+  const common = { materialId: it.materialId, qty: it.qty, grain: it.grain, ...(it.priority ? { priority: it.priority } : {}), ...(kit ? { kit } : {}) }
   if (it.kind === 'part') return { part: { ...newPart({ name: it.name, length: it.length, width: it.width, thickness: it.thickness }), ...common, source: `Batch row ${it.row}` }, warnings: [] }
   if (it.kind === 'door') {
     const styles = doorStylesOf(lib)
@@ -245,6 +358,8 @@ export interface BatchOrderResult {
   warnings: string[]
   /** One entry per machine the setup sends the list to (M2.9). */
   machines: BatchMachineResult[]
+  /** Assemblies in the order with their panels and fittings (M2.9), for the report. */
+  assemblies?: string[]
 }
 
 export interface BatchResult {
@@ -284,6 +399,16 @@ export function updateActiveSetup(s: ShopSettings, patch: Partial<Omit<BatchSetu
   s.batch = { inbox: s.batch?.inbox ?? '', outbox: s.batch?.outbox ?? '', ...s.batch, setupId: cur.id }
 }
 
+function mergeHardware(a: { code: string; name: string; qty: number }[], b: { code: string; name: string; qty: number }[]) {
+  const out = a.map((h) => ({ ...h }))
+  for (const h of b) {
+    const cur = out.find((x) => x.code === h.code)
+    if (cur) cur.qty += h.qty
+    else out.push({ ...h })
+  }
+  return out
+}
+
 /** Outputs that depend on the machine (its nest and programs); the cut list and BOM do not. */
 const PER_MACHINE: ExportKind[] = ['mpr', 'labels-pdf', 'sheetmap-pdf', 'labels-zpl', 'areas-csv']
 
@@ -299,7 +424,8 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
   const { orders, errors } = parseBatchCsv(csvText, ctx.data, { defaultOrder: safe(base) })
   const result: BatchResult = { csv: csvName, orders: [], rowErrors: errors, cancelled: false }
   const say = (m: string) => ctx.onProgress?.(m)
-  say(`${csvName}: ${orders.length} order${orders.length === 1 ? '' : 's'}, ${orders.reduce((n, o) => n + o.items.length, 0)} rows${errors.length ? `, ${errors.length} row problem(s)` : ''}`)
+  const fittings = orders.reduce((n, o) => n + o.items.reduce((k, it) => k + it.fittings.length, 0), 0)
+  say(`${csvName}: ${orders.length} order${orders.length === 1 ? '' : 's'}, ${orders.reduce((n, o) => n + o.items.length, 0)} rows${fittings ? `, ${fittings} fitting${fittings === 1 ? '' : 's'}` : ''}${errors.length ? `, ${errors.length} row problem(s)` : ''}`)
   const setup = ctx.setup ?? activeBatchSetup(ctx.data.settings)
   const targets: { id: string; name: string }[] = []
   for (const id of setup.machines.length ? setup.machines : [MAIN_MACHINE]) {
@@ -309,6 +435,7 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
   }
   if (!targets.length) targets.push({ id: MAIN_MACHINE, name: ctx.data.machine.name })
   const otherOutput = featuresOf(ctx.data.settings).batchMachinesOutput
+  const steps = setup.steps ?? []
   for (const order of orders) {
     const res: BatchOrderResult = { number: order.number, folder: `${safe(order.number)}_${stamp(now)}`, status: 'done', sheets: 0, parts: 0, files: [], errors: [], warnings: [], machines: [] }
     result.orders.push(res)
@@ -322,26 +449,36 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
         if (r.part) camParts.push(r.part)
         else res.errors.push(`Row ${it.row} (${it.name}): ${r.warnings.join(' ')}`)
       }
+      const bom = fittingBom(order, ctx.data)
+      res.assemblies = assemblyLines(order, ctx.data)
       const at = now.toISOString()
       const job: Job = { id: `batch-${safe(order.number)}`, number: order.number, name: order.name, customer: order.customer, notes: `Batch from ${csvName}`, createdAt: at, updatedAt: at, cabinets: [], camParts }
       // M2.9: the same part list goes to every machine of the setup; each gets its own nest,
       // programs and export check. The main machine's files stay in the order folder as before.
-      const sets: { m: BatchMachineResult; data: AppData; out: ReturnType<typeof runJob> }[] = []
+      const sets: { m: BatchMachineResult; data: AppData; out: ReturnType<typeof runJob>; stepCtx: Parameters<typeof runSteps>[2] }[] = []
+      const note = (msgs: BatchStepMessage[], m: BatchMachineResult, tag: string) => {
+        for (const x of msgs) (x.severity === 'error' ? m.errors : res.warnings).push(`${tag}${x.text}`)
+        if (m.errors.length) m.status = 'blocked'
+      }
       for (const t of targets) {
         checkCancel(ctx.isCancelled)
         const main = t.id === MAIN_MACHINE
         const tag = main ? '' : `[${t.name}] `
         say(`${order.number}: nesting ${camParts.reduce((n, p) => n + p.qty, 0)} parts${main ? '' : ` for ${t.name}`}`)
         const d = dataFor(ctx.data, t.id)
-        const out = runJob(job, d, { isCancelled: ctx.isCancelled })
+        const run = runJob(job, d, { isCancelled: ctx.isCancelled })
+        const out = { ...run, hardware: mergeHardware(run.hardware, bom) }
         checkCancel(ctx.isCancelled)
         const m: BatchMachineResult = { id: t.id, name: t.name, folder: main ? '' : machineFolder(t), status: 'written', sheets: out.programs.length, parts: out.instances.length, errors: [], files: [] }
         for (const i of out.issues) (i.severity === 'error' ? m.errors : i.severity === 'warning' ? res.warnings : []).push(`${tag}${i.message}`)
+        // M2.9 batch steps, after nesting: they may report and hold the order back, never change it
+        const stepCtx = { order: { number: order.number, name: order.name, customer: order.customer }, machine: { id: t.id, name: t.name }, job, output: out, data: d }
+        note(runSteps(steps, 'afterNest', stepCtx).messages, m, tag)
         if (m.errors.length) m.status = 'blocked'
         else if (!main && !otherOutput) m.status = 'held'
         res.errors.push(...m.errors)
         res.machines.push(m)
-        sets.push({ m, data: d, out })
+        sets.push({ m, data: d, out, stepCtx })
       }
       res.sheets = res.machines[0].sheets
       res.parts = res.machines[0].parts
@@ -351,13 +488,26 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
         for (const s of sets) if (s.m.status === 'written') s.m.status = 'blocked'
         say(`${order.number}: blocked by ${res.errors.length} error(s); report only`)
       } else {
+        const made: { s: (typeof sets)[number]; files: OutFile[] }[] = []
         for (const s of sets) {
           if (s.m.status !== 'written') continue
           const kinds = ctx.kinds ?? setup.kinds ?? DEFAULT_BATCH_KINDS
           const files = buildFiles(s.m.folder ? kinds.filter((k) => PER_MACHINE.includes(k)) : kinds, job, s.data, s.out)
-          for (const f of files) res.files.push(s.m.folder ? { ...f, name: `${s.m.folder}/${f.name}` } : f)
-          s.m.files = files.map((f) => f.name)
+          // batch steps, before output: may add report files and hold the order back
+          const st = runSteps(steps, 'beforeOutput', s.stepCtx, files)
+          note(st.messages, s.m, s.m.folder ? `[${s.m.name}] ` : '')
+          res.errors.push(...s.m.errors)
+          made.push({ s, files: [...files, ...st.files] })
         }
+        if (res.errors.length) {
+          res.status = 'blocked'
+          for (const s of sets) if (s.m.status === 'written') s.m.status = 'blocked'
+          say(`${order.number}: blocked by a batch step; report only`)
+        } else
+          for (const { s, files } of made) {
+            for (const f of files) res.files.push(s.m.folder ? { ...f, name: `${s.m.folder}/${f.name}` } : f)
+            s.m.files = files.map((f) => f.name)
+          }
         const held = res.machines.filter((m) => m.status === 'held')
         if (held.length) res.warnings.push(`Programs for ${held.map((m) => m.name).join(', ')} were checked but not written: "Write programs for other machines" is off on the Machine page.`)
         const sheets = (n: number) => `${n} sheet${n === 1 ? '' : 's'}`
@@ -393,6 +543,7 @@ export function orderReport(batch: BatchResult, r: BatchOrderResult, now: Date) 
     ...(r.machines.length > 1 || r.machines.some((m) => m.id !== MAIN_MACHINE)
       ? ['', 'Machines:', ...r.machines.map((m) => `  ${m.name}: ${m.sheets} sheet${m.sheets === 1 ? '' : 's'}, ${{ written: m.folder ? `programs in ${m.folder}/` : 'programs in this folder', blocked: 'blocked by the export checker', held: 'checked, not written (output for other machines is off)' }[m.status]}`)]
       : []),
+    ...(r.assemblies?.length ? ['', 'Assemblies and fittings:', ...r.assemblies] : []),
     '',
     'Programs are generated, not machine-proven. Simulate each one in woodWOP before running it on the N-200.',
     '',

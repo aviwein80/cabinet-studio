@@ -1,6 +1,5 @@
 import { Drill } from 'lucide-react'
 import { useState } from 'react'
-import { defaultOp } from '@/cam/ops'
 import type { CamPart, HardwarePattern } from '@/cam/types'
 import { NumField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
@@ -8,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { edgeFrame, patternPoints, placePattern, type RefEdge } from '@/core/hardware/patterns'
+import { edgeFrame, patternDrillOp, patternPoints, placePattern, type RefEdge } from '@/core/hardware/patterns'
 import { StatusBadge } from '../library/PatternsTab'
 
 const EDGES: { value: RefEdge; label: string }[] = [
@@ -36,7 +35,7 @@ export function PatternDialog({ open, onOpenChange, part, patterns, withOp, onPl
     if (!pattern || !placed) return
     let next = placed.part
     if (addOp && withOp) {
-      const op = { ...defaultOp('drill', placed.ids), name: `Drill ${pattern.name}`, levels: { safeZ: 20, rapidZ: 3, depth: Math.max(...pattern.holes.map((h) => h.depth)), through: false, stockZ: 0, passDepth: 0 } }
+      const op = patternDrillOp(pattern, placed.ids)
       next = { ...next, ops: [...next.ops, op] }
     }
     onPlace(next, `Added ${placed.ids.length} hole${placed.ids.length === 1 ? '' : 's'} for ${pattern.name}${addOp && withOp ? ' and a drilling operation' : ''}`)

@@ -9,8 +9,9 @@
  * its y is the depth below face 1, as for edge holes drawn on parts).
  */
 import { makeEntity } from '@/cam/doc'
+import { defaultOp } from '@/cam/ops'
 import { pt } from '@/cam/geom'
-import type { CamPart, FaceId, HardwarePattern, PatternHole } from '@/cam/types'
+import type { CamOp, CamPart, FaceId, HardwarePattern, PatternHole } from '@/cam/types'
 import type { Library } from '../types'
 import { HINGE_ID, PLATE_ID, SLIDE_IDS } from './ids'
 import { BLUM, SALICE, TANDEM } from './specs'
@@ -234,4 +235,9 @@ export function placePattern(part: CamPart, p: HardwarePattern, opt: PlaceOption
   })
   const layers = part.layers.some((l) => l.id === 'holes') ? part.layers : [...part.layers, { id: 'holes', name: 'Holes', color: '#38bdf8', visible: true, locked: false }]
   return { part: { ...part, layers, entities: [...part.entities, ...entities] }, ids: entities.map((e) => e.id), warnings }
+}
+
+/** The drilling operation for a placed pattern's holes (designer and batch fittings alike). */
+export function patternDrillOp(p: HardwarePattern, ids: string[]): CamOp {
+  return { ...defaultOp('drill', ids), name: `Drill ${p.name}`, levels: { safeZ: 20, rapidZ: 3, depth: Math.max(...p.holes.map((h) => h.depth)), through: false, stockZ: 0, passDepth: 0 } }
 }

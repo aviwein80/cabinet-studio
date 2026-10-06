@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import { checkGouge, meshDistance } from '@/cam/3d/check'
 import { blendPasses, type DrivePath, gridLines, offsetDrive } from '@/cam/3d/curve'
-import { makeEntity, newPart, opInputHash, parsePart, serializePart } from '@/cam/doc'
+import { CAM_FILE_VERSION, makeEntity, newPart, opInputHash, parsePart, serializePart } from '@/cam/doc'
 import { circle, type P, polyline } from '@/cam/geom'
 import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { revolve } from '@/cam/mesh/surface'
@@ -407,11 +407,11 @@ describe('M3.1e output, file and goldens', () => {
     expect(keys({ ...op, drive: { mode: 'intersection', groupsA: [1], groupsB: [2] } })).not.toContain('finishStepover')
   })
 
-  it('the drive, the side kept and a surface\'s rows and columns are saved and read back (format 5)', () => {
+  it('the drive, the side kept and a surface\'s rows and columns are saved and read back (format 5 and later)', () => {
     const e = makeEntity({ t: 'contour', c: circle({ x: 40, y: 40 }, 10) }, 'drive')
     const { part } = curveRun(surfaceMesh('hemisphere'), 'hemisphere', { drive: { mode: 'curves', shapes: [e.id], side: 'left', copies: 2 }, keepSide: { groups: [3], side: 'back' } }, [e], [], { grid: { blob: 'hemisphere', rows: 2, cols: 3, closedRows: false, closedCols: true } })
     const back = parsePart(serializePart(part))
-    expect(back.version).toBe(5)
+    expect(back.version).toBe(CAM_FILE_VERSION)
     expect(back.ops).toEqual(part.ops)
     expect(back.models).toEqual(part.models)
   })

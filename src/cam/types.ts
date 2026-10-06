@@ -147,7 +147,7 @@ export interface ReliefInfo {
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4 | 5
+  version: 1 | 2 | 3 | 4 | 5 | 6
   materialId: string | null
   length: number
   width: number
@@ -679,9 +679,12 @@ export interface Rough3dOp extends OpBase {
   stepover: number
   /**
    * Offset rings from the inside out, or back-and-forth lines (plus a pass along the walls), or
-   * adaptive clearing (a steady width of cut).
+   * adaptive clearing (a steady width of cut). Undercut (M3.1g): a lollipop clears the material
+   * under overhangs that the other patterns (from above) leave, level by level, working in from
+   * the open side; `stepover` is then a share of the ball's diameter and `stockToLeave` is left on
+   * every face (`stockZ` is not used).
    */
-  pattern: 'offset' | 'zigzag' | 'adaptive'
+  pattern: 'offset' | 'zigzag' | 'adaptive' | 'undercut'
   /** Zig-zag line angle in degrees from +X. */
   angle: number
   direction: Direction

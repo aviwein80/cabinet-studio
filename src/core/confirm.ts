@@ -48,6 +48,9 @@ export interface CutDefaults {
   roughStepover: number
   /** Adaptive clearing: width of cut, share of the tool diameter. */
   adaptiveWidth: number
+  /** Undercut roughing with a lollipop (M3.1g): height between levels, mm; step-over, share of the ball's diameter. */
+  undercutStepdown: number
+  undercutStepover: number
 }
 export type CutDefaultKey = keyof CutDefaults
 
@@ -65,6 +68,9 @@ export const BUILTIN_CUT_DEFAULTS: CutDefaults = {
   roughStepdown: 3,
   roughStepover: 0.4,
   adaptiveWidth: 0.15,
+  // light cuts for a ball on a thin neck (PLACEHOLDER, like every value here)
+  undercutStepdown: 1,
+  undercutStepover: 0.1,
 }
 
 export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
@@ -80,6 +86,8 @@ export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
   roughStepdown: 'Z-level roughing step-down',
   roughStepover: 'Z-level roughing step-over',
   adaptiveWidth: 'Adaptive width of cut',
+  undercutStepdown: 'Undercut roughing step-down',
+  undercutStepover: 'Undercut roughing step-over',
 }
 
 export const CUT_DEFAULT_KEYS = Object.keys(BUILTIN_CUT_DEFAULTS) as CutDefaultKey[]
@@ -170,7 +178,7 @@ function defaultValue(d: CutDefaults, k: CutDefaultKey): string {
     const w = v as CutDefaults['zwave']
     return `${w.min}-${w.max} mm every ${w.length} mm`
   }
-  if (k === 'pocketStepover' || k === 'faceStepover' || k === 'roughStepover' || k === 'adaptiveWidth') return `${Math.round((v as number) * 100)} % of the tool`
+  if (k === 'pocketStepover' || k === 'faceStepover' || k === 'roughStepover' || k === 'adaptiveWidth' || k === 'undercutStepover') return `${Math.round((v as number) * 100)} % of the tool`
   return `${fmt(v as number)} mm`
 }
 
@@ -293,8 +301,10 @@ export const OP_FIELDS: OpField[] = [
   { key: 'betweenStepover', applies: (o) => o.kind === 'curve' && o.mode === 'between', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'finishStepover', applies: (o) => o.kind === 'finish3d' && o.strategy !== 'projection' && o.strategy !== 'pencil' && !(o.strategy === 'curve' && o.drive?.mode === 'intersection'), get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'waterlineStepdown', applies: (o) => o.kind === 'finish3d' && (o.strategy === 'waterline' || o.strategy === 'helical'), get: (o) => (o as { stepdown?: number }).stepdown ?? 1, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
-  { key: 'roughStepdown', applies: (o) => o.kind === 'rough3d', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
-  { key: 'roughStepover', applies: (o) => o.kind === 'rough3d' && o.pattern !== 'adaptive', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
+  { key: 'roughStepdown', applies: (o) => o.kind === 'rough3d' && o.pattern !== 'undercut', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
+  { key: 'roughStepover', applies: (o) => o.kind === 'rough3d' && o.pattern !== 'adaptive' && o.pattern !== 'undercut', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
+  { key: 'undercutStepdown', applies: (o) => o.kind === 'rough3d' && o.pattern === 'undercut', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
+  { key: 'undercutStepover', applies: (o) => o.kind === 'rough3d' && o.pattern === 'undercut', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
 ]
 
 /**
@@ -359,7 +369,7 @@ export function newOpDefaults(kind: CamOp['kind'], m: MachineProfile, extra: Par
     case 'finish3d':
       return strategy === 'waterline' || strategy === 'helical' ? ({ stepover: d.finishStepover, stepdown: d.waterlineStepdown } as Partial<CamOp>) : strategy === 'projection' || strategy === 'pencil' ? {} : ({ stepover: d.finishStepover } as Partial<CamOp>)
     case 'rough3d':
-      return { stepdown: d.roughStepdown, stepover: d.roughStepover } as Partial<CamOp>
+      return (extra as { pattern?: string }).pattern === 'undercut' ? ({ stepdown: d.undercutStepdown, stepover: d.undercutStepover } as Partial<CamOp>) : ({ stepdown: d.roughStepdown, stepover: d.roughStepover } as Partial<CamOp>)
     default:
       return {}
   }

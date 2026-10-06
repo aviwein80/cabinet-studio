@@ -58,6 +58,7 @@ import { flatAreaFinish } from './3d/flat'
 import { FLAT_DEG } from './3d/passes'
 import { helicalFinish } from './3d/helical'
 import { undercutFinish } from './3d/undercut'
+import { undercutRough } from './3d/undercutRough'
 import { pencilFinish } from './3d/pencil'
 import { projectionFinish } from './3d/projection'
 import { centreRegion, type Region } from './3d/region'
@@ -1838,7 +1839,8 @@ export function inBackground(op: CamOp, part: CamPart): boolean {
  * flatter than 0.5° but not level changes height: such a toolpath is blocked, `noOutput`.)
  */
 export function isFlatLayer(op: CamOp): boolean {
-  if (op.kind === 'rough3d') return op.pattern !== 'adaptive'
+  // (undercut roughing moves level too, but a lollipop under an overhang is simulation only)
+  if (op.kind === 'rough3d') return op.pattern !== 'adaptive' && op.pattern !== 'undercut'
   if (op.kind !== 'finish3d') return false
   if (op.strategy === 'flat') return true
   if (op.strategy !== 'waterline') return false
@@ -1937,19 +1939,28 @@ function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolea
 }
 
 /**
- * Undercut finishing needs a lollipop: its ball reaches under overhangs while its neck (with the
- * collision margin round it) keeps clear of the model.
+ * Undercut finishing and roughing need a lollipop: its ball reaches under overhangs while its neck
+ * (with the collision margin round it) keeps clear of the model. The ball radius and the neck
+ * radius plus the margin, or the reason it cannot work.
  */
-function undercutOf(op: Finish3dOp, mesh: Mesh, region: Region, ctx: GenContext, tp: Toolpath) {
+function lollipopOf(what: string, ctx: GenContext, tp: Toolpath): { R: number; neck: number } | { error: string } {
   const t = tp.tool
-  const none = (w: string) => ({ moves: [] as Move[], warnings: [w], minZ: NaN, spacing: 0 })
-  if (!t || t.shape !== 'lollipop') return none(`Undercut finishing needs a lollipop tool (a ball on a narrower neck)${t ? `: T${t.number} is not one` : ''}. Add one in the tool table (shape Lollipop, with its neck diameter).`)
+  if (!t || t.shape !== 'lollipop') return { error: `${what} needs a lollipop tool (a ball on a narrower neck)${t ? `: T${t.number} is not one` : ''}. Add one in the tool table (shape Lollipop, with its neck diameter).` }
   const R = t.diameter / 2
   const neck = (t.shankDiameter ?? t.diameter) / 2
   const margin = ctx.machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN
-  if (neck + margin >= R) return none(`T${t.number}'s ball (Ø${t.diameter}) reaches no further than its neck (Ø${t.shankDiameter ?? t.diameter}) and the ${margin} mm collision margin round it, so it cannot get under an overhang.`)
-  return undercutFinish(op, mesh, { R, neck: neck + margin }, region, op.levels, ctx.work)
+  if (neck + margin >= R) return { error: `T${t.number}'s ball (Ø${t.diameter}) reaches no further than its neck (Ø${t.shankDiameter ?? t.diameter}) and the ${margin} mm collision margin round it, so it cannot get under an overhang.` }
+  return { R, neck: neck + margin }
 }
+
+function undercutOf(op: Finish3dOp, mesh: Mesh, region: Region, ctx: GenContext, tp: Toolpath) {
+  const l = lollipopOf('Undercut finishing', ctx, tp)
+  if ('error' in l) return { moves: [] as Move[], warnings: [l.error], minZ: NaN, spacing: 0 }
+  return undercutFinish(op, mesh, l, region, op.levels, ctx.work)
+}
+
+/** Undercut roughing is simulation only, whatever the switches say (owner decision, M3.1g). */
+export const UNDERCUT_ROUGH_NO_OUTPUT = 'undercut roughing with a lollipop is simulation only'
 
 /**
  * Curve-driven finishing: the drive shapes or the earlier toolpath as plan paths, or the rows and
@@ -2097,6 +2108,27 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   if (region.fromModel && !m.outline && (mb.min[0] > COVER || mb.min[1] > COVER || mb.max[0] < L - COVER || mb.max[1] < W - COVER)) {
     region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, { min: [Math.min(0, mb.min[0]), Math.min(0, mb.min[1]), mb.min[2]], max: [Math.max(L, mb.max[0]), Math.max(W, mb.max[1]), mb.max[2]] })
     tp.warnings.push(`The model does not cover the whole panel: the panel round it is roughed down to the model's lowest point (${(mb.min[2] + Math.max(0, op.stockZ)).toFixed(2)} mm). Draw a boundary to rough less.`)
+  }
+  if (op.pattern === 'undercut') {
+    // a lollipop under the overhangs: never written to a machine (simulation only)
+    tp.noOutput = UNDERCUT_ROUGH_NO_OUTPUT
+    const l = lollipopOf('Undercut roughing', ctx, tp)
+    if ('error' in l) {
+      tp.warnings.push(l.error)
+      return
+    }
+    const idx = ctx.part.ops.findIndex((o) => o.id === op.id)
+    const fromAbove = ctx.part.ops.slice(0, Math.max(0, idx)).some((o) => o.enabled && o.kind === 'rough3d' && o.pattern !== 'undercut')
+    if (!fromAbove) tp.warnings.push('No Z-level roughing comes before this operation: the lollipop goes down beside the overhang, where material may still stand. Rough from above first.')
+    // the ball's centre stays inside the part's own outline: passes never wrap round the part's
+    // ends, where its neighbours are on a sheet
+    const inPart = { polys: clipPolys('intersect', region.polys, [toPoints(partOutline(ctx.part).contour, 0.005)]), fromModel: region.fromModel }
+    const r = undercutRough(op, m.placed, l, inPart, op.levels, ctx.work)
+    tp.warnings.push(...r.warnings)
+    for (const mv of r.moves) b.moves.push(mv)
+    depthWarnings(r.minZ, ctx, tp)
+    clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
+    return
   }
   const adaptive = op.pattern === 'adaptive'
   const r = zLevelRough(adaptive ? { ...op, adaptive: op.adaptive ?? DEFAULT_ADAPTIVE } : op, m.placed, m.cutter, region, ctx.part, tp.tool!, ctx.work)

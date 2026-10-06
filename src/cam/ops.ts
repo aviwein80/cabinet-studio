@@ -170,6 +170,8 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
         flats: true,
         levels: { ...DEFAULT_LEVELS, depth: 0 },
       }
+      // undercut roughing: a lollipop under the overhangs (light PLACEHOLDER cuts)
+      if ((extra as { pattern?: string }).pattern === 'undercut') Object.assign(op, { name: '3D roughing (undercuts)', stepdown: 1, stepover: 0.1, surface: { ...op.surface, stockToLeave: 0.3, tolerance: 0.01 } })
       break
   }
   return { ...op, ...extra } as CamOp
@@ -187,6 +189,12 @@ export function fromTemplate(t: OpTemplate, geometry: string[]): CamOp {
 }
 
 const routers = (m: MachineProfile) => m.tools.filter((t) => t.type === 'router')
+
+/** The lollipop whose ball reaches furthest past its neck (undercut finishing and roughing). */
+function furthestLollipop(machine: MachineProfile): Tool | null {
+  const reach = (t: Tool) => t.diameter - (t.shankDiameter ?? t.diameter)
+  return routers(machine).filter((t) => t.shape === 'lollipop').sort((a, b) => reach(b) - reach(a) || a.number - b.number)[0] ?? null
+}
 
 /** Tool for an op. Drill ops pick per hole, so this returns the explicit tool or null. */
 export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?: number; diameter?: number }): Tool | null {
@@ -228,11 +236,7 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
       return null
     case 'finish3d': {
       // undercuts: the lollipop whose ball reaches furthest past its neck
-      if (op.strategy === 'undercut') {
-        const lolly = routers(machine).filter((t) => t.shape === 'lollipop')
-        const reach = (t: Tool) => t.diameter - (t.shankDiameter ?? t.diameter)
-        return lolly.sort((a, b) => reach(b) - reach(a) || a.number - b.number)[0] ?? null
-      }
+      if (op.strategy === 'undercut') return furthestLollipop(machine)
       // flat areas: the widest flat-bottomed tool (bull-nose first, then flat end mills other
       // than the cut-out tool)
       if (op.strategy === 'flat') {
@@ -253,6 +257,7 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
       return shaped.sort((a, b) => Number(a.shape !== 'ball') - Number(b.shape !== 'ball') || b.diameter - a.diameter || a.number - b.number)[0] ?? null
     }
     case 'rough3d': {
+      if (op.pattern === 'undercut') return furthestLollipop(machine)
       // bull-nose first, then flat end mills other than the cut-out tool, then ball-nose; largest first
       const cut = cutoutTool(machine)
       const rank = (t: Tool) => (t.shape === 'bull' ? 0 : squareEnd(t) ? 1 : t.shape === 'ball' ? 2 : 3)

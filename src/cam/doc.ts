@@ -19,8 +19,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * leaving those operations out without a word.
  * 5 (M3.1): more 3D finishing strategies (radial, spiral and the rest of M3.1) and their settings.
  * An older app refuses a v5 part instead of machining a new strategy as parallel passes.
+ * 6 (M3.1g): undercut roughing (`rough3d` with pattern 'undercut'). An older app refuses a v6 part
+ * instead of roughing from above with a lollipop.
  */
-export const CAM_FILE_VERSION = 5
+export const CAM_FILE_VERSION = 6
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -253,6 +255,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   3: (p) => ({ ...p, version: 4 }),
   // v4 -> v5: new finishing strategies and their settings are new and optional.
   4: (p) => ({ ...p, version: 5 }),
+  // v5 -> v6: the undercut roughing pattern is new.
+  5: (p) => ({ ...p, version: 6 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */

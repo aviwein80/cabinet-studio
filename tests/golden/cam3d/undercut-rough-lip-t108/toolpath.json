@@ -1,0 +1,26 @@
+{
+ "op": "3D roughing (undercuts)",
+ "kind": "rough3d",
+ "tool": 108,
+ "moves": {
+  "rapid": 48,
+  "feed": 32,
+  "arc": 0,
+  "drill": 0,
+  "poly": 16,
+  "points": 5829
+ },
+ "cutMm": 2748,
+ "box": [
+  42.3,
+  0,
+  -39.7,
+  44.4,
+  59.7,
+  3.3
+ ],
+ "warnings": [
+  "Clears up to 2.0 mm in under the overhang (the ball radius less the neck and the collision margin); material further in stays."
+ ],
+ "hash": "7bc2ef68"
+}

@@ -91,23 +91,25 @@ describe('M2.1 part format version 2', () => {
     }
   })
 
-  it('new parts are the current version (5 since M3.1); newer files are refused; shop files migrate job and library parts', () => {
-    expect(CAM_FILE_VERSION).toBe(5)
-    expect(newPart().version).toBe(5)
-    expect(JSON.parse(serializePart(newPart())).version).toBe(5)
-    expect(() => parsePart(JSON.stringify({ format: 'cabinet-studio-part', version: 6, part: newPart() }))).toThrow(/newer/)
+  it('new parts are the current version (6 since M3.1g); newer files are refused; shop files migrate job and library parts', () => {
+    expect(CAM_FILE_VERSION).toBe(6)
+    expect(newPart().version).toBe(6)
+    expect(JSON.parse(serializePart(newPart())).version).toBe(6)
+    expect(() => parsePart(JSON.stringify({ format: 'cabinet-studio-part', version: 7, part: newPart() }))).toThrow(/newer/)
     expect(() => migratePart({ version: 9 })).toThrow(/newer/)
     const old = { ...newPart({ name: 'old' }), version: 1 as const }
     const data = normalizeData({ jobs: [{ id: 'j', number: 'J1', name: '', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [old] }], library: { ...normalizeData(null).library, partLibrary: [old] } } as Partial<AppData>)
-    expect(data.jobs[0].camParts![0].version).toBe(5)
-    expect(data.library.partLibrary![0].version).toBe(5)
-    // a version 2 part (with a mesh model) moves to 5 with every field kept
+    expect(data.jobs[0].camParts![0].version).toBe(6)
+    expect(data.library.partLibrary![0].version).toBe(6)
+    // a version 2 part (with a mesh model) moves to 6 with every field kept
     const v2 = { ...newPart({ name: 'v2' }), version: 2 as const, models: [{ id: 'm', name: 'M', kind: 'mesh' as const, blob: 'b', source: 's.stl', units: 'mm' as const, place: { ...DEFAULT_PLACEMENT }, layer: 'models', visible: true, triangles: 2, size: [1, 1, 1] as [number, number, number] }] }
-    expect(migratePart(v2)).toEqual({ ...v2, version: 5 })
-    // a version 3 part (M2.5) and a version 4 part (M2.6) move to 5 with every field kept
+    expect(migratePart(v2)).toEqual({ ...v2, version: 6 })
+    // a version 3 (M2.5), 4 (M2.6) or 5 (M3.1) part moves to 6 with every field kept
     const v3 = { ...v2, version: 3 as const }
-    expect(migratePart(v3)).toEqual({ ...v3, version: 5 })
+    expect(migratePart(v3)).toEqual({ ...v3, version: 6 })
     const v4 = { ...v2, version: 4 as const }
-    expect(migratePart(v4)).toEqual({ ...v4, version: 5 })
+    expect(migratePart(v4)).toEqual({ ...v4, version: 6 })
+    const v5 = { ...v2, version: 5 as const }
+    expect(migratePart(v5)).toEqual({ ...v5, version: 6 })
   })
 })

@@ -12,7 +12,7 @@ import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { compareOpTool, toolSnapshot, updateOpTool } from '@/core/toolData'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
-import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, CurveDrive, FaceId, Surface3D } from '@/cam/types'
+import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, CurveDrive, FaceId, Rough3dOp, Surface3D } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -171,6 +171,7 @@ export function OpsPanel({
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'scallop' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (scallop)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'flat' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (flat areas)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'helical' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (helical)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('rough3d', { pattern: 'undercut' } as Partial<CamOp>)}>3D roughing (undercuts, lollipop)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'undercut' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (undercut)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'curve' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (curve-driven)</DropdownMenuItem>
                   </>
@@ -245,7 +246,7 @@ export function OpsPanel({
                                     ? `3D ${DRIVE_LABEL[op.drive?.mode ?? 'curves']}`
                               : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
-                        ? `3D levels every ${formatLength(op.stepdown, units)}`
+                        ? `${op.pattern === 'undercut' ? '3D undercuts, levels' : '3D levels'} every ${formatLength(op.stepdown, units)}`
                         : op.kind === 'chamfer'
                           ? `chamfer ${formatLength(op.size, units)} ${op.drive === 'width' ? 'wide' : 'deep'}`
                           : op.kind === 'edge'
@@ -423,7 +424,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'rough3d' ? 'Pick automatically (bull-nose first)' : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : op.kind === 'finish3d' && op.strategy === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? (op.pattern === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (bull-nose first)') : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : op.kind === 'finish3d' && op.strategy === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -682,6 +683,7 @@ function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adap
 function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void; sel?: string[]; tool?: Tool | null }) {
   const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
   const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
+  const machine = useStore((s) => s.data!.machine)
   const c = useOpCfg(op, part, onChange)
   switch (op.kind) {
     case 'finish3d': {
@@ -991,6 +993,30 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
       const adaptive = op.pattern === 'adaptive'
       const ad = op.adaptive ?? DEFAULT_ADAPTIVE
       const patterns = [{ value: 'offset' as const, label: 'Follow shape' }, { value: 'zigzag' as const, label: 'Back and forth' }]
+      const undercutPattern = finishMore || op.pattern === 'undercut' ? [{ value: 'undercut' as const, label: 'Undercuts (lollipop, under overhangs)' }] : []
+      // moving to or from undercut roughing takes that pattern's own placeholder cutting values
+      const setPattern = (v: Rough3dOp['pattern']) => {
+        const was = op.pattern === 'undercut'
+        const now = v === 'undercut'
+        const d = was !== now ? (newOpDefaults('rough3d', machine, { pattern: v } as Partial<CamOp>) as Partial<Rough3dOp>) : {}
+        onChange({ ...op, ...d, pattern: v, confirmed: was !== now ? op.confirmed?.filter((k) => !['roughStepdown', 'roughStepover', 'undercutStepdown', 'undercutStepover'].includes(k)) : op.confirmed, ...(v === 'adaptive' && !op.adaptive ? { adaptive: { ...DEFAULT_ADAPTIVE } } : {}) })
+      }
+      if (op.pattern === 'undercut')
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Undercut levels">
+              <SelectField label="Pattern" value={op.pattern} options={[...patterns, ...undercutPattern]} onChange={setPattern} />
+              <NumField label="Step-down" value={op.stepdown} min={0.1} step={0.25} cfg={c('undercutStepdown').cfg} badge={c('undercutStepdown').badge} onChange={(v) => c('undercutStepdown').set({ ...op, stepdown: v })} hint="Between levels (ball centre heights)" />
+              <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={2} max={95} cfg={c('undercutStepover').cfg} badge={c('undercutStepover').badge} onChange={(v) => c('undercutStepover').set({ ...op, stepover: v / 100 })} hint="Of the ball's diameter, between passes" />
+              <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => onChange({ ...op, levels: { ...op.levels, safeZ: v } })} />
+              <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => onChange({ ...op, levels: { ...op.levels, rapidZ: v } })} hint="Above the model, beside the overhang" />
+              <div className="col-span-2 text-[11px] text-stone-400">
+                Clears the material under overhangs that roughing from above leaves, before undercut finishing: level by level, working in from the open side; the tool goes down and up only beside the overhang. The ball reaches in as far as its radius less its neck and the collision margin. The stock to leave is left on every face. Simulation only: never written to a machine.
+              </div>
+            </Group>
+          </>
+        )
       return (
         <>
           <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} walls />
@@ -1000,8 +1026,8 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
             <SelectField
               label="Pattern"
               value={op.pattern}
-              options={adaptiveOn || adaptive ? [...patterns, { value: 'adaptive' as const, label: 'Adaptive (steady width of cut)' }] : patterns}
-              onChange={(v) => onChange({ ...op, pattern: v, ...(v === 'adaptive' && !op.adaptive ? { adaptive: { ...DEFAULT_ADAPTIVE } } : {}) })}
+              options={[...(adaptiveOn || adaptive ? [...patterns, { value: 'adaptive' as const, label: 'Adaptive (steady width of cut)' }] : patterns), ...undercutPattern]}
+              onChange={setPattern}
             />
             {!adaptive && <NumField label="Step-over" suffix="%" value={Math.round(op.stepover * 100)} min={5} max={95} cfg={c('roughStepover').cfg} badge={c('roughStepover').badge} onChange={(v) => c('roughStepover').set({ ...op, stepover: v / 100 })} />}
             {op.pattern === 'zigzag' && <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} />}

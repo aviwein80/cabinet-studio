@@ -88,12 +88,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.11a Relief import: readers, sizing, placement, machining guard, dialog (ART-01) | **Done** (October 2026) | See below. Screens only (switch "Relief import", on). |
 | M2.11b Stage 2 exit test, screenshots, docs | **Done** (October 2026) | See below. **M2.11 complete. Stage 2 complete.** |
 | M3.1a Radial and spiral finishing (3D-05), format v5, switch | **Done** (October 2026) | See below. Simulation only (true 3D output stays off). |
-| M3.1b-f Scallop; flat-area and helical; undercut; curve-driven; screenshots and docs | In progress | See "M3.1 split". |
+| M3.1b Scallop finishing (3D-07) | **Done** (October 2026) | See below. Cusp within ±10 % measured independently. Simulation only. |
+| M3.1c-f Flat-area and helical; undercut; curve-driven; screenshots and docs | In progress | See "M3.1 split". |
 | M3.2 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1879,9 +1880,58 @@ README, ROADMAP and this file.
 - **Spiral pitch is in plan**, like parallel passes: on slopes the 3D gap is wider. Scallop
   finishing (M3.1b) is the strategy for an even finish on slopes.
 
+## M3.1b scallop finishing: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-07 | Scallop finishing: passes offset over the surface so the cusp between neighbours is the same everywhere. The step-over is set as on flat ground (the shop's 3D finishing step-over, with its Configure badge); the editor shows the cusp it gives. Passes start from the boundary and work in (or from the middle out), or start from picked shapes (open or closed) and work away from them on both sides; loops counter-clockwise (climb) or clockwise; slope limits, skip flats and rest machining as the other strategies | `src/cam/3d/scallop.ts`, `genFinish3d` and `scallopStarts` in `src/cam/toolpath.ts` |
+| Method | (1) the tool-centre surface on a grid of exact drops; (2) the distance over that surface (3D, not plan) from the start, solved by fast marching over the grid triangles plus sweeps, never interpolating across a crease where fronts from two sides meet; (3) the spacing for the target cusp at each point: on a flat R - sqrt(R² - d²/4); over a curve the chord between two passes sags below a hill (or rises in a hollow) and the spacing is solved so the cusp comes out at the target, from exact drops across the passes; (4) the distance again with that spacing, one unit per pass; passes are its whole levels; (5) a pass along every crease (corner diagonals, the middle line), because there the material is farther than half a spacing from the passes (0.59 of a spacing at a square corner); (6) a check: the distance from every pass over the surface; material more than 0.505 of a spacing from all passes gets a pass along the middle of the gap, and the check runs again | same |
+| Ball and bull-nose | Ball-nose: exact cusp. Bull-nose: spaced for its corner radius (said in a warning; the cusp is then at most the target). Flat end mills and V cutters, and a step-over as wide as the rounded end, are refused with a clear message | same |
+| Associativity | Start shapes are part of the stale hash (moving one marks the operation out of date); a missing start shape is reported | `opInputHash` in `src/cam/doc.ts` |
+| Screens | "3D finishing (scallop)" in the Add operation menu; editor: step-over on flat ground with the cusp it gives, start from the boundary or picked shapes ("Use selection as start"), order, loop direction, slope limits, rest | `src/pages/part/OpsPanel.tsx` |
+
+### Acceptance (scallop holds the cusp within ±10 % over the whole test surface; M2.2 tolerances)
+
+The cusp is measured by an independent check that shares nothing with the generator
+(`tests/cusp.ts`): from points on the model, along the surface normal, how much material is left
+under the balls the cutting moves sweep (ray against capsule, exact). Ridges are found by walking
+square to every pass, every 4 mm along it, from where the tool touched to where it touched again.
+Target cusp 0.0606 mm (6 mm ball, 1.2 mm step-over on flat ground).
+
+| Surface | Ridges measured | Highest anywhere | Between passes one level apart, away from creases, sharp turns and the innermost loops |
+|---|---|---|---|
+| Hill and hollow (new test surface: slopes to 22°, curving both ways), from the boundary | 5,987 | +2.5 % | 4,519 ridges, -3.0 % to +2.5 %, median -0.8 %: all within ±10 % |
+| Sine relief, from the boundary | 5,953 | +3.2 % | 4,974 ridges, -4.5 % to +3.1 %, median -0.8 %: all within ±10 % |
+| Hill and hollow, from a start line along one edge | 6,095 | +3.9 % | 4,716 ridges, -2.9 % to +3.9 %, median -0.7 %: all within ±10 % |
+
+No ridge anywhere is higher than the target + 10 %. Next to creases, sharp turns of passes and the
+innermost loops (where passes close in) the passes come closer than one spacing, so the ridge there
+is lower (down to 15 % of the target): extra cutting, never a higher ridge. Overall 96-98 % of all
+ridges are within ±10 %.
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| The spacing maths | `tests/cam-3d-scallop.test.ts` | On spheres of radius 15, 20, 40 and 100 mm, hill and bowl: the cusp of the spacing found is the target within 1 % (exact two-ball geometry) |
+| No gouge > 0.005 mm, independent check | same | 6 mm ball (exact check) on the hemisphere, sine, raised panel, cove and the hill-and-hollow surface: under 0.005, touching the surface. Bull-nose (sampled) on sine: under 0.005 |
+| Stock to leave ±0.01 mm | same | 0.5 mm on sine: CL points 0.5 ± 0.01; no move closer |
+| Golden digests | `tests/golden/cam3d/{scallop-sine,scallop-bumps-outward,scallop-raised-panel-bull}` | 3 new; every existing golden unchanged |
+| Export blocked | same | `CAM_3D_NO_OUTPUT` with both output switches on |
+
+Speed (cloud container): 150 x 100 mm hill-and-hollow, 6 mm ball, 1.2 mm step-over: about 7 s
+(sine relief 4 s), in the background worker with progress.
+
+### Limits recorded
+
+- **Steep walls**: the distance is solved on a grid in plan, so on walls steeper than about 70°
+  passes crowd into a few grid cells; use waterline (or the slope limits) there. The gouge safety
+  does not depend on this (every point is an exact drop).
+- **Crease passes run after all the level passes** (going in), across the finished passes.
+- **Bull-nose**: spaced for the corner radius only, so on flats (where the flat bottom cuts) the
+  passes are closer than they need to be.
+
 ## Next run
 
-- Continue M3.1 (M3.1b-f), then M3.2.
+- Continue M3.1 (M3.1c-f), then M3.2.
 
 ## Run log
 
@@ -1924,3 +1974,4 @@ README, ROADMAP and this file.
 - **Run 13 (M2.11a-b)**: relief import (`9546b82`); Stage 2 exit test, screenshots, README,
   ROADMAP. M2.11 complete; Stage 2 complete. See `git log`.
 - **Run 14 (M3.1a)**: radial and spiral finishing, shared pass code, format 5, switch. See `git log`.
+- **Run 14 (M3.1b)**: scallop finishing with an independent cusp check. See `git log`.

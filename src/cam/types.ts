@@ -562,9 +562,10 @@ export interface Finish3dOp extends OpBase {
    * Parallel: straight passes dropped onto the surface. Waterline: passes at constant heights
    * around the model. Projection: drawn shapes and text dropped onto the surface. Pencil: along
    * the valleys and inside corners, where the tool touches two surfaces at once. Radial: straight
-   * passes out from a centre. Spiral: one continuous spiral round a centre.
+   * passes out from a centre. Spiral: one continuous spiral round a centre. Scallop: passes offset
+   * across the surface for the same cusp height everywhere.
    */
-  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral'
+  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral' | 'scallop'
   surface: Surface3D
   /**
    * Distance between passes, mm (parallel passes, the shallow-area fill of waterline; radial: the
@@ -583,8 +584,15 @@ export interface Finish3dOp extends OpBase {
   innerRadius?: number
   /**
    * Radial one-way passes and the spiral: run out from the centre (default) or in towards it.
+   * Scallop: inward (default) works away from the start (in from the boundary), outward works back
+   * towards it.
    */
   travel?: 'outward' | 'inward'
+  /**
+   * Scallop: shapes on face 1 (open or closed) the passes start from and are offset away from, on
+   * both sides; none = the boundary (passes work in from it).
+   */
+  startFrom?: string[]
   /** Back and forth, or every pass the same way (with a lift between). */
   pattern: 'zigzag' | 'oneway'
   /**

@@ -143,6 +143,8 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       // radial and spiral: round the middle of the boundary until a centre is set
       if ((extra as { strategy?: string }).strategy === 'radial') Object.assign(op, { name: '3D finishing (radial)', travel: 'outward' })
       if ((extra as { strategy?: string }).strategy === 'spiral') Object.assign(op, { name: '3D finishing (spiral)', travel: 'outward' })
+      // scallop: in from the boundary until start shapes are picked
+      if ((extra as { strategy?: string }).strategy === 'scallop') Object.assign(op, { name: '3D finishing (scallop)', travel: 'inward' })
       break
     case 'rough3d':
       // PLACEHOLDER cutting values until the shop supplies its own

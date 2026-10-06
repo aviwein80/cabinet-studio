@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (scallop)",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 27,
+  "feed": 9,
+  "arc": 0,
+  "drill": 0,
+  "poly": 49,
+  "points": 6835
+ },
+ "cutMm": 6825,
+ "box": [
+  0,
+  0,
+  -17.999,
+  150,
+  100,
+  -2
+ ],
+ "warnings": [],
+ "hash": "756c6066"
+}

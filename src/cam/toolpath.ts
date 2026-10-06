@@ -52,6 +52,7 @@ import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
 import { radialFinish, spiralFinish } from './3d/radial'
+import { scallopFinish } from './3d/scallop'
 import { pencilFinish } from './3d/pencil'
 import { projectionFinish } from './3d/projection'
 import { centreRegion, type Region } from './3d/region'
@@ -1925,6 +1926,22 @@ function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolea
   if (long) tp.warnings.push(`${long} contour(s) have more than ${CONTOUR_POINT_WARN} points: woodWOP's limit per contour is not confirmed yet. Check the program loads on the machine.`)
 }
 
+/** Scallop start shapes (face 1) as plan polylines; missing ones are reported. */
+function scallopStarts(op: Finish3dOp, part: CamPart, tp: Toolpath): { pts: P[]; closed: boolean }[] {
+  const out: { pts: P[]; closed: boolean }[] = []
+  let missing = 0
+  for (const id of op.startFrom ?? []) {
+    const e = part.entities.find((x) => x.id === id)
+    if (!e || e.face !== 1) {
+      missing++
+      continue
+    }
+    for (const c of entityContours(e)) if (c.segs.length) out.push({ pts: toPoints(c, 0.005), closed: c.closed })
+  }
+  if (missing) tp.warnings.push(`${missing} start shape(s) are missing or not on face 1: the passes start from the rest${out.length ? '' : ' (here: the boundary)'}.`)
+  return out
+}
+
 function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const m = model3d(op, ctx, tp)
   if (!m) return
@@ -1978,7 +1995,9 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
         ? radialFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
         : op.strategy === 'spiral'
           ? spiralFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
-          : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+          : op.strategy === 'scallop'
+            ? scallopFinish(op, m.placed, m.cutter, region, op.levels, scallopStarts(op, ctx.part, tp), ctx.work)
+            : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)

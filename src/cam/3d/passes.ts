@@ -227,8 +227,11 @@ export function chainMoves(ordered: Pt[][], smp: Sampler, region: Region, mesh: 
 /** Closed chains (start meets end in plan) can be reversed or rotated freely. */
 export const reverseChain = (c: Pt[]): Pt[] => [...c].reverse()
 
-/** Order chains nearest-next from where the tool is, reversing a chain when its far end is nearer. */
-export function nearestOrder(chains: Pt[][], from: P | null = null): Pt[][] {
+/**
+ * Order chains nearest-next from where the tool is, reversing a chain when its far end is nearer
+ * (unless `keepDirection`, for passes whose direction matters).
+ */
+export function nearestOrder(chains: Pt[][], from: P | null = null, keepDirection = false): Pt[][] {
   const left = [...chains]
   const out: Pt[][] = []
   let at = from
@@ -246,7 +249,7 @@ export function nearestOrder(chains: Pt[][], from: P | null = null): Pt[][] {
         best = i
         rev = false
       }
-      if (db < bestD) {
+      if (!keepDirection && db < bestD) {
         bestD = db
         best = i
         rev = true

@@ -1,0 +1,26 @@
+{
+ "op": "3D finishing (scallop)",
+ "kind": "finish3d",
+ "tool": 107,
+ "moves": {
+  "rapid": 39,
+  "feed": 13,
+  "arc": 0,
+  "drill": 0,
+  "poly": 173,
+  "points": 7562
+ },
+ "cutMm": 16447,
+ "box": [
+  0,
+  0,
+  -9.8,
+  200,
+  150,
+  0.2
+ ],
+ "warnings": [
+  "Bull-nose: passes are spaced for its 2 mm corner radius, so the cusp is at most 0.2404 mm (less where the flat bottom cuts)."
+ ],
+ "hash": "96560ca2"
+}

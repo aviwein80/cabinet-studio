@@ -20,3 +20,9 @@ export const SURFACES: Record<string, { soup: () => Soup; f: (x: number, y: numb
   cove: { soup: () => relief(60, 40, 30, 160, cove), f: cove },
 }
 
+
+/**
+ * M3.1 scallop test surface (not in SURFACES): a smooth hill and a smooth hollow on a flat, so the
+ * surface curves both ways (and in between, saddle-like) with slopes up to about 22°.
+ */
+export const bumps = (x: number, y: number) => -10 + 8 * Math.exp(-((x - 45) ** 2 + (y - 45) ** 2) / 300) - 8 * Math.exp(-((x - 105) ** 2 + (y - 55) ** 2) / 300)

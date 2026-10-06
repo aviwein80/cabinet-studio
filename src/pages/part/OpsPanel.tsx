@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { featuresOf } from '@/core/features'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import type { MachineProfile } from '@/core/types'
+import type { MachineProfile, Tool } from '@/core/types'
 import { aggregateOf, machineModelOf } from '@/core/machineModel'
 import { formatLength } from '@/core/units'
 import { cn } from '@/lib/utils'
@@ -168,6 +168,7 @@ export function OpsPanel({
                   <>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'radial' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (radial)</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'spiral' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (spiral)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'scallop' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (scallop)</DropdownMenuItem>
                   </>
                 )}
               </>
@@ -228,7 +229,7 @@ export function OpsPanel({
                           ? `3D projection, ${op.levels.depth > 0 ? `${formatLength(op.levels.depth, units)} below the surface` : 'on the surface'}`
                           : op.strategy === 'pencil'
                             ? `3D pencil, valleys over ${op.pencilAngle ?? PENCIL_MIN_ANGLE}°`
-                            : op.strategy === 'radial' || op.strategy === 'spiral'
+                            : op.strategy === 'radial' || op.strategy === 'spiral' || op.strategy === 'scallop'
                               ? `3D ${op.strategy}, every ${formatLength(op.stepover, units)}`
                               : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
@@ -472,7 +473,7 @@ function OpEditor({
         </Group>
       )}
 
-      <StrategyFields op={op} part={part} onChange={onChange} />
+      <StrategyFields op={op} part={part} onChange={onChange} sel={sel} tool={tp?.tool ?? resolveTool(op, machine)} />
       {op.kind === 'manual' && <ManualFields op={op} onChange={onChange} pathPick={pathPick ?? null} setPathPick={setPathPick} sel={sel} part={part} />}
       {op.kind !== 'code' && op.kind !== 'drill' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
 
@@ -629,7 +630,7 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
 }
 
 /** Finishing strategies added in M3.1 (shown while their switch is on, or when an operation uses one). */
-const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral'])
+const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral', 'scallop'])
 
 /** Rest machining settings of a 3D finishing operation. */
 function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adaptiveOn: boolean, onChange: (o: CamOp) => void) {
@@ -660,7 +661,7 @@ function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adap
   )
 }
 
-function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
+function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void; sel?: string[]; tool?: Tool | null }) {
   const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
   const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
   const c = useOpCfg(op, part, onChange)
@@ -681,12 +682,64 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
               ? [
                   { value: 'radial' as const, label: 'Radial: straight passes out from a centre' },
                   { value: 'spiral' as const, label: 'Spiral: one spiral round a centre' },
+                  { value: 'scallop' as const, label: 'Scallop: the same cusp height everywhere' },
                 ]
               : []),
           ]}
           onChange={(v) => onChange({ ...op, strategy: v })}
         />
       )
+      if (op.strategy === 'scallop') {
+        // cusp from the rounded end of the tool picked (ball radius, or corner radius of a bull-nose)
+        const r = tool?.shape === 'ball' ? tool.diameter / 2 : tool?.shape === 'bull' ? (tool.cornerRadius ?? 0) : 0
+        const cusp = r > 0 && op.stepover < 2 * r ? r - Math.sqrt(r * r - (op.stepover / 2) ** 2) : NaN
+        const starts = op.startFrom ?? []
+        const lines = sel.filter((id) => part.entities.some((e) => e.id === id && e.face === 1))
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title="Scallop passes">
+              {strategy}
+              <NumField
+                label="Step-over on flat ground"
+                value={op.stepover}
+                min={0.01}
+                step={0.1}
+                cfg={c('finishStepover').cfg}
+                badge={c('finishStepover').badge}
+                onChange={(v) => c('finishStepover').set({ ...op, stepover: v })}
+                hint={Number.isFinite(cusp) ? `Cusp ${cusp.toFixed(3)} mm (${(cusp / 25.4).toFixed(4)} in) everywhere: passes come closer on slopes and curves` : 'Needs a ball-nose or bull-nose tool, wider than the step-over'}
+              />
+              <SelectField
+                label="Start from"
+                value={starts.length ? 'shapes' : 'boundary'}
+                options={[
+                  { value: 'boundary', label: 'The boundary (passes work in)' },
+                  { value: 'shapes', label: 'Picked shapes (passes work out)' },
+                ]}
+                onChange={(v) => onChange({ ...op, startFrom: v === 'shapes' ? (lines.length ? lines : starts.length ? starts : []) : undefined })}
+              />
+              {(starts.length > 0 || lines.length > 0) && (
+                <div className="col-span-2 flex items-center gap-2 text-[11px] text-stone-400">
+                  <span>{starts.length ? `${starts.length} start shape(s)` : 'No start shapes: passes work in from the boundary'}</span>
+                  <Button size="sm" variant="outline" className="h-6 border-white/15 bg-transparent px-2 text-[11px]" disabled={!lines.length} onClick={() => onChange({ ...op, startFrom: lines })}>
+                    Use selection as start
+                  </Button>
+                </div>
+              )}
+              <SelectField label="Order" value={op.travel ?? 'inward'} options={[{ value: 'inward', label: 'Away from the start' }, { value: 'outward', label: 'Back towards the start' }]} onChange={(v) => onChange({ ...op, travel: v })} />
+              <SelectField label="Loops run" value={op.direction} options={[{ value: 'climb', label: 'Counter-clockwise' }, { value: 'conventional', label: 'Clockwise' }]} onChange={(v) => onChange({ ...op, direction: v })} />
+              <NumField label="Slope from" suffix="°" value={op.slope.min} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, min: v } })} />
+              <NumField label="Slope to" suffix="°" value={op.slope.max} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, max: v } })} />
+              <div className="col-span-2">
+                <SwitchField label="Skip flat areas" checked={op.skipFlats} onChange={(v) => onChange({ ...op, skipFlats: v })} hint="Leaves surfaces under 0.5° for a flat-area pass" />
+              </div>
+              <div className="col-span-2 text-[11px] text-stone-400">Passes are offset over the surface, not in plan, and also run along the lines where they meet, so no ridge is left higher than the cusp. Steep walls: use waterline.</div>
+            </Group>
+            {restGroup(op, part, adaptiveOn, onChange)}
+          </>
+        )
+      }
       if (op.strategy === 'radial' || op.strategy === 'spiral') {
         const radial = op.strategy === 'radial'
         return (

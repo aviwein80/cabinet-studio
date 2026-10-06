@@ -352,6 +352,8 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
     const m = part.models?.find((x) => x.id === op.surface.modelId)
     deps.push(m ? { blob: m.blob, place: m.place } : null)
   }
+  // scallop start shapes (not in `geometry`, which holds the boundary)
+  if (op.kind === 'finish3d' && op.startFrom?.length) deps.push({ starts: op.startFrom.map((id) => part.entities.find((e) => e.id === id) ?? id) })
   // rest machining: everything the earlier operations' toolpaths depend on (and the tool table
   // when one of them picks its tool automatically)
   const sources = restSources(op, part)

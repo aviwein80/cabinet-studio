@@ -17,6 +17,7 @@ import { LibraryPage } from './pages/LibraryPage'
 import { MachinePage } from './pages/MachinePage'
 import { PartDesignerPage } from './pages/PartDesigner'
 import { PartsPage } from './pages/PartsPage'
+import { hiddenScreens } from './core/admin'
 import { SettingsPage } from './pages/SettingsPage'
 
 const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page'][]; flag?: keyof FeatureFlags }[] = [
@@ -29,7 +30,7 @@ const NAV: { label: string; icon: typeof Boxes; route: Route; match: Route['page
 ]
 
 export default function App() {
-  const { data, route, go, init, saving, lastSaved, loadError, updateSettings } = useStore()
+  const { data, route, go, init, saving, lastSaved, loadError, updateSettings, adminUnlocked } = useStore()
   const [location, setLocation] = useState('')
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function App() {
             </div>
           </div>
           <nav className="flex flex-1 flex-row gap-1 md:flex-col">
-            {NAV.filter((n) => !n.flag || featuresOf(data.settings)[n.flag]).map((n) => {
+            {NAV.filter((n) => (!n.flag || featuresOf(data.settings)[n.flag]) && (adminUnlocked || !(hiddenScreens(data.settings) as string[]).includes(n.route.page))).map((n) => {
               const active = n.match.includes(route.page)
               return (
                 <button

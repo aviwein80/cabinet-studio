@@ -12,6 +12,8 @@ import { type AiKeyStatus, backend } from "@/app/backend";
 import { useStore } from "@/app/store";
 import { AboutSection } from "@/components/AboutSection";
 import { StorageSection } from "./settings/StorageSection";
+import { AdminSection } from "./settings/AdminSection";
+import { featuresOf } from "@/core/features";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,6 +126,7 @@ export function SettingsPage() {
           </p>
         </section>
         <StorageSection />
+        {featuresOf(data.settings).batchAdditions && <AdminSection />}
         <AboutSection />
       </div>
     </div>

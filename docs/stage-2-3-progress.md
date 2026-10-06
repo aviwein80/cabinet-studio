@@ -80,13 +80,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.9a Other machines and process steps (AM-08) | **Done** (October 2026) | See below. Output switch for other machines off. |
 | M2.9b SQLite storage option (AM-06) | **Done** (October 2026) | See below. JSON stays the default. |
 | M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | **Done** (October 2026) | See below. |
-| M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | Not started | |
+| M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | **Done** (October 2026) | See below. M2.9 complete. |
 | M2.10 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -141,6 +141,8 @@ files present; fixed in M2.8e, back to 17.)
 8. **M2.7 (holders, aggregates)**: see "M2.7 decisions needed" below.
 9. **M2.8 (prices, hold-down limits, turning sheets over, output checks)**: see "M2.8 decisions
    needed" below.
+10. **M2.9 (other machines, process steps, face words, waste areas)**: see "M2.9 decisions
+    needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -1448,6 +1450,66 @@ programs for other machines" (`batchMachinesOutput`), **off**.
 - **Waste areas are reported, not cut.** Cutting waste into small pieces would be new machine output with its own switch; not built (decision 4 below).
 - **Plugin steps** need the plugin API and sandbox of M2.10; today only built-in steps (and steps registered in code) exist.
 
+## M2.9d wizards and admin tools: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| AM-03 | **Batch-setup wizard** (Batch page → New batch setup): name, machines, outputs, extra steps, then a check: a small list (shelves, a door, a cabinet side with a hinge plate) runs through the one batch engine with the new setup in the background worker, and the result is shown; nothing is saved or written. "Create and use" adds the setup and makes it the one in use. A setup picker appears on the Batch page once there are several | `src/core/wizards.ts`, `BatchSetupWizard.tsx`, `src/core/batchExample.ts`, `batch.worker.ts` |
+| AM-03 | **Layer-rule wizard** (Library → Machining rules → New table with the wizard): name; layer names typed or read from a DXF; for each layer the machining (a recipe or "leave alone") and depth from the name, starting from what the shop's first rule table does with that name (its shape filter kept); the outline layer and turning; a check that applies the new table to the drawing (operations made, layers left over). Layer names become exact rules (names with `*` or `?` stay exact) | `wizards.ts`, `RuleSetWizard.tsx` |
+| AM-13 | **Tool-change order** (Machine page): the order "Order by tool" in the designer uses; per machine; nothing is reordered unless that button is pressed | `toolOrderOf`, `ToolOrderSection.tsx`, `OpsPanel.tsx` |
+| AM-13 | **Missing-recipe report** (Settings → Admin tools, CSV): rules and door styles pointing at deleted recipes, empty recipes and rule tables, and shapes in jobs and the part library that no operation machines (the part outline and construction layers do not count) | `missingRecipeReport` |
+| AM-13 | **Password on the defaults** (Settings → Admin tools): the Machine page (every machine) and the Machining rules tab show everything but cannot be changed until the password is entered for the session; set, change (needs the current one), remove, lock now. Stored as a salted SHA-256, never the password. Said plainly on screen: it is not security, the data file can still be edited. Configure badges still show and still open their field; unlocking makes it editable (the standing rule) | `admin.ts`, `AdminLock.tsx`, `AdminSection.tsx` |
+| AM-13 | **Hide screens** from the side bar (Custom parts, Library, Batch runs, Machine & tools; never Jobs or Settings); they come back while unlocked, and the placeholder banner still opens the Machine page | `hiddenScreens`, `App.tsx` |
+
+Also fixed: the batch report printed unmatched layers as "[object Object]" (Stage 1); it now
+names each layer with its shape count.
+
+### Acceptance (wizards create setups that pass the existing batch tests)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Batch-setup wizard | `tests/batch-wizards.test.ts` | Each step's checks (name, duplicate name, no machine, unknown machine, no output, unknown step). A wizard setup runs the Stage 1 batch test list: statuses done / done, the C8 folder, part count and file names, and **every file byte-identical** to the run without a setup; with custom-part output off, held back exactly as before |
+| With two machines and a step | same | Two program sets, the same program names for each machine (sheet programs and the door's turned-over program), waste areas in both folders |
+| Shipped lists | same | The Batch page's example list reads with no row problems; the wizard's check list runs done with output on, held back with it off |
+| Layer-rule wizard | same | Layers read from the Stage 1 test drawings: CUTOUT, POCKET_D8, DRILL_5_12 (and NOTES left alone); suggestions match the shop table (profile, pocket 6 with depth from the name, drill with depth from the name); the new table, used as the only table **or** named in a rules column next to the shop table, gives MPR files **byte-identical** to the shop table's, with no unmatched layers |
+| Admin tools | same + browser check | Tool order (saved order first, unknown and repeated numbers dropped, move up/down; "Order by tool" follows it, unchanged without one). Missing-recipe report on a deleted pocket recipe, an empty recipe and table, a door style without its recipe and a part's unmachined pocket. Password: salted hash, right / wrong / none, under 4 characters refused. In the browser: with the password set, the Machine page's switches and fields are disabled and a click changes nothing |
+
+### Limits recorded
+
+- **The password is a guard against accidents**, not security.
+- **The wizards make setups and tables; editing them later** uses the existing screens (Batch page, Machining rules tab).
+- **Folder-watcher folders** are still one pair (Batch page); the setup in use decides what each list gets.
+
+## M2.9 screenshots
+
+`docs/screenshots/stage-2-3/M2.9/` (browser preview, Playwright; 03 from the desktop app under Xvfb):
+
+- `01-other-machine-editing.png`: a second machine being edited on the Machine page (blue strip), its 49 values to configure, the machine list.
+- `02-batch-setup-machines.png`: the Batch page's setup card with both machines ticked; programs for the other machine checked, not written.
+- `03-storage-sqlite.png`: Settings → Shop data storage in the desktop app, switched to SQLite.
+- `04-batch-steps-and-assemblies.png`: a part list with an assembly and fittings run with the Waste areas step (waste-areas CSV among the files).
+- `05-batch-wizard-machines.png`: batch-setup wizard, machines step.
+- `06-batch-wizard-check.png`: batch-setup wizard, check step: held back by the export checks while custom-part output is off, for both machines.
+- `07-rule-wizard-machining.png`: layer-rule wizard, machining per layer read from a DXF.
+- `08-rule-wizard-check.png`: layer-rule wizard, check on the drawing (3 operations, NOTES left over).
+- `09-admin-tools.png`: Settings → Admin tools (password, hidden screens, missing-recipe report).
+- `10-machine-locked-tool-order.png`: the Machine page locked (strip, disabled fields), the tool-change order, Custom parts hidden from the side bar.
+
+## M2.9 test-suite note
+
+The known timing test `tests/perf.test.ts` "adaptive clearing per Z level" (limit 90 s with the
+whole suite running) failed once more by timing alone in this container: 92.3 s on the untouched
+baseline and 93.2 s on the final M2.9d run, with everything else green; it passed in the full
+suite on the M2.9a, M2.9b and M2.9c runs. Run on its own it passes (66.4 s on the baseline,
+66.1 s after M2.9d). The limit was not changed. One unrelated test (the M2.4c holder collision
+case) timed out once at 5 s while screenshots ran alongside, and passed in every later full run.
+
+## M2.9 licences
+
+No new dependencies. The SQLite option uses `node:sqlite`, built into Node (22 for the tests and
+command line) and into Electron 44's Node 24; SQLite itself is public domain. Everything else is
+our own code on the existing libraries.
+
 ## M2.9 decisions needed (see the report)
 
 1. **Other machines**: does the shop have, or plan, a second machine or a separate drilling step?
@@ -1461,6 +1523,11 @@ programs for other machines" (`batchMachinesOutput`), **off**.
    uses the same words. Custom-part output stays off until then.
 4. **Waste areas**: report only (as built), or also cut large scrap into pieces for the vacuum and
    dust extraction? Cutting would be a new output with its own switch, off.
+
+## Next run: M2.10 plugins, script posts, program tools
+
+- API-01, PST-02, PST-04, NEW-22 as in the prompt. The batch-step registry (`registerBatchStep`)
+  and the machine `post` field are ready for the plugin API and script posts.
 
 ## Run log
 
@@ -1494,3 +1561,6 @@ programs for other machines" (`batchMachinesOutput`), **off**.
 - **Run 9 (M2.7d)**: image trace, screenshots, README, ROADMAP. M2.7 complete. See `git log`.
 - **Run 10 (M2.8a-e)**: areas and costs; shared-line cutting; bridged nesting; flip-side sheets and
   the sheet backplot; manual nesting, screenshots, README, ROADMAP. M2.8 complete. See `git log`.
+- **Run 11 (M2.9a-d)**: other machines and process steps (`51ccb91`); SQLite storage option
+  (`bc4bcb2`); assemblies, fittings by face and batch steps (`1fafaee`); wizards, admin tools,
+  screenshots, README, ROADMAP. M2.9 complete. See `git log`.

@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { CircleStop, FileDown, FolderOpen, Inbox, Loader2, Play, Square, Upload } from 'lucide-react'
+import { CircleStop, FileDown, FolderOpen, Inbox, Loader2, Play, Square, Upload, Wand2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend, type BatchStatus } from '@/app/backend'
@@ -10,11 +10,14 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { activeBatchSetup, updateActiveSetup, type BatchResult, type BatchStatus as OrderStatus } from '@/core/batch'
 import { featuresOf } from '@/core/features'
+import { BATCH_EXAMPLE as EXAMPLE } from '@/core/batchExample'
 import { batchSteps } from '@/core/batchSteps'
 import { machineSetups } from '@/core/machines'
+import { BatchSetupWizard } from './batch/BatchSetupWizard'
 import { cn } from '@/lib/utils'
 
 const COLUMNS: [string, string][] = [
@@ -35,15 +38,6 @@ const COLUMNS: [string, string][] = [
   ],
 ]
 
-const EXAMPLE = [
-  'order,customer,assembly,item,name,type,file,style,material,length,width,qty,grain,priority,kit,hinge,pull,hardware,panel,face,edge,at',
-  'K2041,Weinreb,,1,Pantry shelf,part,,,MDF18,762,304.8,4,no,,,,,,,,,',
-  'K2041,Weinreb,,2,Sign blank,drawing,sign.dxf,,MDF18,,,1,,5,,,,,,,,',
-  'K2041,Weinreb,,3,Pantry door,door,,Shaker,MDF18,1219.2,457.2,2,yes,,Pantry,left,128,,,,,',
-  'K2041,Weinreb,Base B1,4,Left side,part,,,PB18-WHT,720,560,1,,,,,,,,,,',
-  'K2041,Weinreb,Base B1,,Hinge plate,fitting,,,,,,1,,,,,,SALICE-B2VGV-H3,4,top,front,100',
-].join('\r\n')
-
 const STATUS: Record<OrderStatus, { label: string; cls: string }> = {
   done: { label: 'Programs written', cls: 'bg-emerald-100 text-emerald-800' },
   blocked: { label: 'Blocked by checks', cls: 'bg-amber-100 text-amber-900' },
@@ -63,21 +57,31 @@ function download(name: string, blob: Blob) {
 export function BatchPage() {
   const data = useStore((s) => s.data)!
   const camOut = featuresOf(data.settings).camMprOutput
+  const additions = featuresOf(data.settings).batchAdditions
+  const [wizard, setWizard] = useState(false)
   return (
     <div className="flex h-full flex-col">
       <PageHeader
         title="Batch runs"
         subtitle="Part lists in, nested programs and labels out, with nobody at the screen."
         actions={
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => download('batch-example.csv', new Blob([EXAMPLE], { type: 'text/csv' }))}>
-            <FileDown className="size-4" /> Example list
-          </Button>
+          <>
+            {additions && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setWizard(true)}>
+                <Wand2 className="size-4" /> New batch setup
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => download('batch-example.csv', new Blob([EXAMPLE], { type: 'text/csv' }))}>
+              <FileDown className="size-4" /> Example list
+            </Button>
+          </>
         }
       />
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="mx-auto grid max-w-6xl gap-5 p-5 lg:grid-cols-[1fr_360px]">
           <div className="flex flex-col gap-5">
-            {featuresOf(data.settings).batchAdditions && <SetupCard />}
+            {additions && <SetupCard />}
+            {additions && <BatchSetupWizard open={wizard} onOpenChange={setWizard} />}
             {backend.batch ? <WatcherCard /> : null}
             <RunNowCard />
           </div>
@@ -115,7 +119,23 @@ function SetupCard() {
   return (
     <section className="rounded-xl border bg-background" data-cfg="batch-setup">
       <div className="border-b px-4 py-3">
-        <h3 className="text-[13px] font-semibold">Batch setup: {setup.name}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-[13px] font-semibold">Batch setup: {setup.name}</h3>
+          {(data.settings.batchSetups?.length ?? 0) > 1 && (
+            <Select value={setup.id} onValueChange={(v) => updateSettings((s) => void (s.batch = { inbox: s.batch?.inbox ?? '', outbox: s.batch?.outbox ?? '', ...s.batch, setupId: v }))}>
+              <SelectTrigger className="h-7 w-56 text-xs" aria-label="Batch setup in use">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {data.settings.batchSetups!.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">Machines that get a program set from each part list. Each is nested and checked on its own.</p>
       </div>
       <div className="flex flex-col gap-2 p-4 text-xs">

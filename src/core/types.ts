@@ -509,6 +509,8 @@ export interface MachineProfile {
   confirmed?: string[]
   /** The shop's default cutting values for new operations; absent ones are the PLACEHOLDER built-ins. */
   cutDefaults?: Partial<import('./confirm').CutDefaults>
+  /** Tool-change order (tool numbers) used by "Order by tool" (M2.9 admin); absent = tool table order. */
+  toolOrder?: number[]
 }
 
 export interface NestSettings {
@@ -607,6 +609,8 @@ export interface ShopSettings {
   batchSetups?: BatchSetup[]
   /** Spec-sheet reader provider and models. API keys are never stored here. */
   ai?: AiSettings
+  /** Admin tools (M2.9): a password on the shop defaults, screens hidden from the side bar. */
+  admin?: { lock?: import('./admin').AdminLock; hidden?: string[] }
 }
 
 /** Another machine or process step (M2.9, AM-08), with its own complete profile and post. */

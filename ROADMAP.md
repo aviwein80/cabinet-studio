@@ -57,7 +57,15 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   bridged nesting; flip-side sheets with a milled reference edge and a sheet backplot
   (registration 0.000 mm in the tests); editing the layout by hand with snapping, a live check,
   nest list files and the full export check. Each new kind of program output has its own switch,
-  off. Next: M2.9 (batch additions).
+  off. **M2.9 batch additions: done** (October 2026): other machines and process steps with
+  their own profiles (a batch run to two machine models gives two program sets; output for the
+  other machines has its own switch, off); the SQLite storage option (lossless, JSON stays the
+  default; Node's built-in SQLite, no new dependency); assemblies and fittings placed by face in
+  part lists (approved drilling patterns only); batch steps after nesting and before output
+  (waste areas built in; plugin steps with M2.10); batch-setup and layer-rule wizards (their
+  setups pass the Stage 1 batch tests file for file); admin password on the defaults, hidden
+  screens, tool-change order and the missing-recipe report. Next: M2.10 (plugins, script posts,
+  program tools).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -70,6 +78,10 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - M2.6: the saw unit and the rotating aggregate count as absent on the N-200 until confirmed;
     their operations ship, and the export checker refuses their output with a clear message. No
     saw or aggregate macro is presented as proven output.
+- Open for M2.9 (see `docs/stage-2-3-progress.md`): whether the shop has or plans a second
+  machine or a separate drilling step (and, if so, whether steps should share the work); a
+  sample part list from any other program, to check its face words; whether waste areas should
+  only be reported or also cut into pieces (a new output with its own switch).
 - Open for M2.8 (see `docs/stage-2-3-progress.md`): material prices (and densities if costed by
   weight); the hold-down limit for shared lines; bridge width, longest bridge and part size; how
   the shop turns a sheet over and how wide a reference strip to mill; and, before any of the three

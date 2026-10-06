@@ -377,6 +377,39 @@ export checker. Tool numbers are still placeholders.
   built-in defaults, custom-part MPR output is off, so the example order is reported as blocked
   and no programs are written. That is the intended safe default.
 
+  **Batch additions** (switch "Batch additions", on; programs for other machines have their own
+  switch, **off**):
+  - **Other machines and process steps** (Machine page → Machines and process steps): each has
+    its own tool table, machine model, holders and confirmations, edited on the same page. A new
+    one starts as a placeholder copy with every value badged. A batch setup sends the same list
+    to several machines: each gets its own nest, programs and export check; the main machine's
+    files stay in the order folder, the others go in a sub-folder. Written only with "Write
+    programs for other machines" (off: they are checked and listed in the report).
+  - **Batch setups and the setup wizard** (Batch page → New batch setup): machines, outputs and
+    extra steps, step by step, ending with a check run of a small list.
+  - **Assemblies and fittings in part lists**: an `assembly` column (kept together on a sheet,
+    printed on the labels) and `fitting` rows: a library hardware item on a panel by face (top,
+    bottom, front, back, left, right: the part's faces 1-6), from an edge, at a distance. The
+    holes come only from the hardware's approved drilling pattern (the same placement as the
+    Parts designer); hardware without one goes in the BOM only. Nothing is assumed: a drilled
+    fitting without its position is a row problem.
+  - **Batch steps**: run after nesting and before output for every machine. They can report,
+    hold an order back and add report files, never change the programs. Built in: **Waste
+    areas** (each sheet's scrap and remnant pieces as a CSV). Plugins will add steps (M2.10).
+  - **Layer-rule wizard** (Library → Machining rules → New table with the wizard): layer names
+    typed or read from a DXF, the machining for each (starting from what the shop's rules do),
+    and a check on the drawing.
+  - **Admin tools** (Settings): a password on the machine page and the machining rules (not
+    security; everything stays visible, and unlocking makes it editable), screens hidden from
+    the side bar, the tool-change order used by "Order by tool" (Machine page), and the
+    missing-recipe report (rules and door styles pointing at deleted recipes, shapes no
+    operation machines).
+  - **Shop data storage** (Settings, desktop app): the JSON file stays the default; as an option
+    the data is kept in a SQLite database beside it (materials, tools and jobs as tables other
+    programs can query), with the JSON file still written on every save. Export to and import
+    from a database file. Uses the SQLite built into Electron's Node: nothing extra installed.
+    `npm run batch -- ... --data cabinet-studio.sqlite` reads it too.
+
 ## Example outputs
 
 `examples/sample-job/` holds every file generated for the built-in sample kitchen, J1042: four
@@ -487,7 +520,7 @@ The cost is installer size (about 100 MB) and memory, which doesn't matter on a 
 ## Architecture
 
 ```
-electron/          main process: window (app://bundle), JSON storage with backups, folder export (IPC)
+electron/          main process: window (app://bundle), JSON (or SQLite) storage with backups, folder export (IPC)
 src/core/          pure TypeScript, no React — everything below is unit tested
   types.ts         domain model (mm internally; cabinet X=width, Y=depth, Z=up; part x=length/grain)
   units.ts         mm storage, fractional-inch display, parse 23-1/4 and 23.25
@@ -509,7 +542,13 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   labels/          label placement on parts, labels/sheet-map PDF (jsPDF), ZPL
   pipeline.ts      runJob(): expand -> nest -> programs -> validate -> labels
   nestShape.ts     true-shape nesting (no-fit polygons, Clipper2)
-  batch.ts         part-list CSV -> orders -> runJob; batchWatch.ts inbox watcher
+  batch.ts         part-list CSV -> orders -> runJob per machine; batchWatch.ts inbox watcher
+  machines.ts      other machines and process steps (own profiles), batch targets
+  fittings.ts      fittings placed by face in part lists (approved drilling patterns only)
+  batchSteps.ts    batch steps after nesting / before output, waste areas, step registry
+  wizards.ts       batch-setup and layer-rule wizards (answers -> setups)
+  admin.ts         tool-change order, missing-recipe report, admin password, hidden screens
+  shopDb.ts        SQLite storage option (tables for materials, tools, jobs; lossless)
   hardware/patterns.ts, patternImport.ts   drilling patterns, DXF/CSV import, PDF drafts
 src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpaths, native MPR, sim
   mesh/            3D meshes: STL/OBJ/3MF readers, repair, placement, sections, outline, simplify;

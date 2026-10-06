@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, Triang
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
+import { toolOrderOf } from '@/core/admin'
 import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool, resolveTool } from '@/cam/ops'
 import { ManualFields, EditsGroup } from './EditsPanel'
 import { useOpCfg } from './opConfigure'
@@ -183,7 +184,7 @@ export function OpsPanel({
             size="sm"
             variant="ghost"
             className="h-7 text-[11px] text-stone-300 hover:bg-white/5"
-            onClick={() => setOps(orderByTool(part.ops, (o) => tpOf(o.id)?.tool ?? null, machine.tools.map((t) => t.number)))}
+            onClick={() => setOps(orderByTool(part.ops, (o) => tpOf(o.id)?.tool ?? null, toolOrderOf(machine)))}
             title="Group operations by tool, in tool-table order, to save tool changes"
           >
             Sort by tool

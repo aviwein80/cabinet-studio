@@ -26,6 +26,9 @@ import { ToolCompareDialog } from './machine/ToolCompareDialog'
 import { HoldersSection } from './machine/HoldersSection'
 import { AggregatesSection } from './machine/AggregatesSection'
 import { MachinesSection } from './machine/MachinesSection'
+import { ToolOrderSection } from './machine/ToolOrderSection'
+import { AdminLocked } from '@/components/AdminLock'
+import { isLocked } from '@/core/admin'
 import { applyToolTable, toolsCsv, toolsXlsx } from '@/core/toolData'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
@@ -71,7 +74,7 @@ const TOOL_COLS: Column<Tool>[] = [
 ]
 
 export function MachinePage() {
-  const { data, updateMachine, updateSettings, resetMachine, mutate, machineEdit, editMachine } = useStore()
+  const { data, updateMachine, updateSettings, resetMachine, mutate, machineEdit, editMachine, adminUnlocked } = useStore()
   const [importOpen, setImportOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [editTool, setEditTool] = useState<string | null>(null)
@@ -101,6 +104,7 @@ export function MachinePage() {
   }
   const feat = featuresOf(s)
   const ns = nestSettingsOf(s)
+  const locked = isLocked(s, adminUnlocked)
 
   const exportTools = async (kind: 'csv' | 'xlsx' = 'csv') => {
     // every field (M2.7) when the CAD and tool additions are on; the short Stage 1 table otherwise
@@ -114,6 +118,7 @@ export function MachinePage() {
 
   return (
     <div className="flex h-full flex-col">
+      <AdminLocked what="The machine settings, tools and defaults">
       <PageHeader
         title="Machine & tools"
         subtitle={other ? `${m.name} (${other.kind === 'step' ? 'process step' : 'other machine'})` : m.name}
@@ -295,6 +300,7 @@ export function MachinePage() {
             {!other && <CutDefaultsSection machine={m} />}
             {cadTools && <HoldersSection machine={m} updateMachine={updateMachine} />}
             {cadTools && <AggregatesSection machine={m} updateMachine={updateMachine} />}
+            {feat.batchAdditions && <ToolOrderSection machine={m} updateMachine={updateMachine} />}
             {!other && (
             <>
             <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${partSpacing(m, s)} mm`}>
@@ -492,10 +498,11 @@ export function MachinePage() {
           </div>
         </div>
       </div>
+      </AdminLocked>
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} kinds={['tools']} />
       {cadTools && <ToolSheetDialog open={sheetOpen} onOpenChange={setSheetOpen} machine={m} onApply={(tools) => updateMachine((x) => void applyToolTable(x, tools))} />}
       {cadTools && <ToolCompareDialog open={compareOpen} onOpenChange={setCompareOpen} />}
-      {editTool && m.tools.some((t) => t.id === editTool) && (
+      {editTool && !locked && m.tools.some((t) => t.id === editTool) && (
         <ToolDialog
           tool={m.tools.find((t) => t.id === editTool)!}
           machine={m}

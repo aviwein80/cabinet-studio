@@ -327,7 +327,7 @@ function basePart(it: BatchItem, data: AppData, readFile: (path: string) => stri
   const warnings = [...report.warnings]
   if (it.rules && !set) warnings.push(`Machining rules "${it.rules}" not found; using ${sets[0]?.name ?? 'none'}.`)
   const applied = set ?? sets[0] ? applyRules(part, (set ?? sets[0])!, recipesOf(lib)) : null
-  if (applied?.unmatched.length) warnings.push(`No rule for layers: ${applied.unmatched.join(', ')}`)
+  if (applied?.unmatched.length) warnings.push(`No rule for layers: ${applied.unmatched.map((u) => `${u.layer} (${u.shapes} shape${u.shapes === 1 ? '' : 's'})`).join(', ')}`)
   return { part: { ...(applied?.part ?? part), ...common, source: `Batch ${it.file}` }, warnings }
 }
 

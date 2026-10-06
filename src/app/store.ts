@@ -3,6 +3,7 @@ import { type ConfigTarget, confirmKey, type CutDefaultKey, type CutDefaults, se
 import { create } from 'zustand'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { MAIN_MACHINE, newMachineSetup, profileOf } from '@/core/machines'
+import { checkPassword } from '@/core/admin'
 import { sampleJob } from '@/core/sample'
 import { normalizeData } from '@/core/normalize'
 import { DEFAULT_ROOM } from '@/core/room'
@@ -36,6 +37,10 @@ interface State {
   go(route: Route): void
   init(): Promise<void>
   mutate(fn: (d: AppData) => void): void
+  /** The admin password was entered this session (M2.9): locked defaults can be edited. */
+  adminUnlocked: boolean
+  unlockAdmin(password: string): Promise<boolean>
+  lockAdmin(): void
   /** Replace all shop data (import from a database file, M2.9). */
   replaceData(d: AppData): void
   createJob(fields: Pick<Job, 'number' | 'name' | 'customer'>): string
@@ -151,6 +156,13 @@ export const useStore = create<State>((set, get) => {
           confirmKey(p, `default:${key}`)
         } else setCutDefault(d, key, value)
       }),
+    adminUnlocked: false,
+    async unlockAdmin(password) {
+      const ok = await checkPassword(get().data?.settings.admin?.lock, password)
+      if (ok) set({ adminUnlocked: true })
+      return ok
+    },
+    lockAdmin: () => set({ adminUnlocked: false }),
     replaceData(d) {
       set({ data: normalizeData(d), machineEdit: null })
       scheduleSave()

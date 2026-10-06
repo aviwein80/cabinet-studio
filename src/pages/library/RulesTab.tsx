@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Copy, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Copy, Plus, RotateCcw, Trash2, Wand2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useState } from 'react'
 import { useStore } from '@/app/store'
@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import type { Library } from '@/core/types'
 import { formatLength, parseLength } from '@/core/units'
+import { featuresOf } from '@/core/features'
+import { RuleSetWizard } from './RuleSetWizard'
+import { AdminLocked } from '@/components/AdminLock'
 
 type Shapes = 'any' | 'closed' | 'open' | 'circles'
 const SHAPES: { value: Shapes; label: string; where: QueryTest[] }[] = [
@@ -37,6 +40,7 @@ export function RulesTab() {
   const { data, updateLibrary } = useStore()
   const [setId, setSetId] = useState<string | null>(null)
   const [probe, setProbe] = useState('POCKET_D8')
+  const [wizard, setWizard] = useState(false)
   if (!data) return null
   const lib = data.library
   const units = data.settings.units
@@ -69,7 +73,9 @@ export function RulesTab() {
   const hitDepth = hit?.depthFromName ? depthFromLayerName(probe) : null
 
   return (
+    <AdminLocked what="The machining rules and recipes">
     <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
+      <RuleSetWizard open={wizard} onOpenChange={setWizard} onCreated={setSetId} />
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1">
@@ -99,6 +105,11 @@ export function RulesTab() {
           >
             <Copy /> Duplicate
           </Button>
+          {featuresOf(data.settings).batchAdditions && (
+            <Button size="sm" variant="outline" onClick={() => setWizard(true)}>
+              <Wand2 /> New table with the wizard
+            </Button>
+          )}
           {sets.length > 1 && (
             <Button size="sm" variant="ghost" onClick={() => edit((l) => void (l.layerRules = l.layerRules.filter((s) => s.id !== set.id)))}>
               <Trash2 /> Delete table
@@ -254,6 +265,7 @@ export function RulesTab() {
 
       <RecipeList recipes={recipes} usedBy={(id) => sets.some((s) => s.rules.some((r) => r.recipeId === id))} units={units} edit={edit} />
     </div>
+    </AdminLocked>
   )
 }
 

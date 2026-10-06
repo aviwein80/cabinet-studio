@@ -46,7 +46,13 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   the machine model has no such unit (the N-200 default); the new output switch is off. **M2.6e: done**: every
   unconfirmed value (tools, saw blade, holders, machine figures, saw / aggregate fitted, default
   cutting values) shows a Configure badge, can be confirmed or changed any time, and is listed by
-  the export checker. Next: M2.7 (CAD and tool additions).
+  the export checker. **M2.7 CAD and tool additions: done** (October 2026): turn-by-turn sketch
+  solved for unknown values, associative dimensions in inch fractions with print to scale,
+  geometry queries and auto-queries (the layer rules run on them), fill with holes, panelling,
+  image trace (own tracer), holders for every router (shop default holder, assumed stick-out =
+  flute length, holder from a model) used by the simulator and collision checks, angle heads and
+  aggregates, tool grid, spreadsheet export/import and tool data compare. Nothing writes machine
+  output. Next: M2.8 (nesting additions).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -59,6 +65,9 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - M2.6: the saw unit and the rotating aggregate count as absent on the N-200 until confirmed;
     their operations ship, and the export checker refuses their output with a clear message. No
     saw or aggregate macro is presented as proven output.
+- Open for M2.7 (see `docs/stage-2-3-progress.md`): the real stick-outs and holders of every
+  router (2D ones now too) and the shop's usual holder; offsets, housing and allowed angles of
+  any angle head or aggregate.
 - Open for M2.6 (see `docs/stage-2-3-progress.md`): the real saw blade diameter and what
   woodWOP's saw-groove XA/XE mean (cut length at the surface or at full depth), whether a
   rotating aggregate will be fitted (and a sample program for it), and the shop's facing

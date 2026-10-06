@@ -71,13 +71,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.7a Holders and aggregates, tool data compare, spreadsheet, tool grid | **Done** (October 2026) | See below. |
 | M2.7b Turn-by-turn sketch, dimensions, print to scale | **Done** (October 2026) | See below. |
 | M2.7c Geometry queries, fill with holes, panelling | **Done** (October 2026) | See below. |
-| M2.7d | Not started | Image trace, screenshots, docs. |
+| M2.7d Image trace, screenshots, docs | **Done** (October 2026) | See below. M2.7 complete. |
 | M2.8 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -127,6 +127,7 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
    Mac with the network off. (The rebate reach of 6 mm and drilling pointed holes to the
    straight-wall depth were confirmed with the M2.6 go-ahead.)
 7. **M2.6 (saw, aggregate, cutting values)**: see "M2.6 decisions needed" below.
+8. **M2.7 (holders, aggregates)**: see "M2.7 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -1117,6 +1118,50 @@ check bar).
 auto-query), `11-fill-with-holes.png` (a staggered fill of a 4200 x 1300 sign with a window and a
 ring kept clear), `12-split-into-panels.png` (the sign split into two panels with the overlap).
 
+## M2.7d image trace: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NEW-06 | Image trace, our own method (not potrace, which is GPL; no library added): each pixel is ink or paper by a brightness threshold (transparent = paper; invert for light ink); specks of ink and pin-holes under a set size are cleaned away; the borders between ink and paper pixels are followed round, so every loop is closed by construction (ink pixels touching at a corner count as joined); each loop goes through the middle of its pixel edges, sharp corners (direction turning more than the corner angle within a few pixels) are kept on the pixel corner, the rest is smoothed, and the runs between corners are fitted with lines and arcs. Pixels to mm by the width on the part; outer loops counter-clockwise, holes clockwise. Runs in the background worker; the dialog shows the contours over the picture as the settings change and puts them in the middle of the part on their own layer | `src/cam/trace.ts`, worker task `image.trace`, `ImageTraceDialog.tsx` |
+
+Fixture: `tests/fixtures/trace/logo.png` (400 x 240 px, 3 kB, anti-aliased), made by
+`scripts/fixtures/make_trace_fixture.ts`; the tests read it with a small PNG reader in
+`tests/png.ts` (the app decodes pictures with the browser).
+
+### Acceptance (image trace turns a logo PNG into closed contours)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Closed contours from a logo PNG | `tests/cam-trace.test.ts` | 4 closed contours (ring outside and hole, square, L), every segment joined to the next; the 2 x 2 px speck cleaned away; the hole clockwise |
+| Shapes true to the picture (0.5 mm a pixel) | same | Areas: ring outside 5,013.4 against 5,026.5 mm² (-0.26 %), hole 1,970.0 against 1,963.5 (+0.33 %), square 1,225.0 and L 1,575.0 exact; the ring as arcs within 0.3 mm of its radius; square corners within half a millimetre (one pixel), its edges within 0.3 mm; the L's inside corner kept |
+| Robust and repeatable | same | A random 64 x 48 picture: every loop closed; the same picture gives the same contours byte for byte; pixels touching at a corner make one loop; threshold, invert, transparency and speck / pin-hole cleaning checked |
+
+## M2.7 screenshots
+
+`docs/screenshots/stage-2-3/M2.7/` (browser preview, Playwright):
+
+- `01-tool-grid.png`: the tool table as a grid, one cell changed (tinted), Undo / Save.
+- `02-holder-editor.png`: the placeholder collet chuck's outline, point by point, with its drawing.
+- `03-aggregate.png`: the placeholder rotating aggregate: offsets, tilt, housing, angles.
+- `04-tool-dialog-holder.png`: T102 (a 2D tool) in the shop default holder, its stick-out, aggregate choice.
+- `05-tool-data-compare.png`: after T102's diameter changed from 8 to 10: the accepted pocket listed with "Diameter 8 → 10" and Update.
+- `06-simulate-2d-tool-holder.png`: T102 drawn with its holder in a 49 mm pocket; shank and holder collisions in the log.
+- `07-dimensions-inches.png`: an arched door with linear, radius, diameter, angle and ordinate dimensions in inches (one with mm beside it).
+- `08-turn-by-turn-sketch.png`: the door sketch with two unknowns worked out.
+- `09-print-to-scale.png`: print preview at 1:10 with the check bar.
+- `10-geometry-query.png`: circles of 5 mm: 3 found, result layer, keep as auto-query.
+- `11-fill-with-holes.png`: a staggered fill round a window and a ring.
+- `12-split-into-panels.png`: a 4200 mm sign split into two panels.
+- `13-image-trace.png`: the logo traced, contours over the picture.
+- `14-traced-logo-on-part.png`: the traced contours on the part.
+
+## M2.7 licences
+
+No new dependencies. The image tracer is our own code (potrace is GPL and was not used or read);
+holder envelopes, queries, panelling, hole fill, dimensions and the sketch use the existing
+kernel (Clipper2, BSL-1.0), solver, OpenCascade reader (LGPL-2.1, separate WebAssembly, already
+shipped), SheetJS (already in the app) and jsPDF (already in the app).
+
 ## M2.7 decisions needed (see the report)
 
 1. **Real stick-outs and holders** for every router (2D ones now too), and which holder is the
@@ -1124,6 +1169,10 @@ ring kept clear), `12-split-into-panels.png` (the sign split into two panels wit
    the default, flute length assumed for tools with none (all badged; checks err safe).
 2. **Aggregates**: offsets, housing and allowed angles of any angle head or aggregate the shop
    has or may buy. Until then: one invented entry, not fitted.
+
+## Next run: M2.8 nesting additions
+
+- NST-04, NST-05, NST-07, NST-09, NEW-20 as in the prompt.
 
 ## Run log
 
@@ -1154,3 +1203,4 @@ ring kept clear), `12-split-into-panels.png` (the sign split into two panels wit
 - **Run 9 (M2.7a)**: holders and aggregates, tool data compare, spreadsheet, tool grid. See `git log`.
 - **Run 9 (M2.7b)**: turn-by-turn sketch, dimensions, print to scale. See `git log`.
 - **Run 9 (M2.7c)**: geometry queries, fill with holes, panelling. See `git log`.
+- **Run 9 (M2.7d)**: image trace, screenshots, README, ROADMAP. M2.7 complete. See `git log`.

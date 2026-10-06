@@ -30,6 +30,7 @@ import { facesMesh, filletFaces, solidEdges, untrimFace } from '../solid/wires'
 import type { Entity, Layer } from '../types'
 import { holderEnvelope, type HolderFromModel } from '../tools/holder'
 import { isSolidFile } from '../solid/format'
+import { type ImagePixels, traceImage, type TraceOptions, type TraceResult } from '../trace'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -58,6 +59,8 @@ export interface TaskMap {
   /** Read a STEP / IGES / BREP file. `vendor`: URL of the folder with the OpenCascade reader files. */
   'solid.import': { in: { bytes: Uint8Array; name: string; vendor?: string } & SolidReadOptions; out: SolidData }
   'solid.pack': { in: { solid: SolidData }; out: Packed }
+  /** Trace a picture into closed contours (NEW-06). */
+  'image.trace': { in: { img: ImagePixels; opt: TraceOptions }; out: TraceResult }
   /** A holder's revolved outline from a model of it (TOOL-04): mesh or solid file, its axis along the file's `up`. */
   'holder.fromModel': { in: { bytes: Uint8Array; name: string; units?: MeshUnits; up?: UpAxis; step?: number; vendor?: string }; out: HolderFromModel & { triangles: number } }
   'blob.unpackSolid': { in: { gz: Uint8Array; hash: string }; out: SolidData }
@@ -158,6 +161,7 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     const reader = await occt(vendor)
     return readSolid(reader, bytes, name, opt, work)
   },
+  'image.trace': ({ img, opt }) => traceImage(img, opt),
   async 'holder.fromModel'({ bytes, name, units, up, step, vendor }, work) {
     let mesh: Mesh
     if (isSolidFile(name)) {

@@ -35,6 +35,7 @@ import { PrintDialog } from './part/PrintDialog'
 import { QueryDialog } from './part/QueryDialog'
 import { FillHolesDialog } from './part/FillHolesDialog'
 import { PanelDialog } from './part/PanelDialog'
+import { ImageTraceDialog } from './part/ImageTraceDialog'
 import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
@@ -98,7 +99,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [sel, setSel] = useState<string[]>([])
   const [toolId, setToolId] = useState<ToolId>('select')
   const [clicks, setClicks] = useState<Click[]>([])
-  const [cadDialog, setCadDialog] = useState<{ k: 'sketch' | 'print' | 'query' | 'fill' | 'panels'; edit?: string } | null>(null)
+  const [cadDialog, setCadDialog] = useState<{ k: 'sketch' | 'print' | 'query' | 'fill' | 'panels' | 'trace'; edit?: string } | null>(null)
   const [params, setParams] = useState<ToolParams>(DEFAULT_PARAMS)
   const [cursor, setCursor] = useState<SnapResult | null>(null)
   const [message, setMessage] = useState('')
@@ -388,6 +389,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
                 <DropdownMenuItem onSelect={() => setCadDialog({ k: 'query' })}>Geometry query…</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setCadDialog({ k: 'fill' })}>Fill with holes…</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setCadDialog({ k: 'panels' })}>Split into panels…</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setCadDialog({ k: 'trace' })}>Trace a picture…</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -490,6 +492,17 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
         />
       )}
       {cadDialog?.k === 'print' && <PrintDialog part={part} units={units} onClose={() => setCadDialog(null)} />}
+      {cadDialog?.k === 'trace' && (
+        <ImageTraceDialog
+          part={part}
+          units={units}
+          onClose={() => setCadDialog(null)}
+          onInsert={(p, msg) => {
+            change(p)
+            toast.success(msg)
+          }}
+        />
+      )}
       {cadDialog?.k === 'query' && <QueryDialog part={part} units={units} onClose={() => setCadDialog(null)} onChange={change} onSelect={(ids) => setSel(ids)} />}
       {cadDialog?.k === 'fill' && (
         <FillHolesDialog

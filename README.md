@@ -237,6 +237,46 @@ export checker. Tool numbers are still placeholders.
     saw cuts, curve cuts, edge work, toolpaths with heights edited point by point and lost edits
     are never written (`CAM_NO_OUTPUT`). A facing cutter's reach or a saw blade's run-out into
     another part on the sheet is an error (`OP_HITS_NEIGHBOUR`).
+- **CAD and tool additions** (switch: CAD and tool additions, on; part designer → **CAD** menu,
+  the **Dimension** tools, and the Machine page):
+  - **Turn-by-turn sketch**: describe an outline element by element (lines and arcs, each
+    direction from +X or as the turn from the one before, 0 = tangent), press **?** on the values
+    you don't know, and the solver works them out so the outline closes (a closed outline can work
+    out two, for example a door's side height and its arch radius). Blends and chamfers on the
+    corners. The sketch stays with the shape and can be opened and changed later.
+  - **Dimensions**: linear (horizontal, vertical, aligned), angle, radius, diameter and ordinate.
+    Their ends stick to the shapes' corners and centres, so they follow every change. Inches show
+    as fractions; each can show the other unit too. **Measure angle** at a corner. **Print to
+    scale** makes a PDF at 1:1 to 1:50, split over several sheets with crop marks and an overlap
+    strip for full-size templates; measure the check bar on each sheet before trusting it.
+  - **Geometry query**: find shapes (layer, type, size, area, length, radius, holes inside,
+    inside another shape, the outline...), faces of a solid (type, diameter, facing, depth,
+    colour) or models, then select them or move them to a layer. A query can be kept in a rule
+    table as an **auto-query**: it runs before the layer rules on every import (Library → Rules
+    lists them). The layer rules themselves now run on the same query engine, with the same
+    results as before.
+  - **Fill with holes**: a grid, staggered grid or rings of holes inside the selected closed
+    shapes (shapes inside them stay clear), with a margin from every edge, optionally with a
+    drilling operation.
+  - **Split into panels**: a drawing bigger than a sheet becomes sheet-sized parts that overlap by
+    a set amount; shapes cut at a join are closed again along it, and each panel keeps the
+    operations on its pieces.
+  - **Trace a picture**: a PNG, JPEG, GIF, BMP or WebP picture (a logo) becomes closed contours,
+    with threshold, invert, smoothing, sharp corners and speck cleaning. Our own tracer.
+  - **Holders for every router**: tools that name no holder use the shop's **default holder**; a
+    tool with no stick-out given is checked as if the holder sat right at the top of its flutes
+    (the shortest possible, so the check errs on the safe side) and shows a Configure badge. The
+    simulator draws the holder on 2D tools too, and the collision check uses it. Holders are
+    edited on the Machine page point by point, or made from a model of the holder (STL, OBJ,
+    3MF, STEP, IGES, BREP: its widest point at every height).
+  - **Angle heads and aggregates**: offsets, tool tilt, allowed head angles and housing, assigned
+    per tool. Edge work warns when the head would need an angle it cannot be set to, or its
+    housing would hit the panel's edge or the spoilboard; the simulator draws the housing.
+    Listing an aggregate never fits one on the machine.
+  - **Tool table**: edit it as a grid (arrows, Tab, Enter; type to edit; Ctrl+Z / Ctrl+Y; Save /
+    Discard); export every tool field to a spreadsheet (.xlsx or CSV) and import it back with each
+    change shown first; **Tool data in operations** lists every operation whose tool has changed
+    since its toolpath was accepted (diameter 8 → 10, …) and updates it on request.
 - **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
   the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
   aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
@@ -454,7 +494,13 @@ src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its 
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
                    Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse)
   worker/          background compute worker (3D tasks) with progress and cancel
-src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline
+src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline, default holder
+src/core/toolData.ts       tool fields, grid editing, spreadsheet export/import, tool data in operations
+  tools/holder.ts  holder outline from a model (revolved envelope)
+  turnSketch.ts    turn-by-turn sketch on the constraint solver (solver.ts)
+  dims.ts, print.ts  associative dimensions, print to scale (PDF)
+  query.ts         geometry queries and auto-queries (the layer rules run on it)
+  holeFill.ts, panelling.ts, trace.ts   fill with holes, split into panels, image trace
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)
 src/pages/         Jobs, Job (cabinets / cut list / nesting / output), Cabinet editor, Library, Machine
 src/components/    3D viewer (react-three-fiber), sheet view (SVG), forms, shadcn/ui
@@ -473,9 +519,10 @@ All of these can be set on the **Machine & tools** page:
   thickness, and whether a saw unit or aggregate is fitted. All of these are **placeholders**.
   The saw unit is treated as absent, so saw grooves are blocked by the export checker until it
   is confirmed. Every export warns while the figures are placeholders.
-- 3D tool data per tool (Edit): cutting shape (ball-nose, bull-nose with corner radius), shank
-  diameter, flute length, stick-out and holder. The ball-nose 6 and 3 mm, bull-nose 12 mm and the
-  collet-chuck holder in the built-in table are invented placeholders.
+- Tool data per tool (Edit): cutting shape (ball-nose, bull-nose with corner radius), shank
+  diameter, flute length, stick-out, holder and aggregate. The ball-nose 6 and 3 mm, bull-nose
+  12 mm, the stick-outs of the 2D routers T101-T104, the collet-chuck holder (the shop default)
+  and the rotating aggregate in the built-in table are invented placeholders.
 
 - Tool numbers and diameters (placeholder data).
 - Whether drills are addressed by diameter or by tool number.

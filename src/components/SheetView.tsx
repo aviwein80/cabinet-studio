@@ -14,6 +14,7 @@ export function SheetView({
   onSelect,
   highlightUids,
   cutPaths,
+  groups,
 }: {
   program: SheetProgram
   instances: Map<string, PartInstance>
@@ -25,6 +26,8 @@ export function SheetView({
   highlightUids?: Set<string>
   /** Tool-centre cutting paths to draw over the sheet (shared-line plan, M2.8). */
   cutPaths?: { pts: { x: number; y: number }[]; closed: boolean }[]
+  /** Bridged groups (M2.8): the path round each group and its bridges. */
+  groups?: { outer: { x: number; y: number }[]; holes: { x: number; y: number }[][]; bridges: { x0: number; y0: number; x1: number; y1: number }[] }[]
 }) {
   const s = program.sheet
   const cabinets = [...new Set(s.placements.map((p) => instances.get(p.uid)?.cabinetId ?? ''))]
@@ -101,6 +104,20 @@ export function SheetView({
               )}
             </g>
           ))}
+        {groups && (
+          <g pointerEvents="none" data-testid="bridge-groups">
+            {groups.map((g, i) => (
+              <g key={i}>
+                {g.bridges.map((b, k) => (
+                  <rect key={k} x={b.x0} y={b.y0} width={b.x1 - b.x0} height={b.y1 - b.y0} fill="#7c3aed" />
+                ))}
+                {[g.outer, ...g.holes].map((ring, k) => (
+                  <polygon key={`o${k}`} points={ring.map((q) => `${q.x},${q.y}`).join(' ')} fill="none" stroke="#7c3aed" strokeWidth={4} strokeDasharray="14 6" />
+                ))}
+              </g>
+            ))}
+          </g>
+        )}
         {cutPaths && (
           <g fill="none" stroke="#c2410c" strokeWidth={5} strokeLinejoin="round" pointerEvents="none" data-testid="cut-plan">
             {cutPaths.map((p, i) => (

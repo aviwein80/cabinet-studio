@@ -529,6 +529,15 @@ export interface NestSettings {
   /** Parts under this area (mm²) or narrower than `sharedMinSide` keep their own cut-out (hold-down). */
   sharedMinArea?: number
   sharedMinSide?: number
+  /**
+   * Bridged nesting (M2.8, NST-05): small rectangular parts are linked by short bridges and cut as
+   * one continuous path round the group. Written to MPR only with its own switch.
+   */
+  bridges?: boolean
+  /** Bridge width (mm), longest bridge (mm) and largest part linked (mm²). */
+  bridgeWidth?: number
+  bridgeMaxLength?: number
+  bridgeMaxArea?: number
 }
 
 export type NestEngine = 'rect' | 'shape' | 'auto'
@@ -628,6 +637,8 @@ export interface FeatureFlags {
   nestAdditions: boolean
   /** Write the shared-line cutting plan instead of separate cut-outs. Off until proven on the machine. */
   nestSharedOutput: boolean
+  /** Write bridged groups as one cut-out round each group. Off until proven on the machine. */
+  nestBridgeOutput: boolean
 }
 
 export interface Library {

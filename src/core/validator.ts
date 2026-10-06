@@ -293,6 +293,60 @@ export function validateJob(
       }
     }
 
+    // M2.8 bridged nesting: every bridge no longer than set and a tool diameter clear of other
+    // parts; each group's path never runs into a part; the path encloses exactly its parts and
+    // bridges (checked on the program's own paths)
+    if (prog.bridges) {
+      const { plan, written, diameter, maxLength } = prog.bridges
+      const nb = plan.clusters.reduce((n, c) => n + c.bridges.length, 0)
+      const linked = plan.clusters.reduce((n, c) => n + c.members.length, 0)
+      add({
+        severity: 'info',
+        code: 'BRIDGES',
+        sheet: sheetNo,
+        message: `Bridged nesting: ${linked} small part(s) linked into ${plan.clusters.length} group(s) by ${nb} bridge(s), each group cut as one path${plan.alone.length ? `; ${plan.alone.length} small part(s) had no neighbour close enough` : ''}. ${written ? 'Written: break the bridges off after cutting, and simulate in woodWOP.' : 'Not written: the switch "Write bridged groups to MPR" is off, so each part gets its own cut-out.'}`,
+      })
+      if (written) {
+        const placement = new Map(sh.placements.map((p) => [p.uid, p]))
+        const no = (u: string) => byUid.get(u)?.no
+        for (const cl of plan.clusters)
+          for (const b of cl.bridges) {
+            // a bridge beside its part (left or right of it) runs along x; above or below, along y
+            const pa = placement.get(b.a)!
+            const beside = b.x1 <= pa.x + EPS || b.x0 >= pa.x + pa.dx - EPS
+            const len = beside ? b.x1 - b.x0 : b.y1 - b.y0
+            if (len > maxLength + EPS) add({ severity: 'error', code: 'BRIDGE_LONG', sheet: sheetNo, partNo: no(b.a), message: `Bridge between #${no(b.a)} and #${no(b.b)} is ${fmt(len)} mm long; the longest allowed is ${fmt(maxLength)} mm.` })
+            for (const p of sh.placements) {
+              if (p.uid === b.a || p.uid === b.b) continue
+              const gap = Math.max(p.x - b.x1, b.x0 - (p.x + p.dx), p.y - b.y1, b.y0 - (p.y + p.dy))
+              if (gap < diameter - EPS)
+                add({ severity: 'error', code: 'BRIDGE_CLOSE', sheet: sheetNo, partNo: no(b.a), message: `Bridge between #${no(b.a)} and #${no(b.b)} is ${fmt(gap)} mm from part #${no(p.uid)}; the tool needs ${fmt(diameter)} mm to pass.` })
+            }
+          }
+        const groupOps = prog.ops.filter((o): o is Extract<typeof o, { kind: 'contour' }> => o.kind === 'contour' && !!o.bridged && !o.skin)
+        for (const c of groupOps) {
+          for (const p of sh.placements) {
+            const box = { x0: p.x + EPS, y0: p.y + EPS, x1: p.x + p.dx - EPS, y1: p.y + p.dy - EPS }
+            if (c.points.some((a, i) => i > 0 && segmentHitsBox(c.points[i - 1], a, box)))
+              add({ severity: 'error', code: 'BRIDGE_GOUGE', sheet: sheetNo, partNo: no(p.uid), partUid: p.uid, message: `Bridged group path ${c.opId} runs into part #${no(p.uid)}.` })
+          }
+        }
+        for (const [k, cl] of plan.clusters.entries()) {
+          const ring = (o: { points: { x: number; y: number }[] }) => {
+            let a = 0
+            const q = o.points
+            for (let i = 1; i < q.length; i++) a += q[i - 1].x * q[i].y - q[i].x * q[i - 1].y
+            return Math.abs(a / 2)
+          }
+          const mine = groupOps.filter((c) => c.opId === `bridged-${k + 1}` || c.opId === `bridged-${k + 1}-hole`)
+          const enclosed = mine.reduce((n, c) => n + (c.hole ? -ring(c) : ring(c)), 0)
+          const expect = cl.members.reduce((n, u) => n + placement.get(u)!.dx * placement.get(u)!.dy, 0) + cl.bridges.reduce((n, b) => n + (b.x1 - b.x0) * (b.y1 - b.y0), 0)
+          if (Math.abs(enclosed - expect) > 1)
+            add({ severity: 'error', code: 'BRIDGE_SHAPE', sheet: sheetNo, partNo: no(cl.members[0]), message: `Bridged group ${k + 1}: its path encloses ${fmt(enclosed / 1e6)} m² but its parts and bridges are ${fmt(expect / 1e6)} m².` })
+        }
+      }
+    }
+
     for (const c of prog.custom ?? []) {
       const ref = { sheet: sheetNo, partNo: c.partNo, partUid: c.partUid }
       const name = byUid.get(c.partUid)?.part.name ?? c.partUid

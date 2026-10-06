@@ -376,6 +376,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
   const [showLabels, setShowLabels] = useState(true)
   const [showOps, setShowOps] = useState(true)
   const [showPlan, setShowPlan] = useState(true)
+  const [showBridges, setShowBridges] = useState(true)
   const instances = useMemo(() => new Map(out.instances.map((i) => [i.uid, i])), [out])
   const additions = featuresOf(data.settings).nestAdditions
   const costs = useMemo(() => (additions ? jobCosts(out.nest, out.instances, data.library) : null), [additions, out, data.library])
@@ -454,6 +455,15 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
             <label className="flex items-center gap-1.5">
               <Switch checked={showOps} onCheckedChange={setShowOps} /> Machining
             </label>
+            {prog.bridges && (
+              <label className="flex items-center gap-1.5" title="Bridged groups: the path round each group, bridges filled">
+                <Switch checked={showBridges} onCheckedChange={setShowBridges} /> Bridges
+                <span className="text-muted-foreground">
+                  {prog.bridges.plan.clusters.length} group{prog.bridges.plan.clusters.length === 1 ? '' : 's'}
+                  {prog.bridges.written ? '' : ' (not written)'}
+                </span>
+              </label>
+            )}
             {prog.shared && (
               <label className="flex items-center gap-1.5" title="Shared-line cutting plan: tool-centre paths, a dot where each starts">
                 <Switch checked={showPlan} onCheckedChange={setShowPlan} /> Shared lines
@@ -485,6 +495,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               selectedUid={selected}
               onSelect={setSelected}
               {...(prog.shared && showPlan ? { cutPaths: prog.shared.plan.paths } : {})}
+              {...(prog.bridges && showBridges ? { groups: prog.bridges.plan.clusters } : {})}
             />
           </div>
           <div className="w-full shrink-0 overflow-auto border-t bg-background xl:w-80 xl:border-t-0 xl:border-l">

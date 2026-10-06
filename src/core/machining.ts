@@ -7,7 +7,7 @@ import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
-import { type SharedPlan, sharedLinePlan } from './sheetCuts'
+import { type BridgePlan, bridgePlan, type SharedPlan, sharedLinePlan } from './sheetCuts'
 import type { HDrillDir, Job, Library, MachineProfile, NestSettings, OpPurpose, ShopSettings, Tool, Vec2 } from './types'
 
 export interface JobNest {
@@ -36,6 +36,11 @@ export const NEST_DEFAULTS: Required<Omit<NestSettings, 'edgeTrim' | 'extraSpaci
   // PLACEHOLDER hold-down limits: the export checker's small-part warning (0.05 m², 120 mm side)
   sharedMinArea: 50_000,
   sharedMinSide: 120,
+  bridges: false,
+  // PLACEHOLDER bridge values (Configure badges): 6 mm wide, gaps up to 20 mm, parts under 0.1 m²
+  bridgeWidth: 6,
+  bridgeMaxLength: 20,
+  bridgeMaxArea: 100_000,
   engine: 'auto',
   nestInApertures: true,
   keepKitsTogether: false,
@@ -52,6 +57,8 @@ export const nestSettingsOf = (settings: ShopSettings) => ({ ...NEST_DEFAULTS, .
 
 /** Shared-line cutting is on (it needs the nesting additions screens too). */
 export const sharedLinesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).sharedLines && featuresOf(settings).nestAdditions
+/** Bridged nesting is on. */
+export const bridgesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).bridges && featuresOf(settings).nestAdditions
 
 export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings, isCancelled?: CancelCheck): JobNest {
   const ns = nestSettingsOf(settings)
@@ -189,6 +196,10 @@ export interface Contour extends Base {
   open?: boolean
   /** Other parts whose edge this cut also makes. */
   shared?: string[]
+  /** Parts cut together with this path, linked by bridges (M2.8). */
+  bridged?: string[]
+  /** Waste enclosed by a bridged group (cut before the group's outline). */
+  hole?: boolean
 }
 
 /** A custom-part operation in sheet coordinates, written as native woodWOP macros. */
@@ -237,6 +248,8 @@ export interface SheetProgram {
   }[]
   /** Shared-line cutting plan for this sheet (M2.8), and whether it replaced the separate cut-outs. */
   shared?: { plan: SharedPlan; written: boolean; diameter: number }
+  /** Bridged groups on this sheet (M2.8), and whether they replaced the members' cut-outs. */
+  bridges?: { plan: BridgePlan; written: boolean; diameter: number; maxLength: number }
 }
 
 export interface ProgramOptions {
@@ -252,6 +265,8 @@ export interface ProgramOptions {
   onionSkin?: { thickness: number; maxArea: number }
   /** Shared-line cutting (M2.8): plan every sheet; `write` replaces the separate cut-outs with it. */
   sharedLines?: { minArea: number; minSide: number; write: boolean }
+  /** Bridged nesting (M2.8): plan every sheet; `write` cuts each group as one path. */
+  bridges?: { width: number; maxLength: number; maxArea: number; write: boolean }
 }
 
 /** Collision messages for a custom part's toolpaths, worked out once per part, machine and toolpath set. */
@@ -515,17 +530,43 @@ export function buildSheetProgram(
   ops.push(...camOps.filter((o) => !inner.has(o.partUid)).sort((a, b) => rank(a) - rank(b)))
   const outer = contours.filter((c) => !inner.has(c.partUid))
   const skin = opts.onionSkin && opts.onionSkin.thickness > 0 ? opts.onionSkin : null
+  // M2.8 bridged nesting: small parts linked into groups; when written, each group is cut as one
+  // path round its parts and bridges (with the onion skin, when set, on the whole group)
+  const br = opts.bridges && cutter ? opts.bridges : null
+  const bplan = br ? bridgePlan(sheet, instances, { diameter: cutter!.diameter, width: br.width, maxLength: br.maxLength, maxArea: br.maxArea }) : null
+  const bridged = new Map<string, number>()
+  if (bplan && br!.write) bplan.clusters.forEach((c, k) => c.members.forEach((u) => bridged.set(u, k)))
   const skinned = new Set(
     skin
-      ? sheet.placements.filter((p) => !inner.has(p.uid) && !sheet.placements.some((q) => q.inside === p.uid) && partAreaOf(instances.get(p.uid)) < skin.maxArea).map((p) => p.uid)
+      ? sheet.placements.filter((p) => !inner.has(p.uid) && !bridged.has(p.uid) && !sheet.placements.some((q) => q.inside === p.uid) && partAreaOf(instances.get(p.uid)) < skin.maxArea).map((p) => p.uid)
       : [],
   )
   // M2.8 shared-line cutting: plan it; when written, the plan's tool-centre paths replace the
   // separate cut-outs of the parts in it, each part's paths at its own turn in the cut order
   const sl = opts.sharedLines && cutter ? opts.sharedLines : null
-  const plan = sl ? sharedLinePlan(sheet, instances, { diameter: cutter!.diameter, minArea: sl.minArea, minSide: sl.minSide, skinned, clockwise: machine.contour.direction === 'climb-cw' }) : null
+  const plan = sl ? sharedLinePlan(sheet, instances, { diameter: cutter!.diameter, minArea: sl.minArea, minSide: sl.minSide, skinned, bridged: new Set(bridged.keys()), clockwise: machine.contour.direction === 'climb-cw' }) : null
   const inPlan = new Set(plan && sl!.write ? plan.parts : [])
+  const groupDone = new Set<number>()
+  const groupOps: Contour[] = []
   for (const c of outer) {
+    const g = bridged.get(c.partUid)
+    if (g !== undefined) {
+      if (groupDone.has(g)) continue
+      groupDone.add(g)
+      const cl = bplan!.clusters[g]
+      const ring = (pts: Vec2[], hole: boolean) => {
+        const cw = machine.contour.direction === 'climb-cw'
+        let poly = pts
+        // outline: the machine's direction; enclosed waste: the other way round (tool inside it)
+        const a = polygonArea(poly)
+        if ((cw !== hole && a > 0) || (cw === hole && a < 0)) poly = [...poly].reverse()
+        return { ...c, opId: `bridged-${g + 1}${hole ? '-hole' : ''}`, points: startAtLongestEdge(poly), segs: undefined, bridged: cl.members, ...(hole ? { hole: true } : {}) } satisfies Contour
+      }
+      const paths = [...cl.holes.map((h) => ring(h, true)), ring(cl.outer, false)]
+      for (const p of paths) ops.push(skin ? { ...p, za: r3(skin.thickness) } : p)
+      if (skin) groupOps.push(...paths.map((p) => ({ ...p, skin: true })))
+      continue
+    }
     if (inPlan.has(c.partUid)) {
       for (const [k, p] of plan!.paths.entries())
         if (p.partUid === c.partUid)
@@ -535,6 +576,7 @@ export function buildSheetProgram(
     ops.push(skinned.has(c.partUid) ? { ...c, za: r3(skin!.thickness) } : c)
   }
   for (const c of outer) if (skinned.has(c.partUid)) ops.push({ ...c, skin: true })
+  ops.push(...groupOps)
   return {
     name: sheetProgramName(job, sheet.index, materialCode),
     sheet,
@@ -543,6 +585,7 @@ export function buildSheetProgram(
     skipped: machine.hasHorizontalDrillUnit ? [] : hdrills,
     ...(custom.length ? { custom } : {}),
     ...(plan && plan.parts.length ? { shared: { plan, written: inPlan.size > 0, diameter: cutter!.diameter } } : {}),
+    ...(bplan && bplan.clusters.length ? { bridges: { plan: bplan, written: bridged.size > 0, diameter: cutter!.diameter, maxLength: br!.maxLength } } : {}),
   }
 }
 

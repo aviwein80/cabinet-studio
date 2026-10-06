@@ -13,7 +13,7 @@
  */
 import type { PartInstance } from './cutlist'
 import type { NestedSheet, Placement } from './nesting'
-import { EndType, inflatePaths, JoinType } from 'clipper2-ts'
+import { area as areaOf, EndType, FillRule, inflatePaths, JoinType, trimCollinear, union } from 'clipper2-ts'
 import type { Vec2 } from './types'
 
 const EPS = 1e-3
@@ -37,6 +37,8 @@ export interface SharedOptions {
   minSide: number
   /** Parts that get an onion skin keep their own cut-out (and skin pass). */
   skinned?: ReadonlySet<string>
+  /** Parts cut with bridges (M2.8 NST-05) are not in the shared plan. */
+  bridged?: ReadonlySet<string>
   /** Cutting direction of closed loops: clockwise (climb with a right-hand spindle) or not. */
   clockwise: boolean
 }
@@ -56,7 +58,7 @@ export interface SharedPlan {
   /** Parts cut by the plan. */
   parts: string[]
   /** Parts on their own cut-out, and why. */
-  own: { uid: string; why: 'small' | 'shaped' | 'custom' | 'cut-out' | 'skin' }[]
+  own: { uid: string; why: 'small' | 'shaped' | 'custom' | 'cut-out' | 'skin' | 'bridged' }[]
   /** Tool-centre cutting length of the plan's paths, mm. */
   planLength: number
   /** The same parts cut one by one (tool centre round each, arcs at the corners), mm. */
@@ -93,7 +95,8 @@ function addInterval(list: [number, number][], a: number, b: number) {
 }
 
 /** Why a part keeps its own cut-out, or null when it can share lines. */
-export function ownReason(inst: PartInstance, pl: Placement, sheet: NestedSheet, o: Pick<SharedOptions, 'minArea' | 'minSide' | 'skinned'>): SharedPlan['own'][number]['why'] | null {
+export function ownReason(inst: PartInstance, pl: Placement, sheet: NestedSheet, o: Pick<SharedOptions, 'minArea' | 'minSide' | 'skinned' | 'bridged'>): SharedPlan['own'][number]['why'] | null {
+  if (o.bridged?.has(pl.uid)) return 'bridged'
   if (inst.cam) return 'custom'
   if (pl.inside || sheet.placements.some((q) => q.inside === pl.uid)) return 'cut-out'
   if (!isRectInstance(inst)) return 'shaped'
@@ -318,4 +321,130 @@ export function programCutLength(ops: readonly { kind: string; points?: Vec2[]; 
     for (const g of grown) total += g.reduce((s, p, i) => s + Math.hypot(p.x - g[(i + 1) % g.length].x, p.y - g[(i + 1) % g.length].y), 0) / K
   }
   return total
+}
+
+// ---------------------------------------------------------------------------------------------
+// Bridged nesting (NST-05)
+// ---------------------------------------------------------------------------------------------
+
+export interface BridgeOptions {
+  /** Cut-out tool diameter: the tool has to pass round every bridge. */
+  diameter: number
+  /** Bridge width (along the parts' edges), mm. */
+  width: number
+  /** Longest bridge (the widest gap bridged), mm. */
+  maxLength: number
+  /** Parts under this area (mm²) are linked; larger parts are cut on their own. */
+  maxArea: number
+  /** Parts that keep their own cut-out whatever their size (e.g. in shared lines). */
+  skip?: ReadonlySet<string>
+}
+
+export interface Bridge {
+  a: string
+  b: string
+  /** The bridge on the sheet: x0..x1 by y0..y1. */
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+}
+
+export interface BridgeCluster {
+  members: string[]
+  bridges: Bridge[]
+  /** Outline of the parts and bridges together (counter-clockwise), and any enclosed waste (clockwise). */
+  outer: Vec2[]
+  holes: Vec2[][]
+}
+
+export interface BridgePlan {
+  clusters: BridgeCluster[]
+  /** Small parts that found no neighbour to link to (cut on their own). */
+  alone: string[]
+}
+
+/** Gap between two placements' boxes along x or y, and the overlap along the other axis. */
+function facing(a: Placement, b: Placement) {
+  const ox = Math.min(a.x + a.dx, b.x + b.dx) - Math.max(a.x, b.x)
+  const oy = Math.min(a.y + a.dy, b.y + b.dy) - Math.max(a.y, b.y)
+  if (oy > 0) {
+    const [l, rr] = a.x < b.x ? [a, b] : [b, a]
+    const gap = rr.x - (l.x + l.dx)
+    if (gap > 0) return { horiz: true, gap, lo: Math.max(a.y, b.y), hi: Math.min(a.y + a.dy, b.y + b.dy), from: l.x + l.dx, to: rr.x }
+  }
+  if (ox > 0) {
+    const [l, rr] = a.y < b.y ? [a, b] : [b, a]
+    const gap = rr.y - (l.y + l.dy)
+    if (gap > 0) return { horiz: false, gap, lo: Math.max(a.x, b.x), hi: Math.min(a.x + a.dx, b.x + b.dx), from: l.y + l.dy, to: rr.y }
+  }
+  return null
+}
+
+const boxGap = (b: { x0: number; y0: number; x1: number; y1: number }, p: Placement) => Math.max(p.x - b.x1, b.x0 - (p.x + p.dx), p.y - b.y1, b.y0 - (p.y + p.dy))
+
+/**
+ * Link small rectangular parts with short bridges so each group is cut as one continuous path
+ * round the parts and bridges together: the group stays one piece on the vacuum (and on the
+ * table) until the bridges are broken. Bridges go between facing edges no further apart than the
+ * longest bridge, in the middle of the stretch the edges share, and never within a tool diameter
+ * of another part (the tool has to pass). Links form a tree (shortest gaps first), so no waste is
+ * boxed in by bridges.
+ */
+export function bridgePlan(sheet: NestedSheet, instances: ReadonlyMap<string, PartInstance>, o: BridgeOptions): BridgePlan {
+  const eligible = sheet.placements.filter((pl) => {
+    const inst = instances.get(pl.uid)
+    if (!inst || o.skip?.has(pl.uid) || inst.cam || pl.inside || sheet.placements.some((q) => q.inside === pl.uid) || !isRectInstance(inst)) return false
+    return pl.dx * pl.dy < o.maxArea - EPS
+  })
+  const ids = new Set(eligible.map((p) => p.uid))
+  const cand: { a: Placement; b: Placement; f: NonNullable<ReturnType<typeof facing>> }[] = []
+  for (let i = 0; i < eligible.length; i++)
+    for (let j = i + 1; j < eligible.length; j++) {
+      const f = facing(eligible[i], eligible[j])
+      if (!f || f.gap > o.maxLength + EPS || f.gap < o.diameter - EPS || f.hi - f.lo < o.width - EPS) continue
+      cand.push({ a: eligible[i], b: eligible[j], f })
+    }
+  cand.sort((p, q) => p.f.gap - q.f.gap || q.f.hi - q.f.lo - (p.f.hi - p.f.lo) || (p.a.uid + p.b.uid).localeCompare(q.a.uid + q.b.uid))
+  const root = new Map([...ids].map((u) => [u, u]))
+  const find = (u: string): string => (root.get(u) === u ? u : find(root.get(u)!))
+  const bridges: Bridge[] = []
+  for (const { a, b, f } of cand) {
+    if (find(a.uid) === find(b.uid)) continue
+    const mid = (f.lo + f.hi) / 2
+    const box = f.horiz ? { x0: f.from, x1: f.to, y0: mid - o.width / 2, y1: mid + o.width / 2 } : { x0: mid - o.width / 2, x1: mid + o.width / 2, y0: f.from, y1: f.to }
+    const rb = { x0: r3(box.x0), y0: r3(box.y0), x1: r3(box.x1), y1: r3(box.y1) }
+    // the tool has to get round the bridge: every other part at least a tool diameter away
+    if (sheet.placements.some((p) => p.uid !== a.uid && p.uid !== b.uid && boxGap(rb, p) < o.diameter - EPS)) continue
+    root.set(find(a.uid), find(b.uid))
+    bridges.push({ a: a.uid, b: b.uid, ...rb })
+  }
+  const groups = new Map<string, string[]>()
+  for (const p of eligible) groups.set(find(p.uid), [...(groups.get(find(p.uid)) ?? []), p.uid])
+  const clusters: BridgeCluster[] = []
+  const alone: string[] = []
+  // clusters in cut order of their first member
+  for (const members of groups.values()) {
+    if (members.length < 2) {
+      alone.push(members[0])
+      continue
+    }
+    const set = new Set(members)
+    const own = bridges.filter((b) => set.has(b.a))
+    const K = 1000
+    const box = (x0: number, y0: number, x1: number, y1: number) => [
+      { x: Math.round(x0 * K), y: Math.round(y0 * K) },
+      { x: Math.round(x1 * K), y: Math.round(y0 * K) },
+      { x: Math.round(x1 * K), y: Math.round(y1 * K) },
+      { x: Math.round(x0 * K), y: Math.round(y1 * K) },
+    ]
+    const shapes = [...members.map((u) => sheet.placements.find((p) => p.uid === u)!).map((p) => box(p.x, p.y, p.x + p.dx, p.y + p.dy)), ...own.map((b) => box(b.x0, b.y0, b.x1, b.y1))]
+    const merged = union(shapes, FillRule.NonZero).map((ring) => trimCollinear(ring))
+    const toMm = (ring: { x: number; y: number }[]) => ring.map((q) => ({ x: q.x / K, y: q.y / K }))
+    const outerRings = merged.filter((ring) => areaOf(ring) > 0)
+    const outer = toMm(outerRings.sort((p, q) => areaOf(q) - areaOf(p))[0])
+    const holes = merged.filter((ring) => areaOf(ring) < 0).map(toMm)
+    clusters.push({ members, bridges: own, outer, holes })
+  }
+  return { clusters, alone }
 }

@@ -74,13 +74,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.7d Image trace, screenshots, docs | **Done** (October 2026) | See below. M2.7 complete. |
 | M2.8a Area and cost (NEW-20) | **Done** (October 2026) | See below. |
 | M2.8b Shared-line cutting (NST-04) | **Done** (October 2026) | See below. Output switch off. |
-| M2.8c - M2.8e | In progress | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
+| M2.8c Bridged nesting (NST-05) | **Done** (October 2026) | See below. Output switch off. |
+| M2.8d - M2.8e | In progress | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
 | M2.9 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -1230,6 +1231,32 @@ Sample job output unchanged (the new CSV is a separate export).
 - **One side of each shared line is cut climb, the other conventional** (a single pass between two parts).
 - **Corners of the plan are square at the tool centre** (the part corners stay sharp); a part cut on its own goes round its corners in arcs. The measured lengths include this.
 - **Not machine-proven.** The `NOWRK` contour form and the vertical (or ramped) entry on the line are as the MPR 4.x description gives them; output stays off until a sheet is checked in woodWOP.
+
+## M2.8c bridged nesting: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NST-05 | "Bridged nesting" (Machine page, Nesting): small rectangular parts (under 0.1 m²) are linked by bridges between facing edges no further apart than the longest bridge (20 mm), 6 mm wide, in the middle of the stretch the edges share, never within a tool diameter of another part (the tool has to pass). Links form a tree, shortest gaps first, so no waste is boxed in. Each group is cut as **one continuous path** round its parts and bridges (Clipper2 union); with an onion skin set, the group's path leaves the skin and a final pass at the end of the sheet cuts it. Bridged parts are left out of shared lines and of the per-part onion skin | `bridgePlan` in `src/core/sheetCuts.ts`, `buildSheetProgram` |
+| Output | Switch "Write bridged groups to MPR" (`nestBridgeOutput`), **off**. Off: the groups are drawn (Nesting tab, "Bridges") and listed by the checker; every part keeps its own cut-out. On: one compensated `<105>` contour per group (waste boxed in by a group, if any, cut first, the other way round), and a program comment to break the bridges off | `writer.ts`, `SheetView.tsx` |
+| Checks | `BRIDGE_LONG` (a bridge longer than allowed), `BRIDGE_CLOSE` (a bridge within a tool diameter of another part), `BRIDGE_GOUGE` (a group's path runs into a part), `BRIDGE_SHAPE` (the path does not enclose exactly its parts and bridges); `BRIDGES` info | `validator.ts` |
+| Badges | Bridge width, longest bridge and largest part linked are PLACEHOLDER values with Configure badges while bridged nesting is on | `nestUnconfirmed` |
+
+### Acceptance (spec: link parts with short bridges into one continuous path, onion-skin passes, maximum bridge length)
+
+| Check | Proof | Measured |
+|---|---|---|
+| By hand | `tests/nest-bridges.test.ts` | Three 300 x 200 parts 14 mm apart: bridges at x 310-324 and 624-638, y 107-113; outline area 3 x 60,000 + 2 x 84 mm² |
+| Limits | same | 25 mm gap (over 20): not linked; 0.12 m² parts: not linked; a part 7 mm from the bridge spot: no bridge; 2 x 2 block: 3 bridges, no enclosed waste |
+| One path per group, nothing cut into a part | same (independent: the band one diameter wide that the tool sweeps outside each path, intersected with every part) | Sample kitchen: 4 small parts in 2 groups, 2 bridges, 2 paths; swept band meets no part; no `BRIDGE_*` error; same other errors as without |
+| Onion skin | same | Group paths at 0.4 mm first, final through passes at the end of the sheet |
+| Off = unchanged | same | Programs identical with the switch off |
+| Checker catches mistakes | same | Path moved 40 mm: `BRIDGE_GOUGE`; path shrunk: `BRIDGE_SHAPE`; longest bridge 10 mm: `BRIDGE_LONG` |
+
+### Limits recorded
+
+- **Only rectangles are linked**, and only to other small parts (not to a large neighbour).
+- **The parts keep a small radius of material where each bridge meets their edge** (the tool cannot cut an inside corner sharp); it comes off with the bridge stub.
+- **Not machine-proven**; output off.
 
 ### Test-suite note
 

@@ -52,6 +52,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camCadTools', 'CAD and tool additions', 'Turn-by-turn sketch, dimensions and print to scale, geometry queries, fill with holes, panelling, image trace; holder and aggregate library, tool grid, tool data compare and spreadsheet import/export.'],
   ['nestAdditions', 'Nesting additions', 'Areas and costs per sheet and part; shared-line and bridged cutting plans; flip-side sheets with the sheet backplot; moving parts by hand on a sheet. Screens only: each new kind of program output has its own switch, off.'],
   ['nestSharedOutput', 'Write shared-line cuts to MPR', 'Shared-line cutting writes one tool-centre pass between neighbouring parts instead of a cut-out round each. Off until proven on the machine: while off, the plan is shown and measured, and every part keeps its own cut-out.'],
+  ['nestBridgeOutput', 'Write bridged groups to MPR', 'Bridged nesting cuts each group of linked small parts as one path round the parts and their bridges. Off until proven on the machine: while off, the groups are shown and every part keeps its own cut-out.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
   ['cam25dMprOutput', 'Write facing, chamfers and saw cuts to MPR', 'The newer 2.5D operations that have a woodWOP form, as contour-milling passes and saw grooves (also needs the custom-part switch). Off until proven on the machine. Saw grooves also need a saw unit in the machine model. Angled saw cuts, curve cuts, edge work with an aggregate and edited toolpaths are never written.'],
@@ -331,6 +332,23 @@ export function MachinePage() {
                         max={1000}
                         onChange={(v) => mutate((d) => ((d.settings.nesting.sharedMinSide = v), confirmKey(d.machine, 'nest:sharedSmall')))}
                       />
+                    </div>
+                  )}
+                </>
+              )}
+              {feat.nestAdditions && (
+                <>
+                  <SwitchField
+                    label="Bridged nesting"
+                    checked={ns.bridges}
+                    onChange={(v) => updateSettings((x) => (x.nesting.bridges = v))}
+                    hint={`Small rectangular parts are linked by short bridges and cut as one path round each group, so they stay one piece on the vacuum; break the bridges off afterwards. Uses the onion skin above when it is set. Program output has its own switch below (${feat.nestBridgeOutput ? 'on' : 'off'}).`}
+                  />
+                  {ns.bridges && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <NumField label="Bridge width" value={ns.bridgeWidth} min={1} max={50} step={0.5} cfg="nest:bridgeWidth" badge={nestBadge('bridgeWidth')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeWidth = v), confirmKey(d.machine, 'nest:bridgeWidth')))} />
+                      <NumField label="Longest bridge" value={ns.bridgeMaxLength} min={1} max={200} cfg="nest:bridgeMaxLength" badge={nestBadge('bridgeMaxLength')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxLength = v), confirmKey(d.machine, 'nest:bridgeMaxLength')))} hint="Widest gap bridged" />
+                      <NumField label="Parts under" suffix="m²" value={Math.round(ns.bridgeMaxArea / 1e4) / 100} min={0} max={3} step={0.01} cfg="nest:bridgeMaxArea" badge={nestBadge('bridgeMaxArea')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxArea = v * 1e6), confirmKey(d.machine, 'nest:bridgeMaxArea')))} />
                     </div>
                   )}
                 </>

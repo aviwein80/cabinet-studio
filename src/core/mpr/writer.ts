@@ -199,7 +199,7 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('ZSTART', 0)
   w.kv('ANZZST', 0)
   w.kv('KAT', 'Fraesen')
-  w.kv('MNM', mprText(`P${c.partNo} ${c.skin ? 'onion-skin pass' : c.centre ? `shared cut${c.shared?.length ? ' with ' + c.shared.length + ' part(s)' : ''}` : 'cut-out'}`))
+  w.kv('MNM', mprText(`P${c.partNo} ${c.skin ? `onion-skin pass${c.bridged ? ' bridged group' : ''}` : c.bridged ? `bridged group of ${c.bridged.length}${c.hole ? ' waste inside' : ''}` : c.centre ? `shared cut${c.shared?.length ? ' with ' + c.shared.length + ' part(s)' : ''}` : 'cut-out'}`))
 }
 
 /** Native macros for one custom-part intent (already in program coordinates). */
@@ -364,6 +364,7 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
     const c = contours.find((cc) => cc.partUid === pl.uid)
     if (c) w.kv('KM', mprText(`P${c.partNo} at X${fmt(pl.x)} Y${fmt(pl.y)} ${fmt(pl.dx)}x${fmt(pl.dy)}${pl.rotated ? ' rotated' : ''}`))
   }
+  if (prog.bridges?.written) w.kv('KM', mprText(`Bridged groups: ${prog.bridges.plan.clusters.length}, ${prog.bridges.plan.clusters.reduce((n, c) => n + c.bridges.length, 0)} bridges - break them off after cutting`))
   if (prog.shared?.written) w.kv('KM', mprText(`Shared-line cutting: ${prog.shared.plan.parts.length} parts, tool-centre paths (no radius compensation)`))
   if (prog.skipped.length) w.kv('KM', mprText(`${prog.skipped.length} horizontal holes NOT in this program - drill off-machine`))
   w.kv('KAT', 'Kommentar')

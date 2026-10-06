@@ -1,6 +1,7 @@
 /**
  * Generic text-template post for G-code style controllers (not used for the HOMAG, which gets
- * native MPR). Our own template format:
+ * native MPR). Template posts and script posts (M2.10, PST-02) both read `postInput(...)`, so there
+ * is one post path for text programs. Our own template format:
  *
  *   [file]      ext=nc  decimals=3  modal=F
  *   [start] [toolchange] [rapid] [feed] [arc_cw] [arc_ccw] [drill] [peck] [comment] [end]
@@ -9,7 +10,7 @@
  * {NAME:4} forces 4 decimals. A line starting with "?NAME " is written only when NAME is set.
  * Words listed in `modal` are dropped when their value did not change.
  */
-import { simpleMoves, type Toolpath } from './toolpath'
+import { simpleMoves, type FeedKind, type Toolpath } from './toolpath'
 
 export interface PostTemplate {
   name: string
@@ -85,7 +86,58 @@ export function parseTemplate(text: string): Parsed {
   return out
 }
 
-export function runPost(template: PostTemplate, name: string, paths: Toolpath[], zTop = 0): { ext: string; text: string } {
+/**
+ * What every text post gets (M2.10, PST-02): the toolpaths in run order as plain data, Z measured
+ * from the part's top (`zTop` added), feeds in mm/min already worked out per move, arc centres
+ * both absolute and relative to the move's start (I, J). The template post below and script posts
+ * (sandboxed plugins) read the same thing, so the two can be compared exactly.
+ */
+export interface PostToolInfo {
+  number: number
+  name: string
+  diameter: number
+}
+export type PostMove =
+  | { t: 'rapid'; x: number; y: number; z: number }
+  | { t: 'feed'; x: number; y: number; z: number; f: number; kind: FeedKind }
+  | { t: 'arc'; x: number; y: number; z: number; i: number; j: number; cx: number; cy: number; ccw: boolean; f: number }
+  | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number; f: number }
+export interface PostOp {
+  name: string
+  kind: Toolpath['kind']
+  tool: PostToolInfo | null
+  rpm: number
+  moves: PostMove[]
+}
+export interface PostInput {
+  name: string
+  units: 'mm'
+  part?: { length: number; width: number; thickness: number }
+  ops: PostOp[]
+}
+
+export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number; part?: { length: number; width: number; thickness: number } } = {}): PostInput {
+  const zTop = opts.zTop ?? 0
+  let x = 0
+  let y = 0
+  const ops = paths.map((tp): PostOp => {
+    const moves: PostMove[] = []
+    for (const m of simpleMoves(tp.moves)) {
+      const z = m.z + zTop
+      if (m.t === 'rapid') moves.push({ t: 'rapid', x: m.x, y: m.y, z })
+      else if (m.t === 'feed') moves.push({ t: 'feed', x: m.x, y: m.y, z, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)), kind: m.f })
+      else if (m.t === 'arc') moves.push({ t: 'arc', x: m.x, y: m.y, z, i: m.cx - x, j: m.cy - y, cx: m.cx, cy: m.cy, ccw: m.ccw, f: Math.round(tp.feeds.feed * (m.k ?? 1)) })
+      else moves.push({ t: 'drill', x: m.x, y: m.y, z, r: m.r + zTop, peck: m.peck, dwell: m.dwell, f: Math.round(tp.feeds.plunge) })
+      x = m.x
+      y = m.y
+    }
+    return { name: tp.name, kind: tp.kind, tool: tp.tool ? { number: tp.tool.number, name: tp.tool.name, diameter: tp.tool.diameter } : null, rpm: Math.round(tp.feeds.rpm), moves }
+  })
+  return { name, units: 'mm', ...(opts.part ? { part: { ...opts.part } } : {}), ops }
+}
+
+/** The template post on a post input. */
+export function runTemplate(template: PostTemplate, input: PostInput): { ext: string; text: string } {
   const t = parseTemplate(template.text)
   const lines: string[] = []
   const last: Record<string, string> = {}
@@ -111,22 +163,21 @@ export function runPost(template: PostTemplate, name: string, paths: Toolpath[],
       lines.push(ln.replace(/\s+$/, '').replace(/ {2,}/g, ' '))
     }
   }
-  emit('start', { NAME: name })
-  let x = 0
-  let y = 0
-  for (const tp of paths) {
-    if (tp.tool) emit('toolchange', { T: String(tp.tool.number), S: String(Math.round(tp.feeds.rpm)), TOOLNAME: tp.tool.name })
-    emit('comment', { TEXT: tp.name })
-    for (const m of simpleMoves(tp.moves)) {
-      const Z = m.z + zTop
-      if (m.t === 'rapid') emit('rapid', { X: m.x, Y: m.y, Z })
-      else if (m.t === 'feed') emit('feed', { X: m.x, Y: m.y, Z, F: String(Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1))) })
-      else if (m.t === 'arc') emit(m.ccw ? 'arc_ccw' : 'arc_cw', { X: m.x, Y: m.y, Z, I: m.cx - x, J: m.cy - y, F: String(Math.round(tp.feeds.feed * (m.k ?? 1))) })
-      else emit(m.peck > 0 ? 'peck' : 'drill', { X: m.x, Y: m.y, Z, R: m.r + zTop, Q: m.peck, F: String(Math.round(tp.feeds.plunge)) })
-      x = m.x
-      y = m.y
+  emit('start', { NAME: input.name })
+  for (const op of input.ops) {
+    if (op.tool) emit('toolchange', { T: String(op.tool.number), S: String(op.rpm), TOOLNAME: op.tool.name })
+    emit('comment', { TEXT: op.name })
+    for (const m of op.moves) {
+      if (m.t === 'rapid') emit('rapid', { X: m.x, Y: m.y, Z: m.z })
+      else if (m.t === 'feed') emit('feed', { X: m.x, Y: m.y, Z: m.z, F: String(m.f) })
+      else if (m.t === 'arc') emit(m.ccw ? 'arc_ccw' : 'arc_cw', { X: m.x, Y: m.y, Z: m.z, I: m.i, J: m.j, F: String(m.f) })
+      else emit(m.peck > 0 ? 'peck' : 'drill', { X: m.x, Y: m.y, Z: m.z, R: m.r, Q: m.peck, F: String(m.f) })
     }
   }
   emit('end', {})
   return { ext: t.ext, text: lines.join('\r\n') + '\r\n' }
+}
+
+export function runPost(template: PostTemplate, name: string, paths: Toolpath[], zTop = 0): { ext: string; text: string } {
+  return runTemplate(template, postInput(name, paths, { zTop }))
 }

@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import { isLocked } from '@/core/admin'
 import { cn } from '@/lib/utils'
 import SAMPLE_PLUGIN from '../../../examples/plugins/sample-shop-tools.js?raw'
+import SAMPLE_POST from '../../../examples/plugins/iso-router-post.js?raw'
 
 const now = () => new Date().toISOString()
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -117,6 +118,9 @@ export function PluginsSection() {
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void install(SAMPLE_PLUGIN, 'sample')} disabled={plugins.some((p) => p.id === 'sample-shop-tools')}>
             <Plug className="size-3.5" /> Add the sample plugin
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void install(SAMPLE_POST, 'sample')} disabled={plugins.some((p) => p.id === 'iso-router-post')}>
+            <Plug className="size-3.5" /> Add the sample script post
           </Button>
           <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => void saveReference()}>
             <FileDown className="size-3.5" /> Plugin API reference (.d.ts)

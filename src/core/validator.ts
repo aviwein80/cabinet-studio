@@ -580,3 +580,51 @@ function shapeClash(a: Paths64, b: Paths64, spacing: number): 'overlap' | 'close
   const grow = (p: Paths64) => inflatePaths(p, ((spacing - 0.05) / 2) * K, JoinType.Round, EndType.Polygon)
   return areaPaths(intersect(grow(a), grow(b), FillRule.NonZero)) > 1 ? 'close' : null
 }
+
+/** A machine's post: the built-in woodWOP writer, a text template, or a script post from a plugin (M2.10b). */
+export type PostChoice = import('./types').MachineSetup['post']
+
+/** The N-200 (the main machine, or a machine still described as one) takes woodWOP programs only. */
+export const isN200 = (setup: Pick<import('./types').MachineSetup, 'id' | 'profile'>) => setup.id === 'main' || /n-?\s?200/i.test(`${setup.profile.model} ${setup.profile.name}`)
+
+/**
+ * M2.10b: may a text post (template or script) write programs of these toolpaths for this machine?
+ * Every error blocks writing; previews are always allowed. On top of the export checker's own
+ * results for the part on that machine (`issues`, all kept), a text post is refused:
+ * - for the N-200 (it takes woodWOP only; nothing goes to it through a script post);
+ * - while "Write programs through script posts" is off, or without the plugin's machine-output grant;
+ * - for work a G-code style post cannot describe: edge (horizontal) drilling, drilling from the
+ *   underside after turning the part, edge work with an aggregate, saw cuts without a saw unit,
+ *   anything not on face 1, 3D or rotary / tilted work the machine model does not declare, and
+ *   any toolpath that has no confirmed program form.
+ */
+export function checkTextPost(
+  setup: import('./types').MachineSetup,
+  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[] },
+): Issue[] {
+  const out: Issue[] = []
+  const err = (code: string, message: string) => out.push({ severity: 'error', code, message })
+  const post = setup.post
+  if (post.kind === 'woodwop-mpr') return [...(opts.issues ?? [])]
+  if (isN200(setup)) err('POST_N200', `${setup.name} is the N-200 (or still described as one): it takes woodWOP programs only. Template and script posts are for other machines; give this machine its own model name first.`)
+  if (!opts.switchOn) err('POST_OUTPUT_OFF', '"Write programs through script posts" is off (Machine page): programs are shown, not written.')
+  if (post.kind === 'script') {
+    const p = opts.plugin
+    if (!p) err('POST_PLUGIN_MISSING', `The plugin "${post.plugin}" for this post is not installed.`)
+    else if (!p.enabled) err('POST_PLUGIN_OFF', `The plugin ${p.manifest.name} is switched off.`)
+    else if (!p.grants.machineOutput) err('POST_NO_GRANT', `The plugin ${p.manifest.name} has not been granted machine output (Settings → Plugins).`)
+    else if (!p.contributes?.posts.some((x) => x.id === post.post)) err('POST_MISSING', `The plugin ${p.manifest.name} has no post "${post.post}".`)
+  }
+  const caps = machineModelOf(setup.profile).capabilities
+  for (const tp of opts.toolpaths) {
+    const what = (why: string) => err('POST_UNSUPPORTED', `${tp.name}: ${why}`)
+    if (tp.noOutput) what(tp.noOutput)
+    if (tp.intents.some((i) => i.k === 'hdrill')) what('edge (horizontal) drilling cannot be written by a text post.')
+    if (tp.intents.some((i) => i.k === 'vdrill' && i.back)) what('drilling from the underside (part turned over) cannot be written by a text post.')
+    if (tp.kind === 'edge' || tp.edge) what('edge work with an aggregate cannot be written by a text post.')
+    if (tp.kind === 'saw' && !caps.saw) what(`${setup.name} has no saw unit in its machine model.`)
+    if ((tp.kind === 'finish3d' || tp.kind === 'rough3d') && !caps.mill3d) what(`${setup.name} does not declare 3D milling in its machine model.`)
+  }
+  for (const i of opts.issues ?? []) out.push(i)
+  return out
+}

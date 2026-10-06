@@ -72,21 +72,9 @@ export interface PluginBatchStep {
   beforeOutput?(ctx: BatchView & { files: { name: string; bytes: number }[] }): BatchStepResult | void | Promise<BatchStepResult | void>
 }
 
-/** One move of the toolpath list a script post receives (M2.10b); Z is from the part's top. */
-export type PostMove =
-  | { t: 'rapid'; x: number; y: number; z: number }
-  | { t: 'feed'; x: number; y: number; z: number; f: number; plunge: boolean }
-  | { t: 'arc'; x: number; y: number; z: number; i: number; j: number; ccw: boolean; f: number }
-  | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number; f: number }
-
-export interface PostInput {
-  /** Program name. */
-  name: string
-  units: 'mm'
-  part?: { length: number; width: number; thickness: number }
-  /** Operations in the order they run; a new `tool` means a tool change. */
-  ops: { name: string; kind: CamOpKind; tool: { number: number; name: string; diameter: number } | null; rpm: number; moves: PostMove[] }[]
-}
+/** What a script post receives (M2.10b): the same data as the built-in template post (`src/cam/post.ts`). */
+export type { PostInput, PostMove, PostOp } from '../post'
+import type { PostInput } from '../post'
 
 export interface PluginPost {
   id: string

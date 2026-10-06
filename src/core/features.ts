@@ -26,6 +26,7 @@ export const DEFAULT_FEATURES: FeatureFlags = {
   batchAdditions: true,
   batchMachinesOutput: false,
   plugins: true,
+  scriptPostOutput: false,
 }
 
 export const featuresOf = (s: Pick<ShopSettings, 'features'> | undefined): FeatureFlags => ({ ...DEFAULT_FEATURES, ...(s?.features ?? {}) })

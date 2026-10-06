@@ -477,7 +477,12 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
         const stepCtx = { order: { number: order.number, name: order.name, customer: order.customer }, machine: { id: t.id, name: t.name }, job, output: out, data: d }
         note(runSteps(steps, 'afterNest', stepCtx, [], ctx.extraSteps).messages, m, tag)
         if (m.errors.length) m.status = 'blocked'
-        else if (!main && !otherOutput) m.status = 'held'
+        else if (!main && machineSetup(ctx.data, t.id)?.post.kind !== 'woodwop-mpr') {
+          // M2.10b: a machine with a template or script post must not get woodWOP files; sheet
+          // programs through text posts are not built, so its set is checked and held back
+          m.status = 'held'
+          res.warnings.push(`${tag}Programs for ${t.name} go through its ${machineSetup(ctx.data, t.id)?.post.kind} post; batch runs do not write sheet programs through text posts, so they were checked and not written.`)
+        } else if (!main && !otherOutput) m.status = 'held'
         res.errors.push(...m.errors)
         res.machines.push(m)
         sets.push({ m, data: d, out, stepCtx })
@@ -510,7 +515,7 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
             for (const f of files) res.files.push(s.m.folder ? { ...f, name: `${s.m.folder}/${f.name}` } : f)
             s.m.files = files.map((f) => f.name)
           }
-        const held = res.machines.filter((m) => m.status === 'held')
+        const held = res.machines.filter((m) => m.status === 'held' && machineSetup(ctx.data, m.id)?.post.kind === 'woodwop-mpr')
         if (held.length) res.warnings.push(`Programs for ${held.map((m) => m.name).join(', ')} were checked but not written: "Write programs for other machines" is off on the Machine page.`)
         const sheets = (n: number) => `${n} sheet${n === 1 ? '' : 's'}`
         const only = res.machines.length === 1 && res.machines[0].id === MAIN_MACHINE

@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { machineUnconfirmed } from '@/core/confirm'
 import { featuresOf } from '@/core/features'
 import { machineSetups, MAIN_MACHINE } from '@/core/machines'
+import { SAMPLE_TEMPLATE } from '@/cam/post'
+import { isN200 } from '@/core/validator'
+import { toast } from 'sonner'
 import type { MachineSetup } from '@/core/types'
 import { cn } from '@/lib/utils'
 
@@ -15,7 +18,7 @@ import { cn } from '@/lib/utils'
  * page with "Edit"; batch setups pick which of them get a program set.
  */
 export function MachinesSection() {
-  const { data, machineEdit, editMachine, addMachine, removeMachine } = useStore()
+  const { data, machineEdit, editMachine, addMachine, removeMachine, mutate } = useStore()
   const [name, setName] = useState('')
   const [kind, setKind] = useState<MachineSetup['kind']>('machine')
   const [from, setFrom] = useState<'main' | 'placeholder'>('main')
@@ -23,6 +26,23 @@ export function MachinesSection() {
   const list = machineSetups(data)
   const out = featuresOf(data.settings).batchMachinesOutput
   const current = machineEdit ?? MAIN_MACHINE
+  // M2.10b: text posts (the sample template, plugins' script posts) for machines other than the N-200
+  const posts: { value: string; label: string; post: MachineSetup['post'] }[] = [
+    { value: 'woodwop', label: 'woodWOP MPR (built in)', post: { kind: 'woodwop-mpr' } },
+    { value: 'template', label: `Template: ${SAMPLE_TEMPLATE.name}`, post: { kind: 'template', ...SAMPLE_TEMPLATE } },
+    ...(data.plugins ?? []).filter((p) => p.enabled).flatMap((p) => (p.contributes?.posts ?? []).map((x) => ({ value: `script:${p.id}/${x.id}`, label: `Script: ${x.name} (${p.manifest.name})`, post: { kind: 'script' as const, plugin: p.id, post: x.id } }))),
+  ]
+  const postValue = (m: MachineSetup) => (m.post.kind === 'woodwop-mpr' ? 'woodwop' : m.post.kind === 'template' ? 'template' : `script:${m.post.plugin}/${m.post.post}`)
+  const postLabel = (m: MachineSetup) => posts.find((p) => p.value === postValue(m))?.label ?? (m.post.kind === 'script' ? `Script: ${m.post.post} (plugin ${m.post.plugin}, not available)` : 'woodWOP MPR')
+  const setPost = (m: MachineSetup, value: string) => {
+    const choice = posts.find((p) => p.value === value)
+    if (!choice) return
+    if (choice.post.kind !== 'woodwop-mpr' && isN200(m)) return void toast.error(`${m.name} is still described as an N-200`, { description: 'The N-200 takes woodWOP programs only. Give this machine its own model name (Edit → machine model field) before choosing a text post.' })
+    mutate((d) => {
+      const x = d.machines?.find((y) => y.id === m.id)
+      if (x) x.post = choice.post
+    })
+  }
   return (
     <Section title="Machines and process steps" description={`Batch runs can send the same part list to several machines; each gets its own nest, programs and export check. Programs for the other machines are ${out ? 'written' : 'checked but not written ("Write programs for other machines" is off)'}.`}>
       <ul className="flex flex-col gap-1.5" data-cfg="machines">
@@ -33,8 +53,18 @@ export function MachinesSection() {
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{m.name}</div>
                 <div className="text-[11px] text-muted-foreground">
-                  {m.id === MAIN_MACHINE ? 'Main machine' : m.kind === 'step' ? 'Process step' : 'Other machine'} · woodWOP MPR · {m.profile.mat}
+                  {m.id === MAIN_MACHINE ? 'Main machine' : m.kind === 'step' ? 'Process step' : 'Other machine'} · {m.id === MAIN_MACHINE ? `woodWOP MPR · ${m.profile.mat}` : postLabel(m)}
                 </div>
+                {m.id !== MAIN_MACHINE && (
+                  <select aria-label={`Post for ${m.name}`} className="mt-1 h-7 w-full max-w-sm rounded-md border bg-background px-1.5 text-[11px]" value={postValue(m)} onChange={(e) => setPost(m, e.target.value)}>
+                    {posts.map((p) => (
+                      <option key={p.value} value={p.value} disabled={p.post.kind !== 'woodwop-mpr' && isN200(m)}>
+                        {p.label}
+                        {p.post.kind !== 'woodwop-mpr' && isN200(m) ? ' (not for an N-200)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               {open > 0 && (
                 <Badge variant="outline" className="border-amber-400 bg-amber-50 text-[10px] text-amber-900" title="Values still to configure on this machine">

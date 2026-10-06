@@ -620,8 +620,12 @@ export interface MachineSetup {
   /** A machine of its own, or another process step (label only; both get a full program set). */
   kind: 'machine' | 'step'
   profile: MachineProfile
-  /** How its programs are written. Script posts for other controllers come with M2.10. */
-  post: { kind: 'woodwop-mpr' }
+  /**
+   * How its programs are written: the built-in woodWOP writer, or (M2.10b, other machines only) a
+   * text template or a plugin's script post. Text posts write only when their switch is on and
+   * `checkTextPost` finds nothing.
+   */
+  post: { kind: 'woodwop-mpr' } | { kind: 'template'; name: string; text: string } | { kind: 'script'; plugin: string; post: string }
   notes?: string
 }
 
@@ -714,6 +718,8 @@ export interface FeatureFlags {
    * recorder, script-post previews, reading programs back and the program manager. Screens only.
    */
   plugins: boolean
+  /** M2.10b: write programs through template and script posts (other machines only, never the N-200). Off. */
+  scriptPostOutput: boolean
 }
 
 export interface Library {

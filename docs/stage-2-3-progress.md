@@ -82,13 +82,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | **Done** (October 2026) | See below. |
 | M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | **Done** (October 2026) | See below. M2.9 complete. |
 | M2.10a Plugin sandbox and API (API-01) | **Done** (October 2026) | See below. Plugins run sandboxed; nothing granted until the owner grants it. |
-| M2.10b - M2.10d | Not started | Script posts (PST-02); reading programs back (NEW-22); program manager (PST-04), screenshots, docs. See "M2.10 split". |
+| M2.10b Script posts (PST-02) | **Done** (October 2026) | See below. Output switch off; never the N-200. |
+| M2.10c - M2.10d | Not started | Reading programs back (NEW-22); program manager (PST-04), screenshots, docs. See "M2.10 split". |
 | M2.11 | Not started | ART-01. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1586,10 +1587,39 @@ dependency `@jitl/quickjs-ffi-types` 0.32.0 is MIT. The WebAssembly ships unmodi
 `vendor/quickjs/emscripten-module.wasm` with its licence; About screen and
 `THIRD_PARTY_NOTICES.md` updated.
 
-## Next: M2.10b script posts
+## M2.10b script posts: what was built
 
-- PST-02 on the one post path (`src/cam/post.ts`), sample script post equal to the template post
-  on the reference parts, its own output switch (off), never the N-200 for unsupported ops.
+| Spec ID | What | Where |
+|---|---|---|
+| PST-02 | **One post path for text programs**: `postInput(...)` turns toolpaths into plain data (operations in run order, tool, spindle speed, every move with Z from the top, feeds per move, arc centres absolute and as I/J). The built-in template post now reads it (output byte-identical to before, proved against a frozen copy of the old code), and so do script posts. The woodWOP writer stays the built-in path for the N-200 | `src/cam/post.ts` |
+| PST-02 | **Script posts**: a plugin adds `cs.post.add({ id, name, ext, run(input) })`; `run` gets the post input in its sandbox and returns the program text (checked: text, no NUL, at most 50 MB; stopped after 5 s like any plugin code) | `src/cam/plugin/posts.ts`, `prelude.ts` |
+| PST-02 | **Which machine**: a machine other than the main one can use the woodWOP writer, the sample template post or any switched-on plugin's script post (Machine page → Machines and process steps). Not the N-200: the main machine always uses woodWOP, and text posts cannot be chosen for a machine whose model or name still says N-200 (every new machine starts as a copy of it, so the owner must name the other machine first) | `MachinesSection.tsx`, `isN200` |
+| PST-02 | **Export checker for text posts** (`checkTextPost`, in `validator.ts`): writing is refused for the N-200; while the new switch "Write programs through script posts" (`scriptPostOutput`) is **off**; without the plugin's machine-output grant, or with the plugin off or missing; for work a G-code post cannot describe (edge drilling, drilling from the underside after turning the part, edge work with an aggregate, saw cuts without a saw unit, 3D without 3D milling in the machine model, and any toolpath without a confirmed program form); and every error of the job's own export check for that machine is kept (so custom-part output off still blocks) | `src/core/validator.ts` |
+| PST-02 | **Program dialog**: "Program for" picks the N-200 (woodWOP, as before) or another machine's text post: the part's toolpaths with that machine's tools, the post's text, and the checks. "Save program" only when every check passes | `ProgramDialog.tsx`, `planPartPost` |
+| Batch | A machine with a text post never gets woodWOP files in batch runs: its set is nested and checked, then held with a plain reason (batch runs do not write sheet programs through text posts) | `runBatchCsv` |
+| Sample | `examples/plugins/iso-router-post.js` (also "Add the sample script post" on the Plugins screen): the same G-code as the built-in template, as a starting point for another controller; asks for machine output | - |
+
+### Acceptance (a sample script post's output equals the built-in template post's on the reference parts)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Script post = template post | `tests/script-posts.test.ts` | All **44 reference parts** (the 20 Stage 1 parts and the 24 M2.6 parts: saw, facing, chamfer, curve, hand-drawn, edge): the sample script post's text equals the built-in template post's, byte for byte (216 KB of G-code), same file type |
+| One post path, nothing changed | same | The template post on the shared post input equals the old template post on all 44 parts, with the top at 0 and at 19 mm (over 5,000 lines) |
+| Never the N-200, never unsupported work | same | Main machine and a copy still described as an N-200: refused. Switch off, plugin missing / off / ungranted / without the post: each refused with its own message. Edge drilling, turned-over drilling, aggregate edge work, saw without a saw unit, 3D without 3D milling, no confirmed form: each refused; the M2.6 edge parts are refused |
+| Writable only when all is clear | same | A part through the script post on "Router two": refused with the switch off (and the job's own custom-part output check kept); with both switches on and the grant: writable, text equal to the template post, `G81 X40.000 Y40.000` present. Browser check: preview shown, "Save program" disabled with the reasons listed |
+| Batch | same | Two machines (main + one with a template post), every output switch on: main written, the other held with its reason, no files in its folder |
+| Bad script posts | same | Returning a number, NUL text, a missing post, an endless loop: each refused |
+
+### Limits recorded
+
+- **Text posts write single parts** (from the Program dialog), not nested sheets: sheet programs for another controller would need the cabinet side's drilling and cut-outs as toolpaths too. Not built; the owner has no second machine (decision of M2.9).
+- The template post's I/J can read `-0.000` for tiny negative values (as before M2.10; unchanged on purpose so the output stays identical).
+- Rotary, tilted (3+2) and 5-axis work do not exist yet (Stage 3); `checkTextPost` is where their machine-model checks go.
+
+## Next: M2.10c reading programs back
+
+- NEW-22: G-code and our own MPR back into toolpaths, split at tool changes, for the backplot and
+  the simulator.
 
 ## Run log
 
@@ -1626,5 +1656,5 @@ dependency `@jitl/quickjs-ffi-types` 0.32.0 is MIT. The WebAssembly ships unmodi
 - **Run 11 (M2.9a-d)**: other machines and process steps (`51ccb91`); SQLite storage option
   (`bc4bcb2`); assemblies, fittings by face and batch steps (`1fafaee`); wizards, admin tools,
   screenshots, README, ROADMAP. M2.9 complete. See `git log`.
-- **Run 12 (M2.10a)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and API.
-  See `git log`.
+- **Run 12 (M2.10a-b)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and
+  API (`0d80ba4`); script posts. See `git log`.

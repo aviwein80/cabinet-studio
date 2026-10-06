@@ -117,6 +117,25 @@ export interface ModelRef {
   faceColors?: Record<string, string>
   /** Solids: faces sent to layers (face id -> layer id). */
   faceLayers?: Record<string, string>
+  /**
+   * Set when the model is a relief (ART-01): the stored mesh is already made to its size (X and Y
+   * from 0, highest point at Z 0). Operations on it stay inside its outline, and the panel face
+   * round it is never cut.
+   */
+  relief?: ReliefInfo
+}
+
+/** A relief brought in from relief software (STL) or a height map (ART-01). */
+export interface ReliefInfo {
+  from: 'mesh' | 'image'
+  /** Size made, mm: X, Y and depth (highest to lowest point). */
+  size: [number, number, number]
+  /** Outline seen from above, in the stored mesh's coordinates: closed loops of x, y pairs. */
+  outline: number[][]
+  /** Height maps: the picture and how it was read. */
+  image?: { width: number; height: number; bits: number; whiteHigh: boolean; stretched: boolean; spacing: number; smooth: number; depth: number }
+  /** Meshes: size as read (mm) and the facets of a base that were taken off. */
+  mesh?: { size: [number, number, number]; baseRemoved: number }
 }
 
 export interface CamPart {

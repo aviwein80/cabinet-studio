@@ -79,6 +79,26 @@ export function placeMesh(mesh: Mesh, p: ModelPlacement): Mesh {
   return { ...mesh, positions: pos, indices }
 }
 
+/**
+ * Points given in a model's stored coordinates (x, y, z triples), moved the way `placeMesh` moves a
+ * model whose stored mesh fills `box`.
+ */
+export function placePoints(pts: Float64Array | Float32Array, box: Box3, p: ModelPlacement): Float32Array {
+  const corners: number[] = []
+  for (let i = 0; i < 8; i++) corners.push(i & 1 ? box.max[0] : box.min[0], i & 2 ? box.max[1] : box.min[1], i & 4 ? box.max[2] : box.min[2])
+  const cb = meshBounds({ positions: oriented({ positions: Float32Array.from(corners), indices: new Uint32Array(0) }, p) })
+  const out = oriented({ positions: Float32Array.from(pts), indices: new Uint32Array(0) }, p)
+  const dx = p.at[0] - cb.min[0]
+  const dy = p.at[1] - cb.min[1]
+  const dz = p.at[2] - cb.max[2]
+  for (let i = 0; i < out.length; i += 3) {
+    out[i] += dx
+    out[i + 1] += dy
+    out[i + 2] += dz
+  }
+  return out
+}
+
 /** Size (dx, dy, dz) of the model once turned and scaled. */
 export function placedSize(mesh: Mesh, p: ModelPlacement): [number, number, number] {
   const b = meshBounds({ positions: oriented(mesh, p) })

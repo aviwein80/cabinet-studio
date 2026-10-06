@@ -3,17 +3,19 @@
  * tests and the batch runner can call them directly. Inputs and outputs are structured-clone
  * friendly (typed arrays, plain objects).
  */
-import type { Work } from '@/core/cancel'
+import { subWork, type Work } from '@/core/cancel'
 import type { Contour, P } from '../geom'
 import { buildMesh } from '../mesh/build'
 import { autoUp, DEFAULT_PLACEMENT, placedSize, placeMesh } from '../mesh/place'
 import { readMeshFile } from '../mesh/read'
 import { simplifyMesh, type SimplifyResult, type SimplifyTarget } from '../mesh/simplify'
 import { deleteFacets, type FacetFilter, featureEdges, projectOutline, sectionAt, sectionContours } from '../mesh/tools'
-import type { Mesh, MeshReport, MeshUnits } from '../mesh/types'
+import { type Mesh, type MeshReport, type MeshUnits, meshBounds } from '../mesh/types'
+import { type HeightImageSummary, readHeightImage, summarise } from '../relief/image'
+import { checkReliefMesh, type HeightMapOptions, heightMapMesh, type HeightMapResult, type MeshReliefCheck, meshReliefInfo, type ReliefSize, sizeRelief, stripBase } from '../relief/relief'
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
-import type { CamPart, ModelPlacement, ModelRef, Recipe, UpAxis } from '../types'
+import type { CamPart, ModelPlacement, ModelRef, Recipe, ReliefInfo, UpAxis } from '../types'
 import { generateOp, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
 import { type Collision, partCollisions } from '../collision/collision'
@@ -87,6 +89,14 @@ export interface TaskMap {
   'blob.packBytes': { in: { bytes: Uint8Array }; out: Packed }
   /** Toolpaths of the given (3D) operations; meshes by blob hash. */
   'cam.generate': { in: { part: CamPart; machine: MachineProfile; opIds: string[]; meshes: Record<string, Mesh> }; out: Toolpath[] }
+  /** Read a height-map picture (ART-01): its size, detail and a small preview. */
+  'relief.imageInfo': { in: { bytes: Uint8Array; name: string }; out: HeightImageSummary }
+  /** A relief surface from a height-map picture, at its size and depth. */
+  'relief.fromImage': { in: { bytes: Uint8Array; name: string; opt: HeightMapOptions }; out: HeightMapResult }
+  /** Look at a mesh brought in as a relief: size, base, depth of the carved top (also with the base off). */
+  'relief.checkMesh': { in: { mesh: Mesh }; out: MeshReliefCheck & { stripped: MeshReliefCheck & { removed: number } } }
+  /** A mesh relief made to its size and depth (base taken off if asked). */
+  'relief.fromMesh': { in: { mesh: Mesh; removeBase: boolean; size: ReliefSize }; out: { mesh: Mesh; info: ReliefInfo } }
   /** Collision check of toolpaths on a panel (operations numbered in program order). */
   'sim.collide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
 }
@@ -159,6 +169,24 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     return ops.map((op, i) => generateOp(op, { part, machine, meshes: map, work: { isCancelled: work.isCancelled, progress: (f, n) => work.progress?.((i + f) / ops.length, n) } }))
   },
   'sim.collide': ({ panel, toolpaths, machine }, work) => partCollisions(panel, toolpaths, machine, work).found,
+  async 'relief.imageInfo'({ bytes, name }, work) {
+    return summarise(await readHeightImage(bytes, name, work))
+  },
+  async 'relief.fromImage'({ bytes, name, opt }, work) {
+    const img = await readHeightImage(bytes, name, subWork(work, 0, 0.4))
+    const r = heightMapMesh(img, opt, subWork(work, 0.4, 0.6))
+    return { ...r, warnings: [...img.warnings, ...r.warnings] }
+  },
+  'relief.checkMesh'({ mesh }) {
+    const s = stripBase(mesh)
+    return { ...checkReliefMesh(mesh), stripped: { ...checkReliefMesh(s.mesh), removed: s.removed } }
+  },
+  'relief.fromMesh'({ mesh, removeBase, size }, work) {
+    const src = removeBase ? stripBase(mesh) : { mesh, removed: 0 }
+    const b = meshBounds(src.mesh)
+    const sized = sizeRelief(src.mesh, size)
+    return { mesh: sized, info: meshReliefInfo(sized, { size: [b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]], baseRemoved: src.removed }, work) }
+  },
   async 'solid.import'({ bytes, name, vendor, ...opt }, work) {
     work.progress?.(0, 'Loading the solid-model reader')
     const reader = await occt(vendor)

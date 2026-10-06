@@ -61,6 +61,7 @@ import { DEFAULT_COLLISION_MARGIN } from './collision/collision'
 import { modelClearance } from './collision/model'
 import { aggregateOf, anglesOutOfReach, effectiveGauge, machineModelOf, toolOutline } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
+import { mergeMeshes, placedReliefOutline, reliefSurround } from './relief/relief'
 import { type Mesh, meshBounds } from './mesh/types'
 import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
 
@@ -1861,7 +1862,20 @@ function model3d(op: Finish3dOp | Rough3dOp, ctx: GenContext, tp: Toolpath) {
     tp.warnings.push(ct.error)
     return null
   }
-  return { placed: placeMesh(mesh, model.place), cutter: ct.cutter }
+  if (model.relief) {
+    // a relief stays face up; the panel face round it is part of the surface, so nothing outside
+    // its outline is cut below face 1
+    if (model.place.up !== '+z' || model.place.frame) {
+      tp.warnings.push(`The relief "${model.name}" must stay face up (+Z up) to be machined.`)
+      return null
+    }
+    const outline = placedReliefOutline(model)
+    const grow = 2 * (ct.cutter.R + Math.max(0, op.surface.stockToLeave)) + 2
+    const relief = placeMesh(mesh, model.place)
+    return { placed: mergeMeshes([relief, reliefSurround(outline, ctx.part, grow)], 'Panel face round the relief'), cutter: ct.cutter, outline, box: meshBounds(relief) }
+  }
+  const placed = placeMesh(mesh, model.place)
+  return { placed, cutter: ct.cutter, outline: undefined, box: meshBounds(placed) }
 }
 
 /**
@@ -1945,7 +1959,7 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
     return
   }
-  const region = cutRegion(centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, meshBounds(m.placed)))
+  const region = cutRegion(centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, m.box, m.outline))
   if (!region) return
   if (op.strategy === 'waterline') {
     const r = waterlineFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
@@ -1966,13 +1980,14 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
 function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const m = model3d(op, ctx, tp)
   if (!m) return
-  const mb = meshBounds(m.placed)
-  let region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, mb)
+  const mb = m.box
+  let region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, mb, m.outline)
   // no boundary drawn and the model does not cover the panel (a part standing on its own): the
-  // stock round the model is roughed too, down to the model's lowest point
+  // stock round the model is roughed too, down to the model's lowest point. Not for a relief: the
+  // panel round a relief is kept.
   const { length: L, width: W } = ctx.part
   const COVER = 0.01
-  if (region.fromModel && (mb.min[0] > COVER || mb.min[1] > COVER || mb.max[0] < L - COVER || mb.max[1] < W - COVER)) {
+  if (region.fromModel && !m.outline && (mb.min[0] > COVER || mb.min[1] > COVER || mb.max[0] < L - COVER || mb.max[1] < W - COVER)) {
     region = centreRegion(ctx.part, op.geometry, op.surface, m.cutter.R, { min: [Math.min(0, mb.min[0]), Math.min(0, mb.min[1]), mb.min[2]], max: [Math.max(L, mb.max[0]), Math.max(W, mb.max[1]), mb.max[2]] })
     tp.warnings.push(`The model does not cover the whole panel: the panel round it is roughed down to the model's lowest point (${(mb.min[2] + Math.max(0, op.stockZ)).toFixed(2)} mm). Draw a boundary to rough less.`)
   }

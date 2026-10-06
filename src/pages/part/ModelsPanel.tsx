@@ -1,4 +1,4 @@
-import { Box, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Box, Eye, EyeOff, Mountain, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { makeEntity } from '@/cam/doc'
@@ -32,13 +32,20 @@ const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
 const withLayer = (part: CamPart, l: Layer): Layer[] => (part.layers.some((x) => x.id === l.id) ? part.layers : [...part.layers, { ...l }])
 
 /** 3D models on the part: placement, work volume, sections, outline, edges, simplify, clean-up. */
-export function ModelsPanel({ part, units, sel = [], onChange, onImport }: { part: CamPart; units: UnitSystem; sel?: string[]; onChange: (p: CamPart) => void; onImport: () => void }) {
+export function ModelsPanel({ part, units, sel = [], onChange, onImport, onRelief }: { part: CamPart; units: UnitSystem; sel?: string[]; onChange: (p: CamPart) => void; onImport: () => void; onRelief?: () => void }) {
   const models = part.models ?? []
   return (
     <div className="flex flex-col gap-3 p-3 text-xs">
-      <Button size="sm" variant="outline" onClick={onImport}>
-        <Box /> Import 3D model…
-      </Button>
+      <div className="grid grid-cols-2 gap-2">
+        <Button size="sm" variant="outline" className={onRelief ? '' : 'col-span-2'} onClick={onImport}>
+          <Box /> Import 3D model…
+        </Button>
+        {onRelief && (
+          <Button size="sm" variant="outline" onClick={onRelief}>
+            <Mountain /> Import relief…
+          </Button>
+        )}
+      </div>
       <SurfacesPanel part={part} sel={sel} units={units} onChange={onChange} />
       {!models.length && <p className="text-stone-400">No 3D models yet. Import an STL, OBJ or 3MF file: a relief, a carved panel or a shaped part.</p>}
       {models.map((m) => (
@@ -196,6 +203,11 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
         ) : (
           <Badge variant="outline">{model.triangles.toLocaleString('en')} facets</Badge>
         )}
+        {model.relief && (
+          <Badge variant="secondary" title="Operations stay inside the relief's outline; the panel round it is never cut.">
+            relief · {model.relief.from === 'image' ? 'height map' : 'mesh'} · {fmt(model.relief.size[2])} deep
+          </Badge>
+        )}
         {rep && <Badge variant="outline">{rep.openEdges ? `${rep.openEdges} open edges` : 'closed'}</Badge>}
         {model.original && <Badge variant="outline">simplified</Badge>}
       </div>
@@ -206,6 +218,9 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
       <fieldset disabled={!!busy} className="grid gap-2">
         <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-stone-400">
           <span>Up</span>
+          {model.relief ? (
+            <span className="text-stone-300">+Z up (a relief stays face up)</span>
+          ) : (
           <Select value={place.up} onValueChange={(v) => setModel((m) => ({ ...m, place: { ...m.place, up: v as UpAxis } }))}>
             <SelectTrigger size="sm" aria-label="Which way is up">
               <SelectValue />
@@ -218,6 +233,7 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
               ))}
             </SelectContent>
           </Select>
+          )}
           <span>Turn / scale</span>
           <div className="flex items-center gap-1.5">
             <Input aria-label="Turn about Z in degrees" className="h-7 w-14 px-1.5 text-xs" defaultValue={place.rotZ} key={`r${place.rotZ}`} onBlur={(e) => Number.isFinite(Number(e.target.value)) && setModel((m) => ({ ...m, place: { ...m.place, rotZ: Number(e.target.value) } }))} />°

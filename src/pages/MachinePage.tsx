@@ -50,6 +50,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camBatch', 'Batch runs', 'Part lists from CSV or an inbox folder, without opening the screens.'],
   ['hardwarePatterns', 'Drilling patterns', 'Hardware drilling patterns in the library and the Hardware button on parts.'],
   ['cam3d', '3D models', 'Import STL, OBJ and 3MF models onto parts: sections, outlines, simplify, work volume from the model.'],
+  ['camRelief', 'Relief import', 'Bring in reliefs made in relief software (STL) or as height-map pictures (PNG, TIFF) at an exact size and depth, with roughing and finishing added. The panel round a relief is never cut. Screens only: relief toolpaths follow the 3D output switches below.'],
   ['camAdaptive', 'Rest machining and adaptive clearing', 'Pocket options: cut only what earlier operations left; clear at a steady width of cut.'],
   ['camSolids', 'Solid models', 'Import STEP, IGES and BREP solids: faces and colours, holes, pockets and outlines found and put on layers, assemblies split into parts, machining picked faces.'],
   ['camMore25d', 'More 2.5D machining', 'Saw cuts with run-out, angle and joining; facing; chamfers; cuts between curves and along 3D curves; hand-drawn toolpaths; toolpath edits; edge work with a rotating aggregate.'],

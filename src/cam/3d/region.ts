@@ -3,7 +3,7 @@
  * (even-odd), and straight passes clipped to it.
  */
 import { entityContours } from '../doc'
-import { type Contour, type P, rect, toPoints } from '../geom'
+import { type Contour, type P, polyline, rect, toPoints } from '../geom'
 import { offset } from '../kernel'
 import type { Box3 } from '../mesh/types'
 import type { CamPart, Surface3D } from '../types'
@@ -15,10 +15,11 @@ export interface Region {
 }
 
 /**
- * Region for the tool centre: the picked closed shapes (or the model's footprint), moved in by
+ * Region for the tool centre: the picked closed shapes (or the model's footprint: `footprint` when
+ * given, else the box round it), moved in by
  * the tool radius for 'contained', out for 'touching', unchanged for 'centre'.
  */
-export function centreRegion(part: CamPart, geometry: string[], surface: Surface3D, toolR: number, modelBox: Box3): Region {
+export function centreRegion(part: CamPart, geometry: string[], surface: Surface3D, toolR: number, modelBox: Box3, footprint?: P[][]): Region {
   const picked: Contour[] = []
   for (const id of geometry) {
     const e = part.entities.find((x) => x.id === id)
@@ -26,7 +27,8 @@ export function centreRegion(part: CamPart, geometry: string[], surface: Surface
     for (const c of entityContours(e)) if (c.closed && c.segs.length) picked.push(c)
   }
   const fromModel = picked.length === 0
-  const base = fromModel ? [rect(modelBox.min[0], modelBox.min[1], modelBox.max[0] - modelBox.min[0], modelBox.max[1] - modelBox.min[1])] : picked
+  // (a relief's own outline, when there is one, instead of the box round the model)
+  const base = fromModel ? (footprint?.length ? footprint.map((l) => polyline(l, true)) : [rect(modelBox.min[0], modelBox.min[1], modelBox.max[0] - modelBox.min[0], modelBox.max[1] - modelBox.min[1])]) : picked
   const d = surface.boundaryMode === 'contained' ? -toolR : surface.boundaryMode === 'touching' ? toolR : 0
   const cs = d === 0 ? base : offset(base, d)
   return { polys: cs.map((c) => toPoints(c, 0.005)).filter((p) => p.length >= 3), fromModel }

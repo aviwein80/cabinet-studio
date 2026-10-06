@@ -730,6 +730,12 @@ export interface FeatureFlags {
   scriptPostOutput: boolean
   /** M2.10d: copy programs edited by hand to the machine folder (only after their checks pass). Off. */
   editedProgramOutput: boolean
+  /**
+   * M2.11 screens: relief import (STL from relief software, PNG/TIFF height maps) made to size and
+   * depth, with roughing and finishing added. Screens only: relief toolpaths follow the 3D output
+   * rules (and switches) above.
+   */
+  camRelief: boolean
 }
 
 export interface Library {

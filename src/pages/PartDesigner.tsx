@@ -1,4 +1,4 @@
-import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box, Rotate3d, PenLine } from 'lucide-react'
+import { ArrowLeft, CirclePlay, Download, Drill, FileCode2, Maximize, Redo2, Undo2, CircleAlert, Box, Rotate3d, PenLine, Mountain } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
@@ -39,6 +39,7 @@ import { PanelDialog } from './part/PanelDialog'
 import { ImageTraceDialog } from './part/ImageTraceDialog'
 import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
+import { ReliefImportDialog } from './part/ReliefImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
 import { use3dToolpaths } from './part/use3dToolpaths'
 import { appendStep } from '@/cam/more25d/edits'
@@ -117,6 +118,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   const [simOpen, setSimOpen] = useState(false)
   const [patternOpen, setPatternOpen] = useState(false)
   const [modelOpen, setModelOpen] = useState(false)
+  const [reliefOpen, setReliefOpen] = useState(false)
   const [view3d, setView3d] = useState(false)
   const [display, setDisplay] = useState<Display>({ paths: true, arrows: false, grid: true, snapOn: true, ortho: false, modes: new Set<SnapMode>(ALL_SNAPS.filter((m) => m !== 'nearest')), gridSize: units === 'in' ? 25.4 / 4 : 5 })
   const promptRef = useRef<HTMLInputElement>(null)
@@ -400,6 +402,11 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
               <Box className="size-3.5" /> 3D model
             </Button>
           )}
+          {feat.cam3d && feat.camRelief && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setReliefOpen(true)}>
+              <Mountain className="size-3.5" /> Relief
+            </Button>
+          )}
           <Button variant="outline" size="sm" aria-pressed={view3d} className={cn('h-8 gap-1.5 border-white/15 bg-transparent', view3d && 'border-amber-400 text-amber-300')} onClick={() => setView3d((v) => !v)}>
             <Rotate3d className="size-3.5" /> {view3d ? '2D view' : '3D view'}
           </Button>
@@ -463,6 +470,18 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
           withOp={feat.camMachining}
           onPlace={(p, msg) => {
             change(p)
+            toast.success(msg)
+          }}
+        />
+      )}
+      {reliefOpen && (
+        <ReliefImportDialog
+          part={part}
+          units={units}
+          onClose={() => setReliefOpen(false)}
+          onAdd={(p, msg) => {
+            change(p)
+            setTab('models')
             toast.success(msg)
           }}
         />
@@ -685,7 +704,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TabsList>
             {feat.cam3d && (
               <TabsContent value="models" className="min-h-0 flex-1 overflow-auto">
-                <ModelsPanel part={part} units={units} sel={sel} onChange={change} onImport={() => setModelOpen(true)} />
+                <ModelsPanel part={part} units={units} sel={sel} onChange={change} onImport={() => setModelOpen(true)} onRelief={feat.camRelief ? () => setReliefOpen(true) : undefined} />
               </TabsContent>
             )}
             {feat.camMachining && (

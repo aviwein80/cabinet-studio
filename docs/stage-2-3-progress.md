@@ -77,12 +77,16 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.8c Bridged nesting (NST-05) | **Done** (October 2026) | See below. Output switch off. |
 | M2.8d Flip-side sheets (NST-07), sheet backplot | **Done** (October 2026) | See below. Output switch off. |
 | M2.8e Manual nesting (NST-09), screenshots, docs | **Done** (October 2026) | See below. M2.8 complete. | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
-| M2.9 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.9a Other machines and process steps (AM-08) | **Done** (October 2026) | See below. Output switch for other machines off. |
+| M2.9b SQLite storage option (AM-06) | Not started | |
+| M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | Not started | |
+| M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | Not started | |
+| M2.10 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1351,9 +1355,51 @@ so it fails by timing alone when the full suite runs; it passes when run on its 
 run). In the full suite it passed once and failed four times this run, on the old and new code
 alike. The limit was not changed.
 
-## Next run: M2.9 batch additions
+## M2.9 split
 
-- AM-03, AM-06, AM-08, AM-09, AM-10, AM-13 as in the prompt.
+M2.9 is done in named parts, each green, pushed and recorded here before the next starts:
+**M2.9a** other machines and process steps (AM-08); **M2.9b** the SQLite storage option (AM-06);
+**M2.9c** assemblies and fittings by face in part lists, and batch steps (AM-09, AM-10);
+**M2.9d** the setup wizards and admin tools (AM-03, AM-13), screenshots, README, ROADMAP. One batch
+engine: everything extends `src/core/batch.ts`. New switch "Batch additions" (`batchAdditions`,
+screens only, on). Programs for machines other than the main one have their own switch "Write
+programs for other machines" (`batchMachinesOutput`), **off**.
+
+## M2.9a other machines and process steps: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| AM-08 | **Machines and process steps** (Machine page): the main machine stays as it is; others are added as a copy of the main machine or of the placeholder N-200, each with its **own complete profile** (tool table, machine model, spoilboard, holders, aggregates, confirmations) and its own post (the woodWOP writer for now; script posts for other controllers come with M2.10, PST-02). "Edit" shows that machine on the Machine page (a blue strip says which); nesting, labels, the default cutting values and the switches stay shared on the main machine's page | `src/core/machines.ts`, `AppData.machines`, `MachinesSection.tsx`, store `machineEdit` |
+| AM-08 | **Batch setups** carry the machines a part list goes to (Batch page, "Batch setup"). For each machine the same part list is nested, programmed and export-checked **with that machine's profile** (one engine: `runBatchCsv` runs `runJob` once per machine). The main machine's files stay in the order folder exactly as before; each other machine gets a sub-folder with its programs, labels, sheet maps and areas (the cut list and BOM do not depend on the machine and are written once). The report lists every machine | `runBatchCsv`, `BatchSetup`, `activeBatchSetup`, `writeBatchResult` |
+| Output | Switch "Write programs for other machines" (`batchMachinesOutput`), **off**. Off: the other machines are nested and checked, the report and the Batch page say what would be written, nothing is written for them. On: their sets are written | `features.ts`, Machine page |
+| Safety | A new machine starts with **every value a placeholder**: tool table and machine model marked placeholder and no confirmations carried over, even when the main machine's values are confirmed, so every value shows its Configure badge on that machine. An export-checker error on **any** machine holds back the whole order (report only), as before | `newMachineSetup` |
+
+### Acceptance (a batch run to two machine models gives two sets of programs)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Two machine models, two program sets | `tests/batch-machines.test.ts` | Main N-200 (HOMAG header, tools 101-204) and a second machine (WEEKE header, tools renumbered +100, 10 mm cut-out tool T201): 1 set in the order folder, 1 in `WEEKE-second/`, every MPR read back without errors, the right header and only that machine's tool numbers in each |
+| Main machine unchanged | same | The order folder's files with the main machine alone, with an explicit main-only setup, and with a second machine added are byte-identical; all earlier batch tests unchanged |
+| Switch off | same | The second machine is nested and checked (sheets counted) but nothing is written for it; report and warning say so |
+| Errors hold the order | same | Second machine's table 2000 x 1000: `OFF_TABLE` on that machine only, the order blocked, report only |
+| Missing machine | same | A setup naming a removed machine runs the rest and reports it |
+| On disk | same | The order folder gets a `WEEKE-second/` sub-folder with one MPR per sheet |
+| New machine is all placeholder | same | With every main-machine value confirmed, a copy still has its 49 values to configure; saving and loading keeps the machines and setups |
+
+### Limits recorded
+
+- **Only woodWOP machines** for now. A machine with another controller needs a script post (M2.10, PST-02).
+- **A process step gets a full program set** like a machine; splitting operations between steps (for example drilling on one machine, cutting out on another) is not built. It would change what each machine cuts, so it waits for the owner (decision 2 below).
+- **Other machines are used by batch runs only.** The job page's Output tab still writes for the main machine.
+- **Custom-part operations are generated per machine**: an operation that picks its tool automatically picks from that machine's table; an operation with a fixed tool number needs that number on the other machine, or its check fails.
+
+## M2.9 decisions needed (see the report)
+
+1. **Other machines**: does the shop have, or plan, a second machine or a separate drilling step?
+   Until then programs for other machines stay off and every value on a new machine is a
+   placeholder with a Configure badge.
+2. **Process steps that share the work** (for example drilling on one machine, cut-out on the
+   other): wanted? Today each step gets the whole program set.
 
 ## Run log
 

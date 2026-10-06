@@ -598,10 +598,37 @@ export interface ShopSettings {
   currency?: string
   /** Custom-part module switches. Absent keys take the defaults in `DEFAULT_FEATURES`. */
   features?: Partial<FeatureFlags>
-  /** Folder watcher for part-list CSVs (desktop app). */
-  batch?: { inbox: string; outbox: string }
+  /** Folder watcher for part-list CSVs (desktop app), and the batch setup it runs. */
+  batch?: { inbox: string; outbox: string; setupId?: string }
+  /**
+   * Batch setups (M2.9): what a batch run does with a part list (machines, outputs, defaults,
+   * extra steps). Absent = one built-in setup that behaves as Stage 1.
+   */
+  batchSetups?: BatchSetup[]
   /** Spec-sheet reader provider and models. API keys are never stored here. */
   ai?: AiSettings
+}
+
+/** Another machine or process step (M2.9, AM-08), with its own complete profile and post. */
+export interface MachineSetup {
+  id: string
+  name: string
+  /** A machine of its own, or another process step (label only; both get a full program set). */
+  kind: 'machine' | 'step'
+  profile: MachineProfile
+  /** How its programs are written. Script posts for other controllers come with M2.10. */
+  post: { kind: 'woodwop-mpr' }
+  notes?: string
+}
+
+/** What a batch run does with a part list (M2.9). */
+export interface BatchSetup {
+  id: string
+  name: string
+  /** Machines (ids; "main" = the shop machine) that get a program set, in this order. */
+  machines: string[]
+  /** Outputs per order (absent = programs, labels, sheet maps, cut list, BOM). */
+  kinds?: import('./output').ExportKind[]
 }
 
 export interface FeatureFlags {
@@ -668,6 +695,14 @@ export interface FeatureFlags {
   nestBridgeOutput: boolean
   /** Write flip-side sheet programs (side 1 underside, side 2 as usual). Off until proven on the machine. */
   nestFlipOutput: boolean
+  /**
+   * Batch additions (M2.9): other machines and process steps, batch setups and their wizards,
+   * assemblies and fittings in part lists, batch steps, admin tools (screens only; programs for the
+   * other machines have their own switch below, off).
+   */
+  batchAdditions: boolean
+  /** Write program sets for machines other than the main one in batch runs. Off until proven on those machines. */
+  batchMachinesOutput: boolean
 }
 
 export interface Library {
@@ -693,6 +728,8 @@ export interface AppData {
   version: 1
   library: Library
   machine: MachineProfile
+  /** Other machines and process steps (M2.9). The main machine is `machine`. */
+  machines?: MachineSetup[]
   settings: ShopSettings
   jobs: Job[]
 }

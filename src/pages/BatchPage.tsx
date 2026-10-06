@@ -11,8 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import type { BatchResult, BatchStatus as OrderStatus } from '@/core/batch'
+import { activeBatchSetup, updateActiveSetup, type BatchResult, type BatchStatus as OrderStatus } from '@/core/batch'
 import { featuresOf } from '@/core/features'
+import { machineSetups } from '@/core/machines'
 import { cn } from '@/lib/utils'
 
 const COLUMNS: [string, string][] = [
@@ -68,6 +69,7 @@ export function BatchPage() {
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="mx-auto grid max-w-6xl gap-5 p-5 lg:grid-cols-[1fr_360px]">
           <div className="flex flex-col gap-5">
+            {featuresOf(data.settings).batchAdditions && <SetupCard />}
             {backend.batch ? <WatcherCard /> : null}
             <RunNowCard />
           </div>
@@ -90,6 +92,45 @@ export function BatchPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** The batch setup in use (M2.9): which machines get a program set. */
+function SetupCard() {
+  const data = useStore((s) => s.data)!
+  const updateSettings = useStore((s) => s.updateSettings)
+  const go = useStore((s) => s.go)
+  const setup = activeBatchSetup(data.settings)
+  const machines = machineSetups(data)
+  const out = featuresOf(data.settings).batchMachinesOutput
+  const toggle = (id: string, on: boolean) => updateSettings((s) => updateActiveSetup(s, { machines: on ? machines.map((m) => m.id).filter((x) => x === id || setup.machines.includes(x)) : setup.machines.filter((x) => x !== id) }))
+  return (
+    <section className="rounded-xl border bg-background" data-cfg="batch-setup">
+      <div className="border-b px-4 py-3">
+        <h3 className="text-[13px] font-semibold">Batch setup: {setup.name}</h3>
+        <p className="text-xs text-muted-foreground">Machines that get a program set from each part list. Each is nested and checked on its own.</p>
+      </div>
+      <div className="flex flex-col gap-2 p-4 text-xs">
+        {machines.map((m, i) => (
+          <label key={m.id} className="flex items-start gap-2">
+            <Checkbox checked={setup.machines.includes(m.id)} onCheckedChange={(v) => toggle(m.id, v === true)} disabled={setup.machines.length === 1 && setup.machines[0] === m.id} className="mt-0.5" />
+            <span>
+              <span className="font-medium">{m.name}</span>
+              <span className="text-muted-foreground">{i === 0 ? ' · main machine, programs in the order folder' : ` · ${m.kind === 'step' ? 'process step' : 'other machine'}, programs in a sub-folder${out ? '' : ' (checked, not written: output for other machines is off)'}`}</span>
+            </span>
+          </label>
+        ))}
+        {machines.length === 1 && (
+          <p className="text-muted-foreground">
+            Only the main machine is set up.{' '}
+            <button type="button" className="underline" onClick={() => go({ page: 'machine' })}>
+              Add another machine or process step
+            </button>{' '}
+            on the Machine page.
+          </p>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -306,6 +347,12 @@ function ResultTable({ result }: { result: BatchResult }) {
                 <TableCell className="font-mono text-xs">{o.number}</TableCell>
                 <TableCell>
                   <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-medium', STATUS[o.status].cls)}>{STATUS[o.status].label}</span>
+                  {o.machines.length > 1 &&
+                    o.machines.map((m) => (
+                      <div key={m.id} className="mt-1 text-[11px] text-muted-foreground">
+                        {m.name}: {m.sheets} sheet{m.sheets === 1 ? '' : 's'}, {{ written: m.folder ? `in ${m.folder}/` : 'written', blocked: 'blocked', held: 'checked, not written' }[m.status]}
+                      </div>
+                    ))}
                   {o.errors.slice(0, 3).map((e) => (
                     <div key={e} className="mt-1 max-w-xs text-[11px] text-red-700">
                       {e}

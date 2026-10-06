@@ -15,11 +15,12 @@ import { dxfToPart } from '@/cam/dxf'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import type { CamPart } from '@/cam/types'
 import { Cancelled, checkCancel, type CancelCheck } from './cancel'
+import { featuresOf } from './features'
+import { dataFor, machineFolder, machineSetup, MAIN_MACHINE } from './machines'
 import { buildFiles, type ExportKind, type OutFile } from './output'
 import { runJob } from './pipeline'
-import type { AppData, Job, UnitSystem } from './types'
+import type { AppData, BatchSetup, Job, ShopSettings, UnitSystem } from './types'
 import { parseLength } from './units'
-import { countBySeverity } from './validator'
 
 export interface BatchRowError {
   row: number
@@ -219,6 +220,20 @@ export function itemPart(it: BatchItem, data: AppData, readFile: (path: string) 
 
 export type BatchStatus = 'done' | 'blocked' | 'failed' | 'cancelled'
 
+/** One machine's program set for an order (M2.9). */
+export interface BatchMachineResult {
+  id: string
+  name: string
+  /** Sub-folder of the order folder ('' = the order folder itself, for the main machine). */
+  folder: string
+  /** written: files made; blocked: export-checker errors; held: other-machine output is switched off. */
+  status: 'written' | 'blocked' | 'held'
+  sheets: number
+  parts: number
+  errors: string[]
+  files: string[]
+}
+
 export interface BatchOrderResult {
   number: string
   folder: string
@@ -228,6 +243,8 @@ export interface BatchOrderResult {
   files: OutFile[]
   errors: string[]
   warnings: string[]
+  /** One entry per machine the setup sends the list to (M2.9). */
+  machines: BatchMachineResult[]
 }
 
 export interface BatchResult {
@@ -245,7 +262,30 @@ export interface BatchContext {
   onProgress?: (msg: string) => void
   /** Outputs per order; MPR files are only written when the export checker finds no errors. */
   kinds?: ExportKind[]
+  /** The batch setup to run (default: the one chosen in the settings, else the built-in one). */
+  setup?: BatchSetup
 }
+
+/** Stage 1 behaviour: the main machine only, the default outputs. */
+export const DEFAULT_BATCH_SETUP: BatchSetup = { id: 'standard', name: 'Standard', machines: [MAIN_MACHINE] }
+
+/** The setup the folder watcher and "Run a list now" use. */
+export function activeBatchSetup(s: Pick<ShopSettings, 'batch' | 'batchSetups'>): BatchSetup {
+  const list = s.batchSetups ?? []
+  return list.find((b) => b.id === s.batch?.setupId) ?? list[0] ?? DEFAULT_BATCH_SETUP
+}
+
+/** Change the active setup (made from the built-in one the first time). */
+export function updateActiveSetup(s: ShopSettings, patch: Partial<Omit<BatchSetup, 'id'>>) {
+  const cur = activeBatchSetup(s)
+  const next = { ...cur, ...patch }
+  const list = s.batchSetups ?? []
+  s.batchSetups = list.some((b) => b.id === cur.id) ? list.map((b) => (b.id === cur.id ? next : b)) : [...list, next]
+  s.batch = { inbox: s.batch?.inbox ?? '', outbox: s.batch?.outbox ?? '', ...s.batch, setupId: cur.id }
+}
+
+/** Outputs that depend on the machine (its nest and programs); the cut list and BOM do not. */
+const PER_MACHINE: ExportKind[] = ['mpr', 'labels-pdf', 'sheetmap-pdf', 'labels-zpl', 'areas-csv']
 
 const stamp = (d: Date) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`
 const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'job'
@@ -260,8 +300,17 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
   const result: BatchResult = { csv: csvName, orders: [], rowErrors: errors, cancelled: false }
   const say = (m: string) => ctx.onProgress?.(m)
   say(`${csvName}: ${orders.length} order${orders.length === 1 ? '' : 's'}, ${orders.reduce((n, o) => n + o.items.length, 0)} rows${errors.length ? `, ${errors.length} row problem(s)` : ''}`)
+  const setup = ctx.setup ?? activeBatchSetup(ctx.data.settings)
+  const targets: { id: string; name: string }[] = []
+  for (const id of setup.machines.length ? setup.machines : [MAIN_MACHINE]) {
+    const m = machineSetup(ctx.data, id)
+    if (!m) errors.push({ row: 0, message: `Batch setup "${setup.name}": machine "${id}" is not in the machine list; skipped.` })
+    else if (!targets.some((t) => t.id === m.id)) targets.push({ id: m.id, name: m.name })
+  }
+  if (!targets.length) targets.push({ id: MAIN_MACHINE, name: ctx.data.machine.name })
+  const otherOutput = featuresOf(ctx.data.settings).batchMachinesOutput
   for (const order of orders) {
-    const res: BatchOrderResult = { number: order.number, folder: `${safe(order.number)}_${stamp(now)}`, status: 'done', sheets: 0, parts: 0, files: [], errors: [], warnings: [] }
+    const res: BatchOrderResult = { number: order.number, folder: `${safe(order.number)}_${stamp(now)}`, status: 'done', sheets: 0, parts: 0, files: [], errors: [], warnings: [], machines: [] }
     result.orders.push(res)
     try {
       checkCancel(ctx.isCancelled)
@@ -275,19 +324,45 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
       }
       const at = now.toISOString()
       const job: Job = { id: `batch-${safe(order.number)}`, number: order.number, name: order.name, customer: order.customer, notes: `Batch from ${csvName}`, createdAt: at, updatedAt: at, cabinets: [], camParts }
-      say(`${order.number}: nesting ${camParts.reduce((n, p) => n + p.qty, 0)} parts`)
-      const out = runJob(job, ctx.data, { isCancelled: ctx.isCancelled })
-      checkCancel(ctx.isCancelled)
-      res.sheets = out.programs.length
-      res.parts = out.instances.length
-      for (const i of out.issues) (i.severity === 'error' ? res.errors : i.severity === 'warning' ? res.warnings : []).push(i.message)
-      for (const e of errors) res.warnings.push(`Row ${e.row}: ${e.message}`)
-      if (countBySeverity(out.issues).error > 0 || res.errors.length) {
+      // M2.9: the same part list goes to every machine of the setup; each gets its own nest,
+      // programs and export check. The main machine's files stay in the order folder as before.
+      const sets: { m: BatchMachineResult; data: AppData; out: ReturnType<typeof runJob> }[] = []
+      for (const t of targets) {
+        checkCancel(ctx.isCancelled)
+        const main = t.id === MAIN_MACHINE
+        const tag = main ? '' : `[${t.name}] `
+        say(`${order.number}: nesting ${camParts.reduce((n, p) => n + p.qty, 0)} parts${main ? '' : ` for ${t.name}`}`)
+        const d = dataFor(ctx.data, t.id)
+        const out = runJob(job, d, { isCancelled: ctx.isCancelled })
+        checkCancel(ctx.isCancelled)
+        const m: BatchMachineResult = { id: t.id, name: t.name, folder: main ? '' : machineFolder(t), status: 'written', sheets: out.programs.length, parts: out.instances.length, errors: [], files: [] }
+        for (const i of out.issues) (i.severity === 'error' ? m.errors : i.severity === 'warning' ? res.warnings : []).push(`${tag}${i.message}`)
+        if (m.errors.length) m.status = 'blocked'
+        else if (!main && !otherOutput) m.status = 'held'
+        res.errors.push(...m.errors)
+        res.machines.push(m)
+        sets.push({ m, data: d, out })
+      }
+      res.sheets = res.machines[0].sheets
+      res.parts = res.machines[0].parts
+      for (const e of errors) res.warnings.push(e.row ? `Row ${e.row}: ${e.message}` : e.message)
+      if (res.errors.length) {
         res.status = 'blocked'
+        for (const s of sets) if (s.m.status === 'written') s.m.status = 'blocked'
         say(`${order.number}: blocked by ${res.errors.length} error(s); report only`)
       } else {
-        res.files = buildFiles(ctx.kinds ?? DEFAULT_BATCH_KINDS, job, ctx.data, out)
-        say(`${order.number}: ${res.sheets} sheet${res.sheets === 1 ? '' : 's'}, ${res.files.length} files`)
+        for (const s of sets) {
+          if (s.m.status !== 'written') continue
+          const kinds = ctx.kinds ?? setup.kinds ?? DEFAULT_BATCH_KINDS
+          const files = buildFiles(s.m.folder ? kinds.filter((k) => PER_MACHINE.includes(k)) : kinds, job, s.data, s.out)
+          for (const f of files) res.files.push(s.m.folder ? { ...f, name: `${s.m.folder}/${f.name}` } : f)
+          s.m.files = files.map((f) => f.name)
+        }
+        const held = res.machines.filter((m) => m.status === 'held')
+        if (held.length) res.warnings.push(`Programs for ${held.map((m) => m.name).join(', ')} were checked but not written: "Write programs for other machines" is off on the Machine page.`)
+        const sheets = (n: number) => `${n} sheet${n === 1 ? '' : 's'}`
+        const only = res.machines.length === 1 && res.machines[0].id === MAIN_MACHINE
+        say(`${order.number}: ${only ? sheets(res.sheets) : res.machines.map((m) => `${m.name} ${sheets(m.sheets)}${m.status === 'held' ? ' (held back)' : ''}`).join('; ')}, ${res.files.length} files`)
       }
     } catch (e) {
       if (e instanceof Cancelled) {
@@ -315,6 +390,9 @@ export function orderReport(batch: BatchResult, r: BatchOrderResult, now: Date) 
     `Run: ${now.toISOString()}`,
     `Status: ${{ done: 'Programs written', blocked: 'Blocked by the export checker (no programs written)', failed: 'Failed', cancelled: 'Cancelled' }[r.status]}`,
     `Sheets: ${r.sheets}   Parts: ${r.parts}`,
+    ...(r.machines.length > 1 || r.machines.some((m) => m.id !== MAIN_MACHINE)
+      ? ['', 'Machines:', ...r.machines.map((m) => `  ${m.name}: ${m.sheets} sheet${m.sheets === 1 ? '' : 's'}, ${{ written: m.folder ? `programs in ${m.folder}/` : 'programs in this folder', blocked: 'blocked by the export checker', held: 'checked, not written (output for other machines is off)' }[m.status]}`)]
+      : []),
     '',
     'Programs are generated, not machine-proven. Simulate each one in woodWOP before running it on the N-200.',
     '',

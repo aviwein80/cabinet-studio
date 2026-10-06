@@ -1,6 +1,7 @@
 import { FileUp } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { profileOf } from '@/core/machines'
 import { useStore } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -47,7 +48,7 @@ function run(kind: ImportKind, rows: Row[], d: AppData): ImportResult<unknown> {
     case 'templates':
       return importTemplates(rows, d.library.templates, d.library)
     case 'tools':
-      return importTools(rows, d.machine.tools)
+      return importTools(rows, profileOf(d, useStore.getState().machineEdit).tools)
   }
 }
 
@@ -85,7 +86,8 @@ export function ImportDialog({ open, onOpenChange, kinds, onApplied }: { open: b
     if (!result) return
     mutate((d) => {
       const items = result.items as never[]
-      if (kind === 'tools') d.machine.tools = items
+      // tools go to the machine shown on the Machine page (M2.9: possibly another machine)
+      if (kind === 'tools') profileOf(d, useStore.getState().machineEdit).tools = items
       else d.library[kind] = items
     })
     toast.success(`${KIND_LABEL[kind]}: ${result.added} added, ${result.updated} updated`)

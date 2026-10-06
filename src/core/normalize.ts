@@ -41,10 +41,13 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
     cabinets: j.cabinets.map((c) => ({ ...c, params: withParams(c.params) })),
     ...(j.camParts ? { camParts: j.camParts.map(migratePart) } : {}),
   }))
+  const profile = (m: Partial<MachineProfile> | undefined): MachineProfile => ({ ...refreshPlaceholderTools({ ...d.machine, ...(m ?? {}) }), contour: { ...d.machine.contour, ...(m?.contour ?? {}) }, header: { ...d.machine.header, ...(m?.header ?? {}) } })
   return {
     version: 1,
     library,
-    machine: { ...refreshPlaceholderTools({ ...d.machine, ...(raw.machine ?? {}) }), contour: { ...d.machine.contour, ...(raw.machine?.contour ?? {}) }, header: { ...d.machine.header, ...(raw.machine?.header ?? {}) } },
+    machine: profile(raw.machine),
+    // M2.9: other machines and process steps, each profile filled in like the main one
+    ...(raw.machines ? { machines: raw.machines.map((m) => ({ ...m, post: m.post ?? { kind: 'woodwop-mpr' as const }, profile: profile(m.profile) })) } : {}),
     settings: {
       ...d.settings,
       ...(raw.settings ?? {}),

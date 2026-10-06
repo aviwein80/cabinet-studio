@@ -2,11 +2,12 @@ import { nanoid } from 'nanoid'
 import { type ConfigTarget, confirmKey, type CutDefaultKey, type CutDefaults, setCutDefault } from '@/core/confirm'
 import { create } from 'zustand'
 import { PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { MAIN_MACHINE, newMachineSetup, profileOf } from '@/core/machines'
 import { sampleJob } from '@/core/sample'
 import { normalizeData } from '@/core/normalize'
 import { DEFAULT_ROOM } from '@/core/room'
 import type { CamPart } from '@/cam/types'
-import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, ShopSettings } from '@/core/types'
+import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, MachineSetup, ShopSettings } from '@/core/types'
 import { draftBlock } from '@/core/spec/draft'
 import { toast } from 'sonner'
 import { backend } from './backend'
@@ -44,7 +45,14 @@ interface State {
   removeCabinet(jobId: string, cabId: string): void
   saveTemplate(name: string, description: string, params: CarcassParams): string
   updateLibrary(fn: (lib: Library) => void): void
+  /** Edits the machine shown on the Machine page: the main one, or another machine (M2.9). */
   updateMachine(fn: (m: MachineProfile) => void): void
+  /** Machine shown on the Machine page (null = the main machine). */
+  machineEdit: string | null
+  editMachine(id: string | null): void
+  /** Add another machine or process step (a placeholder copy); returns its id. */
+  addMachine(name: string, kind: MachineSetup['kind'], from: 'main' | 'placeholder'): string
+  removeMachine(id: string): void
   updateSettings(fn: (s: ShopSettings) => void): void
   resetMachine(): void
   /** Insert or replace a custom part in a job (jobId) or the shared part library. */
@@ -125,11 +133,40 @@ export const useStore = create<State>((set, get) => {
       } else if (t.kind === 'material') {
         if (!(r.page === 'library' && r.tab === 'materials')) set({ route: { page: 'library', tab: 'materials' } })
       } else if (r.page !== 'machine') set({ route: { page: 'machine' } })
+      // badges on other pages are about the main machine
+      if (t.kind !== 'op' && t.kind !== 'material' && r.page !== 'machine') set({ machineEdit: null })
       set({ configure: t })
     },
     clearConfigure: () => set({ configure: null }),
-    confirmValue: (key) => mutate((d) => confirmKey(d.machine, key)),
-    setCutDefault: (key, value) => mutate((d) => setCutDefault(d, key, value)),
+    confirmValue: (key) => mutate((d) => confirmKey(profileOf(d, get().machineEdit), key)),
+    setCutDefault: (key, value) =>
+      mutate((d) => {
+        const id = get().machineEdit
+        // another machine keeps its own values; operations follow the main machine's only
+        if (id && id !== MAIN_MACHINE) {
+          const p = profileOf(d, id)
+          p.cutDefaults = { ...(p.cutDefaults ?? {}), [key]: value }
+          confirmKey(p, `default:${key}`)
+        } else setCutDefault(d, key, value)
+      }),
+    machineEdit: null,
+    editMachine: (id) => set({ machineEdit: id && id !== MAIN_MACHINE ? id : null }),
+    addMachine(name, kind, from) {
+      let id = ''
+      mutate((d) => {
+        const m = newMachineSetup(d, { name, kind, from })
+        id = m.id
+        d.machines = [...(d.machines ?? []), m]
+      })
+      return id
+    },
+    removeMachine(id) {
+      if (get().machineEdit === id) set({ machineEdit: null })
+      mutate((d) => {
+        d.machines = (d.machines ?? []).filter((m) => m.id !== id)
+        for (const b of d.settings.batchSetups ?? []) b.machines = b.machines.filter((x) => x !== id)
+      })
+    },
 
     async init() {
       try {
@@ -222,11 +259,14 @@ export const useStore = create<State>((set, get) => {
     },
 
     updateLibrary: (fn) => mutate((d) => fn(d.library)),
-    updateMachine: (fn) => mutate((d) => fn(d.machine)),
+    updateMachine: (fn) => mutate((d) => fn(profileOf(d, get().machineEdit))),
     updateSettings: (fn) => mutate((d) => fn(d.settings)),
     resetMachine: () =>
       mutate((d) => {
-        d.machine = clone(PLACEHOLDER_MACHINE)
+        const id = get().machineEdit
+        const other = id ? d.machines?.find((m) => m.id === id) : undefined
+        if (other) other.profile = { ...newMachineSetup(d, { name: other.name, from: 'placeholder' }).profile }
+        else d.machine = clone(PLACEHOLDER_MACHINE)
       }),
     savePart(part, jobId) {
       const blocked = draftBlock(part)

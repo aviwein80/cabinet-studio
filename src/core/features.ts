@@ -23,6 +23,8 @@ export const DEFAULT_FEATURES: FeatureFlags = {
   nestSharedOutput: false,
   nestBridgeOutput: false,
   nestFlipOutput: false,
+  batchAdditions: true,
+  batchMachinesOutput: false,
 }
 
 export const featuresOf = (s: Pick<ShopSettings, 'features'> | undefined): FeatureFlags => ({ ...DEFAULT_FEATURES, ...(s?.features ?? {}) })

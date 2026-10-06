@@ -39,7 +39,12 @@ export function writeBatchResult(fs: BatchFs, cfg: WatchConfig, csvPath: string 
     const tmp = fs.join(cfg.outbox, `.partial-${o.folder}`)
     if (fs.exists(tmp)) fs.remove(tmp)
     fs.mkdirp(tmp)
-    for (const f of o.files) fs.writeFile(fs.join(tmp, f.name), f.data)
+    for (const f of o.files) {
+      // other machines' programs (M2.9) go in a sub-folder per machine: "Name/file.mpr"
+      const parts = f.name.split('/')
+      if (parts.length > 1) fs.mkdirp(fs.join(tmp, ...parts.slice(0, -1)))
+      fs.writeFile(fs.join(tmp, ...parts), f.data)
+    }
     fs.rename(tmp, target)
     written.push(target)
   }

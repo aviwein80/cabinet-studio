@@ -25,6 +25,7 @@ import { ToolSheetDialog } from './machine/ToolSheetDialog'
 import { ToolCompareDialog } from './machine/ToolCompareDialog'
 import { HoldersSection } from './machine/HoldersSection'
 import { AggregatesSection } from './machine/AggregatesSection'
+import { MachinesSection } from './machine/MachinesSection'
 import { applyToolTable, toolsCsv, toolsXlsx } from '@/core/toolData'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
@@ -54,6 +55,8 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['nestSharedOutput', 'Write shared-line cuts to MPR', 'Shared-line cutting writes one tool-centre pass between neighbouring parts instead of a cut-out round each. Off until proven on the machine: while off, the plan is shown and measured, and every part keeps its own cut-out.'],
   ['nestBridgeOutput', 'Write bridged groups to MPR', 'Bridged nesting cuts each group of linked small parts as one path round the parts and their bridges. Off until proven on the machine: while off, the groups are shown and every part keeps its own cut-out.'],
   ['nestFlipOutput', 'Write flip-side sheet programs', 'Sheets with underside work get a side-1 program (reference edge, underside holes, run first with the sheet face down) besides their normal program. Also needs the custom-part switch. Off until proven on the machine: while off, the side-1 program is shown in the sheet backplot and underside holes stay in each part\'s own turned-over program.'],
+  ['batchAdditions', 'Batch additions', 'Other machines and process steps, batch setups and their wizards, assemblies and fittings in part lists, extra batch steps, admin tools. Screens only: programs for the other machines have their own switch, off.'],
+  ['batchMachinesOutput', 'Write programs for other machines', 'Batch runs nest and check the part list for every machine of the setup. Off until proven on those machines: while off, only the main machine\'s programs are written and the others are listed in the report.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
   ['cam25dMprOutput', 'Write facing, chamfers and saw cuts to MPR', 'The newer 2.5D operations that have a woodWOP form, as contour-milling passes and saw grooves (also needs the custom-part switch). Off until proven on the machine. Saw grooves also need a saw unit in the machine model. Angled saw cuts, curve cuts, edge work with an aggregate and edited toolpaths are never written.'],
@@ -68,7 +71,7 @@ const TOOL_COLS: Column<Tool>[] = [
 ]
 
 export function MachinePage() {
-  const { data, updateMachine, updateSettings, resetMachine, mutate } = useStore()
+  const { data, updateMachine, updateSettings, resetMachine, mutate, machineEdit, editMachine } = useStore()
   const [importOpen, setImportOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [editTool, setEditTool] = useState<string | null>(null)
@@ -85,10 +88,12 @@ export function MachinePage() {
     }
   })
   if (!data) return null
-  const m = data.machine
+  // M2.9: this page edits the main machine or, after "Edit" in Machines and process steps, another one
+  const other = machineEdit ? data.machines?.find((x) => x.id === machineEdit) : undefined
+  const m = other?.profile ?? data.machine
   const s = data.settings
   const routers = m.tools.filter((t) => t.type === 'router')
-  const nestItems = nestUnconfirmed(s, m)
+  const nestItems = other ? [] : nestUnconfirmed(s, m)
   const unconfirmed = [...machineUnconfirmed(m), ...nestItems]
   const nestBadge = (k: string) => {
     const u = nestItems.find((x) => x.key === `nest:${k}`)
@@ -111,7 +116,7 @@ export function MachinePage() {
     <div className="flex h-full flex-col">
       <PageHeader
         title="Machine & tools"
-        subtitle={m.name}
+        subtitle={other ? `${m.name} (${other.kind === 'step' ? 'process step' : 'other machine'})` : m.name}
         actions={
           <>
             <Button size="sm" variant="ghost" onClick={() => setResetOpen(true)}>
@@ -119,9 +124,11 @@ export function MachinePage() {
             </Button>
             {cadTools ? (
               <>
-                <Button size="sm" variant="ghost" onClick={() => setCompareOpen(true)}>
-                  <GitCompareArrows /> Tool data in operations
-                </Button>
+                {!other && (
+                  <Button size="sm" variant="ghost" onClick={() => setCompareOpen(true)}>
+                    <GitCompareArrows /> Tool data in operations
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="ghost">
@@ -151,6 +158,17 @@ export function MachinePage() {
         }
       />
       <div className="min-h-0 flex-1 overflow-auto">
+        {other && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-sky-300 bg-sky-50 px-5 py-2.5 text-sm text-sky-950" data-cfg="editing-machine">
+            <span className="min-w-0 flex-1">
+              Editing <b>{other.name}</b>, not the main machine. Its tool table, machine model and holders are its own; nesting, labels and the feature switches are shared and stay on the main machine&apos;s page. Its programs are written only by batch runs, with
+              &quot;Write programs for other machines&quot; on.
+            </span>
+            <Button size="sm" variant="outline" onClick={() => editMachine(null)}>
+              Back to the main machine
+            </Button>
+          </div>
+        )}
         {(m.placeholder || unconfirmed.length > 0) && (
           <div className="flex items-start gap-3 border-b border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-950" data-cfg="unconfirmed-list">
             <TriangleAlert className="mt-0.5 size-5 shrink-0" />
@@ -173,8 +191,20 @@ export function MachinePage() {
         )}
         <div className="grid gap-0 xl:grid-cols-[380px_1fr]">
           <div className="border-b bg-background xl:border-r xl:border-b-0">
+            {feat.batchAdditions && <MachinesSection />}
             <Section title="Machine profile">
-              <TextField label="Profile name" value={m.name} onChange={(v) => updateMachine((x) => (x.name = v))} />
+              <TextField
+                label="Profile name"
+                value={m.name}
+                onChange={(v) =>
+                  other
+                    ? mutate((d) => {
+                        const x = d.machines?.find((y) => y.id === other.id)
+                        if (x) x.name = x.profile.name = v
+                      })
+                    : updateMachine((x) => (x.name = v))
+                }
+              />
               <div className="grid grid-cols-2 gap-2">
                 <TextField label="Model" value={m.model} onChange={(v) => updateMachine((x) => (x.model = v))} />
                 <SelectField
@@ -262,9 +292,11 @@ export function MachinePage() {
               </div>
             </Section>
             <MachineModelSection machine={m} updateMachine={updateMachine} />
-            <CutDefaultsSection machine={m} />
+            {!other && <CutDefaultsSection machine={m} />}
             {cadTools && <HoldersSection machine={m} updateMachine={updateMachine} />}
             {cadTools && <AggregatesSection machine={m} updateMachine={updateMachine} />}
+            {!other && (
+            <>
             <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${partSpacing(m, s)} mm`}>
               <div className="grid grid-cols-2 gap-2">
                 <NumField label="Edge trim" value={s.nesting.edgeTrim} min={0} max={50} onChange={(v) => updateSettings((x) => (x.nesting.edgeTrim = v))} />
@@ -410,6 +442,8 @@ export function MachinePage() {
                 <SwitchField key={key} label={label} hint={hint} checked={feat[key]} onChange={(v) => updateSettings((x) => void (x.features = { ...featuresOf(x), [key]: v }))} />
               ))}
             </Section>
+            </>
+            )}
           </div>
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center justify-between">

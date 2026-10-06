@@ -538,6 +538,16 @@ export interface NestSettings {
   bridgeWidth?: number
   bridgeMaxLength?: number
   bridgeMaxArea?: number
+  /**
+   * Flip-side sheets (M2.8, NST-07): parts with underside work nest on their own sheets, each with
+   * a side-1 program (reference edge, underside holes) run before the sheet's normal program.
+   * Written to MPR only with its own switch.
+   */
+  flipSheets?: boolean
+  /** How the sheet is turned over: end for end, or over its long edge. */
+  flipAxis?: 'end' | 'side'
+  /** Strip milled off on side 1 to make the reference edge, mm. */
+  flipReference?: number
 }
 
 export type NestEngine = 'rect' | 'shape' | 'auto'
@@ -639,6 +649,8 @@ export interface FeatureFlags {
   nestSharedOutput: boolean
   /** Write bridged groups as one cut-out round each group. Off until proven on the machine. */
   nestBridgeOutput: boolean
+  /** Write flip-side sheet programs (side 1 underside, side 2 as usual). Off until proven on the machine. */
+  nestFlipOutput: boolean
 }
 
 export interface Library {

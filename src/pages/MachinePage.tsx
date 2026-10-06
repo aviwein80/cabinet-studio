@@ -53,6 +53,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['nestAdditions', 'Nesting additions', 'Areas and costs per sheet and part; shared-line and bridged cutting plans; flip-side sheets with the sheet backplot; moving parts by hand on a sheet. Screens only: each new kind of program output has its own switch, off.'],
   ['nestSharedOutput', 'Write shared-line cuts to MPR', 'Shared-line cutting writes one tool-centre pass between neighbouring parts instead of a cut-out round each. Off until proven on the machine: while off, the plan is shown and measured, and every part keeps its own cut-out.'],
   ['nestBridgeOutput', 'Write bridged groups to MPR', 'Bridged nesting cuts each group of linked small parts as one path round the parts and their bridges. Off until proven on the machine: while off, the groups are shown and every part keeps its own cut-out.'],
+  ['nestFlipOutput', 'Write flip-side sheet programs', 'Sheets with underside work get a side-1 program (reference edge, underside holes, run first with the sheet face down) besides their normal program. Also needs the custom-part switch. Off until proven on the machine: while off, the side-1 program is shown in the sheet backplot and underside holes stay in each part\'s own turned-over program.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
   ['cam25dMprOutput', 'Write facing, chamfers and saw cuts to MPR', 'The newer 2.5D operations that have a woodWOP form, as contour-milling passes and saw grooves (also needs the custom-part switch). Off until proven on the machine. Saw grooves also need a saw unit in the machine model. Angled saw cuts, curve cuts, edge work with an aggregate and edited toolpaths are never written.'],
@@ -349,6 +350,32 @@ export function MachinePage() {
                       <NumField label="Bridge width" value={ns.bridgeWidth} min={1} max={50} step={0.5} cfg="nest:bridgeWidth" badge={nestBadge('bridgeWidth')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeWidth = v), confirmKey(d.machine, 'nest:bridgeWidth')))} />
                       <NumField label="Longest bridge" value={ns.bridgeMaxLength} min={1} max={200} cfg="nest:bridgeMaxLength" badge={nestBadge('bridgeMaxLength')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxLength = v), confirmKey(d.machine, 'nest:bridgeMaxLength')))} hint="Widest gap bridged" />
                       <NumField label="Parts under" suffix="m²" value={Math.round(ns.bridgeMaxArea / 1e4) / 100} min={0} max={3} step={0.01} cfg="nest:bridgeMaxArea" badge={nestBadge('bridgeMaxArea')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxArea = v * 1e6), confirmKey(d.machine, 'nest:bridgeMaxArea')))} />
+                    </div>
+                  )}
+                </>
+              )}
+              {feat.nestAdditions && (
+                <>
+                  <SwitchField
+                    label="Flip-side sheets"
+                    checked={ns.flipSheets}
+                    onChange={(v) => updateSettings((x) => (x.nesting.flipSheets = v))}
+                    hint={`Parts with underside (face 6) work nest on their own sheets. Side 1 mills a reference edge and drills the underside; the sheet is turned over and side 2 is its normal program. Program output has its own switch below (${feat.nestFlipOutput ? 'on' : 'off'}).`}
+                  />
+                  {ns.flipSheets && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <SelectField
+                        label="Turned over"
+                        value={ns.flipAxis}
+                        cfg="nest:flipAxis"
+                        badge={nestBadge('flipAxis')}
+                        options={[
+                          { value: 'end', label: 'End for end' },
+                          { value: 'side', label: 'Over the long edge' },
+                        ]}
+                        onChange={(v) => mutate((d) => ((d.settings.nesting.flipAxis = v), confirmKey(d.machine, 'nest:flipAxis')))}
+                      />
+                      <NumField label="Reference strip" value={ns.flipReference} min={0.5} max={50} step={0.5} cfg="nest:flipReference" badge={nestBadge('flipReference')} onChange={(v) => mutate((d) => ((d.settings.nesting.flipReference = v), confirmKey(d.machine, 'nest:flipReference')))} hint="Milled off on side 1; that edge goes against the stop" />
                     </div>
                   )}
                 </>

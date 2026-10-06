@@ -47,6 +47,7 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { AreaCostPanel } from '@/components/AreaCostPanel'
+import { type BackplotMode, SheetBackplot } from '@/components/SheetBackplot'
 import { jobCosts } from '@/core/areas'
 import { featuresOf } from '@/core/features'
 
@@ -377,6 +378,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
   const [showOps, setShowOps] = useState(true)
   const [showPlan, setShowPlan] = useState(true)
   const [showBridges, setShowBridges] = useState(true)
+  const [view, setView] = useState<'map' | BackplotMode>('map')
   const instances = useMemo(() => new Map(out.instances.map((i) => [i.uid, i])), [out])
   const additions = featuresOf(data.settings).nestAdditions
   const costs = useMemo(() => (additions ? jobCosts(out.nest, out.instances, data.library) : null), [additions, out, data.library])
@@ -485,7 +487,27 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
           </div>
         )}
         <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
-          <div className="min-h-[320px] min-w-0 flex-1 p-4">
+          <div className="flex min-h-[320px] min-w-0 flex-1 flex-col gap-2 p-4">
+            {prog.back && (
+              <div className="flex flex-wrap items-center gap-1 text-xs" role="tablist" aria-label="Sheet view">
+                {(
+                  [
+                    ['map', 'Sheet map'],
+                    ['side1', 'Backplot side 1'],
+                    ['side2', 'Backplot side 2'],
+                    ['both', 'Both sides'],
+                  ] as const
+                ).map(([k, label]) => (
+                  <Button key={k} size="xs" variant={view === k ? 'default' : 'outline'} onClick={() => setView(k)}>
+                    {label}
+                  </Button>
+                ))}
+                <span className="ml-2 text-muted-foreground">Flip-side sheet{prog.back.written ? '' : ' (side 1 not written)'}</span>
+              </div>
+            )}
+            {prog.back && view !== 'map' ? (
+              <SheetBackplot front={prog} instances={instances} machine={data.machine} mode={view} />
+            ) : (
             <SheetView
               program={prog}
               instances={instances}
@@ -497,6 +519,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               {...(prog.shared && showPlan ? { cutPaths: prog.shared.plan.paths } : {})}
               {...(prog.bridges && showBridges ? { groups: prog.bridges.plan.clusters } : {})}
             />
+            )}
           </div>
           <div className="w-full shrink-0 overflow-auto border-t bg-background xl:w-80 xl:border-t-0 xl:border-l">
             {sel && selLabel ? (

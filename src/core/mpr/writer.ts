@@ -183,7 +183,7 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('EA', `${n}:0`)
   w.kv('MDA', approach)
   // shared-line cuts (M2.8) are tool-centre paths: no radius compensation
-  w.kv('RK', c.centre ? 'NOWRK' : cw ? 'WRKL' : 'WRKR')
+  w.kv('RK', c.centre ? 'NOWRK' : (c.rk ?? (cw ? 'WRKL' : 'WRKR')))
   w.kv('EE', `${n}:${c.segs ? splitMajorArcs(c.segs).length : c.points.length - 1}`)
   w.kv('MDE', `${approach}_AB`)
   w.kv('EM', machine.contour.ramp ? 1 : 0)
@@ -199,7 +199,7 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('ZSTART', 0)
   w.kv('ANZZST', 0)
   w.kv('KAT', 'Fraesen')
-  w.kv('MNM', mprText(`P${c.partNo} ${c.skin ? `onion-skin pass${c.bridged ? ' bridged group' : ''}` : c.bridged ? `bridged group of ${c.bridged.length}${c.hole ? ' waste inside' : ''}` : c.centre ? `shared cut${c.shared?.length ? ' with ' + c.shared.length + ' part(s)' : ''}` : 'cut-out'}`))
+  w.kv('MNM', mprText(`P${c.partNo} ${c.reference ? 'reference edge for turning over' : c.skin ? `onion-skin pass${c.bridged ? ' bridged group' : ''}` : c.bridged ? `bridged group of ${c.bridged.length}${c.hole ? ' waste inside' : ''}` : c.centre ? `shared cut${c.shared?.length ? ' with ' + c.shared.length + ' part(s)' : ''}` : 'cut-out'}`))
 }
 
 /** Native macros for one custom-part intent (already in program coordinates). */

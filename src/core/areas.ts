@@ -54,7 +54,8 @@ export function nestAreas(nest: JobNest, instances: PartInstance[]): { sheets: S
   const parts = new Map<string, PartArea>()
   for (const i of instances) parts.set(i.uid, { uid: i.uid, no: i.no, area: instanceArea(i), rectArea: i.cutLength * i.cutWidth })
   const sheets = nest.sheets.map((sh) => {
-    const sheetArea = sh.sheetLength * sh.sheetWidth
+    // a flip-side sheet is bought whole: the reference strip milled off is scrap
+    const sheetArea = sh.flip ? sh.flip.length * sh.flip.width : sh.sheetLength * sh.sheetWidth
     const partsArea = sh.placements.reduce((s, p) => s + (byUid.has(p.uid) ? parts.get(p.uid)!.area : p.dx * p.dy), 0)
     const remnantArea = (sh.remnants ?? []).reduce((s, r) => s + r.length * r.width, 0)
     return {

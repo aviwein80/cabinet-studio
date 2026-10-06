@@ -14,6 +14,7 @@
 import { checkCancel, type CancelCheck } from './cancel'
 import { nestShapes } from './nestShape'
 import type { NestEngine, Vec2 } from './types'
+import type { FlipInfo } from './flipSide'
 
 export interface NestPart {
   uid: string
@@ -68,6 +69,8 @@ export interface NestedSheet {
   /** Stock offcut used instead of a full sheet. */
   offcutId?: string
   remnants?: Remnant[]
+  /** Flip-side sheet (M2.8): parts with underside work; the sheet as it comes and how it is turned. */
+  flip?: FlipInfo
 }
 
 export interface StockOffcut {

@@ -347,6 +347,45 @@ export function validateJob(
       }
     }
 
+    // M2.8 flip-side sheets: the side-1 program's holes must land on their parts once the sheet is
+    // turned over (checked by mapping each hole back, independently of how it was made), and its
+    // reference edge must stay off the parts
+    if (prog.back) {
+      const { program: side1, written } = prog.back
+      const f = sh.flip!
+      const holes = side1.ops.filter((o): o is Extract<typeof o, { kind: 'vdrill' }> => o.kind === 'vdrill')
+      add({
+        severity: 'info',
+        code: 'FLIP_SHEETS',
+        sheet: sheetNo,
+        message: `Flip-side sheet: ${holes.length} underside hole(s) on ${new Set(holes.map((h) => h.partUid)).size} part(s). Side 1 (${side1.name}) mills a ${fmt(f.reference)} mm reference strip and drills the underside with the sheet face 6 up; then the sheet is turned over ${f.axis === 'end' ? 'end for end' : 'over its long edge'} for this program. ${written ? 'Both programs are written: run side 1 first, and simulate both in woodWOP.' : 'Not written: the switch "Write flip-side sheet programs" (and custom-part output) is off, so underside holes stay in each part\'s own turned-over program.'}`,
+      })
+      if (written) {
+        const L = sh.sheetLength
+        const W = sh.sheetWidth
+        const back = (h: { x: number; y: number }) => (f.axis === 'end' ? { x: L - h.x, y: h.y } : { x: h.x, y: W - h.y })
+        for (const h of holes) {
+          const ref = { sheet: sheetNo, partNo: h.partNo, partUid: h.partUid }
+          const label = `#${h.partNo} underside hole`
+          if (!h.tool) add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no vertical drill D${fmt(h.diameter)} reaching ${fmt(h.depth)} mm in the tool table.` })
+          if (h.depth > T + machine.spoilboardAllowance + EPS) add({ ...ref, severity: 'error', code: 'DEPTH_SPOILBOARD', message: `${label}: ${fmt(h.depth)} mm goes ${fmt(h.depth - T)} mm into the spoilboard.` })
+          const p = back(h)
+          if (!inFootprint(h.partUid, p.x, p.y)) add({ ...ref, severity: 'error', code: 'FLIP_OUTSIDE', message: `${label} at X${fmt(h.x)} Y${fmt(h.y)} on side 1 lands outside its part once the sheet is turned over.` })
+        }
+        for (const c of side1.ops) {
+          if (c.kind !== 'contour' || !c.reference) continue
+          // the strip the tool removes (one diameter on the strip's side of the line) stays off every part
+          const d = c.tool?.diameter ?? 0
+          const edge = f.axis === 'end' ? L : W
+          const clear = Math.min(...sh.placements.map((p) => (f.axis === 'end' ? L - (p.x + p.dx) : W - (p.y + p.dy))))
+          if (c.points.some((q) => Math.abs((f.axis === 'end' ? q.x : q.y) - edge) > EPS) || clear < -EPS)
+            add({ severity: 'error', code: 'FLIP_REFERENCE', sheet: sheetNo, message: `Side 1 reference edge is not on the sheet's turned-over edge (${fmt(edge)} mm) or cuts into a part.` })
+          if (!c.tool) add({ severity: 'error', code: 'TOOL_MISSING', sheet: sheetNo, message: 'Side 1 reference edge: cut-out router missing.' })
+          else if (d <= 0) add({ severity: 'error', code: 'FLIP_REFERENCE', sheet: sheetNo, message: 'Side 1 reference edge: no tool diameter.' })
+        }
+      }
+    }
+
     for (const c of prog.custom ?? []) {
       const ref = { sheet: sheetNo, partNo: c.partNo, partUid: c.partUid }
       const name = byUid.get(c.partUid)?.part.name ?? c.partUid
@@ -402,7 +441,7 @@ export function validateJob(
         add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: `Custom part #${c.partNo} ${name}: ${c.aggregateOps} edge-work operation(s) need a rotating aggregate, and the machine model has none. Confirm the unit on the Machine page (Aggregate head fitted) or machine the edge another way.`, configure: unit('aggregate') })
       if (c.sawUnwritten && !model.capabilities.saw) add({ ...ref, severity: 'error', code: 'MACHINE_CANNOT', message: noSaw(`Custom part #${c.partNo} ${name}: ${c.sawUnwritten} saw operation(s)`), configure: unit('saw') })
       if (c.written) for (const w of c.warnings) add({ ...ref, severity: 'warning', code: 'CAM_TOOLPATH', message: `#${c.partNo} ${w}` })
-      if (c.written && c.backHoles > 0)
+      if (c.written && c.backHoles > 0 && !prog.back?.written)
         add({ ...ref, severity: 'warning', code: 'CAM_BACKSIDE', message: `Custom part #${c.partNo} ${name}: ${c.backHoles} underside hole(s) are in its own turned-over program; run it after cutting the sheet.` })
     }
 

@@ -75,13 +75,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.8a Area and cost (NEW-20) | **Done** (October 2026) | See below. |
 | M2.8b Shared-line cutting (NST-04) | **Done** (October 2026) | See below. Output switch off. |
 | M2.8c Bridged nesting (NST-05) | **Done** (October 2026) | See below. Output switch off. |
-| M2.8d - M2.8e | In progress | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
+| M2.8d Flip-side sheets (NST-07), sheet backplot | **Done** (October 2026) | See below. Output switch off. |
+| M2.8e Manual nesting (NST-09), screenshots, docs | In progress | | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
 | M2.9 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -1257,6 +1258,33 @@ Sample job output unchanged (the new CSV is a separate export).
 - **Only rectangles are linked**, and only to other small parts (not to a large neighbour).
 - **The parts keep a small radius of material where each bridge meets their edge** (the tool cannot cut an inside corner sharp); it comes off with the bridge stub.
 - **Not machine-proven**; output off.
+
+## M2.8d flip-side sheets: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NST-07 | "Flip-side sheets" (Machine page, Nesting): parts with underside (face 6) work nest on their own sheets. Each gets a **side-1 program**, run first with the sheet face 6 up and its factory edges against the stops: it mills a reference strip (5 mm) off the far end and drills the underside holes, mirrored. The sheet is then turned over (end for end, or over its long edge) with the milled edge against the stop, and its **normal program** is side 2 (top work and cut-outs; it opens with a program stop and the turning instruction). Registration: the milled edge is cut by the machine, so side 2 finds it exactly where side 1 put it whatever the real sheet length; the other direction keeps the same factory edge on the stops. The nest leaves the strip off the sheet; areas and costs count the whole sheet | `src/core/flipSide.ts`, `nestJob` (`underside`), `runJob`, `mprFiles` |
+| Backplot | Nesting tab, on a flip-side sheet: "Backplot side 1" (the sheet as it lies face down: parts mirrored, underside holes, reference strip and cut), "Backplot side 2" (as turned over, the milled edge marked), "Both sides" (side-1 holes turned back over onto side 2), with the registration figure | `SheetBackplot.tsx`, `registrationError` |
+| Output | Switch "Write flip-side sheet programs" (`nestFlipOutput`), **off**; it also needs the custom-part switch (the holes are custom-part work). Off: side 1 is only shown and listed; underside holes stay in each part's own turned-over program (Stage 1). On: `<sheet>_side1.mpr` is written, and parts on that sheet get no separate turned-over program | `pipeline.ts` |
+| Checks | `FLIP_OUTSIDE` (a side-1 hole that lands outside its part once turned over, checked by mapping it back), `FLIP_REFERENCE` (reference cut not on the turned-over edge, or into a part), `DEPTH_SPOILBOARD` and `TOOL_MISSING` on the side-1 holes; `FLIP_SHEETS` info | `validator.ts` |
+| Badges | How the sheet is turned and the reference strip are PLACEHOLDER values with Configure badges while flip-side sheets are on | `nestUnconfirmed` |
+
+### Acceptance (flip-side sheets register within 0.1 mm in the backplot)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Registration, read back from the written side-1 MPR | `tests/nest-flip.test.ts` (the side-1 file parsed with `readMpr`; every `<102>` hole turned back over by the test's own formula and compared with where the part design puts it, placement worked out in the test) | 12 holes on 3 parts: **0.0000 mm**, turned end for end and over the long edge |
+| Backplot figure | same, browser check | `registrationError` ≤ 0.001 mm; the "Both sides" view shows "within 0.000 mm" |
+| Reference edge | same | `<105>` along x = sheet length less 5 mm (end for end) or y = width less 5 mm (long edge), `RK="WRKR"` (tool on the strip's side) |
+| Grouping | same | The 3 underside panels on their own sheet (3653 long); no underside panel on any other sheet; flip off: nest identical |
+| Output off / custom-part output off | same | No side-1 file; per-part turned-over program kept; flip switch alone writes nothing |
+| Checker catches mistakes | same | Hole moved 700 mm: `FLIP_OUTSIDE`; 25 mm deep: `DEPTH_SPOILBOARD`; reference cut moved 20 mm: `FLIP_REFERENCE` |
+
+### Limits recorded
+
+- **Underside work is drilling only** (as in Stage 1: face 6 holes). Face 6 milling is not supported.
+- **The registration is only as good as the stops and the reference cut.** Not machine-proven; output off.
+- **With the output off the front program's sheet is 5 mm shorter than the sheet** (the strip is left at the far end, unprogrammed); this is harmless but is noted.
 
 ### Test-suite note
 

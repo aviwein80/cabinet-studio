@@ -3,7 +3,8 @@ import type { CancelCheck } from './cancel'
 import { generatePart, type Toolpath } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
-import { bridgesOn, buildAllPrograms, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
+import { needsUnderside, sideOneProgram, sideTwoNote } from './flipSide'
+import { bridgesOn, buildAllPrograms, flipSheetsOn, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeKey, Job } from './types'
@@ -57,7 +58,8 @@ export interface JobOutput {
 export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelCheck; paths3d?: ReadonlyMap<string, Toolpath> } = {}): JobOutput {
   const { library: lib, machine, settings } = data
   const expanded = expandJob(job, lib, settings)
-  const nest = nestJob(expanded.instances, lib, machine, settings, opts.isCancelled)
+  const flip = flipSheetsOn(settings)
+  const nest = nestJob(expanded.instances, lib, machine, settings, opts.isCancelled, flip ? { underside: (i) => needsUnderside(i, machine) } : {})
   const ns = nestSettingsOf(settings)
   const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, {
     camOutput: featuresOf(settings).camMprOutput,
@@ -68,6 +70,18 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
     ...(bridgesOn(settings) ? { bridges: { width: ns.bridgeWidth, maxLength: ns.bridgeMaxLength, maxArea: ns.bridgeMaxArea, write: featuresOf(settings).nestBridgeOutput } } : {}),
     ...(sharedLinesOn(settings) ? { sharedLines: { minArea: ns.sharedMinArea, minSide: ns.sharedMinSide, write: featuresOf(settings).nestSharedOutput } } : {}),
   })
+  // M2.8 flip-side sheets: a side-1 program (reference edge, underside holes) for each; written
+  // only with both the flip-side switch and the custom-part switch (the holes are custom-part work)
+  if (flip) {
+    const byUid = new Map(expanded.instances.map((i) => [i.uid, i]))
+    const write = featuresOf(settings).nestFlipOutput && featuresOf(settings).camMprOutput
+    for (const p of programs) {
+      const side1 = p.sheet.flip ? sideOneProgram(p, byUid, machine) : null
+      if (!side1) continue
+      p.back = { program: side1, written: write }
+      if (write) p.ops.unshift(sideTwoNote(p))
+    }
+  }
   const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)
   for (const w of expanded.warnings) issues.unshift({ severity: 'warning', code: 'CONSTRUCTION', message: w })
 
@@ -139,10 +153,18 @@ export function mprFiles(job: Job, data: AppData, out: JobOutput) {
     name: `${p.name}.mpr`,
     text: writeSheetMpr(p, { job, machine: data.machine, mprNumber: i + 1, mprCount: out.programs.length }),
   }))
+  // Flip-side sheets (M2.8): the side-1 program of each, run before the sheet's own program.
+  const onFlip = new Set<string>()
+  out.programs.forEach((p, i) => {
+    if (!p.back?.written) return
+    for (const pl of p.sheet.placements) onFlip.add(pl.uid)
+    files.push({ name: `${p.back.program.name}.mpr`, text: writeSheetMpr(p.back.program, { job, machine: data.machine, mprNumber: i + 1, mprCount: out.programs.length }) })
+  })
   // Underside drilling on custom parts: one turned-over program per part design.
   const done = new Set<string>()
   for (const p of out.programs)
     for (const c of p.custom ?? []) {
+      if (onFlip.has(c.partUid)) continue
       const inst = out.instances.find((i) => i.uid === c.partUid)
       if (!c.written || !c.backHoles || !inst?.cam || done.has(inst.cam.id)) continue
       done.add(inst.cam.id)

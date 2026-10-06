@@ -41,6 +41,10 @@ export const NEST_DEFAULTS: Required<Omit<NestSettings, 'edgeTrim' | 'extraSpaci
   bridgeWidth: 6,
   bridgeMaxLength: 20,
   bridgeMaxArea: 100_000,
+  flipSheets: false,
+  // PLACEHOLDER: turned end for end (as the per-part turned-over programs), 5 mm reference strip
+  flipAxis: 'end',
+  flipReference: 5,
   engine: 'auto',
   nestInApertures: true,
   keepKitsTogether: false,
@@ -57,10 +61,12 @@ export const nestSettingsOf = (settings: ShopSettings) => ({ ...NEST_DEFAULTS, .
 
 /** Shared-line cutting is on (it needs the nesting additions screens too). */
 export const sharedLinesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).sharedLines && featuresOf(settings).nestAdditions
+/** Flip-side sheets are on. */
+export const flipSheetsOn = (settings: ShopSettings) => !!nestSettingsOf(settings).flipSheets && featuresOf(settings).nestAdditions
 /** Bridged nesting is on. */
 export const bridgesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).bridges && featuresOf(settings).nestAdditions
 
-export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings, isCancelled?: CancelCheck): JobNest {
+export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings, isCancelled?: CancelCheck, opts: { underside?: (i: PartInstance) => boolean } = {}): JobNest {
   const ns = nestSettingsOf(settings)
   // shared lines: neighbours exactly one tool diameter apart, so their tool-centre lines coincide
   const spacing = sharedLinesOn(settings) && cutoutTool(machine) ? cutoutTool(machine)!.diameter : partSpacing(machine, settings)
@@ -85,7 +91,7 @@ export function nestJob(instances: PartInstance[], lib: Library, machine: Machin
       for (const i of list) unplaced.push({ uid: i.uid, reason: `Material ${materialId} not in library` })
       continue
     }
-    const res = nestMaterial(list.map((i) => nestPartOf(i, ns)), {
+    const base = {
       sheetLength: material.sheetLength,
       sheetWidth: material.sheetWidth,
       edgeTrim: settings.nesting.edgeTrim,
@@ -98,9 +104,22 @@ export function nestJob(instances: PartInstance[], lib: Library, machine: Machin
       offcutType: ns.offcutType,
       offcutMin: { length: ns.offcutMinLength, width: ns.offcutMinWidth },
       isCancelled,
-    })
+    } as const
+    // M2.8 flip-side sheets: parts with underside work nest on their own sheets, the reference
+    // strip milled on side 1 taken off the sheet's length (turned end for end) or width
+    const flip = flipSheetsOn(settings) && opts.underside ? list.filter(opts.underside) : []
+    const rest = flip.length ? list.filter((i) => !flip.includes(i)) : list
+    const res = nestMaterial(rest.map((i) => nestPartOf(i, ns)), base)
     for (const sh of res.sheets) sheets.push({ ...sh, index: sheets.length + 1, materialId, thickness: material.thickness })
     unplaced.push(...res.unplaced)
+    if (flip.length) {
+      const e = ns.flipReference
+      const end = ns.flipAxis === 'end'
+      const fres = nestMaterial(flip.map((i) => nestPartOf(i, ns)), { ...base, offcuts: [], sheetLength: material.sheetLength - (end ? e : 0), sheetWidth: material.sheetWidth - (end ? 0 : e) })
+      for (const sh of fres.sheets)
+        sheets.push({ ...sh, index: sheets.length + 1, materialId, thickness: material.thickness, flip: { axis: ns.flipAxis, reference: e, length: material.sheetLength, width: material.sheetWidth } })
+      unplaced.push(...fres.unplaced)
+    }
     materials.push({ materialId, engine: res.engine, strategy: res.strategy, splitKits: res.splitKits })
   }
   return { sheets, unplaced, spacing, materials }
@@ -200,6 +219,10 @@ export interface Contour extends Base {
   bridged?: string[]
   /** Waste enclosed by a bridged group (cut before the group's outline). */
   hole?: boolean
+  /** Radius compensation side when not the machine's usual one (open paths). */
+  rk?: 'WRKL' | 'WRKR'
+  /** The reference edge milled on side 1 of a flip-side sheet (M2.8). */
+  reference?: boolean
 }
 
 /** A custom-part operation in sheet coordinates, written as native woodWOP macros. */
@@ -250,6 +273,8 @@ export interface SheetProgram {
   shared?: { plan: SharedPlan; written: boolean; diameter: number }
   /** Bridged groups on this sheet (M2.8), and whether they replaced the members' cut-outs. */
   bridges?: { plan: BridgePlan; written: boolean; diameter: number; maxLength: number }
+  /** Flip-side sheet (M2.8): its side-1 program (run first), and whether both are written. */
+  back?: { program: SheetProgram; written: boolean }
 }
 
 export interface ProgramOptions {

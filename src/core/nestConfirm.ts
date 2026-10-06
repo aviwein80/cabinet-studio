@@ -6,7 +6,7 @@
  * check at once.
  */
 import { type ConfigTarget, isConfirmed, keyOf, type NestValueKey, type Unconfirmed } from './confirm'
-import { bridgesOn, nestSettingsOf, sharedLinesOn } from './machining'
+import { bridgesOn, flipSheetsOn, nestSettingsOf, sharedLinesOn } from './machining'
 import type { MachineProfile, ShopSettings } from './types'
 
 export const NEST_VALUE_LABEL: Record<NestValueKey, string> = {
@@ -29,8 +29,10 @@ export function nestValue(settings: ShopSettings, k: NestValueKey): string {
       return `${ns.bridgeMaxLength} mm`
     case 'bridgeMaxArea':
       return `${(ns.bridgeMaxArea / 1e6).toFixed(2)} m²`
-    default:
-      return ''
+    case 'flipAxis':
+      return ns.flipAxis === 'end' ? 'end for end' : 'over the long edge'
+    case 'flipReference':
+      return `${ns.flipReference} mm`
   }
 }
 
@@ -39,6 +41,7 @@ export function nestValuesInUse(settings: ShopSettings): NestValueKey[] {
   const out: NestValueKey[] = []
   if (sharedLinesOn(settings)) out.push('sharedSmall')
   if (bridgesOn(settings)) out.push('bridgeWidth', 'bridgeMaxLength', 'bridgeMaxArea')
+  if (flipSheetsOn(settings)) out.push('flipAxis', 'flipReference')
   return out
 }
 

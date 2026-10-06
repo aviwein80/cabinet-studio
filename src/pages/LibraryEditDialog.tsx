@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { applyKeep, applyTemplateToJobs, applyUpdate, drivingKeys, geometryChanged, jobsUsingTemplate, listConsumers, replaceLibraryItem, type ItemKind, type JobUse } from '@/core/library/propagate'
 import { formatLength, parseLength } from '@/core/units'
 import type { EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
+import { featuresOf } from '@/core/features'
+import { MaterialCostFields } from './library/MaterialCostFields'
 
 type Row = Hardware | Material | EdgeBand
 
@@ -124,6 +126,18 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
                 <NumField label="Sheet width" hint="Drives nesting." value={(draft as Material).sheetWidth} min={100} max={4000} onChange={(v) => set((r) => ((r as Material).sheetWidth = v))} />
                 <SelectField label="Grain" hint="Drives nesting. Grain-locked parts will not rotate on a sheet with grain." value={(draft as Material).grain ? 'yes' : 'no'} options={[{ value: 'yes', label: 'Grain along the sheet length' }, { value: 'no', label: 'No grain' }]} onChange={(v) => set((r) => ((r as Material).grain = v === 'yes'))} />
                 <TextField label="Colour" hint="Appearance only. The 3D view uses it. Cut size does not." value={(draft as Material).color} onChange={(v) => set((r) => ((r as Material).color = v))} />
+                {featuresOf(data.settings).nestAdditions && (
+                  <MaterialCostFields
+                    material={draft as Material}
+                    currency={data.settings.currency ?? '$'}
+                    onChange={(c) =>
+                      set((r) => {
+                        if (c) (r as Material).cost = c
+                        else delete (r as Material).cost
+                      })
+                    }
+                  />
+                )}
               </>
             )}
             {kind === 'edgeband' && (

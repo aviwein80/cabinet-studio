@@ -72,12 +72,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.7b Turn-by-turn sketch, dimensions, print to scale | **Done** (October 2026) | See below. |
 | M2.7c Geometry queries, fill with holes, panelling | **Done** (October 2026) | See below. |
 | M2.7d Image trace, screenshots, docs | **Done** (October 2026) | See below. M2.7 complete. |
-| M2.8 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.8a Area and cost (NEW-20) | **Done** (October 2026) | See below. |
+| M2.8b - M2.8e | In progress | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
+| M2.9 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -1170,9 +1172,41 @@ shipped), SheetJS (already in the app) and jsPDF (already in the app).
 2. **Aggregates**: offsets, housing and allowed angles of any angle head or aggregate the shop
    has or may buy. Until then: one invented entry, not fitted.
 
-## Next run: M2.8 nesting additions
+## M2.8 split
 
-- NST-04, NST-05, NST-07, NST-09, NEW-20 as in the prompt.
+M2.8 is done in named parts, each green, pushed and recorded here before the next starts:
+**M2.8a** areas and costs (NEW-20); **M2.8b** shared-line cutting (NST-04); **M2.8c** bridged
+nesting (NST-05); **M2.8d** flip-side sheets with registration and the sheet backplot (NST-07);
+**M2.8e** manual nesting (NST-09), screenshots, README, ROADMAP. One nesting system: everything
+extends `src/core/nesting.ts` / `nestShape.ts` and the sheet programs in `machining.ts`. New switch
+"Nesting additions" (`nestAdditions`, screens only, on). Every new kind of program output (shared
+lines, bridges, flip-side sheets) gets its own switch, **off**.
+
+## M2.8a areas and costs: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NEW-20 | Areas: each part's true area (outline less its through openings); per sheet the parts, the remnant strips kept and the scrap (everything else: edge trim, gaps, small leftovers), which add up to the sheet exactly. Costs: a material is costed per m² of sheet (typed per ft² in inch mode) or per kg with its density; both become one rate per m². A sheet costs its whole area (an offcut its own); parts, remnants and scrap split it by area; a part's "share of the sheet" spreads the sheet's cost less the remnants kept over its parts by area; weights when a density is given. Job totals. CSV export "Areas and costs" (not part of the sample job's files) | `src/core/areas.ts`, `AreaCostPanel.tsx` (Nesting tab), `MaterialCostFields.tsx` (Library, Materials, Edit), `output.ts` |
+| Badges | No invented prices: a material without a price (or, by weight, without a density) shows "not set" with a Configure badge on the Nesting tab; it opens the material's price field. Entering it clears the badge. Prices are labels: nothing cut changes, so nothing goes stale | `materialUnconfirmed`, new Configure target `material` |
+
+### Acceptance (area and cost numbers match hand calculation)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Part areas | `tests/nest-areas.test.ts` | 1000 x 500 = 0.5 m²; 600 x 400 less a 200 x 100 opening = 0.22 m²; L shape 400 x 400 less 200 x 200 = 0.12 m² (exact) |
+| Sheet areas | same | 2440 x 1220 sheet: parts 0.84, remnant 0.732, scrap 1.4048, sheet 2.9768 m² (exact; they add up) |
+| Cost by area, $40/m² | same | sheet $119.072, parts $33.60, remnant $29.28, scrap $56.192; shares $53.4476 / $23.5170 / $12.8274 (sum = sheet less remnant) |
+| Cost by weight, $0.50/kg, 700 kg/m³, 18 mm | same | 12.6 kg/m², $6.30/m², sheet 37.50768 kg and $18.75384 |
+| Real job | same | Sample job at $25/m²: every sheet adds up, shares add up to sheets less remnants |
+
+Sample job output unchanged (the new CSV is a separate export).
+
+### Test-suite note
+
+`tests/perf.test.ts` "adaptive clearing per Z level" (limit 90 s with the whole suite running in
+parallel, about 37 s alone) measured 90.2 s on the untouched M2.7d code in this container this run,
+so it fails by timing alone when the full suite runs; it passes when run on its own. The limit was
+not changed.
 
 ## Run log
 

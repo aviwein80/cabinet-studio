@@ -18,6 +18,7 @@ import { LibraryEditDialog, TemplateJobsButton } from './LibraryEditDialog'
 import { OffcutsTab } from './library/OffcutsTab'
 import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
+import { useConfigureTarget } from '@/components/configureFocus'
 
 const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'handle', 'other']
 
@@ -58,6 +59,11 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
   const [importOpen, setImportOpen] = useState(false)
   const [editing, setEditing] = useState<Material | EdgeBand | Hardware | null>(null)
   const bundleInput = useRef<HTMLInputElement>(null)
+  // a "Configure" badge asked for a material's cost: open that material
+  useConfigureTarget(['material'], (t) => {
+    const m = t.kind === 'material' ? data?.library.materials.find((x) => x.id === t.materialId) : undefined
+    if (m) setEditing(m)
+  })
   if (!data) return null
   const lib = data.library
 

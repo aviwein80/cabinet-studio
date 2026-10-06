@@ -122,6 +122,8 @@ export const useStore = create<State>((set, get) => {
       const r = get().route
       if (t.kind === 'op') {
         if (!(r.page === 'part' && r.partId === t.partId)) set({ route: { page: 'part', partId: t.partId, ...(t.jobId ? { jobId: t.jobId } : {}) } })
+      } else if (t.kind === 'material') {
+        if (!(r.page === 'library' && r.tab === 'materials')) set({ route: { page: 'library', tab: 'materials' } })
       } else if (r.page !== 'machine') set({ route: { page: 'machine' } })
       set({ configure: t })
     },

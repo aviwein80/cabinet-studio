@@ -46,6 +46,9 @@ import { PartList } from '@/components/PartList'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
+import { AreaCostPanel } from '@/components/AreaCostPanel'
+import { jobCosts } from '@/core/areas'
+import { featuresOf } from '@/core/features'
 
 export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
   const { data, go, mutate } = useStore()
@@ -373,6 +376,8 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
   const [showLabels, setShowLabels] = useState(true)
   const [showOps, setShowOps] = useState(true)
   const instances = useMemo(() => new Map(out.instances.map((i) => [i.uid, i])), [out])
+  const additions = featuresOf(data.settings).nestAdditions
+  const costs = useMemo(() => (additions ? jobCosts(out.nest, out.instances, data.library) : null), [additions, out, data.library])
 
   if (out.programs.length === 0)
     return (
@@ -510,6 +515,11 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
             ) : (
               <div className="p-4 text-xs text-muted-foreground">Click a part to see its details. Numbers match the labels and sheet map.</div>
             )}
+            {costs && (
+              <div className="border-t p-4">
+                <AreaCostPanel costs={costs} sheetIndex={sh.index} selectedUid={selected} lib={data.library} units={data.settings.units} currency={data.settings.currency ?? '$'} />
+              </div>
+            )}
             <div className="border-t p-4">
               <div className="mb-2 text-xs font-semibold">Sheet checks</div>
               <IssueList issues={sheetIssues} onPick={(uid) => setSelected(uid)} empty="No issues on this sheet." jobId={job.id} />
@@ -576,6 +586,7 @@ const EXPORTS: { kind: ExportKind; label: string; desc: string; icon: typeof Fil
   { kind: 'labels-zpl', label: 'Labels ZPL', desc: 'Raw Zebra 203 dpi, send direct to printer', icon: Printer, ext: 'zpl' },
   { kind: 'cutlist-csv', label: 'Cut list CSV', desc: 'Grouped parts with edges', icon: Table2, ext: 'csv' },
   { kind: 'bom-csv', label: 'BOM CSV', desc: 'Sheets, edgeband metres, hardware', icon: Table2, ext: 'csv' },
+  { kind: 'areas-csv', label: 'Areas and costs CSV', desc: 'Per sheet and part: parts, remnants, scrap', icon: Table2, ext: 'csv' },
 ]
 
 function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput }) {
@@ -584,6 +595,7 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
   const [preview, setPreview] = useState<{ name: string; text: string } | null>(null)
   const counts = countBySeverity(out.issues)
   const blocked = counts.error > 0
+  const exports = EXPORTS.filter((e) => e.kind !== 'areas-csv' || featuresOf(data.settings).nestAdditions)
   const files = useMemo(() => mprFiles(job, data, out), [job, data, out])
   const subfolder = `${job.number.replace(/[^A-Za-z0-9_-]+/g, '-')}_${new Date().toISOString().slice(0, 10)}`
 
@@ -625,13 +637,13 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
         <div className="rounded-xl border bg-background p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">Export</h3>
-            <Button disabled={!ack || blocked || busy} onClick={() => exportKinds(EXPORTS.map((e) => e.kind))}>
+            <Button disabled={!ack || blocked || busy} onClick={() => exportKinds(exports.map((e) => e.kind))}>
               <Download /> Export all to folder
             </Button>
           </div>
           {blocked && <p className="mb-3 text-xs text-red-700">Fix the {counts.error} error(s) below before exporting MPR files.</p>}
           <div className="grid gap-2 sm:grid-cols-2">
-            {EXPORTS.map((e) => {
+            {exports.map((e) => {
               const needsAck = e.kind === 'mpr'
               const disabled = busy || (needsAck && (!ack || blocked))
               return (

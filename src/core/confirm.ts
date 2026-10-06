@@ -98,13 +98,18 @@ export type ConfigTarget =
   | { kind: 'model'; fact: ModelFact }
   | { kind: 'default'; key: CutDefaultKey }
   | { kind: 'op'; partId: string; jobId?: string; opId: string; key: CutDefaultKey | 'blade' }
+  | { kind: 'material'; materialId: string; part: 'price' | 'density' }
+  | { kind: 'nest'; key: NestValueKey }
+
+/** Nesting values (M2.8) that are placeholders until the shop confirms them. */
+export type NestValueKey = 'sharedSmall' | 'bridgeWidth' | 'bridgeMaxLength' | 'bridgeMaxArea' | 'flipAxis' | 'flipReference'
 
 export interface Unconfirmed {
   key: string
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Cutting values' | 'Operations'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting'
   target: ConfigTarget
 }
 
@@ -122,6 +127,10 @@ export const keyOf = (t: ConfigTarget): string => {
       return `default:${t.key}`
     case 'op':
       return `op:${t.opId}:${t.key}`
+    case 'material':
+      return `material:${t.materialId}:${t.part}`
+    case 'nest':
+      return `nest:${t.key}`
   }
 }
 

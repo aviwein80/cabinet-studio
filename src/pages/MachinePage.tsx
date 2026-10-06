@@ -49,6 +49,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camSolids', 'Solid models', 'Import STEP, IGES and BREP solids: faces and colours, holes, pockets and outlines found and put on layers, assemblies split into parts, machining picked faces.'],
   ['camMore25d', 'More 2.5D machining', 'Saw cuts with run-out, angle and joining; facing; chamfers; cuts between curves and along 3D curves; hand-drawn toolpaths; toolpath edits; edge work with a rotating aggregate.'],
   ['camCadTools', 'CAD and tool additions', 'Turn-by-turn sketch, dimensions and print to scale, geometry queries, fill with holes, panelling, image trace; holder and aggregate library, tool grid, tool data compare and spreadsheet import/export.'],
+  ['nestAdditions', 'Nesting additions', 'Areas and costs per sheet and part; shared-line and bridged cutting plans; flip-side sheets with the sheet backplot; moving parts by hand on a sheet. Screens only: each new kind of program output has its own switch, off.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
   ['cam25dMprOutput', 'Write facing, chamfers and saw cuts to MPR', 'The newer 2.5D operations that have a woodWOP form, as contour-milling passes and saw grooves (also needs the custom-part switch). Off until proven on the machine. Saw grooves also need a saw unit in the machine model. Angled saw cuts, curve cuts, edge work with an aggregate and edited toolpaths are never written.'],
@@ -294,6 +295,7 @@ export function MachinePage() {
                 <NumField label="Min length" value={ns.offcutMinLength} min={0} max={3000} onChange={(v) => updateSettings((x) => (x.nesting.offcutMinLength = v))} />
                 <NumField label="Min width" value={ns.offcutMinWidth} min={0} max={1500} onChange={(v) => updateSettings((x) => (x.nesting.offcutMinWidth = v))} />
               </div>
+              {feat.nestAdditions && <TextField label="Currency symbol" value={s.currency ?? '$'} onChange={(v) => updateSettings((x) => (x.currency = v.slice(0, 4)))} hint="For material costs. Prices are entered per material (Library, Materials, Edit)." />}
               <SwitchField label="Use stock offcuts first" checked={ns.useOffcuts} onChange={(v) => updateSettings((x) => (x.nesting.useOffcuts = v))} hint="Saved offcuts of the job's materials are filled before full sheets. Manage them under Library, Offcuts." />
             </Section>
             <Section title="Labels and output">

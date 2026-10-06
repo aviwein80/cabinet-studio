@@ -1,3 +1,4 @@
+import { areasCsv, jobCosts } from './areas'
 import { cutListCsv } from './cutlist'
 import { labelsPdf, sheetMapPdf } from './labels/pdf'
 import { labelsZpl } from './labels/zpl'
@@ -20,7 +21,7 @@ export function bomCsv(out: JobOutput, data: AppData) {
   return lines.join('\r\n') + '\r\n'
 }
 
-export type ExportKind = 'mpr' | 'labels-pdf' | 'sheetmap-pdf' | 'labels-zpl' | 'cutlist-csv' | 'bom-csv'
+export type ExportKind = 'mpr' | 'labels-pdf' | 'sheetmap-pdf' | 'labels-zpl' | 'cutlist-csv' | 'bom-csv' | 'areas-csv'
 
 export function buildFiles(kinds: ExportKind[], job: Job, data: AppData, out: JobOutput): OutFile[] {
   const files: OutFile[] = []
@@ -44,6 +45,9 @@ export function buildFiles(kinds: ExportKind[], job: Job, data: AppData, out: Jo
         break
       case 'bom-csv':
         files.push({ name: `${base}_bom.csv`, data: bomCsv(out, data) })
+        break
+      case 'areas-csv':
+        files.push({ name: `${base}_areas-costs.csv`, data: areasCsv(jobCosts(out.nest, out.instances, data.library), out.instances, data.library, data.settings.currency ?? '$') })
         break
     }
   }

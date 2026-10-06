@@ -30,6 +30,17 @@ export interface Material {
   grain: boolean
   color: string
   notes?: string
+  /** Material cost (M2.8, NEW-20). Absent until the shop enters a price. */
+  cost?: MaterialCost
+}
+
+/** How a sheet material is costed: per square metre of sheet, or per kilogram (needs the density). */
+export interface MaterialCost {
+  by: 'area' | 'weight'
+  /** Price per m² ('area') or per kg ('weight'), in the shop currency. Absent = not set. */
+  price?: number
+  /** kg/m³. Needed for costing by weight; also gives sheet and part weights. */
+  density?: number
 }
 
 export interface EdgeBand {
@@ -539,6 +550,8 @@ export interface ShopSettings {
   nesting: NestSettings
   labels: LabelSettings
   outputFolder: string
+  /** Currency symbol for material costs (M2.8). Default "$". */
+  currency?: string
   /** Custom-part module switches. Absent keys take the defaults in `DEFAULT_FEATURES`. */
   features?: Partial<FeatureFlags>
   /** Folder watcher for part-list CSVs (desktop app). */
@@ -599,6 +612,12 @@ export interface FeatureFlags {
    * (screens only; nothing here writes machine output).
    */
   camCadTools: boolean
+  /**
+   * Nesting additions (M2.8): areas and costs, shared-line and bridged cutting plans, flip-side
+   * sheets with the sheet backplot, manual nesting (screens only; each new kind of machine output
+   * has its own switch below, off).
+   */
+  nestAdditions: boolean
 }
 
 export interface Library {

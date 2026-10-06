@@ -769,6 +769,8 @@ export interface Library {
   partLibrary?: CamPart[]
   /** Sheet remnants in stock. */
   offcuts?: Offcut[]
+  /** Single-stroke engraving fonts made in the font editor (NEW-24). */
+  fonts?: import('../cam/types').StrokeFont[]
 }
 
 export interface AppData {

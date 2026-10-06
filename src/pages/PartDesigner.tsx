@@ -70,6 +70,7 @@ const PARAM_LABEL: Record<keyof ToolParams, string> = {
   hatchSpacing: 'Spacing',
   hatchCross: 'Crossed',
   detailScale: 'Magnify ×',
+  font: 'Font',
 }
 const fileBase = (s: string) => s.replace(/[^\w-]+/g, '-') || 'part'
 const LENGTH_PARAMS = new Set<keyof ToolParams>(['radius', 'distance', 'width', 'height', 'spacingX', 'spacingY', 'gap', 'hatchSpacing'])
@@ -158,7 +159,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
     [part, machine, path3dOf],
   )
 
-  const ctx = { part, sel: sel.filter((id) => part.entities.some((e) => e.id === id)), layer, params }
+  const ctx = { part, sel: sel.filter((id) => part.entities.some((e) => e.id === id)), layer, params, fonts: data?.library.fonts }
 
   const cancel = () => {
     setClicks([])
@@ -777,6 +778,7 @@ function ParamInput({ k, params, setParams, units }: { k: keyof ToolParams; para
         </select>
       </label>
     )
+  if (k === 'font') return <FontParam params={params} setParams={setParams} />
   if (k === 'dimRadial')
     return (
       <label className="flex items-center gap-1.5 text-stone-400">
@@ -812,6 +814,23 @@ function ParamInput({ k, params, setParams, units }: { k: keyof ToolParams; para
       </label>
     )
   return <NumParam label={PARAM_LABEL[k]} value={v} length={LENGTH_PARAMS.has(k)} units={units} onChange={(n) => setParams({ ...params, [k]: n })} />
+}
+
+function FontParam({ params, setParams }: { params: ToolParams; setParams: (p: ToolParams) => void }) {
+  const fonts = useStore((s) => s.data?.library.fonts) ?? []
+  return (
+    <label className="flex items-center gap-1.5 text-stone-400">
+      {PARAM_LABEL.font}
+      <select className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-stone-100" value={params.font} onChange={(e) => setParams({ ...params, font: e.target.value })}>
+        <option value="">Built-in</option>
+        {fonts.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
 }
 
 function NumParam({ label, value, length, units, onChange }: { label: string; value: number; length: boolean; units: 'mm' | 'in'; onChange: (n: number) => void }) {

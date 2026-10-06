@@ -73,6 +73,7 @@ import { mergeMeshes, placedReliefOutline, reliefSurround } from './relief/relie
 import { type Mesh, meshBounds } from './mesh/types'
 import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, ThreadOp, VCarveOp } from './types'
 import { isoDepth, threadMoves } from './more25d/thread'
+import { onRapidSurface } from './more25d/rapidSurface'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -2233,7 +2234,21 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 
 export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
   const tp = generateShifted(op, ctx)
-  return hasMoveEdits(op.edits) && op.kind !== 'code' ? editToolpath(tp, op) : tp
+  const edited = hasMoveEdits(op.edits) && op.kind !== 'code' ? editToolpath(tp, op) : tp
+  return op.rapidSurface && op.kind !== 'code' ? withRapidSurface(edited, op) : edited
+}
+
+/** Moves between cuts on the operation's rapid surface (2D-18); the cutting moves are untouched. */
+function withRapidSurface(tp: Toolpath, op: CamOp): Toolpath {
+  const s = op.rapidSurface!
+  // the safe height the rapids use now: the highest rapid (after a facing it sits lower)
+  let safe = -Infinity
+  for (const m of tp.moves) if (m.t === 'rapid') safe = Math.max(safe, m.z)
+  if (!Number.isFinite(safe)) return tp
+  const r = onRapidSurface(tp.moves, s, safe, Math.min(op.levels.rapidZ, safe))
+  const warnings = [...tp.warnings, ...r.warnings, 'woodWOP programs move between cuts at the machine\'s own safety height: the rapid surface is used in the simulation, the checks and text (G-code) programs only.']
+  if (!s.confirmed) warnings.push('The rapid surface is a suggestion worked out from the panel size: check it, then mark it checked.')
+  return { ...tp, moves: r.moves, warnings, stats: stats(r.moves, tp.feeds.feed) }
 }
 
 function generateShifted(op: CamOp, ctx: GenContext): Toolpath {

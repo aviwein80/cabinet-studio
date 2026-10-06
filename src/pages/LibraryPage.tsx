@@ -15,6 +15,7 @@ import { importLibraryBundle } from '@/core/library/import'
 import { featuresOf } from '@/core/features'
 import type { AppData, EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
 import { LibraryEditDialog, TemplateJobsButton } from './LibraryEditDialog'
+import { FontsTab } from './library/FontsTab'
 import { OffcutsTab } from './library/OffcutsTab'
 import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
@@ -134,6 +135,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             {featuresOf(data?.settings).hardwarePatterns && <TabsTrigger value="patterns">Drilling patterns</TabsTrigger>}
             <TabsTrigger value="rules">Machining rules</TabsTrigger>
             <TabsTrigger value="offcuts">Offcuts ({lib.offcuts?.length ?? 0})</TabsTrigger>
+            {featuresOf(data?.settings).camExtras && <TabsTrigger value="fonts">Fonts ({lib.fonts?.length ?? 0})</TabsTrigger>}
           </TabsList>
           {(tab === 'materials' || tab === 'edgebands' || tab === 'hardware') && (
             <Button size="sm" onClick={add}>
@@ -228,6 +230,9 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
         <TabsContent value="offcuts" className="min-h-0 flex-1 overflow-auto p-5">
           <OffcutsTab />
         </TabsContent>
+        <TabsContent value="fonts" className="min-h-0 flex-1 overflow-auto p-5">
+          <FontsTab />
+        </TabsContent>
       </Tabs>
       {editing && (tab === 'materials' || tab === 'edgebands' || tab === 'hardware') && (
         <LibraryEditDialog item={editing} kind={tab === 'materials' ? 'material' : tab === 'edgebands' ? 'edgeband' : 'hardware'} onClose={() => setEditing(null)} />
@@ -235,7 +240,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
       <ImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        kinds={tab === 'templates' || tab === 'rules' || tab === 'offcuts' || tab === 'patterns' ? ['templates', 'materials', 'edgebands', 'hardware'] : [tab, ...(['materials', 'edgebands', 'hardware', 'templates'] as const).filter((k) => k !== tab)]}
+        kinds={tab === 'templates' || tab === 'rules' || tab === 'offcuts' || tab === 'patterns' || tab === 'fonts' ? ['templates', 'materials', 'edgebands', 'hardware'] : [tab, ...(['materials', 'edgebands', 'hardware', 'templates'] as const).filter((k) => k !== tab)]}
         onApplied={(k) => k !== 'tools' && go({ page: 'library', tab: k })}
       />
     </div>

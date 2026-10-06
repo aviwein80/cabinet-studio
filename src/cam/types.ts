@@ -60,9 +60,28 @@ export type Geom =
   | { t: 'contour'; c: Contour }
   | { t: 'circle'; c: P; r: number }
   | { t: 'point'; p: P }
-  | { t: 'text'; at: P; text: string; height: number; angle: number; spacing?: number; arc?: { c: P; r: number } }
+  | { t: 'text'; at: P; text: string; height: number; angle: number; spacing?: number; arc?: { c: P; r: number }; font?: StrokeFont }
   | { t: 'spline'; ctrl: P[]; closed: boolean; through?: boolean }
   | { t: 'poly3d'; pts: [number, number, number][] }
+
+/**
+ * A single-stroke engraving font (NEW-24): glyphs are strokes (polylines) on the font's grid, x
+ * from 0 and y from the baseline up, `capHeight` units tall. Text keeps a copy of the glyphs it
+ * uses (same id and name as the library font), so it never changes when the library font does.
+ */
+export interface StrokeFont {
+  id: string
+  name: string
+  capHeight: number
+  /** Space after the last letter's ink that the text width leaves out, grid units. */
+  gap: number
+  glyphs: Record<string, StrokeGlyph>
+}
+export interface StrokeGlyph {
+  strokes: [number, number][][]
+  /** How far the next letter starts, grid units. */
+  advance: number
+}
 
 export interface Entity {
   id: string
@@ -354,7 +373,16 @@ interface OpBase {
    * the tool table later. Not an input: it never marks the operation stale by itself.
    */
   toolData?: ToolSnapshot
+  /** Moves between cuts follow this surface instead of the flat safe height (2D-18). */
+  rapidSurface?: RapidSurface
 }
+
+/**
+ * A surface the moves between cuts follow (2D-18): the top of a cylinder lying along X or Y (its
+ * axis at `centre` across and `z` above face 1), or of a sphere centred over `c`. Never below the
+ * operation's clearance height. `confirmed`: the owner checked it (a suggested surface is not).
+ */
+export type RapidSurface = ({ kind: 'cylinder'; axis: 'x' | 'y'; centre: number } | { kind: 'sphere'; c: P }) & { z: number; r: number; confirmed?: boolean }
 
 /** Tool data as an operation used it (TOOL-05). Lengths in mm, feeds in mm/min. */
 export interface ToolSnapshot {

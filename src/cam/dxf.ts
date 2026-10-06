@@ -609,7 +609,7 @@ export function exportDxf(part: CamPart, opts: DxfExportOptions = {}): string {
       g(10, e.g.p.x)
       g(20, e.g.p.y)
       g(30, 0)
-    } else if (e.g.t === 'text') {
+    } else if (e.g.t === 'text' && !e.g.font) {
       g(0, 'TEXT')
       g(8, name)
       g(10, e.g.at.x)

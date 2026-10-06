@@ -8,6 +8,7 @@ import { findDrill } from '@/core/machining'
 import { toolOrderOf } from '@/core/admin'
 import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool, resolveTool } from '@/cam/ops'
 import { ManualFields, EditsGroup } from './EditsPanel'
+import { RapidSurfaceGroup } from './RapidSurfaceGroup'
 import { useOpCfg } from './opConfigure'
 import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
 import { confirmOp, type CutDefaultKey, newOpDefaults, opUnconfirmed } from '@/core/confirm'
@@ -502,6 +503,7 @@ function OpEditor({
       )}
 
       <StrategyFields op={op} part={part} onChange={onChange} sel={sel} tool={tp?.tool ?? resolveTool(op, machine)} onPart={onPart} />
+      {op.kind !== 'code' && <RapidSurfaceGroup op={op} part={part} onChange={onChange} />}
       {op.kind === 'manual' && <ManualFields op={op} onChange={onChange} pathPick={pathPick ?? null} setPathPick={setPathPick} sel={sel} part={part} />}
       {op.kind !== 'code' && op.kind !== 'drill' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
 

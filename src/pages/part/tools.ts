@@ -72,8 +72,8 @@ import {
 import { entityContours, makeEntity } from '@/cam/doc'
 import { angleOf, arc3, circle, type Contour, dist, ellipse, near, type P, polyline, rect, regularPolygon, roundedRect, slot, type ReliefStyle } from '@/cam/geom'
 import { splineToContour } from '@/cam/doc'
-import { strokeText } from '@/cam/font'
-import type { Annotation, CamPart, Dimension, Entity } from '@/cam/types'
+import { embedFont, strokeText } from '@/cam/font'
+import type { Annotation, CamPart, Dimension, Entity, StrokeFont } from '@/cam/types'
 import { circleRefAt, linearAxis, measureAngle, measureDim, refAt, refPoint } from '@/cam/dims'
 import { nanoid } from 'nanoid'
 
@@ -108,6 +108,8 @@ export interface ToolParams {
   hatchCross: boolean
   /** Detail views (NEW-21): magnification. */
   detailScale: number
+  /** Text: stroke font id from the library ('' = the built-in font). */
+  font: string
 }
 
 export const DEFAULT_PARAMS: ToolParams = {
@@ -133,6 +135,7 @@ export const DEFAULT_PARAMS: ToolParams = {
   hatchSpacing: 5,
   hatchCross: false,
   detailScale: 2,
+  font: '',
 }
 
 export interface ToolCtx {
@@ -140,6 +143,8 @@ export interface ToolCtx {
   sel: string[]
   layer: string
   params: ToolParams
+  /** Stroke fonts in the library (NEW-24). */
+  fonts?: StrokeFont[]
 }
 
 export interface ToolResult {
@@ -220,6 +225,7 @@ export interface ToolDef {
 }
 
 const pts = (cs: Click[]) => cs.map((c) => c.p)
+const fontFor = (ctx: ToolCtx) => (ctx.params.font ? ctx.fonts?.find((f) => f.id === ctx.params.font) : undefined)
 const add1 = (ctx: ToolCtx, e: Entity): ToolResult => ({ part: addEntities(ctx.part, [e]), sel: [e.id], repeat: true })
 const contourEntity = (ctx: ToolCtx, c: Contour) => add1(ctx, makeEntity({ t: 'contour', c }, ctx.layer))
 const box = (a: P, b: P) => rect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y))
@@ -362,10 +368,13 @@ export const TOOLS: ToolDef[] = [
     group: 'draw',
     icon: Type,
     key: 't',
-    params: ['text', 'height'],
+    params: ['text', 'height', 'font'],
     prompts: ['Start of the text baseline'],
-    preview: (_cs, cur, ctx) => strokeText(ctx.params.text, cur, ctx.params.height),
-    apply: (cs, ctx) => add1(ctx, makeEntity({ t: 'text', at: cs[0].p, text: ctx.params.text, height: ctx.params.height, angle: 0 }, 'text')),
+    preview: (_cs, cur, ctx) => strokeText(ctx.params.text, cur, ctx.params.height, 0, 1, undefined, fontFor(ctx)),
+    apply: (cs, ctx) => {
+      const f = fontFor(ctx)
+      return add1(ctx, makeEntity({ t: 'text', at: cs[0].p, text: ctx.params.text, height: ctx.params.height, angle: 0, ...(f ? { font: embedFont(f, ctx.params.text) } : {}) }, 'text'))
+    },
   },
   {
     id: 'point',

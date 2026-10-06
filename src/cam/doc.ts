@@ -116,7 +116,7 @@ export function entityContours(e: Entity): Contour[] {
     case 'circle':
       return [circle(g.c, g.r)]
     case 'text':
-      return strokeText(g.text, g.at, g.height, g.angle, g.spacing ?? 1, g.arc)
+      return strokeText(g.text, g.at, g.height, g.angle, g.spacing ?? 1, g.arc, g.font)
     case 'spline':
       return [splineToContour(g.ctrl, g.closed, g.through)]
     case 'poly3d':

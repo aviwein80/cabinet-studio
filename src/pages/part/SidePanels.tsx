@@ -4,7 +4,8 @@ import { moveToLayer, setArcRadius, toggleArc, insertNode, deleteNode, nodesOf }
 import { entityContours, fitWorkVolume, partOutline } from '@/cam/doc'
 import { evaluate, resolveVariables } from '@/cam/expr'
 import { area, boxOf, contourLength, radius } from '@/cam/geom'
-import type { CamPart, Entity, FaceId, Layer, LineType } from '@/cam/types'
+import type { CamPart, Entity, FaceId, Layer, LineType, StrokeFont } from '@/cam/types'
+import { embedFont } from '@/cam/font'
 import { LINE_TYPES } from '@/cam/annotate'
 import { NONE, NumField, SelectField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
@@ -214,6 +215,12 @@ function EntityProps({ e, part, fmt, nodeSeg, onChange }: { e: Entity; part: Cam
   const cs = entityContours(e)
   const b = boxOf(cs)
   const setE = (patch: Partial<Entity>) => onChange({ ...part, entities: part.entities.map((x) => (x.id === e.id ? { ...x, ...patch } : x)) })
+  const fonts = useStore((s) => s.data?.library.fonts) ?? []
+  // new letters in a text set in a font: taken from the library font while it is there, else the kept copy stays
+  const refont = (kept: StrokeFont, text: string): StrokeFont => {
+    const lib = fonts.find((f) => f.id === kept.id)
+    return lib ? embedFont(lib, text) : kept
+  }
   const seg = nodeSeg?.id === e.id && e.g.t === 'contour' ? e.g.c.segs[nodeSeg.seg] : undefined
   const kind = e.g.t === 'contour' ? (e.g.c.closed ? 'Closed shape' : 'Open path') : { circle: 'Circle', point: 'Point', text: 'Text', spline: 'Spline', poly3d: '3D polyline' }[e.g.t]
   return (
@@ -253,7 +260,18 @@ function EntityProps({ e, part, fmt, nodeSeg, onChange }: { e: Entity; part: Cam
         )}
         {g.t === 'text' && (
           <>
-            <TextField className="col-span-2" label="Text" value={g.text} onChange={(v) => setE({ g: { ...g, text: v } })} />
+            <TextField className="col-span-2" label="Text" value={g.text} onChange={(v) => setE({ g: { ...g, text: v, ...(g.font ? { font: refont(g.font, v) } : {}) } })} />
+            <SelectField
+              className="col-span-2"
+              label="Font"
+              value={g.font?.id ?? ''}
+              options={[{ value: '', label: 'Built-in' }, ...fonts.map((f) => ({ value: f.id, label: f.name })), ...(g.font && !fonts.some((f) => f.id === g.font!.id) ? [{ value: g.font.id, label: `${g.font.name} (kept with the text)` }] : [])]}
+              onChange={(id) => {
+                const f = fonts.find((x) => x.id === id)
+                const { font: _drop, ...rest } = g
+                setE({ g: f ? { ...rest, font: embedFont(f, g.text) } : id && g.font?.id === id ? g : rest })
+              }}
+            />
             <NumField label="Height" value={g.height} min={1} onChange={(v) => setE({ g: { ...g, height: v } })} />
             <NumField label="Angle" suffix="°" value={Math.round(((g.angle * 180) / Math.PI) * 100) / 100} onChange={(v) => setE({ g: { ...g, angle: (v * Math.PI) / 180 } })} />
           </>

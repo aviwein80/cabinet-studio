@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { annotationLines, brokenAnnotations, clipToCircle, dashPolyline, detailView, hatchLines, hatchRings, LINE_TYPES } from '@/cam/annotate'
-import { makeEntity, newPart } from '@/cam/doc'
+import { makeEntity, newPart, parsePart, serializePart } from '@/cam/doc'
 import { type P, rect } from '@/cam/geom'
 import { DEFAULT_PRINT, printPdf, printPlan } from '@/cam/print'
 import type { CamPart } from '@/cam/types'
@@ -177,6 +177,18 @@ describe('prints measure to scale', () => {
     const segs2 = pdfSegments(printPdf(p, printPlan(p, opt2), opt2))
     const dashes2 = segs2.filter((s) => Math.abs(s.l - 4) < 1e-3 && Math.abs(s.a.y - s.b.y) < 1e-6)
     expect(dashes2.length).toBeGreaterThan(dashes.length)
+  })
+
+  it('annotations and line types are saved and read back with the part', () => {
+    const p = part()
+    p.layers = p.layers.map((l, i) => (i === 0 ? { ...l, lineType: 'centre' as const } : l))
+    p.annotations = [
+      { id: 'a', k: 'hatch', shapes: ['k'], angle: 30, spacing: 4, cross: true },
+      { id: 'b', k: 'detail', c: { x: 100, y: 80 }, r: 20, scale: 3, at: { x: 600, y: 100 }, label: 'A' },
+    ]
+    const back = parsePart(serializePart(p))
+    expect(back.annotations).toEqual(p.annotations)
+    expect(back.layers[0].lineType).toBe('centre')
   })
 
   it('annotations can be left out of the print', () => {

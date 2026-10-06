@@ -22,7 +22,7 @@ Next for the reader: machine edge grooves and edge profiles (needs the aggregate
 underside milling in the turned-over program, and a per-shop "likely features" list so the
 reader recognises the shop's own hardware codes.
 
-## Custom-part Stage 2 and 3 (Stage 2 complete; Stage 3 not started)
+## Custom-part Stage 2 and 3 (Stage 2 complete; Stage 3 in progress)
 
 Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-progress.md`.
 
@@ -82,7 +82,17 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   program written is read back and simulates the same). One limit stays: parallel finishing of a
   relief has no woodWOP form yet (decision 2: true 3D output waits for a sample program from
   woodWOP), so the checker stops it; roughing and waterline can be written once their switch is
-  on. **Stage 2 complete.** Next: Stage 3 (M3.1), when the owner says go.
+  on. **Stage 2 complete.**
+- **Stage 3.** **M3.1 more 3-axis finishing: done** (October 2026): radial and spiral finishing;
+  scallop finishing (the same cusp height everywhere, within ±10 % over the whole test surface,
+  measured independently); flat-area and helical finishing; undercut finishing with a new
+  lollipop tool shape, and a simulator stock that keeps material under overhangs; curve-driven
+  finishing (drive curves, an earlier toolpath, where two surfaces meet, a surface's rows and
+  columns, the tool kept to one side of a surface). Same tolerances as Stage 2 (no gouge over
+  0.005 mm by an independent check, stock to leave within ±0.01 mm). Screens and simulation
+  only, behind the "More 3D finishing" switch; the export checker refuses all of them
+  (`CAM_3D_NO_OUTPUT`) until true 3D output is confirmed with a woodWOP sample program. Next:
+  M3.2 (small extras: threads, wrapping, prints to scale and the rest of its list).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

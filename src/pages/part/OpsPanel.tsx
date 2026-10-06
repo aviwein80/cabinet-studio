@@ -749,7 +749,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
                 ]}
                 onChange={(v) => setDrive({ mode: v })}
               />
-              <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} hint={d.mode === 'parameter' ? 'Between lines, measured on the surface' : d.mode === 'intersection' ? 'Not used: one pass along each line' : 'Between passes, in plan'} />
+              {d.mode !== 'intersection' && <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} hint={d.mode === 'parameter' ? 'Between lines, measured on the surface' : 'Between passes, in plan'} />}
               {d.mode === 'curves' && (
                 <div className="col-span-2 flex items-center gap-2 text-[11px] text-stone-400">
                   <span className="min-w-0 flex-1">{shapes.length === 2 ? '2 drive shapes: passes blended from one to the other' : shapes.length === 1 ? '1 drive shape: the shape and copies offset from it' : shapes.length ? `${shapes.length} shapes picked: pick one or two` : 'No drive shapes yet: select one or two shapes on face 1'}</span>
@@ -811,7 +811,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
               <NumField label="Angle" suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} hint="Best square to the overhang's edge" />
               <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />
               <SelectField label="Cut" value={op.undercut ?? 'both'} options={[{ value: 'both', label: 'Undersides and floors beneath' }, { value: 'underside', label: 'Undersides of overhangs' }, { value: 'floor', label: 'Floors beneath overhangs' }]} onChange={(v) => onChange({ ...op, undercut: v })} />
-              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Needs a lollipop tool (a ball on a narrower neck). Its neck keeps the collision margin (Machine page) clear of the model, so the ball reaches under by its radius less the neck's radius and the margin. The tool goes in and out sideways at the pass's height, where the way up is clear. The simulator keeps the material under the overhang.</div>
+              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Needs a lollipop tool (a ball on a narrower neck). Its neck keeps the collision margin (Machine page) clear of the model, so the ball reaches under by its radius less the neck's radius and the margin. The tool goes in and out sideways at the pass's height, where the way up is clear. It only finishes: the material under the overhang must be cleared first (Z-level roughing cannot reach it). The simulator keeps the material under the overhang, and its collision check shows where the neck would meet uncut material.</div>
             </Group>
             {restGroup(op, part, adaptiveOn, onChange)}
           </>

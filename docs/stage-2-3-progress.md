@@ -92,12 +92,12 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.1c Flat-area and helical finishing (3D-08, first part) | **Done** (October 2026) | See below. Simulation only. |
 | M3.1d Undercut finishing with lollipop tools (3D-08, second part) and a dexel stock | **Done** (October 2026) | See below. Simulation only. |
 | M3.1e Curve-driven finishing (3D-09) | **Done** (October 2026) | See below. Simulation only. |
-| M3.1f Screenshots, README, ROADMAP | In progress | See "M3.1 split". |
+| M3.1f Screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.1 complete.** |
 | M3.2 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -174,6 +174,7 @@ files present; fixed in M2.8e, back to 17.)
 11. **M2.10**: answered (decision 18); still to come: the result of simulating one full circle
     from our MPR in woodWOP.
 12. **M2.11 (relief import)**: see "M2.11 decisions needed" below.
+13. **M3.1 (more 3D finishing)**: see "M3.1 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -2048,9 +2049,55 @@ Test model: an 80 × 60 × 50 block with a lip overhanging a recess (`tests/unde
   an open surface that is the plane of its last facet.
 - **Simulation only**: no curve-driven pass is written to woodWOP (export checker).
 
+## M3.1f screenshots, README, ROADMAP
+
+**M3.1 complete.** README (3D finishing: "More 3D finishing", rest machining, the output rules)
+and ROADMAP (Stage 3 in progress, M3.1 done) are updated.
+
+**Screenshots** (`docs/screenshots/stage-2-3/M3.1/`, browser preview, Playwright; the demo parts
+were made through the app's own code in the page, then every screen used as a user would):
+
+- `01-add-operation-menu.png`: Add operation with the new 3D finishing entries (radial, spiral, scallop, flat areas, helical, undercut, curve-driven).
+- `02-radial.png`: radial passes on the dome (gap 3 mm at the outer edge; passes stop in turn towards the centre) and the editor.
+- `03-spiral.png`: one spiral round the dome, 2 mm between turns.
+- `04-scallop.png`: scallop passes on the hill-and-hollow surface, working in from the boundary; the editor shows the cusp (0.172 mm for 2 mm on the 6 mm ball).
+- `05-flat-areas.png`: flat-area rings on the raised panel's field and border only.
+- `06-helical.png`: one continuous descent round the bowl.
+- `07-lollipop-tool.png`: the tool dialog with the Lollipop shape and its neck diameter (T108, placeholder, Configure badges).
+- `08-undercut.png`: undercut passes on the lip part and the editor (finishes only; clear under the overhang first).
+- `09-undercut-simulated-3d.png`: the simulator in 3D after Z-level roughing and the undercut pass: material kept above the cut under the lip's edge (the layered stock). The collision list shows the placeholder roughing tool's flute is too short for the 40 mm depth (placeholder values).
+- `10-curve-drive-copies.png`: curve-driven passes: a drive curve with four copies each side.
+- `11-curve-intersection.png`: one pass along each line where the picked surfaces meet (two valleys and a ridge); no step-over asked for.
+- `12-curve-rows.png`: passes along the rows of a dome made by revolving (meridians), 3 mm apart on the surface.
+- `13-machine-switch.png`: the "More 3D finishing" switch and what it covers.
+
+Found while taking them: the plan view draws very large toolpaths slowly. A Z-level roughing of
+the 80 x 60 x 40 mm-deep lip part with the default settings and the placeholder 12 mm tool makes
+472,100 points; with it the browser preview stopped drawing. The screenshot used coarser roughing
+(10 mm levels, back and forth: 47,810 points). This is not new in M3.1 (Stage 2 drawing); it is
+recorded as a risk.
+
+## M3.1 decisions needed
+
+1. **Flat-area passes on level flats as flat-layer output?** They run at constant heights, like
+   waterline, and could be written as contour-milling passes behind the 3D output switch (still
+   off). Today they count as true 3D and the checker refuses them. Yes / no.
+2. **Lollipop tools**: does the shop have any (ball and neck diameters, flute length, stick-out)?
+   T108 is a placeholder. Reach under an overhang is the ball radius less the neck radius and the
+   collision margin (2 mm placeholder): a smaller margin reaches further but leaves less room.
+3. **Clearing under overhangs**: undercut finishing only finishes. Nothing in the app roughs under
+   an overhang (Z-level roughing works from above). Needed later, or are undercuts done another
+   way in the shop?
+4. **Rows and columns of imported solids**: parameter lines work on surfaces made in the app
+   (and a solid's face untrimmed). True parameter lines on an imported solid's free-form faces
+   would need a B-rep kernel: the OpenCascade build already reviewed (LGPL-2.1, about 23 MB of
+   WebAssembly, loaded as a separate replaceable file). Not added; say if it is wanted.
+5. Unchanged: placeholder step-overs (finishing 0.6 mm, with Configure badges), the helical slope
+   limit (30°) and the 3D tools; true 3D output waits for a woodWOP sample program (decision 2).
+
 ## Next run
 
-- Finish M3.1 (M3.1f: screenshots, README, ROADMAP, report), then M3.2.
+- M3.2 (small extras: NEW-08, NEW-07, NEW-21, NEW-24, 2D-18), when the owner says go.
 
 ## Run log
 
@@ -2097,3 +2144,4 @@ Test model: an 80 × 60 × 50 block with a lip overhanging a recess (`tests/unde
 - **Run 14 (M3.1c)**: flat-area and helical finishing. See `git log`.
 - **Run 14 (M3.1d)**: undercut finishing with lollipop tools, dexel stock. See `git log`.
 - **Run 14 (M3.1e)**: curve-driven finishing. See `git log`.
+- **Run 14 (M3.1f)**: screenshots, README, ROADMAP. **M3.1 complete.** See `git log`.

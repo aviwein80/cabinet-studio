@@ -16,6 +16,7 @@ import { type Mesh, meshBounds } from '@/cam/mesh/types'
 import { defaultOp, resolveTool } from '@/cam/ops'
 import { generateOp, isFlatLayer, type Toolpath } from '@/cam/toolpath'
 import type { CamOp, CamPart, Entity, Finish3dOp, ModelRef } from '@/cam/types'
+import { newOpDefaults, opUnconfirmed } from '@/core/confirm'
 import { defaultAppData, PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { runJob } from '@/core/pipeline'
 import type { Job } from '@/core/types'
@@ -396,6 +397,15 @@ describe('M3.1e output, file and goldens', () => {
     data.settings.features = { ...data.settings.features, camMprOutput: true, cam3dMprOutput: true }
     expect(runJob(job, data).issues.filter((i) => i.code === 'CAM_3D_NO_OUTPUT')).toHaveLength(1)
   }, 60_000)
+
+  it('a new curve-driven operation uses the shop step-over, with a Configure badge until confirmed; along an intersection it uses none', () => {
+    const machine = PLACEHOLDER_MACHINE
+    const op = { ...defaultOp('finish3d', [], { strategy: 'curve' } as Partial<Finish3dOp>), ...newOpDefaults('finish3d', machine, { strategy: 'curve' } as Partial<Finish3dOp>) } as Finish3dOp
+    const keys = (o: Finish3dOp) => opUnconfirmed(o, { id: 'p' }, machine, null).map((u) => u.target.kind === 'op' && u.target.key)
+    expect(keys(op)).toContain('finishStepover')
+    expect(keys({ ...op, confirmed: ['finishStepover'] })).not.toContain('finishStepover')
+    expect(keys({ ...op, drive: { mode: 'intersection', groupsA: [1], groupsB: [2] } })).not.toContain('finishStepover')
+  })
 
   it('the drive, the side kept and a surface\'s rows and columns are saved and read back (format 5)', () => {
     const e = makeEntity({ t: 'contour', c: circle({ x: 40, y: 40 }, 10) }, 'drive')

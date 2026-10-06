@@ -287,7 +287,7 @@ export const OP_FIELDS: OpField[] = [
     set: (o, v) => ({ ...o, wave: { ...(o as { wave: object }).wave, ...(v as object) } }) as CamOp,
   },
   { key: 'betweenStepover', applies: (o) => o.kind === 'curve' && o.mode === 'between', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
-  { key: 'finishStepover', applies: (o) => o.kind === 'finish3d' && o.strategy !== 'projection' && o.strategy !== 'pencil', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
+  { key: 'finishStepover', applies: (o) => o.kind === 'finish3d' && o.strategy !== 'projection' && o.strategy !== 'pencil' && !(o.strategy === 'curve' && o.drive?.mode === 'intersection'), get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'waterlineStepdown', applies: (o) => o.kind === 'finish3d' && (o.strategy === 'waterline' || o.strategy === 'helical'), get: (o) => (o as { stepdown?: number }).stepdown ?? 1, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
   { key: 'roughStepdown', applies: (o) => o.kind === 'rough3d', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
   { key: 'roughStepover', applies: (o) => o.kind === 'rough3d' && o.pattern !== 'adaptive', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },

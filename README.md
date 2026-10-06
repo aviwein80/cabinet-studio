@@ -217,9 +217,34 @@ export checker. Tool numbers are still placeholders.
   - **Pencil**: one pass along each valley and inside corner of the model, where the tool touches
     two surfaces at once (for example where a panel's bevel meets its border). Valleys flatter
     than a set angle are left out. The smallest ball-nose is picked unless you choose a tool.
-  - **Rest machining** (parallel, waterline and pencil): a smaller tool cuts only where the earlier
-    operations left material it can reach. The earlier toolpaths are simulated to find what they
-    left; rest thinner than a set amount is left out.
+  - **More 3D finishing** (switch: More 3D finishing, on; screens and simulation only):
+    - **Radial**: straight passes out from a centre (the middle of the boundary, or a point you
+      set), no further apart than a set gap at the outer edge; passes stop in turn towards the
+      centre so it is not cut over and over. **Spiral**: one continuous spiral round a centre,
+      a set gap between turns.
+    - **Scallop**: passes offset over the surface (not in plan) so the ridge left between passes
+      (the cusp) is the same height everywhere, on slopes and curves too; from the boundary in,
+      or out from shapes you pick. Measured independently in the tests: within ±10 % of the
+      target over the whole test surface.
+    - **Flat areas**: offset passes only where the tool rests on a face flatter than 0.5°, the
+      first one following the edge of each flat area (found to 0.01 mm). A flat-bottomed tool
+      is picked first.
+    - **Helical**: one continuous descent round steep walls (a hill or a hollow), one step-down
+      per round, no step-down in one place; where walls split or join it cuts waterline passes.
+    - **Undercut**: a **lollipop** tool (a ball on a narrower neck; new tool shape with its neck
+      diameter, placeholder T108) reaches under overhangs. Its neck keeps the collision margin
+      clear of the model; it goes in and out sideways. It finishes only: the material under the
+      overhang must be cleared first. The simulator then keeps material under overhangs (a
+      stock with several layers per column) and checks the neck too.
+    - **Curve-driven**: passes guided by one drive curve and copies of it a step-over apart, by
+      two drive curves (passes blended from one to the other), by an earlier operation's
+      toolpath, along the line where two surfaces (two sets of facet groups) meet (a ball-nose
+      touching both), or along the rows or columns of a surface made in the app (Surfaces:
+      revolve, ruled, loft, sweep, extrude, or a solid's face untrimmed). Optionally the tool is
+      kept on one side of chosen facet groups, which are never cut.
+  - **Rest machining** (every finishing strategy except projection): a smaller tool cuts only
+    where the earlier operations left material it can reach. The earlier toolpaths are
+    simulated to find what they left; rest thinner than a set amount is left out.
 
   You set:
   - the step-over (or step-down), stock to leave and tolerance;
@@ -235,7 +260,8 @@ export checker. Tool numbers are still placeholders.
   Z-level roughing and waterline are written as ordinary contour-milling macros, one per pass
   per level, so each one can be edited in woodWOP. The machine makes its own approach for each
   pass. The job page calculates the 3D toolpaths in the background before export.
-  - Parallel, projection and pencil finishing, and waterline with the shallow-area fill, need true
+  - Parallel, projection and pencil finishing, the M3.1 strategies (radial, spiral, scallop, flat
+    areas, helical, undercut, curve-driven), and waterline with the shallow-area fill, need true
     3D output. The export checker always blocks them (`CAM_3D_NO_OUTPUT`) until the format is
     confirmed with a program from the machine. Adaptive Z-level roughing is blocked as adaptive
     clearing (`CAM_ADAPTIVE_NO_OUTPUT`).

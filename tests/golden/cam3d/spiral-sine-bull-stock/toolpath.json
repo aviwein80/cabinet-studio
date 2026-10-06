@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (spiral)",
+ "kind": "finish3d",
+ "tool": 107,
+ "moves": {
+  "rapid": 111,
+  "feed": 37,
+  "arc": 0,
+  "drill": 0,
+  "poly": 39,
+  "points": 13441
+ },
+ "cutMm": 5198,
+ "box": [
+  0,
+  0,
+  -5.156,
+  150,
+  100,
+  -0.25
+ ],
+ "warnings": [],
+ "hash": "e0045326"
+}

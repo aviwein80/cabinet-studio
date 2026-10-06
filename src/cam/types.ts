@@ -141,7 +141,7 @@ export interface ReliefInfo {
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4
+  version: 1 | 2 | 3 | 4 | 5
   materialId: string | null
   length: number
   width: number
@@ -550,7 +550,7 @@ export interface Surface3D {
 
 /**
  * 3D finishing on a model. Stage 2 strategies: parallel (M2.2a), waterline (M2.2b), projection
- * (M2.2c).
+ * (M2.2c), pencil (M2.3c). Stage 3 (M3.1): radial and spiral.
  *
  * Projection: `geometry` holds the shapes to project (not a boundary); `levels.depth` is the depth
  * below the surface (0 = on the surface), cut in passes like 2D engraving (`levels.passDepth`,
@@ -561,21 +561,36 @@ export interface Finish3dOp extends OpBase {
   /**
    * Parallel: straight passes dropped onto the surface. Waterline: passes at constant heights
    * around the model. Projection: drawn shapes and text dropped onto the surface. Pencil: along
-   * the valleys and inside corners, where the tool touches two surfaces at once.
+   * the valleys and inside corners, where the tool touches two surfaces at once. Radial: straight
+   * passes out from a centre. Spiral: one continuous spiral round a centre.
    */
-  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil'
+  strategy: 'parallel' | 'waterline' | 'projection' | 'pencil' | 'radial' | 'spiral'
   surface: Surface3D
-  /** Distance between passes, mm (parallel passes, and the shallow-area fill of waterline). */
+  /**
+   * Distance between passes, mm (parallel passes, the shallow-area fill of waterline; radial: the
+   * largest gap between neighbouring passes, at the outer edge; spiral: between turns).
+   */
   stepover: number
   /** Waterline: height between passes, mm (default 1). */
   stepdown?: number
   /** Waterline: also finish the areas flatter than the minimum slope with parallel passes. */
   fillShallow?: boolean
-  /** Pass direction in degrees from +X. */
+  /** Pass direction in degrees from +X (radial: the first pass; spiral: where it starts). */
   angle: number
+  /** Radial and spiral: the centre, part coordinates (absent = the middle of the boundary). */
+  centre?: { x: number; y: number }
+  /** Radial and spiral: passes start this far from the centre, mm (default 0). */
+  innerRadius?: number
+  /**
+   * Radial one-way passes and the spiral: run out from the centre (default) or in towards it.
+   */
+  travel?: 'outward' | 'inward'
   /** Back and forth, or every pass the same way (with a lift between). */
   pattern: 'zigzag' | 'oneway'
-  /** One-way passes: climb runs along +angle, conventional against it. */
+  /**
+   * One-way parallel passes: climb runs along +angle, conventional against it. Spiral: climb turns
+   * counter-clockwise seen from above, conventional clockwise.
+   */
   direction: Direction
   /** Cut only where the surface slope (degrees from flat) is within these limits. */
   slope: { min: number; max: number }

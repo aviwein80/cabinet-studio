@@ -77,6 +77,7 @@ export function OpsPanel({
   const rulesOn = useStore((s) => featuresOf(s.data?.settings).camRules)
   const on3d = useStore((s) => featuresOf(s.data?.settings).cam3d) && !!part.models?.length
   const more25d = useStore((s) => featuresOf(s.data?.settings).camMore25d)
+  const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
   const runRules = (setId: string) => {
     if (!lib) return
     const set = ruleSetsOf(lib).find((x) => x.id === setId)
@@ -163,6 +164,12 @@ export function OpsPanel({
                 <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'waterline' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (waterline)</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'projection' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (projection)</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'pencil' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (pencil)</DropdownMenuItem>
+                {finishMore && (
+                  <>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'radial' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (radial)</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'spiral' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (spiral)</DropdownMenuItem>
+                  </>
+                )}
               </>
             )}
             {rulesOn && lib && (
@@ -221,7 +228,9 @@ export function OpsPanel({
                           ? `3D projection, ${op.levels.depth > 0 ? `${formatLength(op.levels.depth, units)} below the surface` : 'on the surface'}`
                           : op.strategy === 'pencil'
                             ? `3D pencil, valleys over ${op.pencilAngle ?? PENCIL_MIN_ANGLE}°`
-                            : `3D, every ${formatLength(op.stepover, units)}`
+                            : op.strategy === 'radial' || op.strategy === 'spiral'
+                              ? `3D ${op.strategy}, every ${formatLength(op.stepover, units)}`
+                              : `3D, every ${formatLength(op.stepover, units)}`
                       : op.kind === 'rough3d'
                         ? `3D levels every ${formatLength(op.stepdown, units)}`
                         : op.kind === 'chamfer'
@@ -619,42 +628,13 @@ function SawFields({ op, onChange }: { op: Extract<CamOp, { kind: 'saw' }>; onCh
   )
 }
 
-function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
-  const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
-  const c = useOpCfg(op, part, onChange)
-  switch (op.kind) {
-    case 'finish3d': {
-      const waterline = op.strategy === 'waterline'
-      const strategy = (
-        <SelectField
-          className="col-span-2"
-          label="Strategy"
-          value={op.strategy}
-          options={[
-            { value: 'parallel', label: 'Parallel: straight passes over the surface' },
-            { value: 'waterline', label: 'Waterline: passes at constant heights' },
-            { value: 'projection', label: 'Projection: drawn shapes and text onto the surface' },
-            { value: 'pencil', label: 'Pencil: along valleys and inside corners' },
-          ]}
-          onChange={(v) => onChange({ ...op, strategy: v })}
-        />
-      )
-      if (op.strategy === 'projection') {
-        const lv = (patch: Partial<typeof op.levels>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
-        return (
-          <>
-            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} pattern />
-            <Group title="Projected shapes">
-              {strategy}
-              <NumField label="Depth below the surface" value={op.levels.depth} min={0} step={0.1} onChange={(v) => lv({ depth: v })} hint="0 = on the surface; measured straight down" />
-              <NumField label="Depth per pass" value={op.levels.passDepth} min={0} onChange={(v) => lv({ passDepth: v })} hint="0 = tool stepdown" />
-              <NumField label="Number of cuts" suffix="" value={op.levels.cuts ?? 0} min={0} onChange={(v) => lv({ cuts: Math.round(v) || undefined })} hint="0 = from depth per pass" />
-              <div className="self-end pb-1.5 text-[11px] text-stone-400">Below the surface, protected groups and groups not chosen are kept clear.</div>
-            </Group>
-          </>
-        )
-      }
-      const rest = (adaptiveOn || op.rest) && (
+/** Finishing strategies added in M3.1 (shown while their switch is on, or when an operation uses one). */
+const MORE_FINISH: ReadonlySet<string> = new Set(['radial', 'spiral'])
+
+/** Rest machining settings of a 3D finishing operation. */
+function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adaptiveOn: boolean, onChange: (o: CamOp) => void) {
+  return (
+    (adaptiveOn || op.rest) && (
         <Group title="Rest machining">
           <div className="col-span-2">
             <SwitchField
@@ -677,6 +657,100 @@ function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onCh
           )}
         </Group>
       )
+  )
+}
+
+function StrategyFields({ op, part, onChange }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void }) {
+  const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
+  const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
+  const c = useOpCfg(op, part, onChange)
+  switch (op.kind) {
+    case 'finish3d': {
+      const waterline = op.strategy === 'waterline'
+      const strategy = (
+        <SelectField
+          className="col-span-2"
+          label="Strategy"
+          value={op.strategy}
+          options={[
+            { value: 'parallel', label: 'Parallel: straight passes over the surface' },
+            { value: 'waterline', label: 'Waterline: passes at constant heights' },
+            { value: 'projection', label: 'Projection: drawn shapes and text onto the surface' },
+            { value: 'pencil', label: 'Pencil: along valleys and inside corners' },
+            ...(finishMore || MORE_FINISH.has(op.strategy)
+              ? [
+                  { value: 'radial' as const, label: 'Radial: straight passes out from a centre' },
+                  { value: 'spiral' as const, label: 'Spiral: one spiral round a centre' },
+                ]
+              : []),
+          ]}
+          onChange={(v) => onChange({ ...op, strategy: v })}
+        />
+      )
+      if (op.strategy === 'radial' || op.strategy === 'spiral') {
+        const radial = op.strategy === 'radial'
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} />
+            <Group title={radial ? 'Radial passes' : 'Spiral'}>
+              {strategy}
+              <NumField
+                label={radial ? 'Largest gap' : 'Gap between turns'}
+                value={op.stepover}
+                min={0.01}
+                step={0.1}
+                cfg={c('finishStepover').cfg}
+                badge={c('finishStepover').badge}
+                onChange={(v) => c('finishStepover').set({ ...op, stepover: v })}
+                hint={radial ? 'Between neighbouring passes, at the outer edge; passes stop in turn towards the centre' : 'Measured in plan'}
+              />
+              <NumField label={radial ? 'First pass at' : 'Start at'} suffix="°" value={op.angle} onChange={(v) => onChange({ ...op, angle: v })} hint="From +X" />
+              <div className="col-span-2">
+                <SwitchField
+                  label="Centre in the middle of the boundary"
+                  checked={!op.centre}
+                  onChange={(v) => onChange({ ...op, centre: v ? undefined : { x: part.length / 2, y: part.width / 2 } })}
+                  hint="The middle of the drawn boundary, or of the model when none is drawn"
+                />
+              </div>
+              {op.centre && (
+                <>
+                  <NumField label="Centre X" value={op.centre.x} onChange={(v) => onChange({ ...op, centre: { ...op.centre!, x: v } })} />
+                  <NumField label="Centre Y" value={op.centre.y} onChange={(v) => onChange({ ...op, centre: { ...op.centre!, y: v } })} />
+                </>
+              )}
+              <NumField label="Inner radius" value={op.innerRadius ?? 0} min={0} onChange={(v) => onChange({ ...op, innerRadius: v || undefined })} hint="Leave this much round the centre uncut" />
+              {radial && <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Out and back' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />}
+              {(!radial || op.pattern === 'oneway') && (
+                <SelectField label="Travel" value={op.travel ?? 'outward'} options={[{ value: 'outward', label: 'Out from the centre' }, { value: 'inward', label: 'In to the centre' }]} onChange={(v) => onChange({ ...op, travel: v })} />
+              )}
+              {!radial && <SelectField label="Turn" value={op.direction} options={[{ value: 'climb', label: 'Counter-clockwise' }, { value: 'conventional', label: 'Clockwise' }]} onChange={(v) => onChange({ ...op, direction: v })} />}
+              <NumField label="Slope from" suffix="°" value={op.slope.min} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, min: v } })} />
+              <NumField label="Slope to" suffix="°" value={op.slope.max} min={0} max={90} onChange={(v) => onChange({ ...op, slope: { ...op.slope, max: v } })} />
+              <div className="col-span-2">
+                <SwitchField label="Skip flat areas" checked={op.skipFlats} onChange={(v) => onChange({ ...op, skipFlats: v })} hint="Leaves surfaces under 0.5° for a flat-area pass" />
+              </div>
+            </Group>
+            {restGroup(op, part, adaptiveOn, onChange)}
+          </>
+        )
+      }
+      if (op.strategy === 'projection') {
+        const lv = (patch: Partial<typeof op.levels>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
+        return (
+          <>
+            <SurfaceGroup op={op} part={part} onSurface={(surface) => onChange({ ...op, surface })} pattern />
+            <Group title="Projected shapes">
+              {strategy}
+              <NumField label="Depth below the surface" value={op.levels.depth} min={0} step={0.1} onChange={(v) => lv({ depth: v })} hint="0 = on the surface; measured straight down" />
+              <NumField label="Depth per pass" value={op.levels.passDepth} min={0} onChange={(v) => lv({ passDepth: v })} hint="0 = tool stepdown" />
+              <NumField label="Number of cuts" suffix="" value={op.levels.cuts ?? 0} min={0} onChange={(v) => lv({ cuts: Math.round(v) || undefined })} hint="0 = from depth per pass" />
+              <div className="self-end pb-1.5 text-[11px] text-stone-400">Below the surface, protected groups and groups not chosen are kept clear.</div>
+            </Group>
+          </>
+        )
+      }
+      const rest = restGroup(op, part, adaptiveOn, onChange)
       if (op.strategy === 'pencil')
         return (
           <>

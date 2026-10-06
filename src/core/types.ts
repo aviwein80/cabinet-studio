@@ -736,6 +736,12 @@ export interface FeatureFlags {
    * rules (and switches) above.
    */
   camRelief: boolean
+  /**
+   * M3.1 screens: more 3D finishing strategies (radial, spiral, scallop, flat-area, helical,
+   * undercut with lollipop tools, curve-driven). Screens only: none of them is written to woodWOP
+   * (true 3D output stays off until the format is confirmed with a program from the machine).
+   */
+  cam3dFinishMore: boolean
 }
 
 export interface Library {

@@ -87,11 +87,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.10d Program manager and editor (PST-04), screenshots, docs | **Done** (October 2026) | See below. M2.10 complete. Copying edited programs has its own switch, off. |
 | M2.11a Relief import: readers, sizing, placement, machining guard, dialog (ART-01) | **Done** (October 2026) | See below. Screens only (switch "Relief import", on). |
 | M2.11b Stage 2 exit test, screenshots, docs | **Done** (October 2026) | See below. **M2.11 complete. Stage 2 complete.** |
-| M3.1 - M3.7 | Not started | |
+| M3.1a Radial and spiral finishing (3D-05), format v5, switch | **Done** (October 2026) | See below. Simulation only (true 3D output stays off). |
+| M3.1b-f Scallop; flat-area and helical; undercut; curve-driven; screenshots and docs | In progress | See "M3.1 split". |
+| M3.2 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1839,9 +1841,47 @@ neither is used by the app or the tests at run time.
 3. **Relief finishing to woodWOP**: covered by decision 2 / open question 4 (a sample 3D program
    saved from woodWOP). Until then parallel finishing is simulation only.
 
-## Next run: Stage 3 (M3.1), only on the owner's go-ahead
+## M3.1 split
 
-- M3.1 more 3-axis finishing (3D-05, 3D-07, 3D-08, 3D-09), as in the prompt.
+M3.1 is four large features, so it is done in named parts, each pushed to `main` when green:
+**M3.1a** radial and spiral finishing (3D-05), the shared pass code, file format 5 and the switch;
+**M3.1b** scallop finishing (3D-07); **M3.1c** flat-area and helical finishing (3D-08);
+**M3.1d** undercut finishing with lollipop tools (3D-08), with a stock model that can hold
+material under an overhang; **M3.1e** curve-driven finishing (3D-09); **M3.1f** screenshots,
+README, ROADMAP and this file.
+
+## M3.1a radial and spiral finishing: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| 3D-05 | Radial finishing: straight passes out from a centre (set, or the middle of the boundary), first pass at a chosen angle, inner radius left uncut, out-and-back or one way (out or in). The pass count is a multiple of 8 so the largest gap, at the outer edge, is at most the step-over; towards the centre every other pass stops where its neighbours are still within the step-over of each other (and every other one of those further in), so passes do not pile up at the centre | `src/cam/3d/radial.ts` |
+| 3D-05 | Spiral finishing: one Archimedean spiral, turns the step-over apart in plan, out from the centre or in to it, counter-clockwise (climb) or clockwise; divided within 0.0005 mm of the true curve; clipped to the boundary | `src/cam/3d/radial.ts` |
+| Shared | The drop sampler (slope limits, groups, protected groups), passes along any plan polyline, clipping to the boundary and the moves that join passes (stay down on short safe links, lift otherwise) moved out of parallel finishing into one module for every strategy. Parallel finishing's goldens are byte-identical | `src/cam/3d/passes.ts`, `parallel.ts` |
+| Format | `CAM_FILE_VERSION` 5 (new strategies and their settings, all optional). An older app refuses a v5 part instead of machining a new strategy as parallel passes | `src/cam/doc.ts` |
+| Switch | "More 3D finishing" (`cam3dFinishMore`, screens, on). None of the new strategies is written to woodWOP: the export checker blocks them with `CAM_3D_NO_OUTPUT` whatever the switches say | `src/core/features.ts`, Machine page |
+| Screens | Add operation: "3D finishing (radial)" and "(spiral)"; editor with gap, first angle, centre (middle of the boundary or X/Y), inner radius, pattern, travel, turn, slope limits, rest machining. The step-over is the shop's 3D finishing step-over with its Configure badge | `src/pages/part/OpsPanel.tsx` |
+
+### Acceptance (M2.2 tolerances)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| No gouge > 0.005 mm, independent check | `tests/cam-3d-radial.test.ts` | Radial and spiral, 6 mm ball (exact check) on the hemisphere, sine relief, raised panel and cove: all under 0.005 mm and touching the surface (closest approach < 0.001 mm). Bull-nose and flat (sampled) on sine, raised panel and cove: under 0.005 |
+| Stock to leave ±0.01 mm | same | 0.5 mm on sine and hemisphere, both strategies: every sampled CL point 0.5 ± 0.01 from the surface; no move closer (exact check) |
+| Gaps never over the step-over | same | Radial layout checked at 400 radii for four cases: worst gap = step-over (ratio ≤ 1.000); passes lie on their rays (< 0.000001 mm) and reach the corners of the model. Spiral: every point on the spiral (turns exactly the pitch apart, < 0.001 mm), the true curve within 0.0005 mm of every straight piece |
+| Boundaries clip right | same | Centre / contained / touching on a 30 mm circle, both strategies: reach 30 / 27 / 33 mm (+0.01) |
+| Import to simulated stock, blocked export | same | STL dome imported in the compute worker, toolpaths in the worker, simulated at 0.5 mm cells: deepest below the model 0.0005 mm (both); most left on slopes under 45° 0.09 mm (radial) and 0.18 mm (spiral) at 1.5 mm; no collisions; export blocked with `CAM_3D_NO_OUTPUT` |
+| Golden digests | `tests/golden/cam3d/{radial-hemisphere,radial-raised-panel-oneway,spiral-hemisphere,spiral-sine-bull-stock}` | 4 new; every existing golden unchanged |
+
+### Limits recorded
+
+- **Radial out-and-back lifts at the inner ends** where neighbouring passes start at different
+  radii (more than two step-overs apart); the outer ends stay down.
+- **Spiral pitch is in plan**, like parallel passes: on slopes the 3D gap is wider. Scallop
+  finishing (M3.1b) is the strategy for an even finish on slopes.
+
+## Next run
+
+- Continue M3.1 (M3.1b-f), then M3.2.
 
 ## Run log
 
@@ -1883,3 +1923,4 @@ neither is used by the app or the tests at run time.
   screenshots, README, ROADMAP. M2.10 complete. See `git log`.
 - **Run 13 (M2.11a-b)**: relief import (`9546b82`); Stage 2 exit test, screenshots, README,
   ROADMAP. M2.11 complete; Stage 2 complete. See `git log`.
+- **Run 14 (M3.1a)**: radial and spiral finishing, shared pass code, format 5, switch. See `git log`.

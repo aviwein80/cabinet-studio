@@ -17,8 +17,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * 4 (M2.6): new operation kinds (facing, chamfer, curve cuts, hand-drawn toolpaths, edge work with
  * an aggregate), saw-cut settings and toolpath edits. An older app refuses a v4 part instead of
  * leaving those operations out without a word.
+ * 5 (M3.1): more 3D finishing strategies (radial, spiral and the rest of M3.1) and their settings.
+ * An older app refuses a v5 part instead of machining a new strategy as parallel passes.
  */
-export const CAM_FILE_VERSION = 4
+export const CAM_FILE_VERSION = 5
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -249,6 +251,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   2: (p) => ({ ...p, version: 3 }),
   // v3 -> v4: new operation kinds, saw settings and toolpath edits are new and optional.
   3: (p) => ({ ...p, version: 4 }),
+  // v4 -> v5: new finishing strategies and their settings are new and optional.
+  4: (p) => ({ ...p, version: 5 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */

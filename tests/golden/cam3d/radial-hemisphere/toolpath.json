@@ -1,0 +1,24 @@
+{
+ "op": "3D finishing (radial)",
+ "kind": "finish3d",
+ "tool": 105,
+ "moves": {
+  "rapid": 276,
+  "feed": 92,
+  "arc": 0,
+  "drill": 0,
+  "poly": 276,
+  "points": 6635
+ },
+ "cutMm": 6321,
+ "box": [
+  0,
+  0,
+  -20,
+  80,
+  80,
+  0
+ ],
+ "warnings": [],
+ "hash": "8fd554e4"
+}

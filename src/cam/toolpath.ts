@@ -51,6 +51,7 @@ import { DEFAULT_ADAPTIVE, feedsFor, passDepths, PLACEHOLDER_BLADE, resolveTool 
 import type { Work } from '@/core/cancel'
 import { cutterOfTool } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
+import { radialFinish, spiralFinish } from './3d/radial'
 import { pencilFinish } from './3d/pencil'
 import { projectionFinish } from './3d/projection'
 import { centreRegion, type Region } from './3d/region'
@@ -1970,7 +1971,14 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     if (isFlatLayer(op)) layerIntents(r.layers, tp, op.name, true)
     return
   }
-  const r = op.strategy === 'pencil' ? pencilFinish(op, m.placed, m.cutter, region, op.levels, ctx.work) : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+  const r =
+    op.strategy === 'pencil'
+      ? pencilFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+      : op.strategy === 'radial'
+        ? radialFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+        : op.strategy === 'spiral'
+          ? spiralFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+          : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)

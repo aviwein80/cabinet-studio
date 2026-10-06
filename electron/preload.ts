@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('cabinetStudio', {
   blobHas: (hash: string): Promise<boolean> => ipcRenderer.invoke('blob:has', hash),
   blobGet: (hash: string): Promise<Uint8Array | null> => ipcRenderer.invoke('blob:get', hash),
   blobPut: (hash: string, gz: Uint8Array): Promise<boolean> => ipcRenderer.invoke('blob:put', hash, gz),
+  storageStatus: () => ipcRenderer.invoke('storage:status'),
+  storageSet: (kind: string) => ipcRenderer.invoke('storage:set', kind),
+  storageExportDb: (json: string): Promise<string | null> => ipcRenderer.invoke('storage:exportDb', json),
+  storageImportDb: () => ipcRenderer.invoke('storage:importDb'),
   info: (): Promise<{ dataFile: string; version: string; platform: string }> => ipcRenderer.invoke('app:info'),
   exportFiles: (files: OutFile[], opts: { folder?: string; subfolder?: string }): Promise<string | null> =>
     ipcRenderer.invoke('files:export', files, opts),

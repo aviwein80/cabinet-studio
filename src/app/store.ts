@@ -36,6 +36,8 @@ interface State {
   go(route: Route): void
   init(): Promise<void>
   mutate(fn: (d: AppData) => void): void
+  /** Replace all shop data (import from a database file, M2.9). */
+  replaceData(d: AppData): void
   createJob(fields: Pick<Job, 'number' | 'name' | 'customer'>): string
   loadSampleJob(): string
   deleteJob(id: string): void
@@ -149,6 +151,10 @@ export const useStore = create<State>((set, get) => {
           confirmKey(p, `default:${key}`)
         } else setCutDefault(d, key, value)
       }),
+    replaceData(d) {
+      set({ data: normalizeData(d), machineEdit: null })
+      scheduleSave()
+    },
     machineEdit: null,
     editMachine: (id) => set({ machineEdit: id && id !== MAIN_MACHINE ? id : null }),
     addMachine(name, kind, from) {

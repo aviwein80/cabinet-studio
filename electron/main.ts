@@ -4,6 +4,7 @@ import path from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { aiCall, aiKeyStatus, aiSetKey } from './aiKeys'
 import { collectBlobs } from './blobGc'
+import { readDbFile, ShopStore, type StoreKind, writeDbFile } from './shopStore'
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL
 const MAX_BACKUPS = 30
@@ -11,6 +12,8 @@ const BACKUP_INTERVAL_MS = 10 * 60 * 1000
 
 const dataDir = () => path.join(app.getPath('userData'), 'data')
 const dataFile = () => path.join(dataDir(), 'cabinet-studio.json')
+/** JSON (default) or the SQLite option (M2.9); the JSON file is written either way. */
+const shopStore = () => new ShopStore(dataDir())
 const backupDir = () => path.join(dataDir(), 'backups')
 /** 3D model data (gzip files named by the SHA-256 of their content), kept out of the shop file. */
 const blobDir = () => path.join(dataDir(), 'blobs')
@@ -90,15 +93,34 @@ type OutFile = { name: string; data: string | Uint8Array }
 const safeFileName = (n: string) => path.basename(n).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
 
 function registerIpc() {
-  ipcMain.handle('data:load', () => {
-    if (!fs.existsSync(dataFile())) return null
-    return fs.readFileSync(dataFile(), 'utf8')
-  })
+  ipcMain.handle('data:load', () => shopStore().load())
 
   ipcMain.handle('data:save', (_e, json: string) => {
     rotateBackups()
-    writeAtomic(dataFile(), json)
+    shopStore().save(json)
     return true
+  })
+
+  ipcMain.handle('storage:status', () => {
+    const st = shopStore()
+    return { kind: st.kind(), jsonFile: st.jsonFile, dbFile: st.dbFile }
+  })
+  ipcMain.handle('storage:set', (_e, kind: StoreKind) => {
+    rotateBackups()
+    return shopStore().switchTo(kind === 'sqlite' ? 'sqlite' : 'json')
+  })
+  ipcMain.handle('storage:exportDb', async (e, json: string) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const res = await dialog.showSaveDialog(win!, { defaultPath: 'cabinet-studio.sqlite', filters: [{ name: 'SQLite database', extensions: ['sqlite', 'db'] }] })
+    if (res.canceled || !res.filePath) return null
+    writeDbFile(res.filePath, JSON.parse(json))
+    return res.filePath
+  })
+  ipcMain.handle('storage:importDb', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const res = await dialog.showOpenDialog(win!, { title: 'Shop data from a database file', properties: ['openFile'], filters: [{ name: 'SQLite database', extensions: ['sqlite', 'db'] }] })
+    if (res.canceled || !res.filePaths[0]) return null
+    return { file: res.filePaths[0], json: JSON.stringify(readDbFile(res.filePaths[0])) }
   })
 
   ipcMain.handle('blob:has', (_e, hash: string) => fs.existsSync(blobFile(hash)))
@@ -112,7 +134,7 @@ function registerIpc() {
     return true
   })
 
-  ipcMain.handle('app:info', () => ({ dataFile: dataFile(), version: app.getVersion(), platform: process.platform }))
+  ipcMain.handle('app:info', () => ({ dataFile: shopStore().kind() === 'sqlite' ? shopStore().dbFile : dataFile(), version: app.getVersion(), platform: process.platform }))
 
   ipcMain.handle('files:export', async (e, files: OutFile[], opts: { folder?: string; subfolder?: string }) => {
     let folder = opts.folder && fs.existsSync(opts.folder) ? opts.folder : undefined

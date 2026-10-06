@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { type AiKeyStatus, backend } from "@/app/backend";
 import { useStore } from "@/app/store";
 import { AboutSection } from "@/components/AboutSection";
+import { StorageSection } from "./settings/StorageSection";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,7 @@ export function SettingsPage() {
             Sending a sheet uploads its page images to that provider.
           </p>
         </section>
+        <StorageSection />
         <AboutSection />
       </div>
     </div>

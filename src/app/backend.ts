@@ -18,6 +18,10 @@ interface Bridge {
   load(): Promise<string | null>
   save(json: string): Promise<boolean>
   info(): Promise<{ dataFile: string; version: string; platform: string }>
+  storageStatus(): Promise<StorageStatus>
+  storageSet(kind: StorageKind): Promise<{ kind: StorageKind; message: string }>
+  storageExportDb(json: string): Promise<string | null>
+  storageImportDb(): Promise<{ file: string; json: string } | null>
   exportFiles(files: OutFile[], opts: { folder?: string; subfolder?: string }): Promise<string | null>
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
   openPath(p: string): Promise<string>
@@ -40,6 +44,23 @@ export interface AiBridge {
   status(): Promise<AiKeyStatus>
   setKey(provider: AiProviderId, key: string | null): Promise<AiKeyStatus>
   call(call: AiCall): Promise<string>
+}
+
+export type StorageKind = 'json' | 'sqlite'
+export interface StorageStatus {
+  kind: StorageKind
+  jsonFile: string
+  dbFile: string
+}
+
+/** Shop data in a JSON file (default) or the SQLite option (M2.9, desktop app). */
+export interface StorageBridge {
+  status(): Promise<StorageStatus>
+  set(kind: StorageKind): Promise<{ kind: StorageKind; message: string }>
+  /** Write the shop data to a database file the user picks. Returns its path, or null if cancelled. */
+  exportDb(data: AppData): Promise<string | null>
+  /** Read shop data from a database file the user picks (not applied yet). */
+  importDb(): Promise<{ file: string; data: AppData } | null>
 }
 
 export interface BatchStatus {
@@ -78,6 +99,7 @@ export interface Backend {
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
   openPath?(p: string): Promise<void>
   batch?: BatchBridge
+  storage?: StorageBridge
   ai: AiBridge
   /** 3D model data, kept outside the shop file. */
   blobs: BlobStore
@@ -201,6 +223,15 @@ function desktopBackend(b: Bridge): Backend {
       cancel: () => b.batchCancel(),
       status: () => b.batchStatus(),
       onEvent: (cb) => b.onBatchEvent(cb),
+    },
+    storage: {
+      status: () => b.storageStatus(),
+      set: (k) => b.storageSet(k),
+      exportDb: (d) => b.storageExportDb(JSON.stringify(d)),
+      importDb: async () => {
+        const r = await b.storageImportDb()
+        return r ? { file: r.file, data: JSON.parse(r.json) as AppData } : null
+      },
     },
     ai: { status: () => b.aiKeyStatus(), setKey: (p, k) => b.aiSetKey(p, k), call: (c) => b.aiCall(c) },
   }

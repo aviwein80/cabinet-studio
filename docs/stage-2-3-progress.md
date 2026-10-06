@@ -78,7 +78,7 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.8d Flip-side sheets (NST-07), sheet backplot | **Done** (October 2026) | See below. Output switch off. |
 | M2.8e Manual nesting (NST-09), screenshots, docs | **Done** (October 2026) | See below. M2.8 complete. | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
 | M2.9a Other machines and process steps (AM-08) | **Done** (October 2026) | See below. Output switch for other machines off. |
-| M2.9b SQLite storage option (AM-06) | Not started | |
+| M2.9b SQLite storage option (AM-06) | **Done** (October 2026) | See below. JSON stays the default. |
 | M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | Not started | |
 | M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | Not started | |
 | M2.10 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
@@ -86,7 +86,7 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1392,6 +1392,32 @@ programs for other machines" (`batchMachinesOutput`), **off**.
 - **A process step gets a full program set** like a machine; splitting operations between steps (for example drilling on one machine, cutting out on another) is not built. It would change what each machine cuts, so it waits for the owner (decision 2 below).
 - **Other machines are used by batch runs only.** The job page's Output tab still writes for the main machine.
 - **Custom-part operations are generated per machine**: an operation that picks its tool automatically picks from that machine's table; an operation with a fixed tool number needs that number on the other machine, or its check fails.
+
+## M2.9b SQLite storage option: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| AM-06 | **Shop data storage** (Settings): the JSON file stays the default. The SQLite option keeps the shop data in `cabinet-studio.sqlite` beside it: materials, tools (of every machine, by machine) and jobs are tables of their own with their main facts as columns (code, name, thickness, tool number, diameter, job number, customer, ...) so other programs can query them; everything else is one JSON shell in a `meta` table. The app then loads from the database (so a change made there by another program is what the app sees) and every save writes the database in one transaction **and still writes the JSON file** beside it, so backups, the blob clean-up and switching back keep working. Switching either way copies the data first; switching to SQLite builds the file beside the old one, reads it back, compares it with the shop data and only then swaps it in | `src/core/shopDb.ts`, `electron/shopStore.ts`, `electron/main.ts`, `StorageSection.tsx` |
+| Import / export | "Export to a database file" (any time) and "Import from a database file" (shows what the file holds and what it replaces, then asks) | same |
+| Batch | The folder watcher loads from whichever store is in use; `npm run batch -- ... --data shop.sqlite` reads a database file | `electron/batchWorker.ts`, `scripts/batch.ts` |
+| Engine | Node's **built-in SQLite** (`node:sqlite`; Node 22 in the tests, Node 24.21 inside Electron 44, checked by running the store in Electron's own Node). No new dependency and nothing to compile, so the Windows and Mac builds need no native module. The spec suggested better-sqlite3 (MIT), which would need a native build per platform; the built-in one does the same job. | - |
+
+### Acceptance (the SQLite option round-trips the shop data without loss; JSON stays the default)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Lossless | `tests/shop-db.test.ts` | Shop data with the sample job, a custom part with an operation, the part library, a second machine with its own tools, batch setups, a price of 0.1 + 0.2, 1e-9 and 12345678901234 in text, quotes, backslashes, line breaks and non-English letters: written and read back **byte-identical** as JSON (compact and indented, so every key in its place); also through a file on disk |
+| Rows are real tables | same | Material codes, tool numbers per machine and job numbers / customers read with plain SQL match the shop data; the shell holds no copy of them |
+| Saves replace, outside edits are seen | same | A save with fewer jobs leaves no old rows; a price changed with SQL is read back |
+| Bad files | same | Not ours, a newer layout, a missing file and a non-database file are refused with a plain message |
+| JSON default, switching both ways | same | A new data folder uses JSON; switch to SQLite and back: same data each way; saves in SQLite mode write both files; an edit made in the database by another program survives switching back |
+| Batch runner | same | `npm run batch -- run ... --data shop.sqlite` writes the programs |
+
+### Limits recorded
+
+- **Desktop app only.** The browser preview keeps its data in browser storage.
+- **Only one program should write the database at a time.** Another program may read it any time; if it changes rows while the app is open, the app's next save overwrites them (the app reads the database when it starts).
+- **Backups stay JSON** (every 10 minutes of saving, as before): they hold the same data.
 
 ## M2.9 decisions needed (see the report)
 

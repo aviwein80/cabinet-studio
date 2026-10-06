@@ -4,8 +4,8 @@
  *   npm run batch -- run <parts.csv> --out <folder> [--data <cabinet-studio.json>]
  *   npm run batch -- watch <inbox> --out <folder> [--data <cabinet-studio.json>] [--poll <ms>]
  *
- * --data is the app's data file (library, machine, settings); without it the built-in defaults
- * are used. Each order gets its own folder; a CSV in the inbox moves to done/, problems/ or
+ * --data is the app's data file (library, machine, settings): the JSON file, or the SQLite
+ * database when the app keeps its data there (.sqlite); without it the built-in defaults are used. Each order gets its own folder; a CSV in the inbox moves to done/, problems/ or
  * cancelled/ when finished. Ctrl+C stops; a half-finished order leaves no files behind.
  */
 import fs from 'node:fs'
@@ -14,6 +14,7 @@ import { nodeBatchFs } from '../electron/batchFs'
 import { runBatchCsv } from '../src/core/batch'
 import { InboxWatcher, writeBatchResult } from '../src/core/batchWatch'
 import { normalizeData } from '../src/core/normalize'
+import { readDbFile } from '../electron/shopStore'
 
 const args = process.argv.slice(2)
 const flag = (name: string) => {
@@ -27,7 +28,7 @@ if (!mode || !target || !out || !['run', 'watch'].includes(mode)) {
   console.error('Usage: npm run batch -- run <parts.csv> --out <folder> [--data <file>]\n       npm run batch -- watch <inbox> --out <folder> [--data <file>] [--poll <ms>]')
   process.exit(2)
 }
-const loadData = () => normalizeData(dataPath && fs.existsSync(dataPath) ? JSON.parse(fs.readFileSync(dataPath, 'utf8')) : null)
+const loadData = () => normalizeData(dataPath && fs.existsSync(dataPath) ? (/\.(sqlite|db)$/i.test(dataPath) ? readDbFile(dataPath) : JSON.parse(fs.readFileSync(dataPath, 'utf8'))) : null)
 const log = (m: string) => console.log(`${new Date().toISOString().slice(11, 19)}  ${m}`)
 
 if (mode === 'run') {

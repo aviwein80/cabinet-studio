@@ -1,6 +1,7 @@
 import { FileUp, MousePointerClick, Palette, RefreshCw, Spline } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { backend } from '@/app/backend'
 import { useStore } from '@/app/store'
 import { recipesOf } from '@/cam/rules'
 import { faceLabel } from '@/cam/solid/encode'
@@ -8,7 +9,7 @@ import type { FaceAction } from '@/cam/solid/faces'
 import { type FaceType, faceColors, facesByColor, facesByType, faceType, setFaceColor, staleSolidShapes } from '@/cam/solid/faceSelect'
 import { faceCount, type SolidData } from '@/cam/solid/types'
 import type { CamPart, ModelRef } from '@/cam/types'
-import { compute, occtVendorUrl, solidCompute } from '@/cam/worker/client'
+import { brepVendorUrl, compute, occtVendorUrl, solidCompute } from '@/cam/worker/client'
 import type { SolidFacesJob } from '@/cam/worker/tasks'
 import { makeEntity } from '@/cam/doc'
 import { Button } from '@/components/ui/button'
@@ -122,6 +123,22 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
     } finally {
       setBusy(null)
     }
+  }
+  /**
+   * The picked face's own rows and columns (its parameter lines, from the B-rep kernel, loaded in
+   * the solid worker on first use), added as a surface model that curve-driven passes can follow.
+   */
+  const rowsAndColumns = async () => {
+    if (!solid || picked.length !== 1) return
+    if (!model.file) return void toast.warning('The file this solid came from is not stored with it. Import the file again.')
+    const r = await inWorker('Rows and columns (first time: loading the B-rep kernel, about 23 MB)', async (signal) => {
+      const gz = await backend.blobs.get(model.file!)
+      if (!gz) throw new Error('The file this solid came from is missing from this computer (data/blobs). Import the file again.')
+      return solidCompute().run('solid.faceGrid', { gz, name: model.source, solid, place: model.place, face: picked[0], brepVendor: brepVendorUrl() }, { signal })
+    })
+    if (!r) return
+    onChange(await addSurfaceModel(part, r.mesh, `${model.name}: face ${r.faceId} rows and columns`, `Face ${r.faceId} rows and columns`))
+    toast.success(`Face ${r.faceId} (${r.surface}): ${r.rows} rows × ${r.cols} columns added as a surface model`, { description: `Within ${r.chord.toFixed(3)} mm of the true surface. In curve-driven finishing choose "A surface's rows or columns" and this surface.${r.warnings.length ? ' ' + r.warnings.join(' ') : ''}` })
   }
   /** The solid as a plain mesh model (for mesh tools such as simplify); the solid is hidden. */
   const toMesh = async () => {
@@ -290,6 +307,9 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
             </Button>
             <Button size="xs" variant="secondary" disabled={picked.length !== 1} onClick={() => void fromFaces({ k: 'untrim', face: picked[0], tol: 0.01 }, 'Untrimmed face')} title="The face's whole surface, without its holes and cut edges">
               Untrim
+            </Button>
+            <Button size="xs" variant="secondary" disabled={picked.length !== 1} onClick={() => void rowsAndColumns()} title="The face's own rows and columns (its parameter lines, true to its surface), for curve-driven passes. STEP and BREP files; loads the B-rep kernel (about 23 MB) the first time.">
+              Rows and columns
             </Button>
             <Button size="xs" variant="secondary" onClick={() => void fromFaces({ k: 'edges', faces: picked, minAngle: 1 }, 'Edges')}>
               Edges

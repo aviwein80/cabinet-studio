@@ -91,6 +91,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## replicad-opencascadejs 1.1.0 (Open CASCADE Technology B-rep kernel)
+
+Used for: a solid face's own rows and columns (its parameter lines, true to its surface) for
+curve-driven finishing (M3.1g). It is the Open CASCADE Technology (OCCT) modelling kernel
+compiled to WebAssembly; the solid reader above gives faces as triangles only.
+
+- replicad-opencascadejs: an opencascade.js build by Steve Genoud. Licence: GNU Lesser General
+  Public License, version 2.1 only (LGPL-2.1-only). Source: https://github.com/sgenoud/replicad
+  (package `replicad-opencascadejs`, version 1.1.0) and https://github.com/donalffons/opencascade.js.
+- Open CASCADE Technology: Copyright (c) Open CASCADE SAS. Licence: GNU Lesser General Public
+  License, version 2.1, with the Open CASCADE exception. Source: https://github.com/Open-Cascade-SAS/OCCT
+  and https://dev.opencascade.org.
+
+How it is shipped (LGPL section 6): the library is **not** compiled into Cabinet Studio. Its two
+files, exactly as published in the npm package, sit next to the app and are loaded (in a
+background worker) only the first time a face's rows and columns are asked for:
+
+- Browser preview: `vendor/opencascade-brep/replicad_single.js` and `replicad_single.wasm`.
+- Desktop app: `resources/app.asar.unpacked/dist/vendor/opencascade-brep/` (unpacked from the app
+  archive so the files can be seen and replaced).
+
+You may replace these two files with your own build of the same library (or of a modified version
+of it) that keeps the same interface; the app will use it. The licence text is shipped beside
+them (`LICENSE`, the LGPL-2.1 as repeated below).
+
 ## occt-import-js 0.0.23 (with Open CASCADE Technology)
 
 Used for: reading solid models (STEP AP203 / AP214 / AP242, IGES and BREP files) into faces with

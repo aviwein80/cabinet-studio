@@ -783,7 +783,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
                 <>
                   <SelectField label="Surface" value={d.modelId ?? NONE} options={[{ value: NONE, label: 'The model machined' }, ...gridModels.filter((m) => m.id !== op.surface.modelId).map((m) => ({ value: m.id, label: m.name }))]} onChange={(v) => setDrive({ modelId: v === NONE ? undefined : v })} />
                   <SelectField label="Along its" value={d.along ?? 'rows'} options={[{ value: 'rows', label: 'Rows' }, { value: 'columns', label: 'Columns' }]} onChange={(v) => setDrive({ along: v })} />
-                  <div className="col-span-2 text-[11px] text-stone-400">Surfaces made in the app (Surfaces: revolve, ruled, loft, sweep, extrude; or a solid's face untrimmed) keep their rows and columns. The tool is placed to touch each line.</div>
+                  <div className="col-span-2 text-[11px] text-stone-400">Surfaces made in the app (Surfaces: revolve, ruled, loft, sweep, extrude; or a solid's face untrimmed) keep their rows and columns; for a solid's face as it is (free-form too), pick it and use "Rows and columns" under the solid's faces. The tool is placed to touch each line.</div>
                 </>
               )}
               <SelectField label="Pattern" value={op.pattern} options={[{ value: 'zigzag', label: 'Back and forth' }, { value: 'oneway', label: 'One way' }]} onChange={(v) => onChange({ ...op, pattern: v })} />

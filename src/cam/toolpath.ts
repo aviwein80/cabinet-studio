@@ -1992,8 +1992,12 @@ function curveOf(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, region: Region, c
     const dm = model && ctx.meshes?.get(model.blob)
     if (model && !dm) tp.warnings.push(`The 3D model "${model.name}" is not loaded, so its rows and columns cannot be followed.`)
     const g = model?.grid
-    if (model && dm && g && g.blob === model.blob && g.rows * g.cols * 3 === dm.positions.length)
-      inputs.grid = { positions: placeMesh(dm, model.place).positions, layout: { rows: g.rows, cols: g.cols, closedRows: g.closedRows, closedCols: g.closedCols } }
+    if (model && dm && g && g.blob === model.blob && g.rows * g.cols * 3 === dm.positions.length) {
+      // a trimmed face's grid has points off the face: only the ones its facets use are on it
+      const used = new Uint8Array(g.trimmed ? g.rows * g.cols : 0)
+      if (g.trimmed) for (let i = 0; i < dm.indices.length; i++) used[dm.indices[i]] = 1
+      inputs.grid = { positions: placeMesh(dm, model.place).positions, layout: { rows: g.rows, cols: g.cols, closedRows: g.closedRows, closedCols: g.closedCols }, ...(g.trimmed ? { inside: used } : {}) }
+    }
   }
   return curveFinish(op, mesh, cutter, region, inputs, op.levels, ctx.work)
 }

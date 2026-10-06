@@ -16,12 +16,15 @@ import { checkReliefMesh, type HeightMapOptions, heightMapMesh, type HeightMapRe
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
 import type { CamPart, ModelPlacement, ModelRef, Recipe, ReliefInfo, UpAxis } from '../types'
-import { generateOp, type Toolpath } from '../toolpath'
+import { generateOp, type Move, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
 import { type Collision, partCollisions } from '../collision/collision'
 import { readSolid, type SolidReadOptions } from '../solid/convert'
 import { decodeSolid, encodeSolid } from '../solid/encode'
 import { occt } from '../solid/occt'
+import { brepKernel } from '../solid/brep'
+import { type DisplayPaths, displayPaths } from '../display'
+import { faceGrid, type FaceGridResult } from '../solid/faceGrid'
 import type { SolidData } from '../solid/types'
 import { type Recognition, recognizePanel, type RecognizeOptions } from '../solid/recognize'
 import { type FeatureRow, featureEntities, solidToPart, type SolidPartOptions } from '../solid/toPart'
@@ -31,7 +34,7 @@ import { extendMesh, extrude, flat, loft, revolve, ruled, splitMesh, sweep, type
 import { facesMesh, filletFaces, solidEdges, untrimFace } from '../solid/wires'
 import type { Entity, Layer } from '../types'
 import { holderEnvelope, type HolderFromModel } from '../tools/holder'
-import { isSolidFile } from '../solid/format'
+import { isSolidFile, solidFormatOf } from '../solid/format'
 import { type ImagePixels, traceImage, type TraceOptions, type TraceResult } from '../trace'
 import { readProgram, type ReadProgram } from '../programRead'
 
@@ -79,6 +82,10 @@ export interface TaskMap {
   'surface.make': { in: SurfaceJob; out: Mesh }
   /** Surfaces and edges from a solid's faces (CAD-16): in part coordinates as the model is placed. */
   'solid.faces': { in: { solid: SolidData; place: ModelPlacement; job: SolidFacesJob }; out: { mesh?: Mesh; edges?: [number, number, number][][] } }
+  /** M3.1g: a large toolpath simplified for the plan view (display only). */
+  'toolpath.display': { in: { moves: Move[]; budget?: number }; out: DisplayPaths }
+  /** M3.1g: a face's own rows and columns from the B-rep kernel (loaded on first use, in this worker). */
+  'solid.faceGrid': { in: { file?: Uint8Array; gz?: Uint8Array; name: string; solid: SolidData; place: ModelPlacement; face: number; tol?: number; brepVendor?: string }; out: FaceGridResult }
   /** Machine picked faces (SOL-02): the part with the new shapes and operation. */
   'solid.machineFaces': { in: { part: CamPart; model: ModelRef; solid: SolidData; faces: number[]; action: FaceAction }; out: { part: CamPart; made: number; opName: string | null; warnings: string[] } }
   /** Send faces to a layer, with a recipe's operations (SOL-03). */
@@ -284,6 +291,19 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
       case 'edges':
         return { edges: solidEdges(body, pf.frame, { faces: job.faces, minAngle: job.minAngle }).map((e) => e.pts) }
     }
+  },
+  'toolpath.display': ({ moves, budget }) => displayPaths({ moves }, { budget }),
+  async 'solid.faceGrid'({ file, gz, name, solid, place, face, tol, brepVendor }, work) {
+    const format = solidFormatOf(name)
+    if (!format) throw new Error(`${name}: not a STEP, IGES or BREP file.`)
+    // the file as stored next to the shop file (compressed), or as given
+    const bytes = file ?? (gz ? await gunzip(gz) : null)
+    if (!bytes) throw new Error('The file this solid came from is needed.')
+    if (format === 'iges') return faceGrid(null, bytes, format, solid, place, face)
+    work.progress?.(0.05, 'Loading the B-rep kernel (first time: about 23 MB)')
+    const oc = await brepKernel(brepVendor)
+    work.progress?.(0.4, `Rows and columns of face ${face}`)
+    return faceGrid(oc, bytes, format, solid, place, face, { tol })
   },
   'solid.machineFaces'({ part, model, solid, faces, action }) {
     const r = machineFaces(part, model, solid, faces, action)

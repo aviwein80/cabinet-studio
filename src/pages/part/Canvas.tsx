@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import { useStore } from '@/app/store'
 import { dimText, measureDim } from '@/cam/dims'
 import { contourPath, entitiesInBox, hitEntity } from './hit'
+import { useDisplayPaths } from './displayPaths'
+import type { DisplayPaths } from '@/cam/display'
 import type { Click, ToolDef } from './tools'
 
 export interface Display {
@@ -26,68 +28,6 @@ interface View {
   cx: number
   cy: number
   s: number
-}
-
-function toolpathPaths(tp: Toolpath) {
-  let x = 0
-  let y = 0
-  let first = true
-  let cut = ''
-  let rapid = ''
-  const drills: P[] = []
-  const f = (n: number) => (Math.round(n * 1000) / 1000).toString()
-  for (const m of tp.moves) {
-    if (m.t === 'poly') {
-      // 3D chains can hold millions of points: draw a point once it is 0.25 mm from the last one
-      const p = m.pts
-      let d = first ? '' : `M${f(x)} ${f(y)}`
-      for (let i = 0; i + 2 < p.length; i += 3) {
-        const last = i + 3 >= p.length
-        if (first) {
-          x = p[i]
-          y = p[i + 1]
-          first = false
-          d = `M${f(x)} ${f(y)}`
-          continue
-        }
-        if (!last && Math.hypot(p[i] - x, p[i + 1] - y) < 0.25) continue
-        x = p[i]
-        y = p[i + 1]
-        d += `L${f(x)} ${f(y)}`
-      }
-      cut += d
-      continue
-    }
-    if (m.t === 'drill') {
-      drills.push({ x: m.x, y: m.y })
-      x = m.x
-      y = m.y
-      continue
-    }
-    if (first) {
-      x = m.x
-      y = m.y
-      first = false
-      continue
-    }
-    if (m.t === 'rapid') {
-      if (Math.abs(m.x - x) > 1e-9 || Math.abs(m.y - y) > 1e-9) rapid += `M${f(x)} ${f(y)}L${f(m.x)} ${f(m.y)}`
-    } else if (m.t === 'feed') {
-      if (Math.abs(m.x - x) > 1e-9 || Math.abs(m.y - y) > 1e-9) cut += `M${f(x)} ${f(y)}L${f(m.x)} ${f(m.y)}`
-    } else {
-      const r = Math.hypot(x - m.cx, y - m.cy)
-      const a0 = Math.atan2(y - m.cy, x - m.cx)
-      let a1 = Math.atan2(m.y - m.cy, m.x - m.cx)
-      if (m.ccw && a1 <= a0) a1 += 2 * Math.PI
-      if (!m.ccw && a1 >= a0) a1 -= 2 * Math.PI
-      cut += `M${f(x)} ${f(y)}A${f(r)} ${f(r)} 0 ${Math.abs(a1 - a0) > Math.PI ? 1 : 0} ${m.ccw ? 1 : 0} ${f(m.x)} ${f(m.y)}`
-    }
-    x = m.x
-    y = m.y
-  }
-  const m0 = tp.moves.find((m) => m.t !== 'rapid')
-  const start = m0?.t === 'poly' ? (m0.pts.length >= 2 ? { x: m0.pts[0], y: m0.pts[1] } : undefined) : m0
-  return { cut, rapid, drills, start }
 }
 
 /**
@@ -148,8 +88,13 @@ export interface CanvasProps {
   onSegPick: (id: string, seg: number) => void
 }
 
+/** A toolpath drawn with more points than this shows its centre line only (not the tool's width). */
+const BAND_POINTS = 20_000
+
 export function PartCanvas(props: CanvasProps) {
   const { part, sel, toolpaths, display, tool, clicks, preview } = props
+  // (built once per toolpath, simplified for the screen; large ones in the background)
+  const drawings = useDisplayPaths(toolpaths)
   const host = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [view, setView] = useState<View>({ cx: part.length / 2, cy: part.width / 2, s: 1 })
@@ -364,6 +309,7 @@ export function PartCanvas(props: CanvasProps) {
       onContextMenu={(e) => e.preventDefault()}
       data-testid="part-canvas"
     >
+      {display.paths && <LargePathNote toolpaths={toolpaths.filter((tp) => !props.hiddenOps.has(tp.opId))} drawings={drawings} />}
       <svg width={size.w} height={size.h} className="absolute inset-0">
         <g transform={worldTf}>
           {grid && (
@@ -386,12 +332,14 @@ export function PartCanvas(props: CanvasProps) {
             toolpaths
               .filter((tp) => !props.hiddenOps.has(tp.opId))
               .map((tp) => {
-                const { cut, rapid, drills } = toolpathPaths(tp)
+                const dp = drawings.get(tp.opId)
+                if (!dp) return null
+                const { cut, rapid, drills } = dp
                 // (edge work: the tool lies flat, so its width is not drawn round the path)
                 const d = tp.kind === 'edge' ? 1 : (tp.tool?.diameter ?? 6)
                 return (
                   <g key={tp.opId}>
-                    <path d={cut} stroke="#0ea5e9" strokeOpacity={0.18} strokeWidth={d} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    {dp.drawn <= BAND_POINTS && <path d={cut} stroke="#0ea5e9" strokeOpacity={0.18} strokeWidth={d} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
                     <path d={cut} stroke="#38bdf8" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />
                     <path d={rapid} stroke="#f87171" strokeWidth={1} strokeDasharray="4 4" fill="none" vectorEffect="non-scaling-stroke" />
                     {drills.map((p, i) => (
@@ -473,7 +421,7 @@ export function PartCanvas(props: CanvasProps) {
           toolpaths
             .filter((tp) => !props.hiddenOps.has(tp.opId))
             .map((tp) => {
-              const st = toolpathPaths(tp).start
+              const st = drawings.get(tp.opId)?.start
               if (!st) return null
               const q = px(st)
               return <rect key={`st-${tp.opId}`} x={q.x - 4} y={q.y - 4} width={8} height={8} fill="#22c55e" stroke="#0f172a" strokeWidth={1} />
@@ -562,5 +510,24 @@ function DimsLayer({ part, px }: { part: CamPart; px: (p: P) => P }) {
         )
       })}
     </g>
+  )
+}
+
+/** What the plan view says about very large toolpaths: still being drawn, or drawn simplified. */
+function LargePathNote({ toolpaths, drawings }: { toolpaths: Toolpath[]; drawings: Map<string, DisplayPaths | null> }) {
+  const waiting = toolpaths.filter((tp) => drawings.get(tp.opId) === null)
+  const simplified = toolpaths.map((tp) => drawings.get(tp.opId)).filter((d): d is DisplayPaths => !!d && d.tol > 0)
+  if (!waiting.length && !simplified.length) return null
+  const tol = Math.max(0, ...simplified.map((d) => d.tol))
+  const noBand = simplified.some((d) => d.drawn > BAND_POINTS)
+  return (
+    <div className="pointer-events-none absolute right-2 bottom-2 z-10 max-w-sm rounded border border-white/10 bg-black/60 px-2 py-1 text-[11px] text-stone-300" data-testid="large-path-note">
+      {waiting.length > 0 && <div>Drawing {waiting.length} large toolpath(s)…</div>}
+      {simplified.length > 0 && (
+        <div>
+          Large toolpath(s) drawn simplified for the screen (within {tol < 0.1 ? tol.toFixed(2) : tol.toFixed(1)} mm{noBand ? '; centre line only' : ''}). The simulation, checks and programs use every point.
+        </div>
+      )}
+    </div>
   )
 }

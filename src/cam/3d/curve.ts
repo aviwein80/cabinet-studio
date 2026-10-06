@@ -37,7 +37,7 @@ export interface DrivePath {
 /** What a drive needs from outside the model: plan paths (curves, toolpath) or a surface's points and layout (parameter). */
 export interface CurveInputs {
   paths?: DrivePath[]
-  grid?: { positions: ArrayLike<number>; layout: MeshGrid }
+  grid?: { positions: ArrayLike<number>; layout: MeshGrid; inside?: ArrayLike<number> }
 }
 
 /** Most copies to a side of a drive when they are not counted (as many as the boundary holds). */
@@ -126,8 +126,8 @@ export function curveFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, region
       break
     }
     case 'parameter': {
-      if (!inputs.grid) return none('Passes along a surface\'s rows or columns need a surface made in the app (Surfaces: revolve, ruled, loft, sweep, extrude, or a solid face untrimmed). This model has no rows and columns.')
-      passes = gridLines(inputs.grid.positions, inputs.grid.layout, drive.along ?? 'rows', step, cutter, s).map((p) => [p])
+      if (!inputs.grid) return none('Passes along a surface\'s rows or columns need a surface made in the app (Surfaces: revolve, ruled, loft, sweep, extrude, a solid face untrimmed, or a solid face\'s rows and columns). This model has no rows and columns.')
+      passes = gridPasses(inputs.grid.positions, inputs.grid.layout, drive.along ?? 'rows', step, cutter, s, inputs.grid.inside).filter((p) => p.length)
       if (!passes.length) return none('The surface has no rows and columns to follow.')
       break
     }
@@ -558,9 +558,15 @@ export function toolpathRuns(moves: Move[]): DrivePath[] {
  * Lines along a surface's rows (or columns), spaced across it so that neighbouring lines are never
  * more than `step` apart on the surface (between corresponding points). Each comes back as the
  * plan path where the tool touches the line: moved off it along the surface normal (facing up) by
- * the tool's rounded end and out by its flat bottom.
+ * the tool's rounded end and out by its flat bottom. `inside` (one flag per grid point): only these
+ * points belong to the surface (a trimmed face); a line is cut where it leaves them.
  */
-export function gridLines(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | 'columns', step: number, cutter: Cutter3D, s: number): DrivePath[] {
+export function gridLines(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | 'columns', step: number, cutter: Cutter3D, s: number, inside?: ArrayLike<number>): DrivePath[] {
+  return gridPasses(pos, g, along, step, cutter, s, inside).flat()
+}
+
+/** `gridLines`, each line as one pass (in pieces where it leaves a trimmed face). */
+export function gridPasses(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | 'columns', step: number, cutter: Cutter3D, s: number, inside?: ArrayLike<number>): DrivePath[][] {
   const rowsWay = along === 'rows'
   const na = rowsWay ? g.rows : g.cols
   const nb = rowsWay ? g.cols : g.rows
@@ -587,8 +593,14 @@ export function gridLines(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | '
   const count = closedAcross ? Math.max(1, n) : n + 1
   const rc = cutter.kind === 'torus' ? cutter.rc + s : 0
   const flat = cutter.kind === 'torus' ? cutter.R - cutter.rc : 0
-  // each line's points and the surface normal there, the way the facets face (rows x columns)
-  const lines: { pts: V3[]; nrm: V3[] }[] = []
+  // each line's points and the surface normal there, the way the facets face (rows x columns),
+  // and whether each point is on the (trimmed) surface
+  const lines: { pts: V3[]; nrm: V3[]; on: boolean[] }[] = []
+  const isIn = (a: number, b: number) => {
+    if (!inside) return true
+    const [i, j] = rowsWay ? [a, b] : [b, a]
+    return !!inside[i * g.cols + j]
+  }
   let up = 0
   for (let k = 0; k < count; k++) {
     const sk = n > 0 ? (total * k) / n : 0
@@ -611,10 +623,12 @@ export function gridLines(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | '
     }
     const line: V3[] = []
     const across: V3[] = []
+    const on: boolean[] = []
     for (let b = 0; b < nb; b++) {
       const p = get(a, b)
       const q = get(a1, b)
       line.push(addv(p, mul(sub(q, p), f)))
+      on.push((f >= 1 - 1e-12 || isIn(a, b)) && (f <= 1e-12 || isIn(a1, b)))
       const [u, v] = [unit(acrossAt(a, b)), unit(acrossAt(a1, b))]
       const w = addv(mul(u, 1 - f), mul(v, f))
       across.push(norm(w) > 1e-12 ? w : sub(q, p))
@@ -628,12 +642,12 @@ export function gridLines(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | '
       nrm.push(n)
       up += c[2]
     }
-    lines.push({ pts: line, nrm })
+    lines.push({ pts: line, nrm, on })
   }
   // the tool works on the side facing up (a surface made the other way round is turned over)
   const sgn = up < 0 ? -1 : 1
-  return lines.map(({ pts, nrm }) => ({
-    pts: pts.map((q, b) => {
+  return lines.map(({ pts, nrm, on }) => {
+    const plan = pts.map((q, b) => {
       let n = mul(nrm[b], sgn)
       if (norm(n) === 0) n = [0, 0, 1]
       const h = Math.hypot(n[0], n[1])
@@ -641,9 +655,25 @@ export function gridLines(pos: ArrayLike<number>, g: MeshGrid, along: 'rows' | '
       // nearly level ground the flat bottom sits over the line: it touches anywhere under it)
       const off = rc + (h > 1e-12 ? (flat * Math.min(1, h / 0.1)) / h : 0)
       return { x: q[0] + n[0] * off, y: q[1] + n[1] * off }
-    }),
-    closed: closedAlong,
-  }))
+    })
+    if (on.every(Boolean)) return [{ pts: plan, closed: closedAlong }]
+    // the pieces on the surface (a closed line that leaves it is no longer closed: it starts after a gap)
+    const pieces: DrivePath[] = []
+    const n = plan.length
+    const start = closedAlong ? on.findIndex((v, b) => v && !on[(b + n - 1) % n]) : 0
+    let cur: P[] = []
+    for (let k = 0; k < n; k++) {
+      const b = (start + k) % n
+      if (on[b]) cur.push(plan[b])
+      else {
+        if (cur.length >= 2) pieces.push({ pts: cur, closed: false })
+        cur = []
+      }
+    }
+    if (closedAlong && cur.length && on[start] && on[(start + n - 1) % n]) cur.push(plan[start])
+    if (cur.length >= 2) pieces.push({ pts: cur, closed: false })
+    return pieces
+  })
 }
 
 // ---------------------------------------------------------------------------------------------

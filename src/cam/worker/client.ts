@@ -146,6 +146,11 @@ export function solidCompute(): ComputeClient {
   return solid
 }
 
+/** Absolute URL of the folder holding the OpenCascade B-rep kernel's files (M3.1g, next to the app's page). */
+export function brepVendorUrl(): string | undefined {
+  return typeof document !== 'undefined' ? new URL('vendor/opencascade-brep/', document.baseURI).href : undefined
+}
+
 /** Absolute URL of the folder holding the OpenCascade reader files (next to the app's page). */
 export function occtVendorUrl(): string | undefined {
   return typeof document !== 'undefined' ? new URL('vendor/occt-import-js/', document.baseURI).href : undefined

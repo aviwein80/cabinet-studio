@@ -20,6 +20,9 @@ const csp = (): Plugin => ({
  */
 const VENDOR: { dir: string; from: string; files: string[] }[] = [
   { dir: 'vendor/occt-import-js', from: 'node_modules/occt-import-js/dist', files: ['occt-import-js.js', 'occt-import-js.wasm', 'license.occt-import-js.txt', 'license.occt.txt'] },
+  // the OpenCascade B-rep kernel (M3.1g, LGPL-2.1): a face's true surface, loaded in the solid worker on first use
+  { dir: 'vendor/opencascade-brep', from: 'node_modules/replicad-opencascadejs/dist', files: ['replicad_single.js', 'replicad_single.wasm'] },
+  { dir: 'vendor/opencascade-brep', from: 'node_modules/replicad-opencascadejs', files: ['LICENSE'] },
   // the plugin sandbox (M2.10, MIT): its WebAssembly as a separate file, loaded on first use
   { dir: 'vendor/quickjs', from: 'node_modules/@jitl/quickjs-wasmfile-release-sync/dist', files: ['emscripten-module.wasm'] },
   { dir: 'vendor/quickjs', from: 'node_modules/@jitl/quickjs-wasmfile-release-sync', files: ['LICENSE'] },

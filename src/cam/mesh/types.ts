@@ -22,6 +22,11 @@ export interface MeshGrid {
   cols: number
   closedRows: boolean
   closedCols: boolean
+  /**
+   * A trimmed face's grid (M3.1g): some points lie on the surface beyond the face's edges; only the
+   * points its facets use are on the face, and lines along the grid stop where they leave them.
+   */
+  trimmed?: boolean
 }
 
 export interface Box3 {

@@ -120,9 +120,10 @@ export interface ModelRef {
   /**
    * Surfaces made in the app (NEW-19) whose facets are rows and columns of points: the layout of
    * the stored mesh `blob` (row after row, `cols` points each), so passes can follow its rows or
-   * columns (curve-driven finishing). Ignored once the blob changes.
+   * columns (curve-driven finishing). Ignored once the blob changes. `trimmed`: a solid face's rows
+   * and columns (M3.1g), whose points beyond the face's edges are left out of its facets.
    */
-  grid?: { blob: string; rows: number; cols: number; closedRows: boolean; closedCols: boolean }
+  grid?: { blob: string; rows: number; cols: number; closedRows: boolean; closedCols: boolean; trimmed?: boolean }
   /**
    * Set when the model is a relief (ART-01): the stored mesh is already made to its size (X and Y
    * from 0, highest point at Z 0). Operations on it stay inside its outline, and the panel face

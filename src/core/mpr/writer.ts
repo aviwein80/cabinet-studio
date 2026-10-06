@@ -182,7 +182,8 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.line('<105 \\Konturfraesen\\')
   w.kv('EA', `${n}:0`)
   w.kv('MDA', approach)
-  w.kv('RK', cw ? 'WRKL' : 'WRKR')
+  // shared-line cuts (M2.8) are tool-centre paths: no radius compensation
+  w.kv('RK', c.centre ? 'NOWRK' : cw ? 'WRKL' : 'WRKR')
   w.kv('EE', `${n}:${c.segs ? splitMajorArcs(c.segs).length : c.points.length - 1}`)
   w.kv('MDE', `${approach}_AB`)
   w.kv('EM', machine.contour.ramp ? 1 : 0)
@@ -198,7 +199,7 @@ function writeContourMacro(w: Lines, n: number, c: Contour, machine: MachineProf
   w.kv('ZSTART', 0)
   w.kv('ANZZST', 0)
   w.kv('KAT', 'Fraesen')
-  w.kv('MNM', mprText(`P${c.partNo} ${c.skin ? 'onion-skin pass' : 'cut-out'}`))
+  w.kv('MNM', mprText(`P${c.partNo} ${c.skin ? 'onion-skin pass' : c.centre ? `shared cut${c.shared?.length ? ' with ' + c.shared.length + ' part(s)' : ''}` : 'cut-out'}`))
 }
 
 /** Native macros for one custom-part intent (already in program coordinates). */
@@ -363,6 +364,7 @@ export function writeSheetMpr(prog: SheetProgram, ctx: MprContext): string {
     const c = contours.find((cc) => cc.partUid === pl.uid)
     if (c) w.kv('KM', mprText(`P${c.partNo} at X${fmt(pl.x)} Y${fmt(pl.y)} ${fmt(pl.dx)}x${fmt(pl.dy)}${pl.rotated ? ' rotated' : ''}`))
   }
+  if (prog.shared?.written) w.kv('KM', mprText(`Shared-line cutting: ${prog.shared.plan.parts.length} parts, tool-centre paths (no radius compensation)`))
   if (prog.skipped.length) w.kv('KM', mprText(`${prog.skipped.length} horizontal holes NOT in this program - drill off-machine`))
   w.kv('KAT', 'Kommentar')
   w.kv('MNM', 'Kommentar')

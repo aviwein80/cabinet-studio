@@ -15,9 +15,10 @@ import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 import { MachineModelSection } from './machine/MachineModelSection'
 import { CutDefaultsSection } from './machine/CutDefaultsSection'
-import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
+import { ConfigureBadge, UnconfirmedList, ValueBadges } from '@/components/Configure'
 import { useConfigureTarget } from '@/components/configureFocus'
 import { confirmKey, machineUnconfirmed, toolUnconfirmed } from '@/core/confirm'
+import { nestUnconfirmed } from '@/core/nestConfirm'
 import { ToolDialog } from './machine/ToolDialog'
 import { ToolGrid } from './machine/ToolGrid'
 import { ToolSheetDialog } from './machine/ToolSheetDialog'
@@ -50,6 +51,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camMore25d', 'More 2.5D machining', 'Saw cuts with run-out, angle and joining; facing; chamfers; cuts between curves and along 3D curves; hand-drawn toolpaths; toolpath edits; edge work with a rotating aggregate.'],
   ['camCadTools', 'CAD and tool additions', 'Turn-by-turn sketch, dimensions and print to scale, geometry queries, fill with holes, panelling, image trace; holder and aggregate library, tool grid, tool data compare and spreadsheet import/export.'],
   ['nestAdditions', 'Nesting additions', 'Areas and costs per sheet and part; shared-line and bridged cutting plans; flip-side sheets with the sheet backplot; moving parts by hand on a sheet. Screens only: each new kind of program output has its own switch, off.'],
+  ['nestSharedOutput', 'Write shared-line cuts to MPR', 'Shared-line cutting writes one tool-centre pass between neighbouring parts instead of a cut-out round each. Off until proven on the machine: while off, the plan is shown and measured, and every part keeps its own cut-out.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
   ['cam25dMprOutput', 'Write facing, chamfers and saw cuts to MPR', 'The newer 2.5D operations that have a woodWOP form, as contour-milling passes and saw grooves (also needs the custom-part switch). Off until proven on the machine. Saw grooves also need a saw unit in the machine model. Angled saw cuts, curve cuts, edge work with an aggregate and edited toolpaths are never written.'],
@@ -64,7 +66,7 @@ const TOOL_COLS: Column<Tool>[] = [
 ]
 
 export function MachinePage() {
-  const { data, updateMachine, updateSettings, resetMachine } = useStore()
+  const { data, updateMachine, updateSettings, resetMachine, mutate } = useStore()
   const [importOpen, setImportOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [editTool, setEditTool] = useState<string | null>(null)
@@ -72,7 +74,7 @@ export function MachinePage() {
   const [compareOpen, setCompareOpen] = useState(false)
   // a "Configure" badge elsewhere asked for a field on this page: open its tool, then focus it
   const cadTools = featuresOf(data?.settings).camCadTools
-  useConfigureTarget(['tool', 'holder', 'aggregate', 'model', 'default'], (t) => {
+  useConfigureTarget(['tool', 'holder', 'aggregate', 'model', 'default', 'nest'], (t) => {
     if (t.kind === 'tool') setEditTool(t.toolId)
     // with the holder library on this page, the holder's own card takes the focus
     if (t.kind === 'holder' && !cadTools) {
@@ -84,7 +86,12 @@ export function MachinePage() {
   const m = data.machine
   const s = data.settings
   const routers = m.tools.filter((t) => t.type === 'router')
-  const unconfirmed = machineUnconfirmed(m)
+  const nestItems = nestUnconfirmed(s, m)
+  const unconfirmed = [...machineUnconfirmed(m), ...nestItems]
+  const nestBadge = (k: string) => {
+    const u = nestItems.find((x) => x.key === `nest:${k}`)
+    return u ? <ValueBadges item={u} /> : null
+  }
   const feat = featuresOf(s)
   const ns = nestSettingsOf(s)
 
@@ -295,6 +302,39 @@ export function MachinePage() {
                 <NumField label="Min length" value={ns.offcutMinLength} min={0} max={3000} onChange={(v) => updateSettings((x) => (x.nesting.offcutMinLength = v))} />
                 <NumField label="Min width" value={ns.offcutMinWidth} min={0} max={1500} onChange={(v) => updateSettings((x) => (x.nesting.offcutMinWidth = v))} />
               </div>
+              {feat.nestAdditions && (
+                <>
+                  <SwitchField
+                    label="Shared-line cutting"
+                    checked={ns.sharedLines}
+                    onChange={(v) => updateSettings((x) => (x.nesting.sharedLines = v))}
+                    hint={`Rectangular parts nest exactly one cut-out tool diameter apart (extra spacing is not used) and the line between two neighbours is cut once. Program output has its own switch below (${feat.nestSharedOutput ? 'on' : 'off'}).`}
+                  />
+                  {ns.sharedLines && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumField
+                        label="Own cut-out under"
+                        suffix="m²"
+                        value={Math.round(ns.sharedMinArea / 1e4) / 100}
+                        min={0}
+                        max={3}
+                        step={0.01}
+                        cfg="nest:sharedSmall"
+                        badge={nestBadge('sharedSmall')}
+                        onChange={(v) => mutate((d) => ((d.settings.nesting.sharedMinArea = v * 1e6), confirmKey(d.machine, 'nest:sharedSmall')))}
+                        hint="Hold-down: smaller parts keep their own cut-out."
+                      />
+                      <NumField
+                        label="Or narrower than"
+                        value={ns.sharedMinSide}
+                        min={0}
+                        max={1000}
+                        onChange={(v) => mutate((d) => ((d.settings.nesting.sharedMinSide = v), confirmKey(d.machine, 'nest:sharedSmall')))}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
               {feat.nestAdditions && <TextField label="Currency symbol" value={s.currency ?? '$'} onChange={(v) => updateSettings((x) => (x.currency = v.slice(0, 4)))} hint="For material costs. Prices are entered per material (Library, Materials, Edit)." />}
               <SwitchField label="Use stock offcuts first" checked={ns.useOffcuts} onChange={(v) => updateSettings((x) => (x.nesting.useOffcuts = v))} hint="Saved offcuts of the job's materials are filled before full sheets. Manage them under Library, Offcuts." />
             </Section>

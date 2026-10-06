@@ -13,6 +13,7 @@ import { featuresOf } from './features'
 import type { Library, MachineProfile, ShopSettings } from './types'
 import { machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed } from './confirm'
 import { resolveTool } from '@/cam/ops'
+import { pathToRegion, uncutLength } from './sheetCuts'
 
 export type Severity = 'error' | 'warning' | 'info'
 
@@ -248,6 +249,46 @@ export function validateJob(
           if (op.points.some((p) => !inSheet(p.x, p.y)))
             add({ ...ref, severity: 'error', code: 'OUT_OF_SHEET', message: `#${op.partNo}: outline leaves the sheet.` })
           break
+        }
+      }
+    }
+
+    // M2.8 shared-line cutting: the tool-centre paths written must stay a tool radius clear of
+    // every part on the sheet, and must cut every edge of every part in the plan (checked here on
+    // the program's own paths, independently of the planner)
+    if (prog.shared) {
+      const { plan, written, diameter } = prog.shared
+      const r = diameter / 2
+      const pct = plan.separateLength > 0 ? Math.round((1 - plan.planLength / plan.separateLength) * 1000) / 10 : 0
+      const m = (mm: number) => `${(mm / 1000).toFixed(1)} m`
+      add({
+        severity: 'info',
+        code: 'SHARED_LINES',
+        sheet: sheetNo,
+        message: `Shared-line cutting: ${plan.parts.length} part(s) cut with ${m(plan.planLength)} of cutting instead of ${m(plan.separateLength)} one by one (${pct} % less)${plan.own.length ? `; ${plan.own.length} part(s) keep their own cut-out` : ''}. ${written ? 'Written as tool-centre paths: simulate in woodWOP.' : 'Not written: the switch "Write shared-line cuts to MPR" is off, so each part gets its own cut-out.'}`,
+      })
+      if (written) {
+        const centre = prog.ops.filter((o): o is Extract<typeof o, { kind: 'contour' }> => o.kind === 'contour' && !!o.centre)
+        const outlines = sh.placements.map((pl) => {
+          const inst = byUid.get(pl.uid)
+          if (!inst) return { pl, ring: [] }
+          const { pt } = placementTransform(inst, pl)
+          const o = inst.outline.length >= 3 ? inst.outline : [{ x: 0, y: 0 }, { x: inst.cutLength, y: 0 }, { x: inst.cutLength, y: inst.cutWidth }, { x: 0, y: inst.cutWidth }]
+          return { pl, ring: o.map((q) => pt(q.x, q.y)) }
+        })
+        for (const c of centre)
+          for (const { pl, ring } of outlines) {
+            if (ring.length < 3) continue
+            const d = pathToRegion(c.points, ring)
+            if (d < r - 0.001)
+              add({ severity: 'error', code: 'SHARED_GOUGE', sheet: sheetNo, partNo: byUid.get(pl.uid)?.no, partUid: pl.uid, message: `Shared cut ${c.opId} comes ${fmt(d)} mm from part #${byUid.get(pl.uid)?.no}; the tool centre must stay ${fmt(r)} mm away.` })
+          }
+        for (const uid of plan.parts) {
+          const pl = sh.placements.find((p) => p.uid === uid)
+          if (!pl) continue
+          const miss = uncutLength(pl, r, centre.map((c) => ({ pts: c.points })))
+          if (miss > 0.01)
+            add({ severity: 'error', code: 'SHARED_UNCUT', sheet: sheetNo, partNo: byUid.get(uid)?.no, partUid: uid, message: `Part #${byUid.get(uid)?.no}: ${fmt(miss)} mm of its edge is not cut by the shared-line paths.` })
         }
       }
     }

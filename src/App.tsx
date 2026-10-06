@@ -1,4 +1,5 @@
 import { machineUnconfirmed } from '@/core/confirm'
+import { nestUnconfirmed } from '@/core/nestConfirm'
 import { Boxes, Cpu, FolderKanban, Inbox, Library as LibraryIcon, Loader2, PenTool, Settings, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Toaster } from '@/components/ui/sonner'
@@ -42,7 +43,7 @@ export default function App() {
         <Loader2 className="size-4 animate-spin" /> Loading shop data...
       </div>
     )
-  const unconfirmedCount = machineUnconfirmed(data.machine).length
+  const unconfirmedCount = machineUnconfirmed(data.machine).length + nestUnconfirmed(data.settings, data.machine).length
 
   return (
     <TooltipProvider delayDuration={300}>

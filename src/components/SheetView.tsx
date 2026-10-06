@@ -13,6 +13,7 @@ export function SheetView({
   selectedUid,
   onSelect,
   highlightUids,
+  cutPaths,
 }: {
   program: SheetProgram
   instances: Map<string, PartInstance>
@@ -22,6 +23,8 @@ export function SheetView({
   selectedUid?: string | null
   onSelect?: (uid: string | null) => void
   highlightUids?: Set<string>
+  /** Tool-centre cutting paths to draw over the sheet (shared-line plan, M2.8). */
+  cutPaths?: { pts: { x: number; y: number }[]; closed: boolean }[]
 }) {
   const s = program.sheet
   const cabinets = [...new Set(s.placements.map((p) => instances.get(p.uid)?.cabinetId ?? ''))]
@@ -98,6 +101,16 @@ export function SheetView({
               )}
             </g>
           ))}
+        {cutPaths && (
+          <g fill="none" stroke="#c2410c" strokeWidth={5} strokeLinejoin="round" pointerEvents="none" data-testid="cut-plan">
+            {cutPaths.map((p, i) => (
+              <polyline key={i} points={p.pts.map((q) => `${q.x},${q.y}`).join(' ')} strokeDasharray={p.closed ? undefined : '22 8'} />
+            ))}
+            {cutPaths.map((p, i) => (
+              <circle key={`s${i}`} cx={p.pts[0].x} cy={p.pts[0].y} r={9} fill="#c2410c" />
+            ))}
+          </g>
+        )}
         <g stroke="#dc2626" strokeWidth={4}>
           <line x1={0} y1={0} x2={120} y2={0} />
           <line x1={0} y1={0} x2={0} y2={120} />

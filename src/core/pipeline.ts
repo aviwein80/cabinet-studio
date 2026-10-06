@@ -3,7 +3,7 @@ import type { CancelCheck } from './cancel'
 import { generatePart, type Toolpath } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
-import { buildAllPrograms, nestJob, nestSettingsOf, type JobNest, type SheetProgram } from './machining'
+import { buildAllPrograms, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeKey, Job } from './types'
@@ -65,6 +65,7 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
     cam25dOutput: featuresOf(settings).cam25dMprOutput,
     ...(opts.paths3d ? { paths3d: opts.paths3d } : {}),
     ...(ns.onionSkin > 0 ? { onionSkin: { thickness: ns.onionSkin, maxArea: ns.onionSkinMaxArea } } : {}),
+    ...(sharedLinesOn(settings) ? { sharedLines: { minArea: ns.sharedMinArea, minSide: ns.sharedMinSide, write: featuresOf(settings).nestSharedOutput } } : {}),
   })
   const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)
   for (const w of expanded.warnings) issues.unshift({ severity: 'warning', code: 'CONSTRUCTION', message: w })

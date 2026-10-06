@@ -7,6 +7,7 @@ import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
+import { type SharedPlan, sharedLinePlan } from './sheetCuts'
 import type { HDrillDir, Job, Library, MachineProfile, NestSettings, OpPurpose, ShopSettings, Tool, Vec2 } from './types'
 
 export interface JobNest {
@@ -31,6 +32,10 @@ export function partSpacing(machine: MachineProfile, settings: ShopSettings) {
 }
 
 export const NEST_DEFAULTS: Required<Omit<NestSettings, 'edgeTrim' | 'extraSpacing' | 'allowRotation' | 'premill'>> = {
+  sharedLines: false,
+  // PLACEHOLDER hold-down limits: the export checker's small-part warning (0.05 m², 120 mm side)
+  sharedMinArea: 50_000,
+  sharedMinSide: 120,
   engine: 'auto',
   nestInApertures: true,
   keepKitsTogether: false,
@@ -45,9 +50,13 @@ export const NEST_DEFAULTS: Required<Omit<NestSettings, 'edgeTrim' | 'extraSpaci
 
 export const nestSettingsOf = (settings: ShopSettings) => ({ ...NEST_DEFAULTS, ...settings.nesting })
 
+/** Shared-line cutting is on (it needs the nesting additions screens too). */
+export const sharedLinesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).sharedLines && featuresOf(settings).nestAdditions
+
 export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings, isCancelled?: CancelCheck): JobNest {
-  const spacing = partSpacing(machine, settings)
   const ns = nestSettingsOf(settings)
+  // shared lines: neighbours exactly one tool diameter apart, so their tool-centre lines coincide
+  const spacing = sharedLinesOn(settings) && cutoutTool(machine) ? cutoutTool(machine)!.diameter : partSpacing(machine, settings)
   const byMaterial = new Map<string, PartInstance[]>()
   for (const inst of instances) {
     const list = byMaterial.get(inst.materialId) ?? []
@@ -174,6 +183,12 @@ export interface Contour extends Base {
   segs?: Seg[]
   /** Final pass through an onion skin left by the first cut-out pass. */
   skin?: boolean
+  /** The points are the tool centre (no radius compensation): shared-line cuts (M2.8). */
+  centre?: boolean
+  /** Open path (not repeated back to its start). */
+  open?: boolean
+  /** Other parts whose edge this cut also makes. */
+  shared?: string[]
 }
 
 /** A custom-part operation in sheet coordinates, written as native woodWOP macros. */
@@ -220,6 +235,8 @@ export interface SheetProgram {
     /** Enabled edge-work operations with an aggregate (for the aggregate check). */
     aggregateOps?: number
   }[]
+  /** Shared-line cutting plan for this sheet (M2.8), and whether it replaced the separate cut-outs. */
+  shared?: { plan: SharedPlan; written: boolean; diameter: number }
 }
 
 export interface ProgramOptions {
@@ -233,6 +250,8 @@ export interface ProgramOptions {
   paths3d?: ReadonlyMap<string, Toolpath>
   /** Small parts: the cut-out leaves `thickness` and a last pass at the end of the sheet cuts it. */
   onionSkin?: { thickness: number; maxArea: number }
+  /** Shared-line cutting (M2.8): plan every sheet; `write` replaces the separate cut-outs with it. */
+  sharedLines?: { minArea: number; minSide: number; write: boolean }
 }
 
 /** Collision messages for a custom part's toolpaths, worked out once per part, machine and toolpath set. */
@@ -501,7 +520,20 @@ export function buildSheetProgram(
       ? sheet.placements.filter((p) => !inner.has(p.uid) && !sheet.placements.some((q) => q.inside === p.uid) && partAreaOf(instances.get(p.uid)) < skin.maxArea).map((p) => p.uid)
       : [],
   )
-  for (const c of outer) ops.push(skinned.has(c.partUid) ? { ...c, za: r3(skin!.thickness) } : c)
+  // M2.8 shared-line cutting: plan it; when written, the plan's tool-centre paths replace the
+  // separate cut-outs of the parts in it, each part's paths at its own turn in the cut order
+  const sl = opts.sharedLines && cutter ? opts.sharedLines : null
+  const plan = sl ? sharedLinePlan(sheet, instances, { diameter: cutter!.diameter, minArea: sl.minArea, minSide: sl.minSide, skinned, clockwise: machine.contour.direction === 'climb-cw' }) : null
+  const inPlan = new Set(plan && sl!.write ? plan.parts : [])
+  for (const c of outer) {
+    if (inPlan.has(c.partUid)) {
+      for (const [k, p] of plan!.paths.entries())
+        if (p.partUid === c.partUid)
+          ops.push({ ...c, opId: `shared-${k + 1}`, points: p.pts, segs: undefined, centre: true, ...(p.closed ? {} : { open: true }), ...(p.shared.length ? { shared: p.shared } : {}) })
+      continue
+    }
+    ops.push(skinned.has(c.partUid) ? { ...c, za: r3(skin!.thickness) } : c)
+  }
   for (const c of outer) if (skinned.has(c.partUid)) ops.push({ ...c, skin: true })
   return {
     name: sheetProgramName(job, sheet.index, materialCode),
@@ -510,6 +542,7 @@ export function buildSheetProgram(
     ops,
     skipped: machine.hasHorizontalDrillUnit ? [] : hdrills,
     ...(custom.length ? { custom } : {}),
+    ...(plan && plan.parts.length ? { shared: { plan, written: inPlan.size > 0, diameter: cutter!.diameter } } : {}),
   }
 }
 

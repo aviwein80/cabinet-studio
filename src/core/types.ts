@@ -521,6 +521,14 @@ export interface NestSettings {
   offcutMinWidth?: number
   /** Fill saved offcuts of the same material before starting full sheets. */
   useOffcuts?: boolean
+  /**
+   * Shared-line cutting (M2.8, NST-04): rectangular parts nest exactly one cut-out tool diameter
+   * apart and the line between neighbours is cut once. Written to MPR only with its own switch.
+   */
+  sharedLines?: boolean
+  /** Parts under this area (mm²) or narrower than `sharedMinSide` keep their own cut-out (hold-down). */
+  sharedMinArea?: number
+  sharedMinSide?: number
 }
 
 export type NestEngine = 'rect' | 'shape' | 'auto'
@@ -618,6 +626,8 @@ export interface FeatureFlags {
    * has its own switch below, off).
    */
   nestAdditions: boolean
+  /** Write the shared-line cutting plan instead of separate cut-outs. Off until proven on the machine. */
+  nestSharedOutput: boolean
 }
 
 export interface Library {

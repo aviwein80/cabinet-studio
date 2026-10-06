@@ -73,13 +73,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.7c Geometry queries, fill with holes, panelling | **Done** (October 2026) | See below. |
 | M2.7d Image trace, screenshots, docs | **Done** (October 2026) | See below. M2.7 complete. |
 | M2.8a Area and cost (NEW-20) | **Done** (October 2026) | See below. |
-| M2.8b - M2.8e | In progress | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
+| M2.8b Shared-line cutting (NST-04) | **Done** (October 2026) | See below. Output switch off. |
+| M2.8c - M2.8e | In progress | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
 | M2.9 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -1200,6 +1201,35 @@ lines, bridges, flip-side sheets) gets its own switch, **off**.
 | Real job | same | Sample job at $25/m²: every sheet adds up, shares add up to sheets less remnants |
 
 Sample job output unchanged (the new CSV is a separate export).
+
+## M2.8b shared-line cutting: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NST-04 | "Shared-line cutting" (Machine page, Nesting): rectangular parts nest exactly one cut-out tool diameter apart (extra spacing is not used), so the tool-centre lines of neighbours lie on top of each other. The plan walks the parts in the sheet's cut order; for each it cuts what is still uncut of the rectangle one tool radius outside it, so every line is cut once, collinear pieces join into one straight cut (one pass along a whole row of parts) and pieces that meet round a corner join into one path. Each part is cut free at (or before) its own turn | `sharedLinePlan` in `src/core/sheetCuts.ts`, `nestJob` / `buildSheetProgram` in `machining.ts` |
+| Hold-down | Parts under 0.05 m² or narrower than 120 mm (PLACEHOLDER limits = the export checker's small-part rule, Configure badge), onion-skinned parts, shaped parts, custom parts and parts in or around cut-outs keep their own cut-out (and skin pass) | `ownReason`, `nestConfirm.ts` |
+| Output | Switch "Write shared-line cuts to MPR" (`nestSharedOutput`), **off**. Off: the plan is drawn on the sheet (Nesting tab, "Shared lines", with the saving) and listed by the checker; every part keeps its own cut-out. On: each shared path is a `<105>` contour along the tool centre with `RK="NOWRK"` (no radius compensation), open paths end where they end | `writer.ts`, `SheetView.tsx`, `JobPage.tsx` |
+| Checks | Export checker, on the program's own paths (independent of the planner): `SHARED_GOUGE` (a path closer than the tool radius to any part on the sheet), `SHARED_UNCUT` (an edge of a planned part not cut); `SHARED_LINES` info with the measured saving | `validator.ts`, `pathToRegion`, `uncutLength` |
+| Badges | "Shared lines: smallest part that shares lines" while shared lines are on and unconfirmed (Machine page banner and field, sidebar count); typing a value confirms it; the plan follows any change at once (sheet programs are rebuilt from the settings) | `nestUnconfirmed` |
+
+### Acceptance (shared lines cut the measured cut length by at least 15 % on a rectangle-heavy job, part sizes unchanged)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Cut length, measured on the programs written both ways | `tests/nest-shared.test.ts` (`programCutLength`: tool-centre length of every cut-out pass; compensated outlines grown by the radius with round corners) | Sample kitchen (3 sheets): 92.70 m → 75.77 m, **18.3 % less**. Eight base and wall cabinets (5 sheets): 152.45 m → 114.17 m, **25.1 % less** |
+| Part sizes and places unchanged | same | Same nest, same placements, same cut sizes with the output on or off; same export-checker errors |
+| No cut into a part | same (independent check: every path sampled every 0.5 mm against every part rectangle) | Closest approach exactly the tool radius, 6.000 mm |
+| Every edge cut | same (every 0.5 mm round each part's tool-centre rectangle lies on a path) | Nothing uncovered |
+| By hand | same | Two 500 x 300 parts: 1648 + 1336 = 2984 mm against 2 x (1600 + 12π); 3 x 2 grid: 3 x 1836 + 4 x 824 = 8804 mm |
+| Checker catches mistakes | same | A path moved 3 mm into the parts: `SHARED_GOUGE`; a path removed: `SHARED_UNCUT` |
+| Off = unchanged | same | With shared lines off, nest and programs identical; all goldens and the sample job unchanged |
+
+### Limits recorded
+
+- **Only rectangles share lines.** Shaped and custom parts keep their own cut-outs.
+- **One side of each shared line is cut climb, the other conventional** (a single pass between two parts).
+- **Corners of the plan are square at the tool centre** (the part corners stay sharp); a part cut on its own goes round its corners in arcs. The measured lengths include this.
+- **Not machine-proven.** The `NOWRK` contour form and the vertical (or ramped) entry on the line are as the MPR 4.x description gives them; output stays off until a sheet is checked in woodWOP.
 
 ### Test-suite note
 

@@ -346,7 +346,7 @@ export interface SavedSheet {
 export type ToolType = 'router' | 'drill-vertical' | 'drill-horizontal' | 'saw'
 /** Cutting-edge shape, used by custom-part machining. Cabinet machining only reads `type`. */
 /** `lollipop`: a ball (the diameter) on a narrower neck (`shankDiameter`), for undercuts (M3.1). */
-export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile' | 'lollipop'
+export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile' | 'lollipop' | 'thread'
 
 export interface Tool {
   id: string
@@ -744,6 +744,12 @@ export interface FeatureFlags {
    * (true 3D output stays off until the format is confirmed with a program from the machine).
    */
   cam3dFinishMore: boolean
+  /**
+   * Small extras (M3.2): thread milling, fold / flatten / wrap, hatching, detail views and line
+   * types, the stroke-font editor, rapid surfaces (screens only; thread milling is never written
+   * to woodWOP).
+   */
+  camExtras: boolean
 }
 
 export interface Library {

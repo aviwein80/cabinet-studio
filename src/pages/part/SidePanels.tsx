@@ -4,7 +4,8 @@ import { moveToLayer, setArcRadius, toggleArc, insertNode, deleteNode, nodesOf }
 import { entityContours, fitWorkVolume, partOutline } from '@/cam/doc'
 import { evaluate, resolveVariables } from '@/cam/expr'
 import { area, boxOf, contourLength, radius } from '@/cam/geom'
-import type { CamPart, Entity, FaceId, Layer } from '@/cam/types'
+import type { CamPart, Entity, FaceId, Layer, LineType } from '@/cam/types'
+import { LINE_TYPES } from '@/cam/annotate'
 import { NONE, NumField, SelectField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { deletePoint3d, insertPoint3d, movePoint3d, poly3dLength } from '@/cam/mesh/poly3d'
@@ -29,6 +30,19 @@ export function LayersPanel({ part, current, setCurrent, sel, onChange }: { part
           <input type="color" aria-label={`${l.name} colour`} value={l.color} onChange={(e) => setLayer(l.id, { color: e.target.value })} className="size-4 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0" />
           <input className="min-w-0 flex-1 bg-transparent text-stone-100 outline-none focus:bg-white/5" value={l.name} onChange={(e) => setLayer(l.id, { name: e.target.value })} onFocus={() => setCurrent(l.id)} />
           <span className="w-6 text-right text-[10px] text-stone-500 tabular-nums">{count(l.id)}</span>
+          <select
+            aria-label={`${l.name} line type`}
+            title="Line type, on screen and in prints"
+            className="w-14 rounded border border-white/10 bg-black/30 px-0.5 text-[10px] text-stone-300"
+            value={l.lineType ?? 'solid'}
+            onChange={(e) => setLayer(l.id, { lineType: e.target.value === 'solid' ? undefined : (e.target.value as LineType) })}
+          >
+            {(Object.keys(LINE_TYPES) as LineType[]).map((t) => (
+              <option key={t} value={t}>
+                {LINE_TYPES[t].label}
+              </option>
+            ))}
+          </select>
           <button aria-label="Visible" className="text-stone-400 hover:text-white" onClick={() => setLayer(l.id, { visible: !l.visible })}>
             {l.visible ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
           </button>
@@ -62,7 +76,7 @@ export function LayersPanel({ part, current, setCurrent, sel, onChange }: { part
           Move selection here
         </Button>
       </div>
-      <p className="px-3 pb-3 text-[11px] leading-snug text-stone-500">New shapes go on the highlighted layer. Construction layers are drawn dashed and never machined.</p>
+      <p className="px-3 pb-3 text-[11px] leading-snug text-stone-500">New shapes go on the highlighted layer. Construction layers are drawn dashed and never machined. A layer's line type shows on screen and in prints (dashes in paper mm).</p>
     </div>
   )
 }

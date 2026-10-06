@@ -1,0 +1,27 @@
+{
+ "op": "Thread milling",
+ "kind": "thread",
+ "tool": 109,
+ "moves": {
+  "rapid": 6,
+  "feed": 2,
+  "arc": 36,
+  "drill": 0,
+  "poly": 0,
+  "points": 0
+ },
+ "cutMm": 224,
+ "box": [
+  13,
+  15,
+  -12,
+  17,
+  15,
+  0
+ ],
+ "warnings": [
+  "1 internal thread(s) have no core hole cut before them: pre-drill or bore it first (the thread operation's \"Add core holes\").",
+  "Bottom-up: the tool goes straight down the middle of the core hole to the thread's bottom first, so the core hole must be at least as deep as the thread."
+ ],
+ "hash": "ad63f9e6"
+}

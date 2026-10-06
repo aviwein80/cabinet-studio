@@ -51,6 +51,8 @@ export interface CutDefaults {
   /** Undercut roughing with a lollipop (M3.1g): height between levels, mm; step-over, share of the ball's diameter. */
   undercutStepdown: number
   undercutStepover: number
+  /** Thread milling (M3.2): radial passes out to the full thread depth. */
+  threadPasses: number
 }
 export type CutDefaultKey = keyof CutDefaults
 
@@ -71,6 +73,7 @@ export const BUILTIN_CUT_DEFAULTS: CutDefaults = {
   // light cuts for a ball on a thin neck (PLACEHOLDER, like every value here)
   undercutStepdown: 1,
   undercutStepover: 0.1,
+  threadPasses: 2,
 }
 
 export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
@@ -88,6 +91,7 @@ export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
   adaptiveWidth: 'Adaptive width of cut',
   undercutStepdown: 'Undercut roughing step-down',
   undercutStepover: 'Undercut roughing step-over',
+  threadPasses: 'Thread milling: radial passes',
 }
 
 export const CUT_DEFAULT_KEYS = Object.keys(BUILTIN_CUT_DEFAULTS) as CutDefaultKey[]
@@ -179,6 +183,7 @@ function defaultValue(d: CutDefaults, k: CutDefaultKey): string {
     return `${w.min}-${w.max} mm every ${w.length} mm`
   }
   if (k === 'pocketStepover' || k === 'faceStepover' || k === 'roughStepover' || k === 'adaptiveWidth' || k === 'undercutStepover') return `${Math.round((v as number) * 100)} % of the tool`
+  if (k === 'threadPasses') return `${v as number}`
   return `${fmt(v as number)} mm`
 }
 
@@ -305,6 +310,7 @@ export const OP_FIELDS: OpField[] = [
   { key: 'roughStepover', applies: (o) => o.kind === 'rough3d' && o.pattern !== 'adaptive' && o.pattern !== 'undercut', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'undercutStepdown', applies: (o) => o.kind === 'rough3d' && o.pattern === 'undercut', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
   { key: 'undercutStepover', applies: (o) => o.kind === 'rough3d' && o.pattern === 'undercut', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
+  { key: 'threadPasses', applies: (o) => o.kind === 'thread', get: (o) => (o as { passes: number }).passes, set: (o, v) => ({ ...o, passes: v }) as CamOp },
 ]
 
 /**
@@ -368,6 +374,8 @@ export function newOpDefaults(kind: CamOp['kind'], m: MachineProfile, extra: Par
       return mode === 'between' ? ({ stepover: d.betweenStepover } as Partial<CamOp>) : mode === 'zwave' || !mode ? ({ wave: { ...d.zwave, shape: 'sine' } } as Partial<CamOp>) : {}
     case 'finish3d':
       return strategy === 'waterline' || strategy === 'helical' ? ({ stepover: d.finishStepover, stepdown: d.waterlineStepdown } as Partial<CamOp>) : strategy === 'projection' || strategy === 'pencil' ? {} : ({ stepover: d.finishStepover } as Partial<CamOp>)
+    case 'thread':
+      return { passes: d.threadPasses } as Partial<CamOp>
     case 'rough3d':
       return (extra as { pattern?: string }).pattern === 'undercut' ? ({ stepdown: d.undercutStepdown, stepover: d.undercutStepover } as Partial<CamOp>) : ({ stepdown: d.roughStepdown, stepover: d.roughStepover } as Partial<CamOp>)
     default:

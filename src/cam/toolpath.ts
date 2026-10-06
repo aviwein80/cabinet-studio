@@ -71,7 +71,8 @@ import { aggregateOf, anglesOutOfReach, effectiveGauge, machineModelOf, toolOutl
 import { placeMesh } from './mesh/place'
 import { mergeMeshes, placedReliefOutline, reliefSurround } from './relief/relief'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, ThreadOp, VCarveOp } from './types'
+import { isoDepth, threadMoves } from './more25d/thread'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -1517,6 +1518,77 @@ function genEdge(op: EdgeOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 
 const CURVE_NO_OUTPUT = 'curve cuts move the tool up and down along the path, which needs true 3D output (off until the format is confirmed)'
 
+/** Thread milling has no woodWOP form that is confirmed (helical moves); simulation only. */
+export const THREAD_NO_OUTPUT = 'thread milling runs helical moves, and no woodWOP form for them is confirmed: simulation only'
+
+/**
+ * Thread milling (NEW-08): a helix round each picked circle (`more25d/thread.ts`), checked for a
+ * thread mill that fits and for the core hole (internal threads) being cut by an earlier operation.
+ */
+function genThread(op: ThreadOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  tp.noOutput = THREAD_NO_OUTPUT
+  const t = tp.tool
+  if (!t || t.shape !== 'thread') {
+    tp.warnings.push(`Thread milling needs a thread mill (tool shape Thread mill)${t ? `: T${t.number} is not one` : ''}. Add one in the tool table, with its neck diameter.`)
+    return
+  }
+  const L = op.levels.depth
+  if (!(L > 0)) {
+    tp.warnings.push('Set the thread length (Depth).')
+    return
+  }
+  if (!(op.pitch > 0)) {
+    tp.warnings.push('Set the pitch.')
+    return
+  }
+  const circles = geometryOf(op, ctx.part).filter(({ e }) => e.g.t === 'circle' && e.face === 1)
+  const others = op.geometry.length - circles.length
+  if (others > 0) tp.warnings.push(`${others} picked shape(s) are not circles on face 1 and are left out (threads go round circles).`)
+  if (!circles.length) {
+    tp.warnings.push('Pick the circles to thread: holes for an internal thread, bosses for an external one.')
+    return
+  }
+  if (L > t.maxDepth + 1e-9) tp.warnings.push(`The thread is ${L} mm long but T${t.number} reaches only ${t.maxDepth} mm: the neck or holder may rub. Check in simulation.`)
+  const rt = t.diameter / 2
+  const neck = Math.min(rt, (t.shankDiameter ?? t.diameter) / 2)
+  const earlier = ctx.part.ops.slice(0, Math.max(0, ctx.part.ops.findIndex((o) => o.id === op.id))).filter((o) => o.enabled && (o.kind === 'drill' || o.kind === 'pocket' || o.kind === 'profile'))
+  let noCore = 0
+  for (const { e } of circles) {
+    const g = e.g as { t: 'circle'; c: P; r: number }
+    const D = op.diameter > 0 ? op.diameter : 2 * g.r
+    const h = op.threadDepth > 0 ? op.threadDepth : isoDepth(op.side, op.pitch)
+    if (h >= D / 2) {
+      tp.warnings.push(`A ${D} mm thread cannot be ${h.toFixed(3)} mm deep.`)
+      continue
+    }
+    // the tooth must reach the full thread depth past the neck, or the neck rubs the crests
+    if (rt - neck < h - 1e-9) {
+      tp.warnings.push(`T${t.number}'s tooth stands only ${(rt - neck).toFixed(2)} mm proud of its neck, less than the ${h.toFixed(3)} mm thread depth: the neck would rub the thread. Use a tool with a deeper tooth.`)
+      continue
+    }
+    const minor = D - 2 * h
+    if (op.side === 'internal' && 2 * rt >= minor - 1e-9) {
+      tp.warnings.push(`T${t.number} (Ø${t.diameter}) does not fit the core hole of a ${D} mm thread (Ø${minor.toFixed(3)}). Use a smaller thread mill.`)
+      continue
+    }
+    // the core hole: cut by an earlier operation on a circle at the same centre, at least as wide
+    if (op.side === 'internal') {
+      const cut = earlier.some((o) => o.geometry.some((id) => {
+        const x = ctx.part.entities.find((q) => q.id === id)
+        return !!x && x.g.t === 'circle' && Math.hypot(x.g.c.x - g.c.x, x.g.c.y - g.c.y) < 0.01 && 2 * x.g.r >= minor - 0.05
+      }))
+      if (!cut) noCore++
+    }
+    const plan = threadMoves(g.c, { side: op.side, diameter: D, pitch: op.pitch, hand: op.hand, travel: op.travel, length: L, depth: h, passes: op.passes, spring: op.spring }, rt, op.levels.safeZ, op.levels.rapidZ)
+    tp.warnings.push(...plan.warnings)
+    for (const m of plan.moves) b.moves.push(m)
+    const last = plan.moves[plan.moves.length - 1]
+    if (last && last.t !== 'poly') Object.assign(b, { x: last.x, y: last.y, z: last.z })
+  }
+  if (noCore) tp.warnings.push(`${noCore} internal thread(s) have no core hole cut before them: pre-drill or bore it first (the thread operation's "Add core holes").`)
+  if (op.side === 'internal' && op.travel === 'up') tp.warnings.push('Bottom-up: the tool goes straight down the middle of the core hole to the thread\'s bottom first, so the core hole must be at least as deep as the thread.')
+}
+
 /** Tool-tip chains as 3D moves: down to each chain's start, along it, up again. */
 function emitChains(chains: Chain3[], op: CamOp, b: Builder) {
   for (const ch of chains) {
@@ -2241,6 +2313,9 @@ function generateAt(op: CamOp, ctx: GenContext): Toolpath {
         break
       case 'edge':
         genEdge(op, ctx, tp, b)
+        break
+      case 'thread':
+        genThread(op, ctx, tp, b)
         break
     }
   tp.stats = stats(b.moves, feeds.feed)

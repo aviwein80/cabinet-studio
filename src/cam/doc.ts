@@ -21,8 +21,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * An older app refuses a v5 part instead of machining a new strategy as parallel passes.
  * 6 (M3.1g): undercut roughing (`rough3d` with pattern 'undercut'). An older app refuses a v6 part
  * instead of roughing from above with a lollipop.
+ * 7 (M3.2): thread milling, hatching and detail views, layer line types, stroke fonts on texts,
+ * rapid surfaces. An older app refuses a v7 part instead of leaving them out without a word.
  */
-export const CAM_FILE_VERSION = 6
+export const CAM_FILE_VERSION = 7
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -257,6 +259,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   4: (p) => ({ ...p, version: 5 }),
   // v5 -> v6: the undercut roughing pattern is new.
   5: (p) => ({ ...p, version: 6 }),
+  // v6 -> v7: thread milling, annotations, line types, stroke fonts and rapid surfaces are new and optional.
+  6: (p) => ({ ...p, version: 7 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */

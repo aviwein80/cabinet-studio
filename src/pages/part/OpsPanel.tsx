@@ -1,7 +1,10 @@
 import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
-import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
+import { makeEntity, opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
+import type { P } from '@/cam/geom'
+import { isClimb, isoDepth } from '@/cam/more25d/thread'
+import { findDrill } from '@/core/machining'
 import { toolOrderOf } from '@/core/admin'
 import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool, resolveTool } from '@/cam/ops'
 import { ManualFields, EditsGroup } from './EditsPanel'
@@ -78,6 +81,7 @@ export function OpsPanel({
   const on3d = useStore((s) => featuresOf(s.data?.settings).cam3d) && !!part.models?.length
   const more25d = useStore((s) => featuresOf(s.data?.settings).camMore25d)
   const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
+  const extras = useStore((s) => featuresOf(s.data?.settings).camExtras)
   const runRules = (setId: string) => {
     if (!lib) return
     const set = ruleSetsOf(lib).find((x) => x.id === setId)
@@ -143,6 +147,11 @@ export function OpsPanel({
                 {OP_LABEL[k]}
               </DropdownMenuItem>
             ))}
+            {extras && (
+              <DropdownMenuItem onSelect={() => add('thread')} title="Simulation only: no woodWOP form for helical moves is confirmed">
+                {OP_LABEL.thread}
+              </DropdownMenuItem>
+            )}
             {more25d && (
               <>
                 <DropdownMenuSeparator />
@@ -251,6 +260,8 @@ export function OpsPanel({
                           ? `chamfer ${formatLength(op.size, units)} ${op.drive === 'width' ? 'wide' : 'deep'}`
                           : op.kind === 'edge'
                             ? `edge ${formatLength(op.reach, units)} in, ${formatLength(op.height, units)} down`
+                          : op.kind === 'thread'
+                            ? `${op.side} thread, pitch ${op.pitch}, ${formatLength(op.levels.depth, units)} long`
                           : op.kind === 'curve'
                             ? { between: 'between two curves', follow3d: 'along 3D curves', zwave: `wave ${formatLength(op.wave.min, units)} to ${formatLength(op.wave.max, units)}` }[op.mode]
                         : op.levels.through
@@ -300,6 +311,7 @@ export function OpsPanel({
             onAccept={() => accept([current.id])}
             pathPick={pathPick ?? null}
             setPathPick={setPathPick}
+            onPart={onChange}
           />
         ) : (
           <div className="px-4 py-8 text-center text-xs text-stone-400">Pick an operation to edit its settings.</div>
@@ -331,6 +343,7 @@ function OpEditor({
   onAccept,
   pathPick,
   setPathPick,
+  onPart,
 }: {
   op: CamOp
   part: CamPart
@@ -342,6 +355,8 @@ function OpEditor({
   onDelete: () => void
   onDuplicate: () => void
   onAccept: () => void
+  /** Change the whole part (shapes and operations), e.g. thread core holes. */
+  onPart?: (p: CamPart) => void
   pathPick?: PathPick | null
   setPathPick?: (p: PathPick | null) => void
 }) {
@@ -465,14 +480,14 @@ function OpEditor({
         </Group>
       )}
 
-      {(op.kind === 'manual' || op.kind === 'edge') && (
+      {(op.kind === 'manual' || op.kind === 'edge' || op.kind === 'thread') && (
         <Group title="Heights">
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} />
           <NumField label="Rapid down to" value={op.levels.rapidZ} min={0} onChange={(v) => lv({ rapidZ: v })} />
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && !OPS_3D.has(op.kind) && (
+      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && op.kind !== 'thread' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -486,7 +501,7 @@ function OpEditor({
         </Group>
       )}
 
-      <StrategyFields op={op} part={part} onChange={onChange} sel={sel} tool={tp?.tool ?? resolveTool(op, machine)} />
+      <StrategyFields op={op} part={part} onChange={onChange} sel={sel} tool={tp?.tool ?? resolveTool(op, machine)} onPart={onPart} />
       {op.kind === 'manual' && <ManualFields op={op} onChange={onChange} pathPick={pathPick ?? null} setPathPick={setPathPick} sel={sel} part={part} />}
       {op.kind !== 'code' && op.kind !== 'drill' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
 
@@ -680,7 +695,7 @@ function restGroup(op: Extract<CamOp, { kind: 'finish3d' }>, part: CamPart, adap
   )
 }
 
-function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void; sel?: string[]; tool?: Tool | null }) {
+function StrategyFields({ op, part, onChange, sel = [], tool = null, onPart }: { op: CamOp; part: CamPart; onChange: (o: CamOp) => void; sel?: string[]; tool?: Tool | null; onPart?: (p: CamPart) => void }) {
   const adaptiveOn = useStore((s) => featuresOf(s.data?.settings).camAdaptive)
   const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
   const machine = useStore((s) => s.data!.machine)
@@ -1145,6 +1160,8 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
       return <SawFields op={op} onChange={onChange} />
     case 'edge':
       return <EdgeFields op={op} part={part} onChange={onChange} />
+    case 'thread':
+      return <ThreadFields op={op} part={part} onChange={onChange} onPart={onPart} />
     case 'chamfer':
       return (
         <Group title="Chamfer">
@@ -1249,4 +1266,54 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
     default:
       return null
   }
+}
+
+/** Thread milling (NEW-08): the thread, how it is cut, and the core holes it needs. */
+function ThreadFields({ op, part, onChange, onPart }: { op: Extract<CamOp, { kind: 'thread' }>; part: CamPart; onChange: (o: CamOp) => void; onPart?: (p: CamPart) => void }) {
+  const c = useOpCfg(op, part, onChange)
+  const machine = useStore((s) => s.data!.machine)
+  const circles = op.geometry.map((id) => part.entities.find((e) => e.id === id)).filter((e): e is Extract<typeof e, object> => !!e && e.g.t === 'circle')
+  const D = op.diameter > 0 ? op.diameter : circles[0] && circles[0].g.t === 'circle' ? 2 * circles[0].g.r : 0
+  const h = op.threadDepth > 0 ? op.threadDepth : isoDepth(op.side, op.pitch)
+  const minor = D - 2 * h
+  const climb = isClimb(op)
+  /** Core holes: circles at the minor diameter on the same centres, and an operation that cuts them (drill when one fits, else a pocket). */
+  const addCore = () => {
+    if (!circles.length || !(minor > 0)) return
+    const layer = { id: 'thread-cores', name: 'Thread core holes', color: '#fb7185', visible: true, locked: false }
+    const made = circles.map((e) => makeEntity({ t: 'circle', c: { ...(e.g as { c: P }).c }, r: minor / 2 }, layer.id))
+    const drill = findDrill(machine, minor, op.levels.depth, 'drill-vertical')
+    const ids = made.map((e) => e.id)
+    const coreOp = drill ? defaultOp('drill', ids, { levels: { ...op.levels, depth: op.levels.depth + 1 } } as Partial<CamOp>) : defaultOp('pocket', ids, { levels: { ...op.levels, depth: op.levels.depth + 1 } } as Partial<CamOp>)
+    const idx = part.ops.findIndex((o) => o.id === op.id)
+    const ops = [...part.ops]
+    ops.splice(Math.max(0, idx), 0, { ...coreOp, name: `Core holes Ø${Math.round(minor * 1000) / 1000}` })
+    onPart?.({ ...part, layers: part.layers.some((l) => l.id === layer.id) ? part.layers : [...part.layers, layer], entities: [...part.entities, ...made], ops })
+  }
+  return (
+    <Group title="Thread">
+      <SelectField label="Thread" value={op.side} options={[{ value: 'internal', label: 'Internal (in a hole)' }, { value: 'external', label: 'External (round a boss)' }]} onChange={(v) => onChange({ ...op, side: v })} />
+      <NumField label="Major diameter" value={op.diameter} min={0} step={0.5} onChange={(v) => onChange({ ...op, diameter: v })} hint="0 = each circle's own diameter" />
+      <NumField label="Pitch" value={op.pitch} min={0.05} step={0.05} onChange={(v) => onChange({ ...op, pitch: v })} hint="Per turn" />
+      <SelectField label="Hand" value={op.hand} options={[{ value: 'right', label: 'Right-hand' }, { value: 'left', label: 'Left-hand' }]} onChange={(v) => onChange({ ...op, hand: v })} />
+      <SelectField label="Cut" value={op.travel} options={[{ value: 'up', label: 'Bottom-up' }, { value: 'down', label: 'Top-down' }]} onChange={(v) => onChange({ ...op, travel: v })} />
+      <NumField label="Thread length" value={op.levels.depth} min={0} step={1} onChange={(v) => onChange({ ...op, levels: { ...op.levels, depth: v } })} hint="Below face 1" />
+      <NumField label="Thread depth" value={op.threadDepth} min={0} step={0.01} onChange={(v) => onChange({ ...op, threadDepth: v })} hint={`0 = ISO basic depth (${(op.side === 'internal' ? 0.5413 : 0.6134).toFixed(4)} × pitch)`} />
+      <NumField label="Radial passes" suffix="" value={op.passes} min={1} step={1} cfg={c('threadPasses').cfg} badge={c('threadPasses').badge} onChange={(v) => c('threadPasses').set({ ...op, passes: Math.max(1, Math.round(v)) })} />
+      <div className="col-span-2">
+        <SwitchField label="Spring pass" checked={op.spring} onChange={(v) => onChange({ ...op, spring: v })} hint="One more turn round at full depth" />
+      </div>
+      <div className="col-span-2 text-[11px] text-stone-400">
+        {D > 0 ? `Major Ø${D.toFixed(3)}, depth ${h.toFixed(3)}, minor (core) Ø${minor.toFixed(3)}. ` : ''}
+        {climb ? 'Climb milling' : 'Conventional milling'} with the spindle turning clockwise. The helix drops exactly one pitch per turn; the tool's feed is set at the tooth's tip. A single-profile thread mill (tool shape Thread mill). Simulation only: never written to woodWOP.
+      </div>
+      {op.side === 'internal' && onPart && (
+        <div className="col-span-2">
+          <Button size="sm" variant="outline" className="h-7 border-white/15 bg-transparent px-2 text-[11px]" disabled={!circles.length || !(minor > 0)} onClick={addCore}>
+            Add core holes (Ø{minor > 0 ? minor.toFixed(2) : '?'}) before it
+          </Button>
+        </div>
+      )}
+    </Group>
+  )
 }

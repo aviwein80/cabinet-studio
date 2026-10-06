@@ -22,7 +22,39 @@ export interface Layer {
   locked: boolean
   /** Construction layers are never machined or exported. */
   construction?: boolean
+  /** How the layer's shapes are drawn on screen and in prints (NEW-21; absent = solid). */
+  lineType?: LineType
 }
+
+/** Line types (NEW-21): dash lengths are paper mm in a print, so they look the same at any scale. */
+export type LineType = 'solid' | 'dashed' | 'hidden' | 'centre' | 'dotted'
+
+/** A hatch (NEW-21): parallel lines over closed shapes (by id: it follows them as they change). */
+export interface HatchNote {
+  id: string
+  k: 'hatch'
+  shapes: string[]
+  /** Degrees from the X axis. */
+  angle: number
+  /** Distance between the lines, part mm. */
+  spacing: number
+  /** Crossed: the same lines again at 90° more. */
+  cross?: boolean
+}
+
+/** A detail view (NEW-21): the circle `c`, `r` magnified `scale` times and shown centred on `at`. */
+export interface DetailNote {
+  id: string
+  k: 'detail'
+  c: P
+  r: number
+  scale: number
+  at: P
+  label: string
+}
+
+/** Annotations on face 1 (NEW-21): notes only, never machined or exported to a machine. */
+export type Annotation = HatchNote | DetailNote
 
 export type Geom =
   | { t: 'contour'; c: Contour }
@@ -148,7 +180,7 @@ export interface ReliefInfo {
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4 | 5 | 6
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7
   materialId: string | null
   length: number
   width: number
@@ -182,6 +214,8 @@ export interface CamPart {
   dims?: Dimension[]
   /** Origin of ordinate dimensions (absent = the part's corner 0,0). */
   dimOrigin?: P
+  /** Hatching and detail views on face 1 (NEW-21): notes only, never machined or exported to a machine. */
+  annotations?: Annotation[]
   /** Turn-by-turn sketches (CAD-02) kept so their shapes can be opened and solved again, by entity id. */
   sketches?: Record<string, TurnSketch>
   /** Work volume was fitted to a model with this oversize (mm); kept so it can be refitted. */
@@ -779,7 +813,29 @@ export interface EdgeOp extends OpBase {
   overrun: number
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp
+/**
+ * Thread milling (NEW-08, M3.2): a single-profile thread mill runs a helix round each picked circle
+ * (`geometry`), inside it (internal thread) or round it (external), one pitch per turn, in radial
+ * passes out to the full thread depth. `levels.depth` is the thread's length below face 1.
+ */
+export interface ThreadOp extends OpBase {
+  kind: 'thread'
+  side: 'internal' | 'external'
+  /** Major (nominal) diameter, mm; 0 = each picked circle's own diameter. */
+  diameter: number
+  pitch: number
+  hand: 'right' | 'left'
+  /** Cut from face 1 down, or from the bottom up. */
+  travel: 'down' | 'up'
+  /** Thread depth (radial, major to minor), mm; 0 = the ISO basic depth for the pitch. */
+  threadDepth: number
+  /** Radial passes out to the full depth. */
+  passes: number
+  /** One more pass at full depth. */
+  spring: boolean
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp | ThreadOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

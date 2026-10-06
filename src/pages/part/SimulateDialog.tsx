@@ -11,8 +11,8 @@ import { writeStl } from '@/cam/mesh/tools'
 import { buildTimeline, cellRect, cutSummary, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
 import { type StockMeshRange, stockMesh, stockMeshTops } from '@/cam/stock/heightfield'
 import type { HeightfieldStock } from '@/cam/stock/heightfield'
-import type { DexelStock } from '@/cam/stock/dexel'
-import { needsDexel, stockFor } from '@/cam/stock/choose'
+import { DexelStock } from '@/cam/stock/dexel'
+import { needsDexel, piecesNeeded, stockFor } from '@/cam/stock/choose'
 import { cutFreePieces, dropMask } from '@/cam/stock/pieces'
 import { entityContours } from '@/cam/doc'
 import { type P, toPoints } from '@/cam/geom'
@@ -31,7 +31,7 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
 import { formatLength } from '@/core/units'
-import type { MachineProfile, Tool, UnitSystem } from '@/core/types'
+import type { MachineProfile, UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
 const SPEEDS = [1, 4, 16, 64, 256]
@@ -75,11 +75,13 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const ordered = useMemo(() => programOrder(toolpaths), [toolpaths])
   const tl = useMemo(() => buildTimeline(ordered), [ordered])
   const cell = simCell(part.length, part.width)
-  // (a lollipop under an overhang needs the dexel stock, which keeps the lip)
+  // (a lollipop under an overhang, or a thread mill's groove, needs the dexel stock, which keeps
+  // the material over them; a thread needs a piece per turn)
   const dexel = needsDexel(ordered)
+  const layers = piecesNeeded(ordered)
   const sim = useMemo(
-    () => new StockSimulation(tl, stockFor({ length: part.length, width: part.width, thickness: part.thickness }, dexel ? [{ tool: { shape: 'lollipop' } as Tool }] : [], cell)),
-    [part.length, part.width, part.thickness, dexel, cell, tl],
+    () => new StockSimulation(tl, dexel ? new DexelStock(part.length, part.width, part.thickness, cell, layers) : stockFor({ length: part.length, width: part.width, thickness: part.thickness }, [], cell)),
+    [part.length, part.width, part.thickness, dexel, layers, cell, tl],
   )
   const stock = sim.stock as HeightfieldStock | DexelStock
   // collision check: the whole program replayed in the background

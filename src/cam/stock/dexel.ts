@@ -9,10 +9,10 @@
  * heightfield from above (top view, cut summaries, cut-free pieces) works unchanged.
  */
 import type { Box3, Mesh } from '../mesh/types'
-import { createHeightfield, type Cutter, cutterZ, type Heightfield, type V3 } from '../sim'
+import { createHeightfield, type Cutter, cutterZ, type Heightfield, THREAD_FLANK, type V3 } from '../sim'
 import type { StockModel, StockSnapshot } from './types'
 
-/** Intervals a column can hold; more are merged (the smallest gap filled, never showing cut material as gone). */
+/** Intervals a column can hold by default; more are merged (the smallest gap filled, never showing cut material as gone). */
 export const DEXEL_MAX = 6
 
 export class DexelStock implements StockModel {
@@ -22,20 +22,23 @@ export class DexelStock implements StockModel {
   readonly ny: number
   readonly cell: number
   readonly thickness: number
-  /** Intervals per column: [lo, hi] pairs, sorted, DEXEL_MAX per column. */
+  /** Intervals a column can hold (a thread's grooves need one per turn). */
+  readonly max: number
+  /** Intervals per column: [lo, hi] pairs, sorted, `max` per column. */
   private readonly iv: Float32Array
   private readonly cnt: Uint8Array
   /** Columns where intervals had to be merged. */
   overflow = 0
   private dirty: { minX: number; minY: number; maxX: number; maxY: number; through: boolean } | null = null
 
-  constructor(length: number, width: number, thickness: number, cell?: number) {
+  constructor(length: number, width: number, thickness: number, cell?: number, maxPieces = DEXEL_MAX) {
     this.hf = createHeightfield(length, width, thickness, cell)
     this.nx = this.hf.nx
     this.ny = this.hf.ny
     this.cell = this.hf.cell
     this.thickness = thickness
-    this.iv = new Float32Array(this.nx * this.ny * DEXEL_MAX * 2)
+    this.max = Math.max(1, Math.min(255, Math.round(maxPieces)))
+    this.iv = new Float32Array(this.nx * this.ny * this.max * 2)
     this.cnt = new Uint8Array(this.nx * this.ny)
     this.reset()
     this.dirty = null
@@ -91,12 +94,12 @@ export class DexelStock implements StockModel {
         }
         zs.sort((u, v) => u - v)
         const out: number[] = []
-        for (let q = 0; q + 1 < zs.length && out.length / 2 < DEXEL_MAX; q += 2) {
+        for (let q = 0; q + 1 < zs.length && out.length / 2 < this.max; q += 2) {
           const lo = Math.max(-this.thickness, zs[q])
           const hi = Math.min(0, zs[q + 1])
           if (hi - lo > 1e-6) out.push(lo, hi)
         }
-        this.iv.set(out, k * DEXEL_MAX * 2)
+        this.iv.set(out, k * this.max * 2)
         this.cnt[k] = out.length / 2
         this.hf.top[k] = this.cnt[k] ? out[out.length - 1] : -this.thickness
       }
@@ -110,7 +113,7 @@ export class DexelStock implements StockModel {
   /** The intervals of column k (copies). */
   column(k: number): [number, number][] {
     const out: [number, number][] = []
-    for (let q = 0; q < this.cnt[k]; q++) out.push([this.iv[(k * DEXEL_MAX + q) * 2], this.iv[(k * DEXEL_MAX + q) * 2 + 1]])
+    for (let q = 0; q < this.cnt[k]; q++) out.push([this.iv[(k * this.max + q) * 2], this.iv[(k * this.max + q) * 2 + 1]])
     return out
   }
 
@@ -118,7 +121,7 @@ export class DexelStock implements StockModel {
   private remove(k: number, lo: number, hi: number) {
     const n = this.cnt[k]
     if (!n || hi <= lo) return
-    const base = k * DEXEL_MAX * 2
+    const base = k * this.max * 2
     const out: number[] = []
     let changed = false
     for (let q = 0; q < n; q++) {
@@ -134,7 +137,7 @@ export class DexelStock implements StockModel {
     }
     if (!changed) return
     // too many pieces: fill the smallest gaps (shows material, never hides it)
-    while (out.length / 2 > DEXEL_MAX) {
+    while (out.length / 2 > this.max) {
       let best = 1
       let gap = Infinity
       for (let q = 1; q < out.length / 2; q++) {
@@ -193,6 +196,10 @@ export class DexelStock implements StockModel {
     this.mark(Math.min(a.x, b.x) - r, Math.min(a.y, b.y) - r, Math.max(a.x, b.x) + r, Math.max(a.y, b.y) + r, Math.min(a.z, b.z) <= -this.thickness + 1e-6)
     if (cutter.shape === 'lollipop') {
       this.carveLollipop(a, b, cutter)
+      return
+    }
+    if (cutter.shape === 'thread') {
+      this.carveThread(a, b, cutter)
       return
     }
     // a vertical tool takes everything from its bottom up: the lowest bottom over the move
@@ -285,6 +292,40 @@ export class DexelStock implements StockModel {
     })
   }
 
+  /**
+   * A thread mill: a 60° tooth (tip at the tool's radius, at the move's height) on a neck. Along a
+   * short move the tooth's cut in each column is one piece: from the lowest lower flank to the
+   * highest upper flank over the positions where it reaches the column; within the neck's radius,
+   * everything from the tooth's base up.
+   */
+  private carveThread(a: V3, b: V3, c: Cutter) {
+    const R = c.r
+    const neck = Math.min(R, c.neck ?? 0)
+    const base = (R - neck) * THREAD_FLANK
+    const n = Math.max(8, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (this.cell / 4)))
+    this.forColumns(a, b, R, (k, px, py) => {
+      let lo = Infinity
+      let hi = -Infinity
+      let neckLo = Infinity
+      for (let q = 0; q <= n; q++) {
+        const f = q / n
+        const x = a.x + (b.x - a.x) * f
+        const y = a.y + (b.y - a.y) * f
+        const z = a.z + (b.z - a.z) * f
+        const d = Math.hypot(px - x, py - y)
+        if (d > R) continue
+        if (d <= neck) neckLo = Math.min(neckLo, z - base)
+        else {
+          const w = (R - d) * THREAD_FLANK
+          lo = Math.min(lo, z - w)
+          hi = Math.max(hi, z + w)
+        }
+      }
+      if (Number.isFinite(neckLo)) this.remove(k, Math.min(neckLo, lo), Infinity)
+      else if (hi > lo) this.remove(k, lo, hi)
+    })
+  }
+
   carvePoints(a: V3, b: V3): V3[] {
     const step = this.cell / 2
     const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step))
@@ -309,7 +350,7 @@ export class DexelStock implements StockModel {
       if (!n) return
       const low = lowest(d)
       // material reaching above the envelope's lowest point (it occupies everything above it)
-      const top = this.iv[(k * DEXEL_MAX + n - 1) * 2 + 1]
+      const top = this.iv[(k * this.max + n - 1) * 2 + 1]
       if (top <= -this.thickness + 1e-6) return
       const e = top - low
       if (e > depth) {
@@ -332,7 +373,7 @@ export class DexelStock implements StockModel {
     const j = Math.floor(y / this.cell)
     if (i < 0 || j < 0 || i >= this.nx || j >= this.ny) return false
     const k = j * this.nx + i
-    for (let q = 0; q < this.cnt[k]; q++) if (z >= this.iv[(k * DEXEL_MAX + q) * 2] && z <= this.iv[(k * DEXEL_MAX + q) * 2 + 1]) return true
+    for (let q = 0; q < this.cnt[k]; q++) if (z >= this.iv[(k * this.max + q) * 2] && z <= this.iv[(k * this.max + q) * 2 + 1]) return true
     return false
   }
 
@@ -358,7 +399,7 @@ export class DexelStock implements StockModel {
       for (let i = 0; i < this.nx; i++) {
         const k = j * this.nx + i
         let left = 0
-        for (let q = 0; q < this.cnt[k]; q++) left += this.iv[(k * DEXEL_MAX + q) * 2 + 1] - this.iv[(k * DEXEL_MAX + q) * 2]
+        for (let q = 0; q < this.cnt[k]; q++) left += this.iv[(k * this.max + q) * 2 + 1] - this.iv[(k * this.max + q) * 2]
         v += (this.thickness - left) * this.cellArea(i, j)
       }
     return v
@@ -426,8 +467,8 @@ export class DexelStock implements StockModel {
 
   reset() {
     for (let k = 0; k < this.nx * this.ny; k++) {
-      this.iv[k * DEXEL_MAX * 2] = -this.thickness
-      this.iv[k * DEXEL_MAX * 2 + 1] = 0
+      this.iv[k * this.max * 2] = -this.thickness
+      this.iv[k * this.max * 2 + 1] = 0
       this.cnt[k] = 1
     }
     this.hf.top.fill(0)
@@ -453,7 +494,7 @@ export class DexelStock implements StockModel {
     this.iv.set(s.data.subarray(0, this.iv.length))
     for (let k = 0; k < this.cnt.length; k++) {
       this.cnt[k] = s.data[this.iv.length + k]
-      this.hf.top[k] = this.cnt[k] ? this.iv[(k * DEXEL_MAX + this.cnt[k] - 1) * 2 + 1] : -this.thickness
+      this.hf.top[k] = this.cnt[k] ? this.iv[(k * this.max + this.cnt[k] - 1) * 2 + 1] : -this.thickness
     }
     this.dirty = { minX: 0, minY: 0, maxX: this.hf.length, maxY: this.hf.width, through: true }
   }

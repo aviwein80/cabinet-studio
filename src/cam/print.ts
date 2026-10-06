@@ -3,10 +3,14 @@
  * over as many sheets as it needs with crop marks so full-size templates can be taped together.
  * Every sheet carries a check bar of a known length: measure it with a rule before trusting the
  * print (printers are told "actual size"; any scaling by the printer shows on the bar).
+ *
+ * Annotations (NEW-21) print too: hatching, detail views (magnified on top of the print scale) and
+ * layer line types, whose dashes are paper mm so they look the same at any scale.
  */
 import { jsPDF } from 'jspdf'
 import { formatInches } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
+import { annotationLines, dashPolyline, LINE_TYPES } from './annotate'
 import { dimText, measureDim } from './dims'
 import { entityContours, layerOf } from './doc'
 import { boxOf, type P, toPoints } from './geom'
@@ -28,12 +32,14 @@ export interface PrintOptions {
   /** Paper margin, mm. */
   margin: number
   dims: boolean
+  /** Hatching and detail views (NEW-21). */
+  notes?: boolean
   units: UnitSystem
   /** Overlap between neighbouring sheets, mm of paper (for taping). */
   overlap: number
 }
 
-export const DEFAULT_PRINT: PrintOptions = { scale: 1, paper: 'letter', landscape: true, margin: 12, dims: true, units: 'mm', overlap: 10 }
+export const DEFAULT_PRINT: PrintOptions = { scale: 1, paper: 'letter', landscape: true, margin: 12, dims: true, notes: true, units: 'mm', overlap: 10 }
 
 export interface PrintPage {
   /** Part point (mm) at the drawing area's lower-left corner. */
@@ -56,17 +62,28 @@ export interface PrintPlan {
   bar: { length: number; label: string }
 }
 
-/** Shapes and dimensions of face 1 as part-mm polylines and texts. */
+/** Shapes, annotations and dimensions of face 1 as part-mm polylines (with their dash patterns, paper mm) and texts. */
 function drawing(part: CamPart, opt: PrintOptions) {
   const lines: P[][] = []
+  const dashes: (number[] | undefined)[] = []
   for (const e of part.entities) {
-    if (e.face !== 1 || layerOf(part, e.layer)?.visible === false) continue
+    const layer = layerOf(part, e.layer)
+    if (e.face !== 1 || layer?.visible === false) continue
+    const dash = layer?.lineType ? LINE_TYPES[layer.lineType].dash : []
     for (const c of entityContours(e)) {
       const pts = toPoints(c, 0.05)
-      if (pts.length > 1) lines.push(c.closed ? [...pts, pts[0]] : pts)
+      if (pts.length > 1) {
+        lines.push(c.closed ? [...pts, pts[0]] : pts)
+        dashes.push(dash.length ? dash : undefined)
+      }
     }
   }
   const texts: PrintPage['texts'] = []
+  if (opt.notes !== false) {
+    const a = annotationLines(part)
+    lines.push(...a.lines)
+    texts.push(...a.texts.map((t) => ({ ...t, angle: 0 })))
+  }
   if (opt.dims)
     for (const d of part.dims ?? []) {
       const g = measureDim(part, d)
@@ -83,7 +100,7 @@ function drawing(part: CamPart, opt: PrintOptions) {
       }
       texts.push({ at: g.text, text: dimText(d, g, opt.units), angle: g.textDir })
     }
-  return { lines, texts }
+  return { lines, dashes, texts }
 }
 
 /** Keep the parts of a polyline inside a box (each piece is its own polyline). */
@@ -140,7 +157,7 @@ export function printPlan(part: CamPart, opt: PrintOptions): PrintPlan {
   const paper = opt.landscape ? { w: pp.h, h: pp.w } : { w: pp.w, h: pp.h }
   const foot = 12
   const area = { x: opt.margin, y: opt.margin, w: paper.w - 2 * opt.margin, h: paper.h - 2 * opt.margin - foot }
-  const { lines, texts } = drawing(part, opt)
+  const { lines, dashes, texts } = drawing(part, opt)
   const all = lines.flat()
   const box = all.length ? boxOf([{ closed: false, segs: all.slice(1).map((b, i) => ({ k: 'L' as const, a: all[i], b })) }]) : { minX: 0, minY: 0, maxX: part.length, maxY: part.width }
   const pad = 5 * opt.scale
@@ -163,7 +180,12 @@ export function printPlan(part: CamPart, opt: PrintOptions): PrintPlan {
       // part mm -> paper mm (y down)
       const toPaper = (p: P): P => ({ x: area.x + (p.x - origin.x) / opt.scale, y: area.y + area.h - (p.y - origin.y) / opt.scale })
       const b = { x0: area.x, y0: area.y, x1: area.x + area.w, y1: area.y + area.h }
-      const pl = lines.flatMap((l) => clip(l.map(toPaper), b))
+      // dashes are laid out on paper (whole lines, so they run on across sheets), then clipped
+      const pl = lines.flatMap((l, i) => {
+        const onPaper = l.map(toPaper)
+        const d = dashes[i]
+        return (d ? dashPolyline(onPaper, d) : [onPaper]).flatMap((q) => clip(q, b))
+      })
       const tx = texts.map((t) => ({ ...t, at: toPaper(t.at) })).filter((t) => t.at.x >= b.x0 && t.at.x <= b.x1 && t.at.y >= b.y0 && t.at.y <= b.y1)
       pages.push({ origin, row, col, lines: pl, texts: tx })
     }

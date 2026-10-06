@@ -17,6 +17,7 @@ const SHAPES: { value: ToolShape; label: string }[] = [
   { value: 'saw', label: 'Saw blade' },
   { value: 'profile', label: 'Profile cutter' },
   { value: 'lollipop', label: 'Lollipop (ball on a narrower neck)' },
+  { value: 'thread', label: 'Thread mill (single 60° tooth on a neck)' },
 ]
 
 /** Cutting shape and the lengths collision checks need: shank, flutes, stick-out and holder. */
@@ -88,7 +89,13 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
             </div>
           )}
           <div className="grid grid-cols-3 gap-2 rounded-md" data-cfg={`tool:${tool.id}:lengths`}>
-            <NumField label={tool.shape === 'lollipop' ? 'Neck Ø' : 'Shank Ø'} value={opt(tool.shankDiameter)} min={0} onChange={set('shankDiameter')} hint={tool.shape === 'lollipop' ? 'Narrower than the ball: how far the ball reaches under an overhang' : 'Above the flutes'} />
+            <NumField
+              label={tool.shape === 'lollipop' || tool.shape === 'thread' ? 'Neck Ø' : 'Shank Ø'}
+              value={opt(tool.shankDiameter)}
+              min={0}
+              onChange={set('shankDiameter')}
+              hint={tool.shape === 'lollipop' ? 'Narrower than the ball: how far the ball reaches under an overhang' : tool.shape === 'thread' ? 'Behind the tooth: it must pass the thread without touching it' : 'Above the flutes'}
+            />
             <NumField label="Flute length" value={opt(tool.fluteLength)} min={0} onChange={set('fluteLength')} hint="Cutting length" />
             <NumField label="Stick-out" value={opt(tool.gaugeLength)} min={0} onChange={set('gaugeLength')} hint="Tip to holder face" />
           </div>

@@ -43,6 +43,8 @@ import {
   Radius,
   TriangleRight,
   ListOrdered,
+  Hash,
+  ZoomIn,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -67,11 +69,11 @@ import {
   trimAt,
   addEntities,
 } from '@/cam/cad'
-import { makeEntity } from '@/cam/doc'
+import { entityContours, makeEntity } from '@/cam/doc'
 import { angleOf, arc3, circle, type Contour, dist, ellipse, near, type P, polyline, rect, regularPolygon, roundedRect, slot, type ReliefStyle } from '@/cam/geom'
 import { splineToContour } from '@/cam/doc'
 import { strokeText } from '@/cam/font'
-import type { CamPart, Dimension, Entity } from '@/cam/types'
+import type { Annotation, CamPart, Dimension, Entity } from '@/cam/types'
 import { circleRefAt, linearAxis, measureAngle, measureDim, refAt, refPoint } from '@/cam/dims'
 import { nanoid } from 'nanoid'
 
@@ -100,6 +102,12 @@ export interface ToolParams {
   /** Dimensions: radius or diameter; also show the other unit. */
   dimRadial: 'radius' | 'diameter'
   dimAlt: boolean
+  /** Hatching (NEW-21): angle (degrees), spacing (part mm), crossed. */
+  hatchAngle: number
+  hatchSpacing: number
+  hatchCross: boolean
+  /** Detail views (NEW-21): magnification. */
+  detailScale: number
 }
 
 export const DEFAULT_PARAMS: ToolParams = {
@@ -121,6 +129,10 @@ export const DEFAULT_PARAMS: ToolParams = {
   gap: 0.1,
   dimRadial: 'diameter',
   dimAlt: false,
+  hatchAngle: 45,
+  hatchSpacing: 5,
+  hatchCross: false,
+  detailScale: 2,
 }
 
 export interface ToolCtx {
@@ -182,6 +194,8 @@ export type ToolId =
   | 'dimradius'
   | 'dimordinate'
   | 'measureangle'
+  | 'hatch'
+  | 'detail'
 
 export interface ToolDef {
   id: ToolId
@@ -578,7 +592,55 @@ export const TOOLS: ToolDef[] = [
       return { message: `Angle ${m.inside.toFixed(2)}° (the other way ${m.outside.toFixed(2)}°)`, repeat: true }
     },
   },
+
+  // Annotation (NEW-21): notes only, never machined
+  {
+    id: 'hatch',
+    label: 'Hatch',
+    group: 'dims',
+    icon: Hash,
+    needsSelection: true,
+    immediate: true,
+    prompts: [],
+    params: ['hatchAngle', 'hatchSpacing', 'hatchCross'],
+    apply: (_c, ctx) => {
+      const shapes = ctx.sel.filter((id) => {
+        const e = ctx.part.entities.find((x) => x.id === id)
+        return !!e && entityContours(e).some((c) => c.closed)
+      })
+      if (!shapes.length) return { message: 'Select one or more closed shapes to hatch (a shape inside another stays empty, as a hole).' }
+      const spacing = Math.max(0.1, ctx.params.hatchSpacing)
+      const h: Annotation = { id: nanoid(8), k: 'hatch', shapes, angle: ctx.params.hatchAngle, spacing, ...(ctx.params.hatchCross ? { cross: true } : {}) }
+      return { part: addNote(ctx.part, h), message: `Hatched ${shapes.length} shape(s) at ${ctx.params.hatchAngle}°, ${spacing} mm apart. The hatch follows its shapes; delete it under Annotations.` }
+    },
+  },
+  {
+    id: 'detail',
+    label: 'Detail view',
+    group: 'dims',
+    icon: ZoomIn,
+    prompts: ['Centre of the detail', 'A point on its circle (or type the radius)', 'Place the magnified view'],
+    params: ['detailScale'],
+    valueToPoint: (cs, v) => (cs.length === 1 && v > 0 ? { x: cs[0].p.x + v, y: cs[0].p.y } : null),
+    preview: (cs, cur, ctx) => {
+      if (!cs.length) return []
+      const r = dist(cs[0].p, cs.length > 1 ? cs[1].p : cur)
+      if (cs.length < 2) return r > 0 ? [circle(cs[0].p, r)] : []
+      return [circle(cs[0].p, r), circle(cur, r * Math.max(0.01, ctx.params.detailScale))]
+    },
+    apply: (cs, ctx) => {
+      const r = dist(cs[0].p, cs[1].p)
+      if (!(r > 0)) return { message: 'Pick a point away from the centre for the circle.' }
+      const used = new Set((ctx.part.annotations ?? []).flatMap((a) => (a.k === 'detail' ? [a.label] : [])))
+      let label = 'A'
+      for (let i = 0; used.has(label); i++) label = i < 25 ? String.fromCharCode(66 + i) : `D${i - 24}`
+      const d: Annotation = { id: nanoid(8), k: 'detail', c: cs[0].p, r, scale: Math.max(0.01, ctx.params.detailScale), at: cs[2].p, label }
+      return { part: addNote(ctx.part, d), message: `Detail ${label} at ${d.scale}:1 added (notes only; it prints with the drawing).` }
+    },
+  },
 ]
+
+const addNote = (part: CamPart, a: Annotation): CamPart => ({ ...part, annotations: [...(part.annotations ?? []), a] })
 
 /** Snap tolerance for dimension ends: picked points land on nodes exactly when snapping is on. */
 const DIM_TOL = 0.05

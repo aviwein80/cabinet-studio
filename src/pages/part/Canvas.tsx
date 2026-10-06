@@ -9,6 +9,7 @@ import type { CamPart, Entity } from '@/cam/types'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/app/store'
 import { dimText, measureDim } from '@/cam/dims'
+import { annotationLines, screenDash } from '@/cam/annotate'
 import { contourPath, entitiesInBox, hitEntity } from './hit'
 import { useDisplayPaths } from './displayPaths'
 import type { DisplayPaths } from '@/cam/display'
@@ -353,7 +354,8 @@ export function PartCanvas(props: CanvasProps) {
           {shown.entities.filter(visible).map((e) => {
             const selected = sel.includes(e.id)
             const hot = hover === e.id
-            const construction = layerOf(shown, e.layer)?.construction
+            const layer = layerOf(shown, e.layer)
+            const construction = layer?.construction
             if (e.g.t === 'point') {
               const p = e.g.p
               return <path key={e.id} d={`M${p.x - 4 / view.s} ${p.y}L${p.x + 4 / view.s} ${p.y}M${p.x} ${p.y - 4 / view.s}L${p.x} ${p.y + 4 / view.s}`} stroke={selected ? '#fbbf24' : colorOf(e)} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
@@ -366,7 +368,7 @@ export function PartCanvas(props: CanvasProps) {
                   d={d}
                   stroke={selected ? '#fbbf24' : colorOf(e)}
                   strokeWidth={e.id === shown.outlineId ? 2 : 1.4}
-                  strokeDasharray={construction ? '6 4' : undefined}
+                  strokeDasharray={screenDash(layer?.lineType) ?? (construction ? '6 4' : undefined)}
                   fill={e.id === shown.outlineId ? '#d6b98a' : 'none'}
                   fillOpacity={0.08}
                   fillRule="evenodd"
@@ -448,6 +450,7 @@ export function PartCanvas(props: CanvasProps) {
           const q = px(c.p)
           return <circle key={i} cx={q.x} cy={q.y} r={3} fill="#fbbf24" />
         })}
+        <NotesLayer part={shown} px={px} />
         <DimsLayer part={shown} px={px} />
         {cursor &&
           cursor.guides.map((g, i) => {
@@ -465,6 +468,39 @@ export function PartCanvas(props: CanvasProps) {
         )}
       </svg>
     </div>
+  )
+}
+
+/**
+ * Annotations drawn on screen (NEW-21): hatching and detail views, worked out from the shapes as
+ * they are now (so a hatch follows its shapes), labels the same size at any zoom.
+ */
+function NotesLayer({ part, px }: { part: CamPart; px: (p: P) => P }) {
+  const notes = useMemo(() => (part.annotations?.length ? annotationLines(part, 0.05) : null), [part])
+  if (!notes) return null
+  const f = (n: number) => Math.round(n * 10) / 10
+  const d = notes.lines
+    .map((l) =>
+      l
+        .map((q, i) => {
+          const s = px(q)
+          return `${i ? 'L' : 'M'}${f(s.x)} ${f(s.y)}`
+        })
+        .join(''),
+    )
+    .join('')
+  return (
+    <g pointerEvents="none" data-testid="notes">
+      <path d={d} stroke="#94a3b8" strokeWidth={0.8} fill="none" />
+      {notes.texts.map((t, i) => {
+        const s = px(t.at)
+        return (
+          <text key={i} x={s.x} y={s.y} textAnchor="middle" fontSize={12} fill="#cbd5e1" stroke="#16181d" strokeWidth={3} paintOrder="stroke">
+            {t.text}
+          </text>
+        )
+      })}
+    </g>
   )
 }
 

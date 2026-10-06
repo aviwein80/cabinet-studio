@@ -1,5 +1,5 @@
 /**
- * Print to scale (CAD-08): the drawing and its dimensions as a PDF at 1:N on one or more sheets.
+ * Print to scale (CAD-08, NEW-21): the drawing, its dimensions and annotations as a PDF at 1:N on one or more sheets.
  * Print it at "actual size" and measure the check bar before using the print as a template.
  */
 import { Printer } from 'lucide-react'
@@ -31,7 +31,7 @@ export function PrintDialog({ part, units, onClose }: { part: CamPart; units: Un
           <DialogTitle className="flex items-center gap-2">
             <Printer className="size-4" /> Print to scale
           </DialogTitle>
-          <DialogDescription className="text-stone-400">Face 1 and its dimensions at 1:N. Big drawings are split over several sheets with crop marks and an overlap strip for taping. Each sheet has a check bar: measure it before trusting the print.</DialogDescription>
+          <DialogDescription className="text-stone-400">Face 1, its dimensions, hatching and detail views at 1:N; layer line types print with dashes in paper mm. Big drawings are split over several sheets with crop marks and an overlap strip for taping. Each sheet has a check bar: measure it before trusting the print.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-[1fr_240px]">
           <svg viewBox={`0 0 ${plan.paper.w} ${plan.paper.h}`} className="max-h-[55vh] w-full rounded-md bg-white" role="img" aria-label="First sheet">
@@ -73,6 +73,9 @@ export function PrintDialog({ part, units, onClose }: { part: CamPart; units: Un
             </label>
             <label className="flex items-center gap-2">
               <Switch size="sm" checked={opt.dims} onCheckedChange={(dims) => setOpt({ ...opt, dims })} /> Dimensions
+            </label>
+            <label className="flex items-center gap-2">
+              <Switch size="sm" checked={opt.notes !== false} onCheckedChange={(notes) => setOpt({ ...opt, notes })} /> Hatching and detail views
             </label>
             <p className="text-stone-400">
               {plan.pages.length} sheet{plan.pages.length === 1 ? '' : 's'} ({plan.cols} across × {plan.rows} up). {plan.bar.label}.

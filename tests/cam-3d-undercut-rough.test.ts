@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest'
 import { meshDistance } from '@/cam/3d/check'
 import { checkCollisions, collisionSetup } from '@/cam/collision/collision'
-import { newPart, opInputHash, opState, parsePart, serializePart } from '@/cam/doc'
+import { CAM_FILE_VERSION, newPart, opInputHash, opState, parsePart, serializePart } from '@/cam/doc'
 import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { meshBounds, type Mesh } from '@/cam/mesh/types'
 import { defaultOp, resolveTool } from '@/cam/ops'
@@ -262,7 +262,7 @@ describe('M3.1g undercut roughing: choices, refusals, output', () => {
     expect(tp.warnings.join(' ')).toMatch(/Nothing to rough: no overhang/)
   }, 120_000)
 
-  it('its own placeholder step-down and step-over, with Configure badges; editing them marks the operation stale; saved and read back (format 6)', () => {
+  it('its own placeholder step-down and step-over, with Configure badges; editing them marks the operation stale; saved and read back (format 6 and later)', () => {
     const m = machineWith()
     const d = newOpDefaults('rough3d', m, { pattern: 'undercut' } as Partial<Rough3dOp>)
     expect(d).toEqual({ stepdown: 1, stepover: 0.1 })
@@ -277,7 +277,7 @@ describe('M3.1g undercut roughing: choices, refusals, output', () => {
     expect(opState(built, part, tool)).toBe('current')
     expect(opState({ ...built, stepdown: 1.5 }, part, tool)).toBe('stale')
     const back = parsePart(serializePart(part))
-    expect(back.version).toBe(6)
+    expect(back.version).toBe(CAM_FILE_VERSION)
     expect(back.ops).toEqual(part.ops)
   })
 

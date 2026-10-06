@@ -36,6 +36,7 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   curve: 'Curve cut',
   manual: 'Hand-drawn toolpath',
   edge: 'Edge work (aggregate)',
+  thread: 'Thread milling',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -113,6 +114,10 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       break
     case 'manual':
       op = { ...base, kind, start: { x: 0, y: 0, z: 0 }, steps: [] }
+      break
+    case 'thread':
+      // an M10 x 1.5 internal thread, 12 mm long, climb cut (bottom-up); PLACEHOLDER radial passes
+      op = { ...base, kind, side: 'internal', diameter: 0, pitch: 1.5, hand: 'right', travel: 'up', threadDepth: 0, passes: 2, spring: false, levels: { ...DEFAULT_LEVELS, depth: 12 } }
       break
     case 'face':
       // PLACEHOLDER step-over (the pocket's 45 %) until the shop supplies its own
@@ -221,6 +226,9 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     case 'manual':
     case 'edge':
       return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
+    case 'thread':
+      // the smallest thread mill (it fits the most holes); a bigger one only when picked
+      return routers(machine).filter((t) => t.shape === 'thread').sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
     case 'face':
       // the widest flat cutter
       return routers(machine).filter(squareEnd).sort((a, b) => b.diameter - a.diameter || a.number - b.number)[0] ?? null

@@ -30,7 +30,7 @@ import { PatternDialog } from './part/PatternDialog'
 import { PluginMenu } from './part/PluginMenu'
 import { usablePatterns } from '@/core/hardware/patterns'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
-import { DimsPanel } from './part/DimsPanel'
+import { AnnotationsPanel, DimsPanel } from './part/DimsPanel'
 import { TurnSketchDialog } from './part/TurnSketchDialog'
 import { PrintDialog } from './part/PrintDialog'
 import { QueryDialog } from './part/QueryDialog'
@@ -66,9 +66,13 @@ const PARAM_LABEL: Record<keyof ToolParams, string> = {
   gap: 'Gap',
   dimRadial: 'Show',
   dimAlt: 'Also the other unit',
+  hatchAngle: 'Angle °',
+  hatchSpacing: 'Spacing',
+  hatchCross: 'Crossed',
+  detailScale: 'Magnify ×',
 }
 const fileBase = (s: string) => s.replace(/[^\w-]+/g, '-') || 'part'
-const LENGTH_PARAMS = new Set<keyof ToolParams>(['radius', 'distance', 'width', 'height', 'spacingX', 'spacingY', 'gap'])
+const LENGTH_PARAMS = new Set<keyof ToolParams>(['radius', 'distance', 'width', 'height', 'spacingX', 'spacingY', 'gap', 'hatchSpacing'])
 
 export function PartDesignerPage({ partId, jobId }: { partId: string; jobId?: string }) {
   const { data, go, savePart } = useStore()
@@ -739,6 +743,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             <TabsContent value="layers" className="min-h-0 flex-1 overflow-auto">
               <LayersPanel part={part} current={layer} setCurrent={setLayer} sel={ctx.sel} onChange={change} />
               {feat.camCadTools && <DimsPanel part={part} units={units} onChange={change} />}
+              {feat.camCadTools && <AnnotationsPanel part={part} units={units} onChange={change} />}
             </TabsContent>
             <TabsContent value="props" className="min-h-0 flex-1 overflow-auto">
               <PropertiesPanel part={part} sel={ctx.sel} units={units} materials={data!.library.materials} nodeSeg={nodeSeg} onChange={change} onFit={() => setFitKey((k) => k + 1)} />

@@ -26,9 +26,12 @@ export interface Cutter {
   angle: number
   /** Corner radius for bull-nose cutters. */
   cornerRadius?: number
-  /** Lollipop: neck radius (narrower than the ball `r`). */
+  /** Lollipop: neck radius (narrower than the ball `r`). Thread mill: the neck above its tooth. */
   neck?: number
 }
+
+/** A thread mill's tooth flanks: 30° from square to the axis (a 60° thread form). */
+export const THREAD_FLANK = Math.tan(Math.PI / 6)
 
 export interface SimSeg {
   a: V3
@@ -90,7 +93,7 @@ export function cutterOf(tp: Toolpath, d?: number): Cutter {
     dia = w && w.k === 'saw' ? w.width : (t?.kerf ?? 4)
   }
   if (!dia) dia = tp.kind === 'vcarve' ? 20 : 6
-  return { r: dia / 2, shape, angle: t?.angle ?? 90, ...(shape === 'bull' ? { cornerRadius: t?.cornerRadius ?? 0 } : {}), ...(shape === 'lollipop' ? { neck: Math.min(dia, t?.shankDiameter ?? dia) / 2 } : {}) }
+  return { r: dia / 2, shape, angle: t?.angle ?? 90, ...(shape === 'bull' ? { cornerRadius: t?.cornerRadius ?? 0 } : {}), ...(shape === 'lollipop' || shape === 'thread' ? { neck: Math.min(dia, t?.shankDiameter ?? dia) / 2 } : {}) }
 }
 
 /** Cutter bottom height at horizontal distance `d` from the tool axis, tool tip at `z`. */
@@ -99,6 +102,8 @@ export function cutterZ(c: Cutter, z: number, d: number): number {
   // (a lollipop's lowest point at d is its ball's)
   if (c.shape === 'ball' || c.shape === 'lollipop') return z + c.r - Math.sqrt(Math.max(0, c.r * c.r - d * d))
   if (c.shape === 'v') return z + d / Math.tan(((c.angle || 90) * Math.PI) / 360)
+  // a thread mill's tooth: its lower flank (the tooth's tip at z, at the tool's radius)
+  if (c.shape === 'thread') return z - Math.min(c.r - d, c.r - (c.neck ?? 0)) * THREAD_FLANK
   if (c.shape === 'bull') {
     const rc = Math.min(Math.max(0, c.cornerRadius ?? 0), c.r)
     const flat = c.r - rc

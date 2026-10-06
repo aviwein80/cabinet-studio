@@ -25,9 +25,9 @@ export function cutoutTool(machine: MachineProfile): Tool | undefined {
   return machine.tools.find((t) => t.type === 'router' && t.number === machine.cutoutToolNumber)
 }
 
-/** Flat-bottomed router: what 2D pockets, grooves and engraving are calculated for (not V, ball or bull-nose). */
+/** Flat-bottomed router: what 2D pockets, grooves and engraving are calculated for (not V, ball, bull-nose, lollipop or thread mill). */
 export function squareEnd(t: Tool) {
-  return t.type === 'router' && t.shape !== 'v' && t.shape !== 'ball' && t.shape !== 'bull' && t.shape !== 'lollipop'
+  return t.type === 'router' && t.shape !== 'v' && t.shape !== 'ball' && t.shape !== 'bull' && t.shape !== 'lollipop' && t.shape !== 'thread'
 }
 
 export function partSpacing(machine: MachineProfile, settings: ShopSettings) {

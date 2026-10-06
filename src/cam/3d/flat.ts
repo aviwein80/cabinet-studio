@@ -9,6 +9,10 @@
  * its offsets inwards. Every pass is dropped onto the model exactly and kept only where the tool
  * still touches a flat face (`passes.ts`), so the tool never rides up a wall or off an edge on this
  * strategy. With rest machining on, only the flat areas earlier operations left material on are cut.
+ *
+ * On level flats every pass runs at one height, so it can also go to woodWOP as an ordinary
+ * contour-milling pass (`layers`, like waterline), behind the 3D flat-layer output switch. A pass
+ * on a face that is flatter than 0.5° but not level changes height as it goes: true 3D (`uneven`).
  */
 import { checkCancel, type Work } from '@/core/cancel'
 import type { P } from '../geom'
@@ -21,14 +25,25 @@ import { type Finish3dResult, LINK_STEPOVERS } from './parallel'
 import { chainMoves, chainsAlong, FLAT_DEG, nearestOrder, surfaceSampler } from './passes'
 import { insideRegion, polysBox, type Region } from './region'
 import { levelLines, simplifyPlan } from './scallop'
+import type { Layer } from './waterline'
+
+/** A pass whose heights differ by no more than this is level (one contour-milling depth), mm. */
+export const LEVEL_TOL = 0.0005
+
+export interface FlatAreaResult extends Finish3dResult {
+  /** The passes, in cutting order, each at its one height (only the level ones; for flat-layer output). */
+  layers: Layer[]
+  /** Passes that are not level (on faces flatter than 0.5° but tilted): they need true 3D output. */
+  uneven: number
+}
 
 /** Grid nodes at most. */
 const MAX_NODES = 2_000_000
 /** The first pass runs this far inside the traced edge of a flat area, mm. */
 const EDGE_IN = 0.005
 
-export function flatAreaFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, region: Region, levels: Levels, work?: Work): Finish3dResult {
-  const none = (w: string): Finish3dResult => ({ moves: [], warnings: [w], minZ: NaN, spacing: 0 })
+export function flatAreaFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, region: Region, levels: Levels, work?: Work): FlatAreaResult {
+  const none = (w: string): FlatAreaResult => ({ moves: [], warnings: [w], minZ: NaN, spacing: 0, layers: [], uneven: 0 })
   // only where the tool touches a flat face (and the groups chosen)
   const smp = surfaceSampler({ ...op, slope: { min: 0, max: FLAT_DEG }, skipFlats: false }, mesh, cutter)
   if ('error' in smp) return none(smp.error)
@@ -115,7 +130,40 @@ export function flatAreaFinish(op: Finish3dOp, mesh: Mesh, cutter: Cutter3D, reg
   if (!ordered.length) return none('Nothing to cut: the passes found no flat face to rest on.')
   // (links stay down only over flat faces: this strategy never rides up a wall)
   const { moves, minZ } = chainMoves(ordered, smp, region, mesh, { linkMax: LINK_STEPOVERS * step, levels, onCutOnly: true })
-  return { moves, warnings: [], minZ, spacing: step }
+  const { layers, uneven } = levelPasses(ordered)
+  return { moves, warnings: [], minZ, spacing: step, layers, uneven }
+}
+
+/**
+ * The passes as flat layers, in cutting order: each level pass at its height (a pass that comes
+ * back to its start is closed), points in line with their neighbours left out; passes whose
+ * heights differ by more than `LEVEL_TOL` are counted.
+ */
+export function levelPasses(chains: Pt[][]): { layers: Layer[]; uneven: number } {
+  const layers: Layer[] = []
+  let uneven = 0
+  for (const c of chains) {
+    let lo = Infinity
+    let hi = -Infinity
+    for (const p of c) {
+      lo = Math.min(lo, p.z)
+      hi = Math.max(hi, p.z)
+    }
+    if (c.length < 2 || hi - lo > LEVEL_TOL) {
+      if (c.length >= 2) uneven++
+      continue
+    }
+    const a = c[0]
+    const b = c[c.length - 1]
+    const closed = c.length > 3 && Math.hypot(b.x - a.x, b.y - a.y) < 1e-6
+    // (at one height, points in line with their neighbours add nothing: the pass is the same within 0.0005 mm)
+    const pts = simplifyPlan(
+      (closed ? c.slice(0, -1) : c).map((p) => ({ x: p.x, y: p.y })),
+      LEVEL_TOL,
+    )
+    layers.push({ z: (lo + hi) / 2, chains: [{ pts, closed }] })
+  }
+  return { layers, uneven }
 }
 
 function signedArea(pts: P[]): number {

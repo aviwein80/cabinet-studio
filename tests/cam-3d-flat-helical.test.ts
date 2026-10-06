@@ -15,8 +15,10 @@ import { meshBounds } from '@/cam/mesh/types'
 import { defaultOp, resolveTool } from '@/cam/ops'
 import { buildTimeline } from '@/cam/sim'
 import { HeightfieldStock } from '@/cam/stock/heightfield'
-import { generateOp, isFlatLayer, type Toolpath } from '@/cam/toolpath'
-import type { Finish3dOp } from '@/cam/types'
+import { levelPasses } from '@/cam/3d/flat'
+import { generateOp, isFlatLayer, pathKey, type Toolpath } from '@/cam/toolpath'
+import type { CamPart, Finish3dOp } from '@/cam/types'
+import { writeSheetMpr } from '@/core/mpr/writer'
 import { defaultAppData, PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { runJob } from '@/core/pipeline'
 import type { Job } from '@/core/types'
@@ -26,6 +28,7 @@ import { bowl, raisedPanel } from './surfaces'
 
 const machine = PLACEHOLDER_MACHINE
 const COS_FLAT = Math.cos((0.5 * Math.PI) / 180)
+const AT_FACE1 = (n: number) => `${n} pass(es) at or above face 1 are not written to woodWOP (they cut nothing on the panel, or only where the model stands above it).`
 
 addSurface('bowl', buildMesh(parseStl(stlBinary(relief(80, 80, 160, 160, bowl))), { gapTol: 0 }).mesh, bowl)
 
@@ -47,7 +50,8 @@ function chains(tp: Toolpath): [number, number, number][][] {
 describe('M3.1c flat-area finishing', () => {
   it('cuts only where the tool rests on a flat face, at that face, and traces the edge of the flat to 0.01 mm', () => {
     const { mesh, tp } = finishSetup('hemisphere', 'flat', { toolId: BALL, stepover: 2 })
-    expect(tp.warnings).toEqual([])
+    // (M3.1g: the ball resting on the dome's top is a level pass at face 1: nothing to write there)
+    expect(tp.warnings).toEqual([AT_FACE1(1)])
     const dc = new DropCutter(mesh, { kind: 'torus', R: 3, rc: 3 })
     const pts = clPoints(tp)
     expect(pts.length).toBeGreaterThan(200)
@@ -77,7 +81,8 @@ describe('M3.1c flat-area finishing', () => {
 
   it('raised panel, 8 mm flat end mill: the border floor is finished flat right up to the tool radius from the bevel; the bevel is never cut', () => {
     const { mesh, part, tp } = finishSetup('raised-panel', 'flat', { toolId: FLAT, stepover: 4 })
-    expect(tp.warnings).toEqual([])
+    // (M3.1g: the field is at face 1, so its passes are not written as flat layers: nothing to cut there)
+    expect(tp.warnings).toEqual([AT_FACE1(115), "2 contour(s) have more than 2000 points: woodWOP's limit per contour is not confirmed yet. Check the program loads on the machine."])
     const dc = new DropCutter(mesh, { kind: 'torus', R: 4, rc: 0 })
     for (const [x, y, z] of clPoints(tp)) {
       expect(dc.drop(x, y)).toBe(true)
@@ -219,20 +224,12 @@ describe('M3.1c helical finishing', () => {
 })
 
 describe('M3.1c output and goldens', () => {
-  it('neither is a flat layer; the export checker refuses both, even with both output switches on', () => {
-    for (const [name, strategy, patch] of [
-      ['raised-panel', 'flat', { toolId: FLAT, stepover: 6 }],
-      ['bowl', 'helical', { toolId: BALL, stepdown: 2 }],
-    ] as [string, 'flat' | 'helical', Partial<Finish3dOp>][]) {
-      const { part: p, op } = finishSetup(name, strategy, patch)
-      expect(isFlatLayer(op)).toBe(false)
-      const part = { ...p, materialId: 'mat-mdf18', thickness: 45 }
-      const data = defaultAppData()
-      const job: Job = { id: 'j', number: 'JF', name: 'Flat', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [part] }
-      data.jobs = [job]
-      data.settings.features = { ...data.settings.features, camMprOutput: true, cam3dMprOutput: true }
-      expect(runJob(job, data).issues.filter((i) => i.code === 'CAM_3D_NO_OUTPUT'), strategy).toHaveLength(1)
-    }
+  it('helical is not a flat layer; the export checker refuses it, even with both output switches on', () => {
+    const { part: p, op } = finishSetup('bowl', 'helical', { toolId: BALL, stepdown: 2 })
+    expect(isFlatLayer(op)).toBe(false)
+    const { job, data } = flatJob({ ...p, materialId: 'mat-mdf18', thickness: 45 })
+    data.settings.features = { ...data.settings.features, camMprOutput: true, cam3dMprOutput: true }
+    expect(runJob(job, data).issues.filter((i) => i.code === 'CAM_3D_NO_OUTPUT')).toHaveLength(1)
   }, 60_000)
 
   for (const [label, name, strategy, patch] of [
@@ -243,4 +240,103 @@ describe('M3.1c output and goldens', () => {
   ] as [string, string, 'flat' | 'helical', Partial<Finish3dOp>][]) {
     it(`golden: ${label}`, () => expectGolden3d(label, finishSetup(name, strategy, patch).tp), 120_000)
   }
+})
+
+function flatJob(part: CamPart) {
+  const data = defaultAppData()
+  const job: Job = { id: 'j', number: 'JF', name: 'Flat', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [part] }
+  data.jobs = [job]
+  return { job, data }
+}
+
+describe('M3.1g flat-area finishing on level flats as flat layers (owner decision 1)', () => {
+  const codes = (out: ReturnType<typeof runJob>) => out.issues.filter((i) => i.code.startsWith('CAM_3D') || i.code === 'CAM_NO_OUTPUT').map((i) => i.code)
+
+  it('raised panel: every level pass is one contour at its floor depth; written only with both switches on (off by default)', () => {
+    const { part: p, op, tp } = finishSetup('raised-panel', 'flat', { toolId: FLAT, stepover: 6 })
+    expect(isFlatLayer(op)).toBe(true)
+    expect(tp.noOutput).toBeUndefined()
+    const contours = tp.intents.filter((it) => it.k === 'contour')
+    expect(contours.length).toBeGreaterThan(3)
+    // the border floor is 10 mm below face 1 (plus the tiny level facets of the test mesh's corner
+    // hips, a recorded limit, at every 0.25 mm); the field (at face 1) is not written
+    const pts = clPoints(tp)
+    const key = (x: number, y: number, z: number) => `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`
+    // (a pass's first point is where the tool feeds down to it)
+    const onPath = new Set([...pts, ...tp.moves.flatMap((m) => (m.t === 'feed' ? [[m.x, m.y, m.z]] : []))].map(([x, y, z]) => key(x, y, z)))
+    let corners = 0
+    let floor = 0
+    for (const it of contours) {
+      if (it.k !== 'contour') continue
+      expect(it.passes).toHaveLength(1)
+      const d = it.passes[0].depth
+      expect(d).toBeGreaterThan(0)
+      expect(d).toBeLessThanOrEqual(10 + 1e-9)
+      if (Math.abs(d - 10) < 1e-6) floor++
+      expect(it.ramp).toBe(true)
+      expect(it.rk).toBe('NOWRK')
+      expect(it.tool?.id).toBe(FLAT)
+      // every corner is a point of the toolpath's own cutting chains, at the contour's depth
+      for (const sg of it.segs) {
+        expect(onPath.has(key(sg.a.x, sg.a.y, -d))).toBe(true)
+        corners++
+      }
+    }
+    expect(floor).toBeGreaterThan(3)
+    expect(corners).toBeLessThan(pts.length)
+    process.stdout.write(`  [flat layers] raised panel, 8 mm flat, 6 mm step-over: ${contours.length} contours (${floor} on the border floor at depth 10 mm), ${corners} corners from ${pts.length} toolpath points\n`)
+
+    const part = { ...p, materialId: 'mat-mdf18', thickness: 45 }
+    const { job, data } = flatJob(part)
+    const paths3d = new Map([[pathKey(op, part, machine), tp]])
+    // the defaults: custom-part output and 3D flat-layer output both off
+    expect(data.settings.features?.cam3dMprOutput ?? false).toBe(false)
+    data.settings.features = { ...data.settings.features, camMprOutput: true, cam3dMprOutput: false }
+    let out = runJob(job, data, { paths3d })
+    expect(codes(out)).toEqual(['CAM_3D_OUTPUT_OFF'])
+    expect(out.programs.flatMap((pr) => pr.ops).filter((o) => o.kind === 'cam' && o.intent.k === 'contour')).toHaveLength(0)
+    // both on, toolpath not calculated (a batch run): blocked
+    data.settings.features = { ...data.settings.features, camMprOutput: true, cam3dMprOutput: true }
+    expect(codes(runJob(job, data))).toEqual(['CAM_3D_NOT_READY'])
+    // both on, toolpath calculated: the contours are written as <105> passes at the floor depth
+    out = runJob(job, data, { paths3d })
+    expect(codes(out)).toEqual([])
+    const written = out.programs.flatMap((pr) => pr.ops).filter((o) => o.kind === 'cam' && o.intent.k === 'contour')
+    expect(written).toHaveLength(contours.length)
+    const mpr = writeSheetMpr(out.programs[0], { job, machine: data.machine, mprNumber: 1, mprCount: 1 })
+    expect(mpr.split('<105 ').length - 1).toBeGreaterThanOrEqual(contours.length)
+  }, 120_000)
+
+  it('a flat that is not quite level (0.23°) is true 3D: the toolpath is blocked even with both switches on', () => {
+    // a pocket floor tilted 0.004 (0.23°: flatter than 0.5°, so flat-area finishing cuts it)
+    const tilted = (x: number, y: number) => {
+      const e = Math.min(x - 10, y - 10, 90 - x, 70 - y)
+      return e >= 0 ? -8 + 0.004 * x : 0
+    }
+    addSurface('tilted-floor', buildMesh(parseStl(stlBinary(relief(100, 80, 200, 160, tilted))), { gapTol: 0 }).mesh, tilted)
+    const { part: p, op, tp } = finishSetup('tilted-floor', 'flat', { toolId: FLAT, stepover: 4 })
+    expect(isFlatLayer(op)).toBe(true)
+    expect(clPoints(tp).length).toBeGreaterThan(50)
+    expect(tp.noOutput).toMatch(/flatter than 0.5° but not level/)
+    expect(tp.intents.filter((it) => it.k === 'contour')).toHaveLength(0)
+    const part = { ...p, materialId: 'mat-mdf18', thickness: 45 }
+    const { job, data } = flatJob(part)
+    data.settings.features = { ...data.settings.features, camMprOutput: true, cam3dMprOutput: true }
+    const out = runJob(job, data, { paths3d: new Map([[pathKey(op, part, machine), tp]]) })
+    expect(codes(out)).toEqual(['CAM_NO_OUTPUT'])
+    expect(out.programs.flatMap((pr) => pr.ops).filter((o) => o.kind === 'cam' && o.intent.k === 'contour')).toHaveLength(0)
+  }, 120_000)
+
+  it('level passes: corners only where the pass turns, heights within 0.0005 mm', () => {
+    const P = (x: number, y: number, z: number) => ({ x, y, z, ok: true, cut: true, prot: false })
+    const ring = [P(0, 0, -5), P(5, 0, -5), P(10, 0, -5), P(10, 10, -5), P(0, 10, -5.0002), P(0, 0, -5)]
+    const tiltedRun = [P(0, 0, -5), P(10, 0, -5.01)]
+    const r = levelPasses([ring, tiltedRun])
+    expect(r.uneven).toBe(1)
+    expect(r.layers).toHaveLength(1)
+    expect(r.layers[0].chains[0].closed).toBe(true)
+    // (5, 0) is in line with its neighbours
+    expect(r.layers[0].chains[0].pts).toEqual([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }])
+    expect(r.layers[0].z).toBeCloseTo(-5.0001, 6)
+  })
 })

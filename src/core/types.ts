@@ -672,7 +672,8 @@ export interface FeatureFlags {
   /** Write custom-part operations into N-200 MPR files. Off until the owner has proven output on the machine. */
   camMprOutput: boolean
   /**
-   * Write the flat-layer 3D operations (Z-level roughing, waterline) as contour-milling macros.
+   * Write the flat-layer 3D operations (Z-level roughing, waterline, flat-area finishing on level
+   * flats) as contour-milling macros.
    * Needs `camMprOutput` too. Off until the owner has proven the output on the machine.
    */
   cam3dMprOutput: boolean

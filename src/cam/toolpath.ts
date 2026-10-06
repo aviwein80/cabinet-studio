@@ -1832,12 +1832,16 @@ export function inBackground(op: CamOp, part: CamPart): boolean {
 
 /**
  * 3D operations that cut only at constant heights (Z-level roughing; waterline without the
- * shallow-area fill). They can be written to woodWOP as ordinary contour-milling passes, behind
- * their own switch. Everything else in 3D needs true 3D output, which stays off.
+ * shallow-area fill; flat-area finishing, whose passes on level flats each run at one height).
+ * They can be written to woodWOP as ordinary contour-milling passes, behind their own switch.
+ * Everything else in 3D needs true 3D output, which stays off. (A flat-area pass on a face that is
+ * flatter than 0.5° but not level changes height: such a toolpath is blocked, `noOutput`.)
  */
 export function isFlatLayer(op: CamOp): boolean {
   if (op.kind === 'rough3d') return op.pattern !== 'adaptive'
-  if (op.kind !== 'finish3d' || op.strategy !== 'waterline') return false
+  if (op.kind !== 'finish3d') return false
+  if (op.strategy === 'flat') return true
+  if (op.strategy !== 'waterline') return false
   return !(op.fillShallow && Math.max(op.slope.min, op.skipFlats ? 0.5 : 0) > 0)
 }
 
@@ -1912,7 +1916,7 @@ function depthWarnings(minZ: number, ctx: GenContext, tp: Toolpath) {
 }
 
 /** Flat-layer output: every pass of every level as one contour-milling pass at that level's depth. */
-function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolean) {
+function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolean, aboveWhy = 'above face 1 are not written to woodWOP (they cut only where the model stands above the panel)') {
   let long = 0
   let above = 0
   for (const L of layers) {
@@ -1928,7 +1932,7 @@ function layerIntents(layers: Layer[], tp: Toolpath, label: string, ramp: boolea
       tp.intents.push({ k: 'contour', segs, closed: c.closed, rk: 'NOWRK', approach: 'SEN', ramp, tool: tp.tool, label: `${label} Z${(-depth).toFixed(2)}`, passes: [{ depth, from: 0, to: segs.length - 1 }] })
     }
   }
-  if (above) tp.warnings.push(`${above} pass(es) above face 1 are not written to woodWOP (they cut only where the model stands above the panel).`)
+  if (above) tp.warnings.push(`${above} pass(es) ${aboveWhy}.`)
   if (long) tp.warnings.push(`${long} contour(s) have more than ${CONTOUR_POINT_WARN} points: woodWOP's limit per contour is not confirmed yet. Check the program loads on the machine.`)
 }
 
@@ -2046,6 +2050,18 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
     if (isFlatLayer(op)) layerIntents(r.layers, tp, op.name, true)
     return
   }
+  if (op.strategy === 'flat') {
+    const r = flatAreaFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+    tp.warnings.push(...r.warnings)
+    b.moves.push(...r.moves)
+    depthWarnings(r.minZ, ctx, tp)
+    clearanceWarnings(m.placed, r.moves, op.surface.stockToLeave, ctx, tp)
+    // level flats go out as flat layers (behind the 3D output switch); a pass on a face that is
+    // not quite level changes height, which no contour-milling pass can carry
+    if (r.uneven) tp.noOutput = `${r.uneven} flat-area pass(es) run on faces that are flatter than 0.5° but not level, so their height changes along the pass (true 3D)`
+    else layerIntents(r.layers, tp, op.name, true, 'at or above face 1 are not written to woodWOP (they cut nothing on the panel, or only where the model stands above it)')
+    return
+  }
   const r =
     op.strategy === 'pencil'
       ? pencilFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
@@ -2055,15 +2071,13 @@ function genFinish3d(op: Finish3dOp, ctx: GenContext, tp: Toolpath, b: Builder) 
           ? spiralFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
           : op.strategy === 'scallop'
             ? scallopFinish(op, m.placed, m.cutter, region, op.levels, scallopStarts(op, ctx.part, tp), ctx.work)
-            : op.strategy === 'flat'
-              ? flatAreaFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
-              : op.strategy === 'helical'
-                ? helicalFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
-                : op.strategy === 'undercut'
-                  ? undercutOf(op, m.placed, region, ctx, tp)
-                  : op.strategy === 'curve'
-                    ? curveOf(op, m.placed, m.cutter, region, ctx, tp)
-                    : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+            : op.strategy === 'helical'
+              ? helicalFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
+              : op.strategy === 'undercut'
+                ? undercutOf(op, m.placed, region, ctx, tp)
+                : op.strategy === 'curve'
+                  ? curveOf(op, m.placed, m.cutter, region, ctx, tp)
+                  : parallelFinish(op, m.placed, m.cutter, region, op.levels, ctx.work)
   tp.warnings.push(...r.warnings)
   b.moves.push(...r.moves)
   depthWarnings(r.minZ, ctx, tp)

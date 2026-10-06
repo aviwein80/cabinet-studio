@@ -19,6 +19,8 @@
   79.991,
   0
  ],
- "warnings": [],
+ "warnings": [
+  "1 pass(es) at or above face 1 are not written to woodWOP (they cut nothing on the panel, or only where the model stands above it)."
+ ],
  "hash": "281bfe6d"
 }

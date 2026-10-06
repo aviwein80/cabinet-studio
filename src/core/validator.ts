@@ -422,7 +422,7 @@ export function validateJob(
           ...ref,
           severity: 'error',
           code: 'CAM_3D_NO_OUTPUT',
-          message: `Custom part #${c.partNo} ${name}: ${c.ops3d} 3D operation(s) need true 3D output, which cannot be written to woodWOP yet (it stays off until the format is confirmed with a program from the machine). Only simulate them. Z-level roughing, and waterline without the shallow-area fill, can be written as flat layers.`,
+          message: `Custom part #${c.partNo} ${name}: ${c.ops3d} 3D operation(s) need true 3D output, which cannot be written to woodWOP yet (it stays off until the format is confirmed with a program from the machine). Only simulate them. Z-level roughing, waterline without the shallow-area fill, and flat-area finishing on level flats can be written as flat layers.`,
         })
       if (c.adaptiveOps)
         add({
@@ -438,8 +438,8 @@ export function validateJob(
           severity: 'error',
           code: off ? 'CAM_3D_OUTPUT_OFF' : 'CAM_3D_NOT_READY',
           message: off
-            ? `Custom part #${c.partNo} ${name}: ${c.flat3d} 3D roughing or waterline operation(s) are not written because 3D flat-layer output is off (Machine > Features).`
-            : `Custom part #${c.partNo} ${name}: ${c.flat3dMissing} 3D roughing or waterline toolpath(s) are not calculated yet. Wait for the job page to finish calculating them (batch runs cannot calculate 3D toolpaths yet).`,
+            ? `Custom part #${c.partNo} ${name}: ${c.flat3d} 3D roughing, waterline or flat-area operation(s) are not written because 3D flat-layer output is off (Machine > Features).`
+            : `Custom part #${c.partNo} ${name}: ${c.flat3dMissing} 3D roughing, waterline or flat-area toolpath(s) are not calculated yet. Wait for the job page to finish calculating them (batch runs cannot calculate 3D toolpaths yet).`,
         })
       }
       if (c.collisions?.length)

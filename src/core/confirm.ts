@@ -181,13 +181,17 @@ export function toolUnconfirmed(m: MachineProfile, t: Tool): Unconfirmed[] {
     const target: ConfigTarget = { kind: 'tool', toolId: t.id, part }
     if (open && !isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: `T${t.number} ${label}`, value, group: 'Tools', target })
   }
-  add('data', 'number, diameter and depth', `Ø${fmt(t.diameter)}, ${fmt(t.maxDepth)} deep`, m.placeholder)
+  // M3.1g (owner): lollipop sizes are not known. Its ball, neck, flute and stick-out stay badged until
+  // each is confirmed, even once the rest of the tool table is real.
+  const lolly = t.shape === 'lollipop'
+  add('data', lolly ? 'number, ball Ø and depth' : 'number, diameter and depth', `${lolly ? 'ball ' : ''}Ø${fmt(t.diameter)}, ${fmt(t.maxDepth)} deep`, m.placeholder || lolly)
   if (t.type === 'saw') add('blade', 'blade diameter', t.bladeDiameter ? `Ø${fmt(t.bladeDiameter)} mm` : 'Ø200 mm (assumed)', m.placeholder || !t.bladeDiameter)
   if (hasLengths(m, t)) {
     // no stick-out given: the shortest possible (the flute length) is assumed, so checks err safe
     const g = effectiveGauge(m, t)
     const stick = g.assumed ? `${fmt(g.gauge)} (assumed = flute length)` : t.gaugeLength ? fmt(t.gaugeLength) : '?'
-    add('lengths', 'shank, flute and stick-out', `flute ${fmt(t.fluteLength ?? t.maxDepth)}, stick-out ${stick} mm`, m.placeholder || g.assumed)
+    const neck = lolly ? `neck Ø${t.shankDiameter ? fmt(t.shankDiameter) : '? (not given)'}, ` : ''
+    add('lengths', lolly ? 'neck Ø, flute and stick-out' : 'shank, flute and stick-out', `${neck}flute ${fmt(t.fluteLength ?? t.maxDepth)}, stick-out ${stick} mm`, m.placeholder || g.assumed || lolly)
   }
   if (t.type === 'router' || t.type === 'saw') {
     const f = feedsFor({ feeds: {} } as CamOp, t, null, m)

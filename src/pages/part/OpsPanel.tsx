@@ -720,7 +720,7 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null }: { op: Cam
               <NumField label="Step-over" value={op.stepover} min={0.01} step={0.1} cfg={c('finishStepover').cfg} badge={c('finishStepover').badge} onChange={(v) => c('finishStepover').set({ ...op, stepover: v })} hint="Between the rings, mm" />
               <SelectField label="Order" value={op.travel ?? 'inward'} options={[{ value: 'inward', label: 'From the edge in' }, { value: 'outward', label: 'From the middle out' }]} onChange={(v) => onChange({ ...op, travel: v })} />
               <SelectField label="Rings run" value={op.direction} options={[{ value: 'climb', label: 'Counter-clockwise' }, { value: 'conventional', label: 'Clockwise' }]} onChange={(v) => onChange({ ...op, direction: v })} />
-              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Only where the tool rests on a face flatter than 0.5°: the first ring follows the edge of each flat area (traced to 0.01 mm), the next ones step in. A flat-bottomed tool is picked first.</div>
+              <div className="col-span-2 self-end pb-1.5 text-[11px] text-stone-400">Only where the tool rests on a face flatter than 0.5°: the first ring follows the edge of each flat area (traced to 0.01 mm), the next ones step in. A flat-bottomed tool is picked first. On level flats each ring can go to woodWOP as a contour at its depth (switch "Write 3D roughing, waterline and flat areas", off); a face not quite level makes it simulation only.</div>
             </Group>
             {restGroup(op, part, adaptiveOn, onChange)}
           </>

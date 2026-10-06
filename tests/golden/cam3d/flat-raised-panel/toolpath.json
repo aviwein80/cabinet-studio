@@ -19,6 +19,9 @@
   149.991,
   0
  ],
- "warnings": [],
+ "warnings": [
+  "115 pass(es) at or above face 1 are not written to woodWOP (they cut nothing on the panel, or only where the model stands above it).",
+  "2 contour(s) have more than 2000 points: woodWOP's limit per contour is not confirmed yet. Check the program loads on the machine."
+ ],
  "hash": "864062d2"
 }

@@ -218,3 +218,50 @@ describe('export checker messages', () => {
     for (const code of ['PLACEHOLDER_TOOLS', 'MACHINE_PLACEHOLDER', 'MACHINE_CANNOT', 'CAM_OUTPUT_OFF']) expect(after.some((i) => i.code === code)).toBe(true)
   })
 })
+
+describe('M3.1g lollipop sizes stay placeholders (owner decision 2)', () => {
+  const T108 = (m: MachineProfile) => m.tools.find((t) => t.id === 't108')!
+  const parts = (m: MachineProfile) => toolUnconfirmed(m, T108(m)).map((u) => [u.target.kind === 'tool' ? u.target.part : '', u.label, u.value])
+
+  it('ball, neck, flute and stick-out each show Configure, with the values in use', () => {
+    const m = fresh()
+    const u = parts(m)
+    expect(u).toContainEqual(['data', 'T108 number, ball Ø and depth', 'ball Ø12, 40 deep'])
+    expect(u).toContainEqual(['lengths', 'T108 neck Ø, flute and stick-out', 'neck Ø4, flute 12, stick-out 60 mm'])
+    // on the machine page's list too
+    expect(keys(m)).toEqual(expect.arrayContaining(['tool:t108:data', 'tool:t108:lengths']))
+  })
+
+  it('still badged once the rest of the tool table is real; gone only when each value is confirmed', () => {
+    const m = fresh()
+    m.placeholder = false
+    // an ordinary tool loses its badge with the real table; the lollipop keeps both
+    expect(toolUnconfirmed(m, m.tools.find((t) => t.id === 't102')!).map((x) => x.key)).not.toContain('tool:t102:data')
+    expect(parts(m).map((x) => x[0])).toEqual(expect.arrayContaining(['data', 'lengths']))
+    // a neck not given at all says so
+    const noNeck = { ...T108(m), shankDiameter: undefined }
+    expect(toolUnconfirmed(m, noNeck).find((x) => x.key === 'tool:t108:lengths')!.value).toMatch(/neck Ø\? \(not given\)/)
+    confirmKey(m, 'tool:t108:data')
+    expect(parts(m).map((x) => x[0])).not.toContain('data')
+    expect(parts(m).map((x) => x[0])).toContain('lengths')
+    confirmKey(m, 'tool:t108:lengths')
+    expect(parts(m).map((x) => x[0])).not.toContain('lengths')
+  })
+
+  it('an undercut operation lists them in its editor and the export checker lists them; confirming switches nothing on', () => {
+    const data = defaultAppData()
+    const part = newPart({ name: 'Lip', length: 80, width: 60, thickness: 50, materialId: 'mat-mdf18' })
+    const op = { ...defaultOp('finish3d', [], { strategy: 'undercut' } as Partial<CamOp>), toolId: 't108' } as CamOp
+    part.ops = [op]
+    const u = opUnconfirmed(op, part, data.machine, T108(data.machine)).map((x) => x.key)
+    expect(u).toEqual(expect.arrayContaining(['tool:t108:data', 'tool:t108:lengths']))
+    const j: Job = { id: 'j', number: 'J108', name: '', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [part] }
+    data.jobs = [j]
+    const listed = runJob(j, data).issues.find((i) => i.code === 'UNCONFIRMED')!.configure!.map((x) => x.key)
+    expect(listed).toEqual(expect.arrayContaining(['tool:t108:data', 'tool:t108:lengths']))
+    const before = data.settings.features
+    confirmKey(data.machine, 'tool:t108:lengths')
+    expect(data.settings.features).toEqual(before)
+    expect(runJob(j, data).issues.some((i) => i.code === 'CAM_3D_NO_OUTPUT')).toBe(true)
+  })
+})

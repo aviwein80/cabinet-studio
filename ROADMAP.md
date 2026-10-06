@@ -64,8 +64,14 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   part lists (approved drilling patterns only); batch steps after nesting and before output
   (waste areas built in; plugin steps with M2.10); batch-setup and layer-rule wizards (their
   setups pass the Stage 1 batch tests file for file); admin password on the defaults, hidden
-  screens, tool-change order and the missing-recipe report. Next: M2.10 (plugins, script posts,
-  program tools).
+  screens, tool-change order and the missing-recipe report. **M2.10 plugins, script posts and
+  program tools: done** (October 2026): plugins in a sandbox (QuickJS, MIT) with menu commands,
+  batch steps, script posts and a macro recorder, nothing granted until the owner grants it; one
+  post path for text programs (a sample script post writes byte-identical G-code to the template
+  post on all 44 reference parts; text posts never for the N-200, output switch off); G-code and
+  our MPR read back into toolpaths for the simulator; a program manager with an editor (line
+  numbers, maths on values), checks and copying to the machine folder (edited programs behind
+  their own switch, off). Next: M2.11 (relief import).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -78,10 +84,16 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - M2.6: the saw unit and the rotating aggregate count as absent on the N-200 until confirmed;
     their operations ship, and the export checker refuses their output with a clear message. No
     saw or aggregate macro is presented as proven output.
-- Open for M2.9 (see `docs/stage-2-3-progress.md`): whether the shop has or plans a second
-  machine or a separate drilling step (and, if so, whether steps should share the work); a
-  sample part list from any other program, to check its face words; whether waste areas should
-  only be reported or also cut into pieces (a new output with its own switch).
+- Open for M2.10 (see `docs/stage-2-3-progress.md`): how woodWOP reads half-circle arcs given
+  only by their ends and radius (our writer's full circles and split arcs; their centre is only
+  fixed to about 0.05-0.07 mm), and whether to write such arcs in pieces of at most 90 degrees
+  (changes the MPR golden files); whether hand-edited programs should ever be copied to the
+  machine folder (switch off until then); where the machine folder is.
+- M2.9 answered (October 2026): no second machine, the N-200 only (output for other machines
+  off); process steps do not share work; the app's own face words; waste areas a report only.
+- M2.8 answered (October 2026): prices later through Configure badges; hold-down and bridge
+  sizes stay badged placeholders; flip end for end with a 5 mm strip; the three output switches
+  stay off.
 - Open for M2.8 (see `docs/stage-2-3-progress.md`): material prices (and densities if costed by
   weight); the hold-down limit for shared lines; bridge width, longest bridge and part size; how
   the shop turns a sheet over and how wide a reference strip to mill; and, before any of the three

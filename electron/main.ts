@@ -151,6 +151,9 @@ function registerIpc() {
     return target
   })
 
+  // program manager (M2.10): which of these files are already in a folder (before replacing them)
+  ipcMain.handle('files:existing', (_e, folder: string, names: string[]) => (folder && fs.existsSync(folder) ? names.filter((n) => fs.existsSync(path.join(folder, safeFileName(n)))) : []))
+
   ipcMain.handle('files:save', async (e, file: OutFile, filters: { name: string; extensions: string[] }[]) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const res = await dialog.showSaveDialog(win!, { defaultPath: safeFileName(file.name), filters })

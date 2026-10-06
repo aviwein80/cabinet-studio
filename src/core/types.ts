@@ -316,6 +316,12 @@ export interface Job {
   camParts?: CamPart[]
   /** Sheet layout edited by hand (M2.8, NST-09). Absent = the automatic nest. */
   nestEdit?: SavedNest
+  /**
+   * Programs edited by hand (M2.10, PST-04), by file name: the edited text and the hash of the
+   * generated program it was made on. When the job changes the generated program, the edit is out
+   * of date and is not used.
+   */
+  programEdits?: Record<string, { text: string; base: string; editedAt: string }>
 }
 
 /** A nest edited by hand, or loaded from a nest list: sheets and where each part sits. */
@@ -596,6 +602,8 @@ export interface ShopSettings {
   nesting: NestSettings
   labels: LabelSettings
   outputFolder: string
+  /** M2.10d: the folder the machine reads its programs from (the program manager copies there). */
+  machineFolder?: string
   /** Currency symbol for material costs (M2.8). Default "$". */
   currency?: string
   /** Custom-part module switches. Absent keys take the defaults in `DEFAULT_FEATURES`. */
@@ -720,6 +728,8 @@ export interface FeatureFlags {
   plugins: boolean
   /** M2.10b: write programs through template and script posts (other machines only, never the N-200). Off. */
   scriptPostOutput: boolean
+  /** M2.10d: copy programs edited by hand to the machine folder (only after their checks pass). Off. */
+  editedProgramOutput: boolean
 }
 
 export interface Library {

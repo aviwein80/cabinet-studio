@@ -61,6 +61,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['batchAdditions', 'Batch additions', 'Other machines and process steps, batch setups and their wizards, assemblies and fittings in part lists, extra batch steps, admin tools. Screens only: programs for the other machines have their own switch, off.'],
   ['plugins', 'Plugins and program tools', 'Plugins (each in its own sandbox; nothing granted until you grant it on the Settings page), the macro recorder, script posts shown as previews, reading programs back for the simulator, and the program manager. Screens only: a plugin can never switch output on or get past the export checker.'],
   ['scriptPostOutput', 'Write programs through script posts', 'Template and script posts write G-code style programs for machines other than the N-200 (Machines and process steps). Off: their programs are shown in the Program preview, never written. Even on, a script post also needs its plugin\'s machine-output grant, and the export checker must pass for that machine; the N-200 always gets woodWOP programs.'],
+  ['editedProgramOutput', 'Copy hand-edited programs to the machine folder', 'The program manager can edit a program by hand (line numbers, simple maths on values). Off: edited programs can be checked, simulated and saved with the job, but only the programs as generated (and checked by the export checker) are copied to the machine folder. Even on, an edited program must read back with no errors, stay on the table and above the spoilboard allowance, and use tools from the table.'],
   ['batchMachinesOutput', 'Write programs for other machines', 'Batch runs nest and check the part list for every machine of the setup. Off until proven on those machines: while off, only the main machine\'s programs are written and the others are listed in the report.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
@@ -443,6 +444,13 @@ export function MachinePage() {
                 placeholder="e.g. \\\\N200-PC\\mpr  (empty = ask every time)"
                 onChange={(v) => updateSettings((x) => (x.outputFolder = v))}
                 hint="Each export creates a JOB_date subfolder here. A network share to the machine PC works."
+              />
+              <TextField
+                label="Machine folder (program manager)"
+                value={s.machineFolder ?? ''}
+                placeholder="e.g. \\\\N200-PC\\programs  (empty = not set)"
+                onChange={(v) => updateSettings((x) => (x.machineFolder = v))}
+                hint="Where the machine reads its programs. The job's program manager copies checked programs straight into it (no subfolder), asking before it replaces a file."
               />
             </Section>
             <Section title="Custom-part features" description="Screens for drawn and imported parts. Writing their machining into N-200 programs stays off until the tool table is real.">

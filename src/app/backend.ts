@@ -25,6 +25,7 @@ interface Bridge {
   storageImportDb(): Promise<{ file: string; json: string } | null>
   exportFiles(files: OutFile[], opts: { folder?: string; subfolder?: string }): Promise<string | null>
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
+  existingFiles(folder: string, names: string[]): Promise<string[]>
   openPath(p: string): Promise<string>
   pickFolder(title: string): Promise<string | null>
   batchStart(cfg: { inbox: string; outbox: string }): Promise<BatchStatus>
@@ -110,6 +111,8 @@ export interface Backend {
   /** Write several files into a folder. Returns the folder written to, or null if cancelled. */
   exportFiles(files: OutFile[], opts: { folder?: string; subfolder: string }): Promise<string | null>
   saveFile(file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null>
+  /** Desktop: which of these names already exist in a folder. */
+  existingFiles?(folder: string, names: string[]): Promise<string[]>
   openPath?(p: string): Promise<void>
   batch?: BatchBridge
   storage?: StorageBridge
@@ -228,6 +231,7 @@ function desktopBackend(b: Bridge): Backend {
     },
     exportFiles: (files, opts) => b.exportFiles(files, opts),
     saveFile: (file, filters) => b.saveFile(file, filters),
+    existingFiles: (folder, names) => b.existingFiles(folder, names),
     async openPath(p) {
       await b.openPath(p)
     },

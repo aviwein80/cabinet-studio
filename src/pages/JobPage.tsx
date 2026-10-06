@@ -50,6 +50,7 @@ import { AreaCostPanel } from '@/components/AreaCostPanel'
 import { type BackplotMode, SheetBackplot } from '@/components/SheetBackplot'
 import { NestEditor } from './job/NestEditor'
 import { JobPluginMenu } from './job/JobPluginMenu'
+import { ProgramManager } from './job/ProgramManager'
 import { jobCosts } from '@/core/areas'
 import { featuresOf } from '@/core/features'
 
@@ -150,7 +151,7 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
           {out && <NestingTab job={job} data={data} out={out} />}
         </TabsContent>
         <TabsContent value="output" className="min-h-0 flex-1 overflow-auto p-5">
-          {out && <OutputTab job={job} data={data} out={out} />}
+          {out && <OutputTab job={job} data={data} out={out} setJob={setJob} />}
         </TabsContent>
       </Tabs>
     </div>
@@ -670,7 +671,7 @@ const EXPORTS: { kind: ExportKind; label: string; desc: string; icon: typeof Fil
   { kind: 'areas-csv', label: 'Areas and costs CSV', desc: 'Per sheet and part: parts, remnants, scrap', icon: Table2, ext: 'csv' },
 ]
 
-function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput }) {
+function OutputTab({ job, data, out, setJob }: { job: Job; data: AppData; out: JobOutput; setJob: (fn: (j: Job) => void) => void }) {
   const [ack, setAck] = useState(false)
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<{ name: string; text: string } | null>(null)
@@ -763,24 +764,35 @@ function OutputTab({ job, data, out }: { job: Job; data: AppData; out: JobOutput
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="rounded-xl border bg-background">
-          <div className="border-b px-4 py-2.5 text-sm font-semibold">Programs</div>
-          <ul className="divide-y">
-            {files.map((f, i) => (
-              <li key={f.name} className="flex items-center justify-between gap-2 px-4 py-2 text-xs">
-                <div className="min-w-0">
-                  <div className="truncate font-mono">{f.name}</div>
-                  <div className="text-muted-foreground">
-                    {out.programs[i] ? `${out.programs[i].sheet.placements.length} parts · ${out.programs[i].ops.length} operations` : 'Custom part turned over: underside drilling'}
+        {featuresOf(data.settings).plugins ? (
+          <ProgramManager
+            job={job}
+            data={data}
+            programs={files.map((f, i) => ({ ...f, note: out.programs[i] ? `${out.programs[i].sheet.placements.length} parts · ${out.programs[i].ops.length} operations` : 'Custom part turned over: underside drilling' }))}
+            jobErrors={counts.error}
+            acknowledged={ack}
+            setJob={setJob}
+          />
+        ) : (
+          <div className="rounded-xl border bg-background">
+            <div className="border-b px-4 py-2.5 text-sm font-semibold">Programs</div>
+            <ul className="divide-y">
+              {files.map((f, i) => (
+                <li key={f.name} className="flex items-center justify-between gap-2 px-4 py-2 text-xs">
+                  <div className="min-w-0">
+                    <div className="truncate font-mono">{f.name}</div>
+                    <div className="text-muted-foreground">
+                      {out.programs[i] ? `${out.programs[i].sheet.placements.length} parts · ${out.programs[i].ops.length} operations` : 'Custom part turned over: underside drilling'}
+                    </div>
                   </div>
-                </div>
-                <Button size="xs" variant="outline" onClick={() => setPreview(f)}>
-                  View
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
+                  <Button size="xs" variant="outline" onClick={() => setPreview(f)}>
+                    View
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>

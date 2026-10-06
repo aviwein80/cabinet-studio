@@ -84,13 +84,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.10a Plugin sandbox and API (API-01) | **Done** (October 2026) | See below. Plugins run sandboxed; nothing granted until the owner grants it. |
 | M2.10b Script posts (PST-02) | **Done** (October 2026) | See below. Output switch off; never the N-200. |
 | M2.10c Reading programs back (NEW-22) | **Done** (October 2026) | See below. Also fixes the template post's feed on helical entries, and text posts now refuse operations without one tool. |
-| M2.10d | Not started | Program manager and editor (PST-04), screenshots, README, ROADMAP. See "M2.10 split". |
-| M2.11 | Not started | ART-01. |
+| M2.10d Program manager and editor (PST-04), screenshots, docs | **Done** (October 2026) | See below. M2.10 complete. Copying edited programs has its own switch, off. |
+| M2.11 | Not started | ART-01. Next run. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -125,6 +125,16 @@ files present; fixed in M2.8e, back to 17.)
     output, adaptive and true 3D output stay off; the saw unit and the rotating aggregate count
     as absent on the N-200 until confirmed (ship the operations; the checker blocks their output;
     no invented macros).
+15. With the M2.10 go-ahead, for M2.8: material prices come later through Configure badges;
+    hold-down and bridge sizes stay badged placeholders; sheets are flipped end for end with a
+    5 mm reference strip; shared-line, bridge and flip-side output stay off.
+16. With the M2.10 go-ahead, for M2.9: no second machine (the N-200 only), output for other
+    machines stays off; process steps do not share the work; part lists keep the app's own face
+    words; waste areas stay a report only.
+17. With the M2.10 go-ahead: plugins run sandboxed, with file, network and machine-output access
+    only by an explicit owner grant; no plugin may switch output on or get past the export
+    checker; script posts never target the N-200 for rotary, 3+2, 5-axis or other unsupported
+    work; every machine output switch stays off.
 
 ## Open questions for the owner
 
@@ -143,10 +153,11 @@ files present; fixed in M2.8e, back to 17.)
    straight-wall depth were confirmed with the M2.6 go-ahead.)
 7. **M2.6 (saw, aggregate, cutting values)**: see "M2.6 decisions needed" below.
 8. **M2.7 (holders, aggregates)**: see "M2.7 decisions needed" below.
-9. **M2.8 (prices, hold-down limits, turning sheets over, output checks)**: see "M2.8 decisions
-   needed" below.
-10. **M2.9 (other machines, process steps, face words, waste areas)**: see "M2.9 decisions
-    needed" below.
+9. **M2.8**: answered (decision 15); still to come: the prices themselves, the hold-down and bridge
+   sizes, and one sheet of each kind checked in woodWOP before any of those switches goes on.
+10. **M2.9**: answered (decision 16).
+11. **M2.10 (half-circle arcs in MPR, hand-edited programs, the machine folder, plugins)**: see
+    "M2.10 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -1654,10 +1665,76 @@ writer.
 - **MPR: our own macros only** (what our writer produces); other woodWOP macros are listed as not drawn.
 - **Large programs**: read in the background worker; the simulator's limits are those of M2.4.
 
-## Next: M2.10d program manager and editor
+## M2.10d program manager and editor: what was built
 
-- PST-04: list generated programs, edit with line numbers and simple maths on values, copy to the
-  machine folder; screenshots, README, ROADMAP.
+| Spec ID | What | Where |
+|---|---|---|
+| PST-04 | **Program list** (job → Output → Programs): the job's programs as the job makes them (sheet programs, flip-side and turned-over programs), each marked as generated, edited by hand, or edit out of date, with why it cannot be copied yet | `ProgramManager.tsx` |
+| PST-04 | **Editor**: the program with line numbers; **simple maths on values**: one G-code word (X, Y, Z, F ...; comments left alone) or one MPR key (XA, TI, ZA, X / Y in contours; XA is not X), add / subtract / multiply / divide / set, on all lines or a range; each number keeps its decimals (at least three when the result needs them), the line ends stay. **Check** (reads back with no refusals; cutting moves on the table, a tool radius beyond its edge allowed for outside cuts; not deeper than the stock plus the spoilboard allowance; tools from the table), **Simulate** (read back and the simulator), back to the generated program, **keep the edit** with the job | `src/core/programEdit.ts` |
+| PST-04 | **Edits belong to the program they were made on** (SHA-256 of the generated text): when the job changes the program, the edit is marked out of date and is not used | `Job.programEdits`, `programState` |
+| PST-04 | **Copy to the machine folder** (new setting on the Machine page, "Machine folder"): programs as generated follow the export rules (no export-checker errors, the "simulate in woodWOP" tick); the app asks before replacing a file there. Programs edited by hand also need the new switch "Copy hand-edited programs to the machine folder" (`editedProgramOutput`, **off**) and a clean check of the edited text. The job's normal export still writes the generated programs | `copyProblems`, `files:existing` (desktop) |
+
+### Acceptance (spec: list generated programs, open them in a text editor with line numbers and simple maths on values, copy to the machine folder)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Maths on values | `tests/program-manager.test.ts` | G-code: Y + 5 on 4 of 5 lines (the comment's "Y100" and the ";" comment untouched), decimals kept (25.5, 5.25, `Y-4.000` → `Y1.000`, `X.5` → `X-.5`), F × 0.8 = 800, F × 0.3333 = 333.300, a line range. MPR: TI + 1 on every TI (216 on the S02 sheet), X + 10 on every contour X and no XA; quotes and CRLF kept. Bad key, divide by 0, no number: refused |
+| Checks on an edited program | same | The generated sheet and G-code pass; TI deeper than stock + allowance, X moved off the table, an unknown tool: each caught with a plain message. Browser check: TI + 0.5 on S02 → "16 cutting moves go deeper than 18.50 mm below the top" |
+| Copy rules | same | Generated: copyable with a folder, no errors and the tick; each missing piece named. Edited: switch off → refused; no check yet → refused; check with problems → refused; all clear → allowed. Out of date → refused |
+| Screens | browser (Playwright) | Program list, editor with maths and check, copy buttons disabled with the reason (screenshots 11, 12) |
+
+### Limits recorded
+
+- **Copy is a plain file copy** into the machine folder (the desktop app asks before replacing); in the browser preview programs download as a zip.
+- **Maths works in the program's own units** (mm for our programs), one word or key at a time; no expressions inside the program.
+- **The check of an edited program** is as good as reading the text back: it cannot know what the edit meant (for example a moved hole that now hits another one). That is why copying edited programs has its own switch, off.
+
+## M2.10 screenshots
+
+`docs/screenshots/stage-2-3/M2.10/` (browser preview, Playwright):
+
+- `01-plugins-settings.png`: Settings → Plugins: the sample plugin (asks to read `C:/Shop/Lists`, not granted, what it adds), the sample script post (asks for machine output, not granted) and a recorded macro.
+- `02-designer-plugins-menu.png`: the designer's Plugins menu: plugin commands and Record a macro.
+- `03-designer-plugin-command.png`: the sample's pocket command applied: a pocket on the two closed POCKET shapes, marked New.
+- `04-plugin-file-refused.png`: the price-list command refused: "Reading C:/Shop/Lists/prices.csv was not granted".
+- `05-macro-recorder-save.png`: saving a recorded macro as a plugin, with the changes listed.
+- `06-batch-plugin-step.png`: the Batch page with the plugin's "Sheet use check" beside the built-in step.
+- `07-machines-script-post.png`: a second machine ("Router two", its own model name) using the sample script post.
+- `08-program-script-post.png`: the Program dialog through Router two's script post: the G-code, and why it is not written (switch off, no grant).
+- `09-read-program.png`: Read a program: a 782-line G-code pocket program read back (toolpath, tool, moves, length, time, stock).
+- `10-read-program-simulated.png`: the same program in the simulator, with the collision check.
+- `11-program-manager.png`: job → Output → Programs, with the machine folder and why copying waits.
+- `12-program-editor.png`: the editor after TI + 0.5 on a sheet program: line numbers, the maths row, the check catching the too-deep holes.
+- `13-machine-switches.png`: the Machine page's switches: "Plugins and program tools" (on), "Write programs through script posts" and "Copy hand-edited programs to the machine folder" (off).
+
+## M2.10 licences
+
+New in M2.10a: `quickjs-emscripten-core` 0.32.0, `@jitl/quickjs-wasmfile-release-sync` 0.32.0 and
+their dependency `@jitl/quickjs-ffi-types` 0.32.0, all MIT (QuickJS itself MIT). Checked with
+`npx license-checker`. No GPL or AGPL. Everything else in M2.10 is our own code on the existing
+libraries.
+
+## M2.10 decisions needed (see the report)
+
+1. **Half-circle arcs in MPR** (found by reading programs back): every full circle is written as
+   two exact half circles and every arc over 180 degrees as two arcs just under 180, each given
+   only by its ends and radius to 4 decimals, which fixes the centre only to about 0.05-0.07 mm.
+   How woodWOP reads them is not known. Options: (a) write such arcs in pieces of at most 90
+   degrees (removes the doubt; changes the MPR output and its golden files); (b) keep as is and
+   check one circle in woodWOP first. Recommendation: (b) then (a) if woodWOP's circle is off.
+   Nothing changed until then.
+2. **Hand-edited programs to the machine**: should they ever be copied to the machine folder?
+   Switch off until the owner says so.
+3. **Machine folder**: the folder the N-200 reads its programs from (empty until set).
+4. **Template post feed fix** (made, the safe direction): helical entries are now written at the
+   plunge feed. Only affects G-code from the sample template; the N-200's MPR is unchanged.
+5. **Plugins to trust**: the sample plugin and script post are examples; nothing is granted by
+   default. Which plugins (if any) the shop wants, and what to grant them, is the owner's call.
+
+## Next run: M2.11 relief import
+
+- ART-01 as in the prompt (Vectric STL and height-map PNG, placed at the right size and depth,
+  machined with the M2.2 strategies in the simulator; no relief modeller).
 
 ## Run log
 
@@ -1694,5 +1771,6 @@ writer.
 - **Run 11 (M2.9a-d)**: other machines and process steps (`51ccb91`); SQLite storage option
   (`bc4bcb2`); assemblies, fittings by face and batch steps (`1fafaee`); wizards, admin tools,
   screenshots, README, ROADMAP. M2.9 complete. See `git log`.
-- **Run 12 (M2.10a-b)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and
-  API (`0d80ba4`); script posts (`eeb407d`); reading programs back. See `git log`.
+- **Run 12 (M2.10a-d)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and
+  API (`0d80ba4`); script posts (`eeb407d`); reading programs back (`33910cd`); program manager,
+  screenshots, README, ROADMAP. M2.10 complete. See `git log`.

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('cabinetStudio', {
   info: (): Promise<{ dataFile: string; version: string; platform: string }> => ipcRenderer.invoke('app:info'),
   exportFiles: (files: OutFile[], opts: { folder?: string; subfolder?: string }): Promise<string | null> =>
     ipcRenderer.invoke('files:export', files, opts),
+  existingFiles: (folder: string, names: string[]): Promise<string[]> => ipcRenderer.invoke('files:existing', folder, names),
   saveFile: (file: OutFile, filters: { name: string; extensions: string[] }[]): Promise<string | null> =>
     ipcRenderer.invoke('files:save', file, filters),
   openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:open', p),

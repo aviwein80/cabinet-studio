@@ -395,7 +395,7 @@ export checker. Tool numbers are still placeholders.
     fitting without its position is a row problem.
   - **Batch steps**: run after nesting and before output for every machine. They can report,
     hold an order back and add report files, never change the programs. Built in: **Waste
-    areas** (each sheet's scrap and remnant pieces as a CSV). Plugins will add steps (M2.10).
+    areas** (each sheet's scrap and remnant pieces as a CSV). Plugins add their own steps (M2.10).
   - **Layer-rule wizard** (Library → Machining rules → New table with the wizard): layer names
     typed or read from a DXF, the machining for each (starting from what the shop's rules do),
     and a check on the drawing.
@@ -409,6 +409,36 @@ export checker. Tool numbers are still placeholders.
     programs can query), with the JSON file still written on every save. Export to and import
     from a database file. Uses the SQLite built into Electron's Node: nothing extra installed.
     `npm run batch -- ... --data cabinet-studio.sqlite` reads it too.
+
+  **Plugins, script posts and program tools** (switch "Plugins and program tools", on; every
+  kind of output they could produce has its own switch, **off**):
+  - **Plugins** (Settings → Plugins): JavaScript files that add designer and job-page menu
+    commands, batch steps and script posts. Each runs in its own sandbox (QuickJS in
+    WebAssembly): it cannot see the app, your files or the network, and is stopped after 5 s or
+    64 MB. A plugin's header *asks* for folders, https hosts or machine output; only what you
+    tick is granted, every refusal is logged, and the desktop app checks the grants again on the
+    real file system. New or changed code starts switched off with nothing granted. A plugin
+    never switches output on and never gets past the export checker: its part changes come back
+    checked (it cannot confirm values, approve drafts or mark toolpaths up to date), and its batch
+    steps cannot add programs. Samples in `examples/plugins/`; the typed API is offered on the
+    Plugins screen as `cabinet-studio-plugin.d.ts`.
+  - **Macro recorder** (Parts designer → Plugins → Record a macro): what you change becomes a
+    plugin with one command that makes the same changes again.
+  - **Script posts**: a plugin's post turns the toolpaths into program text for another
+    controller. Machines other than the N-200 can use the woodWOP writer, the sample G-code
+    template or a script post (Machine page); the N-200 always gets woodWOP. The Program dialog
+    previews a part through another machine's post with the checks; writing needs "Write programs
+    through script posts" (off), the plugin's machine-output grant and a clean export check, and
+    is refused for work G-code cannot describe (edge or turned-over drilling, aggregates,
+    operations without one tool).
+  - **Read a program** (Custom parts page): a G-code program or one of our MPR files back into
+    toolpaths, one per tool change, then the simulator with the collision check.
+  - **Program manager** (job → Output → Programs): open each program in an editor with line
+    numbers and simple maths on values (add, subtract, multiply, divide or set one word or key on
+    a range of lines), check it, simulate it, keep the edit with the job, and copy programs to the
+    machine folder (Machine page). Programs as generated follow the export rules; programs edited
+    by hand also need "Copy hand-edited programs to the machine folder" (off) and a clean check
+    (reads back, on the table, above the spoilboard allowance, tools from the table).
 
 ## Example outputs
 
@@ -520,7 +550,8 @@ The cost is installer size (about 100 MB) and memory, which doesn't matter on a 
 ## Architecture
 
 ```
-electron/          main process: window (app://bundle), JSON (or SQLite) storage with backups, folder export (IPC)
+electron/          main process: window (app://bundle), JSON (or SQLite) storage with backups, folder export,
+                   plugin file and network access with its own grant check (IPC)
 src/core/          pure TypeScript, no React — everything below is unit tested
   types.ts         domain model (mm internally; cabinet X=width, Y=depth, Z=up; part x=length/grain)
   units.ts         mm storage, fractional-inch display, parse 23-1/4 and 23.25
@@ -549,6 +580,8 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   wizards.ts       batch-setup and layer-rule wizards (answers -> setups)
   admin.ts         tool-change order, missing-recipe report, admin password, hidden screens
   shopDb.ts        SQLite storage option (tables for materials, tools, jobs; lossless)
+  programEdit.ts   program manager: maths on values, checks for edited programs, copy rules
+  sha256.ts        SHA-256 (plugin grants belong to the exact code)
   hardware/patterns.ts, patternImport.ts   drilling patterns, DXF/CSV import, PDF drafts
 src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpaths, native MPR, sim
   mesh/            3D meshes: STL/OBJ/3MF readers, repair, placement, sections, outline, simplify;
@@ -562,6 +595,10 @@ src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its 
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
                    Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse)
   worker/          background compute worker (3D tasks) with progress and cancel
+  plugin/          plugin sandbox (QuickJS), the typed API, grants, part-change checks, batch
+                   steps, script posts, macro recorder
+  post.ts          the post input shared by the template post and script posts
+  programRead.ts   G-code and our MPR read back into toolpaths
 src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline, default holder
 src/core/toolData.ts       tool fields, grid editing, spreadsheet export/import, tool data in operations
   tools/holder.ts  holder outline from a model (revolved envelope)

@@ -230,6 +230,31 @@ interface OpBase {
    * `faceStepover`); they no longer show a "Configure" badge.
    */
   confirmed?: string[]
+  /**
+   * The tool data this operation was last calculated with (TOOL-05), kept so it can be compared with
+   * the tool table later. Not an input: it never marks the operation stale by itself.
+   */
+  toolData?: ToolSnapshot
+}
+
+/** Tool data as an operation used it (TOOL-05). Lengths in mm, feeds in mm/min. */
+export interface ToolSnapshot {
+  toolId: string
+  number: number
+  diameter: number
+  maxDepth: number
+  shape?: string
+  angle?: number
+  cornerRadius?: number
+  fluteLength?: number
+  shankDiameter?: number
+  /** Stick-out used (the tool's, or the assumed one). */
+  gauge?: number
+  /** Holder used (the tool's or the shop default). */
+  holderId?: string
+  rpm: number
+  feed: number
+  plunge: number
 }
 
 /**

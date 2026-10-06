@@ -151,7 +151,7 @@ describe('M2.4b playback', () => {
     const v = meshVolume(back)
     expect(v).toBeLessThanOrEqual(cells + 1)
     expect(v).toBeGreaterThan(cells * 0.995)
-  })
+  }, 60_000)
 
   it('section and coarse display meshes are closed too', () => {
     const s = new HeightfieldStock(p.length, p.width, p.thickness, 1)

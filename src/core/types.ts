@@ -354,8 +354,10 @@ export interface Tool {
   fluteLength?: number
   /** Stick-out: tip to the face of the holder. Anything deeper than this hits the holder. */
   gaugeLength?: number
-  /** Holder from `MachineProfile.holders`. */
+  /** Holder from `MachineProfile.holders`. Absent = the shop's default holder (`defaultHolderId`). */
   holderId?: string
+  /** Aggregate (angle head or rotating aggregate) this tool sits in, from `MachineProfile.aggregates` (TOOL-04). */
+  aggregateId?: string
 }
 
 /**
@@ -367,6 +369,33 @@ export interface ToolHolder {
   name: string
   profile: { z: number; r: number }[]
   /** Invented numbers until the shop measures its real holders. */
+  placeholder?: boolean
+  notes?: string
+  /**
+   * Made from an imported model (STL, OBJ, 3MF, STEP, IGES or BREP): the outline is the model's
+   * revolved envelope (the widest point at every height, so it never under-states the holder).
+   */
+  source?: { file: string; triangles: number; step: number }
+}
+
+/**
+ * An angle head or a rotating aggregate (TOOL-04): a unit in the spindle that holds a tool at an
+ * angle to the spindle. `offset` is from the spindle's gauge point to the tool's gauge point (the
+ * face the tool's stick-out is measured from). Fitting one on the machine is a machine-model fact
+ * (`capabilities.aggregate`); a library entry never fits it.
+ */
+export interface Aggregate {
+  id: string
+  name: string
+  kind: 'angle-head' | 'rotating'
+  /** Spindle gauge point to the tool's gauge point, mm, with the head at angle 0 (tool pointing along +X). */
+  offset: { x: number; y: number; z: number }
+  /** Tool axis from vertical, degrees (90 = lying flat). */
+  tilt: number
+  /** Angles about the vertical axis the head can be set to: any, or a list (degrees from +X). */
+  angles: { mode: 'any' } | { mode: 'list'; list: number[] }
+  /** Housing round the tool's gauge point: width across the tool, height above the tool axis (to its top), depth below it (to its underside). */
+  housing: { width: number; above: number; below: number; length: number }
   placeholder?: boolean
   notes?: string
 }
@@ -435,6 +464,13 @@ export interface MachineProfile {
   tools: Tool[]
   feeds?: MaterialFeed[]
   holders?: ToolHolder[]
+  /**
+   * Holder used by router tools that name none (M2.7: collision checks for every router, 2D ones
+   * included). Absent = such tools have no holder.
+   */
+  defaultHolderId?: string
+  /** Angle heads and aggregates (TOOL-04). */
+  aggregates?: Aggregate[]
   /** Machine model (axes, table, heads, capabilities); absent = the placeholder N-200 model (`machineModelOf`). */
   physical?: MachineModel
   /**
@@ -557,6 +593,12 @@ export interface FeatureFlags {
    * settings) to MPR. Needs `camMprOutput` too. Off until proven on the machine.
    */
   cam25dMprOutput: boolean
+  /**
+   * CAD and tool additions (M2.7): turn-by-turn sketch, dimensions, geometry queries, fill with
+   * holes, panelling, image trace, holder and aggregate library, tool data compare, tool grid
+   * (screens only; nothing here writes machine output).
+   */
+  camCadTools: boolean
 }
 
 export interface Library {

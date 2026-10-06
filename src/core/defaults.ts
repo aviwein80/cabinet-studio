@@ -5,6 +5,7 @@ import type {
   EdgeBand,
   Hardware,
   Library,
+  Aggregate,
   MachineProfile,
   Material,
   ShopSettings,
@@ -153,6 +154,21 @@ export const PLACEHOLDER_HOLDER: ToolHolder = {
   ],
 }
 
+/**
+ * PLACEHOLDER rotating aggregate: invented offsets and housing so the library, the simulator and
+ * the edge-work checks have something to show. The machine model still has no aggregate fitted.
+ */
+export const PLACEHOLDER_AGGREGATE: Aggregate = {
+  id: 'ag-placeholder',
+  name: 'Rotating aggregate (placeholder)',
+  kind: 'rotating',
+  offset: { x: 0, y: 0, z: -120 },
+  tilt: 90,
+  angles: { mode: 'any' },
+  housing: { width: 70, above: 45, below: 6, length: 90 },
+  placeholder: true,
+}
+
 export const PLACEHOLDER_MACHINE: MachineProfile = {
   name: 'HOMAG CENTATEQ N-200 (placeholder tools)',
   model: 'CENTATEQ N-200',
@@ -167,10 +183,11 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
   contour: { approach: 'SEN', ramp: true, direction: 'climb-cw' },
   header: { OP: 1, FM: 1 },
   tools: [
-    { id: 't101', number: 101, type: 'router', name: 'Compression cutter Z2 12 mm (cut-out)', diameter: 12, maxDepth: 42 },
-    { id: 't102', number: 102, type: 'router', name: 'Spiral cutter 8 mm', diameter: 8, maxDepth: 30 },
-    { id: 't103', number: 103, type: 'router', name: 'Spiral cutter 6 mm (grooves)', diameter: 6, maxDepth: 20 },
-    { id: 't104', number: 104, type: 'router', name: 'V-bit 90° 12.7 mm (placeholder)', diameter: 12.7, maxDepth: 12, shape: 'v', angle: 90, centreCutting: true },
+    // stick-outs (gaugeLength) of the 2D routers are invented too (M2.7: they sit in the default holder)
+    { id: 't101', number: 101, type: 'router', name: 'Compression cutter Z2 12 mm (cut-out)', diameter: 12, maxDepth: 42, gaugeLength: 62 },
+    { id: 't102', number: 102, type: 'router', name: 'Spiral cutter 8 mm', diameter: 8, maxDepth: 30, gaugeLength: 50 },
+    { id: 't103', number: 103, type: 'router', name: 'Spiral cutter 6 mm (grooves)', diameter: 6, maxDepth: 20, gaugeLength: 40 },
+    { id: 't104', number: 104, type: 'router', name: 'V-bit 90° 12.7 mm (placeholder)', diameter: 12.7, maxDepth: 12, shape: 'v', angle: 90, centreCutting: true, gaugeLength: 32 },
     { id: 't201', number: 201, type: 'drill-vertical', name: 'Dowel drill 5 mm', diameter: 5, maxDepth: 35 },
     { id: 't202', number: 202, type: 'drill-vertical', name: 'Dowel drill 7 mm', diameter: 7, maxDepth: 35 },
     { id: 't203', number: 203, type: 'drill-vertical', name: 'Dowel drill 8 mm', diameter: 8, maxDepth: 35 },
@@ -182,6 +199,8 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
     { id: 't107', number: 107, type: 'router', name: 'Bull-nose 12 mm R2 (placeholder)', diameter: 12, maxDepth: 30, shape: 'bull', cornerRadius: 2, centreCutting: true, shankDiameter: 12, fluteLength: 30, gaugeLength: 60, holderId: 'h-placeholder' },
   ],
   holders: [PLACEHOLDER_HOLDER],
+  defaultHolderId: PLACEHOLDER_HOLDER.id,
+  aggregates: [PLACEHOLDER_AGGREGATE],
 }
 
 export const DEFAULT_SETTINGS: ShopSettings = {

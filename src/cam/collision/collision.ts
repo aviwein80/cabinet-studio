@@ -18,7 +18,7 @@
  * Part frame: Z = 0 at face 1, negative into the material.
  */
 import { checkCancel, type Work } from '@/core/cancel'
-import { type CutterOutline, cutterOutline, holderOf, machineModelOf } from '@/core/machineModel'
+import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
 import type { MachineProfile } from '@/core/types'
 import { buildTimeline, cutterZ, programOrder, type SimTimeline, type V3 } from '../sim'
 import { HeightfieldStock } from '../stock/heightfield'
@@ -71,7 +71,7 @@ export function collisionSetup(tl: SimTimeline, toolpaths: Toolpath[], machine: 
   return {
     outlines: tl.ops.map((o) => {
       const tool = toolpaths[o.path]?.tool
-      return tool ? cutterOutline(tool, holderOf(machine, tool)) : null
+      return tool ? toolOutline(machine, tool) : null
     }),
     thickness,
     spoilboardAllowance: machine.spoilboardAllowance,

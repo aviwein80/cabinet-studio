@@ -5,7 +5,8 @@
 import { nanoid } from 'nanoid'
 import { strokeText } from './font'
 import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, polyline, pt, rect, transform, type Mat } from './geom'
-import type { MachineProfile } from '@/core/types'
+import { aggregateOf, effectiveGauge, effectiveHolder } from '@/core/machineModel'
+import type { MachineProfile, Tool } from '@/core/types'
 import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
 
 /**
@@ -284,7 +285,7 @@ export function fnv(s: string) {
  * Machine settings a toolpath reads besides its tool: through depth and the material feed table
  * (and the tool table, for rest machining from operations that pick their tool automatically).
  */
-export type OpMachineInputs = Pick<MachineProfile, 'throughDepth' | 'feeds'> & Partial<Pick<MachineProfile, 'tools'>>
+export type OpMachineInputs = Pick<MachineProfile, 'throughDepth' | 'feeds'> & Partial<Pick<MachineProfile, 'tools' | 'holders' | 'defaultHolderId' | 'aggregates'>>
 
 /** Milling operations whose toolpaths count as removed material for 2D rest machining. */
 export const REST_SOURCE_KINDS: ReadonlySet<CamOp['kind']> = new Set(['profile', 'pocket', 'engrave', 'vcarve', 'sweep'])
@@ -333,7 +334,7 @@ export function modelsFor(op: CamOp, part: CamPart): string[] {
  */
 export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: OpMachineInputs): string {
   // (confirming a value changes nothing the toolpath reads)
-  const { builtHash: _b, name: _n, note: _note, confirmed: _c, ...params } = op
+  const { builtHash: _b, name: _n, note: _note, confirmed: _c, toolData: _t, ...params } = op
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
   const deps: unknown[] = [params, geo, tool, part.thickness]
   // a facing before it re-set the stock top
@@ -358,6 +359,14 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
     const toolId = tool && typeof tool === 'object' && 'id' in tool ? (tool as { id: string }).id : null
     const feed = toolId && part.materialId ? (machine.feeds?.find((f) => f.toolId === toolId && f.materialId === part.materialId) ?? null) : null
     deps.push({ through: machine.throughDepth, material: part.materialId, feed })
+    // M2.7: the holder the tool sits in (its own or the shop default), the stick-out used and its
+    // aggregate: the collision checks (and 3D clearance warnings, edge-work checks) read them
+    if (tool && typeof tool === 'object' && 'type' in tool) {
+      const t = tool as Tool
+      const holder = effectiveHolder(machine, t)
+      const agg = aggregateOf(machine, t)
+      if (holder || agg) deps.push({ holder: holder?.profile ?? null, gauge: effectiveGauge(machine, t).gauge, agg })
+    }
   }
   return fnv(JSON.stringify(deps))
 }

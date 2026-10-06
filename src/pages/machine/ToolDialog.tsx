@@ -1,10 +1,12 @@
-import { NumField, SelectField, TextField } from '@/components/fields'
+import { NONE, NumField, SelectField, TextField } from '@/components/fields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { MachineProfile, Tool, ToolShape } from '@/core/types'
 import { ValueBadges } from '@/components/Configure'
-import { isConfirmed, toolUnconfirmed, type ToolPart } from '@/core/confirm'
+import { aggregateItem, holderItem as holderUnconfirmed, toolUnconfirmed, type ToolPart } from '@/core/confirm'
+import { effectiveGauge, effectiveHolder, usesHolder } from '@/core/machineModel'
+import { HolderPreview } from './HoldersSection'
 
 const SHAPES: { value: ToolShape; label: string }[] = [
   { value: 'flat', label: 'Flat end' },
@@ -33,7 +35,11 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
     )
   const items = toolUnconfirmed(machine, tool)
   const u = (part: ToolPart) => items.find((x) => x.target.kind === 'tool' && x.target.part === part)
-  const holderItem = tool.holderId && holders.find((h) => h.id === tool.holderId)?.placeholder && !isConfirmed(machine, `holder:${tool.holderId}`) ? { key: `holder:${tool.holderId}`, label: 'Holder', value: 'invented outline', group: 'Holders' as const, target: { kind: 'holder' as const, holderId: tool.holderId } } : undefined
+  const holderItem = holderUnconfirmed(machine, tool) ?? undefined
+  const aggItem = tool.aggregateId ? (aggregateItem(machine, tool.aggregateId) ?? undefined) : undefined
+  const eff = effectiveHolder(machine, tool)
+  const gauge = effectiveGauge(machine, tool)
+  const defaultHolder = holders.find((h) => h.id === machine.defaultHolderId)
   const confirmBtn = (key: string) => () => update(() => {}, key)
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -99,23 +105,39 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
               </div>
             </div>
           )}
-          <SelectField
-            label="Holder"
-            value={tool.holderId ?? ''}
-            options={[{ value: '', label: 'Not given' }, ...holders.map((h) => ({ value: h.id, label: `${h.name}${h.placeholder && !/placeholder/i.test(h.name) ? ' (placeholder)' : ''}` }))]}
-            onChange={(v) => update((t) => (v ? (t.holderId = v) : delete t.holderId))}
-            cfg={tool.holderId ? `holder:${tool.holderId}` : undefined}
-            badge={<ValueBadges item={holderItem} onConfirm={holderItem ? confirmBtn(holderItem.key) : undefined} />}
-          />
-          {(() => {
-            const h = holders.find((x) => x.id === tool.holderId)
-            return h ? (
-              <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
-                {h.placeholder && <Badge variant="outline">placeholder</Badge>}
-                Outline (height above holder face : radius) {h.profile.map((p) => `${p.z}:${p.r}`).join('  ')}
+          {usesHolder(tool) && (
+            <SelectField
+              label="Holder"
+              value={tool.holderId ?? NONE}
+              options={[{ value: NONE, label: defaultHolder ? `Shop default (${defaultHolder.name})` : 'None (no default holder set)' }, ...holders.map((h) => ({ value: h.id, label: `${h.name}${h.placeholder && !/placeholder/i.test(h.name) ? ' (placeholder)' : ''}` }))]}
+              onChange={(v) => update((t) => (v !== NONE ? (t.holderId = v) : delete t.holderId))}
+              cfg={eff ? `holder:${eff.id}` : undefined}
+              badge={<ValueBadges item={holderItem} onConfirm={holderItem ? confirmBtn(holderItem.key) : undefined} />}
+              hint={gauge.assumed ? `No stick-out given: the flute length (${gauge.gauge} mm) is assumed, the shortest possible, so the collision check errs safe.` : undefined}
+            />
+          )}
+          {tool.type === 'router' && (machine.aggregates?.length ?? 0) > 0 && (
+            <SelectField
+              label="Aggregate"
+              value={tool.aggregateId ?? NONE}
+              options={[{ value: NONE, label: 'None (in the main spindle)' }, ...(machine.aggregates ?? []).map((a) => ({ value: a.id, label: a.name }))]}
+              onChange={(v) => update((t) => (v !== NONE ? (t.aggregateId = v) : delete t.aggregateId))}
+              cfg={tool.aggregateId ? `aggregate:${tool.aggregateId}` : undefined}
+              badge={<ValueBadges item={aggItem} onConfirm={aggItem ? confirmBtn(aggItem.key) : undefined} />}
+              hint="For edge work: the stick-out is measured from the aggregate's face. Assigning one does not fit an aggregate on the machine."
+            />
+          )}
+          {eff && (
+            <div className="flex items-center gap-3 rounded-md border p-2 text-[11px] text-muted-foreground">
+              <HolderPreview holder={eff} tool={tool} gauge={gauge.gauge} size={110} />
+              <div className="min-w-0">
+                <div className="font-medium text-foreground">
+                  {eff.name} {eff.placeholder && <Badge variant="outline">placeholder</Badge>}
+                </div>
+                <div>Stick-out {Number.isFinite(gauge.gauge) ? `${gauge.gauge} mm${gauge.assumed ? ' (assumed)' : ''}` : 'not given'}. Edit outlines under Holders on this page.</div>
               </div>
-            ) : null
-          })()}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button onClick={onClose}>Done</Button>

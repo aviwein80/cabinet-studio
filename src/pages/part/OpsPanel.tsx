@@ -2,13 +2,14 @@ import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, Triang
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
 import { opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
-import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool } from '@/cam/ops'
+import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool, resolveTool } from '@/cam/ops'
 import { ManualFields, EditsGroup } from './EditsPanel'
 import { useOpCfg } from './opConfigure'
 import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
 import { confirmOp, type CutDefaultKey, newOpDefaults, opUnconfirmed } from '@/core/confirm'
 import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
+import { compareOpTool, toolSnapshot, updateOpTool } from '@/core/toolData'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
 import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, FaceId, Surface3D } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
@@ -18,7 +19,7 @@ import { featuresOf } from '@/core/features'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { MachineProfile } from '@/core/types'
-import { machineModelOf } from '@/core/machineModel'
+import { aggregateOf, machineModelOf } from '@/core/machineModel'
 import { formatLength } from '@/core/units'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/app/store'
@@ -88,7 +89,13 @@ export function OpsPanel({
   const tpOf = (id: string) => toolpaths.find((t) => t.opId === id)
   const stateOf = (op: CamOp) => opState(op, part, tpOf(op.id)?.tool ?? null, machine)
   const setOps = (ops: CamOp[]) => onChange({ ...part, ops, updatedAt: new Date().toISOString() })
-  const accept = (ids: string[]) => setOps(part.ops.map((o) => (ids.includes(o.id) ? { ...o, builtHash: opInputHash(o, part, tpOf(o.id)?.tool ?? null, machine) } : o)))
+  // accepted toolpaths keep the tool data they were made with (TOOL-05: compared with the table later)
+  const accept = (ids: string[]) =>
+    setOps(part.ops.map((o) => {
+      if (!ids.includes(o.id)) return o
+      const tool = tpOf(o.id)?.tool ?? null
+      return { ...o, builtHash: opInputHash(o, part, tool, machine), ...(tool ? { toolData: toolSnapshot(tool, machine, part.materialId) } : {}) }
+    }))
 
   const add = (kind: CamOpKind, extra: Partial<CamOp> = {}) => {
     let geometry = sel
@@ -322,6 +329,8 @@ function OpEditor({
   const toolItem = unconf.find((u) => u.target.kind === 'tool' && u.target.part !== 'feeds')
   const feedItem = unconf.find((u) => u.target.kind === 'tool' && u.target.part === 'feeds')
   const missing = op.geometry.filter((g) => !part.entities.some((e) => e.id === g)).length
+  // TOOL-05: the tool data stored when the toolpath was accepted, against the tool table now
+  const toolDiff = op.toolData && tp?.tool ? compareOpTool(op, part, machine, tp.tool).diffs : []
 
   return (
     <div className="dark text-stone-100">
@@ -356,6 +365,16 @@ function OpEditor({
           </span>
         )}
       </div>
+      {toolDiff.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-sky-500/10 px-4 py-2 text-[11px] text-sky-100">
+          <span className="min-w-0 flex-1">
+            The tool table changed since this toolpath was accepted: {toolDiff.map((d) => `${d.label.toLowerCase()} ${String(d.stored ?? '–')} → ${String(d.library ?? '–')}`).join(', ')}.
+          </span>
+          <Button size="sm" variant="outline" className="h-6 border-sky-300/40 bg-transparent px-2 text-[11px]" onClick={() => onChange(updateOpTool(op, part, machine, tp?.tool ?? null))}>
+            Update to the table
+          </Button>
+        </div>
+      )}
       {unconf.length > 0 && (
         <div className="border-b border-white/10 bg-amber-500/5 px-4 py-2 text-stone-200" data-cfg={`op:${op.id}:list`}>
           <div className="mb-1 text-[11px] text-amber-200">Uses {unconf.length} value{unconf.length === 1 ? '' : 's'} not confirmed yet (placeholders). Configure opens the field; nothing here turns on machine output.</div>
@@ -544,6 +563,9 @@ function AdaptiveFields({ ad, onAd, rampAngle, onRamp, width }: { ad: AdaptiveSe
 /** Edge work with a rotating aggregate (5AX-04). */
 function EdgeFields({ op, part, onChange }: { op: Extract<CamOp, { kind: 'edge' }>; part: CamPart; onChange: (o: CamOp) => void }) {
   const aggregate = useStore((s) => machineModelOf(s.data!.machine).capabilities.aggregate)
+  const machine = useStore((s) => s.data!.machine)
+  const tool = resolveTool(op, machine)
+  const agg = aggregateOf(machine, tool)
   const c = useOpCfg(op, part, onChange)
   return (
     <Group title="Edge work (aggregate)">
@@ -559,6 +581,9 @@ function EdgeFields({ op, part, onChange }: { op: Extract<CamOp, { kind: 'edge' 
       <SelectField label="Travel" value={op.direction} options={[{ value: 'climb', label: 'Material on the left' }, { value: 'conventional', label: 'Material on the right' }]} onChange={(v) => onChange({ ...op, direction: v })} />
       <NumField label="Run on past open ends" value={op.overrun} min={0} onChange={(v) => onChange({ ...op, overrun: v })} />
       <div className="self-end pb-1.5 text-[11px] text-stone-400">{op.geometry.length ? `${op.geometry.length} edge shape(s)` : 'No shapes picked: the part outline'}</div>
+      <div className="col-span-2 text-[11px] text-stone-400">
+        {agg ? `Aggregate: ${agg.name} (${agg.angles.mode === 'any' ? 'any angle' : `angles ${agg.angles.list.join(', ')}°`}); its housing and angles are checked.` : `T${tool?.number ?? '?'} has no aggregate in the tool table (Machine & tools → tool → Aggregate): the housing and head angles are not checked.`}
+      </div>
       <div className="col-span-2 text-[11px] text-stone-400">A flat tool on an aggregate turning about the vertical axis, kept square to the edge. Never written to woodWOP until the aggregate's macro is confirmed.</div>
     </Group>
   )

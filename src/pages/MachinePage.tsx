@@ -1,4 +1,4 @@
-import { FileDown, FileUp, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
+import { FileDown, FileUp, GitCompareArrows, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -19,6 +19,13 @@ import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
 import { useConfigureTarget } from '@/components/configureFocus'
 import { confirmKey, machineUnconfirmed, toolUnconfirmed } from '@/core/confirm'
 import { ToolDialog } from './machine/ToolDialog'
+import { ToolGrid } from './machine/ToolGrid'
+import { ToolSheetDialog } from './machine/ToolSheetDialog'
+import { ToolCompareDialog } from './machine/ToolCompareDialog'
+import { HoldersSection } from './machine/HoldersSection'
+import { AggregatesSection } from './machine/AggregatesSection'
+import { applyToolTable, toolsCsv, toolsXlsx } from '@/core/toolData'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 const TOOL_TYPES: { value: ToolType; label: string }[] = [
   { value: 'router', label: 'Router' },
@@ -41,6 +48,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camAdaptive', 'Rest machining and adaptive clearing', 'Pocket options: cut only what earlier operations left; clear at a steady width of cut.'],
   ['camSolids', 'Solid models', 'Import STEP, IGES and BREP solids: faces and colours, holes, pockets and outlines found and put on layers, assemblies split into parts, machining picked faces.'],
   ['camMore25d', 'More 2.5D machining', 'Saw cuts with run-out, angle and joining; facing; chamfers; cuts between curves and along 3D curves; hand-drawn toolpaths; toolpath edits; edge work with a rotating aggregate.'],
+  ['camCadTools', 'CAD and tool additions', 'Turn-by-turn sketch, dimensions and print to scale, geometry queries, fill with holes, panelling, image trace; holder and aggregate library, tool grid, tool data compare and spreadsheet import/export.'],
   ['camMprOutput', 'Write custom-part machining to MPR', 'Off: custom parts are nested and labelled, and the export checker blocks MPR export until this is on.'],
   ['cam3dMprOutput', 'Write 3D roughing and waterline to MPR', 'Z-level roughing and waterline finishing as contour-milling passes, level by level (also needs the switch above). Off until a program is proven on the machine. Parallel, projection and pencil finishing, and adaptive roughing, are never written.'],
   ['cam25dMprOutput', 'Write facing, chamfers and saw cuts to MPR', 'The newer 2.5D operations that have a woodWOP form, as contour-milling passes and saw grooves (also needs the custom-part switch). Off until proven on the machine. Saw grooves also need a saw unit in the machine model. Angled saw cuts, curve cuts, edge work with an aggregate and edited toolpaths are never written.'],
@@ -59,10 +67,14 @@ export function MachinePage() {
   const [importOpen, setImportOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [editTool, setEditTool] = useState<string | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
   // a "Configure" badge elsewhere asked for a field on this page: open its tool, then focus it
-  useConfigureTarget(['tool', 'holder', 'model', 'default'], (t) => {
+  const cadTools = featuresOf(data?.settings).camCadTools
+  useConfigureTarget(['tool', 'holder', 'aggregate', 'model', 'default'], (t) => {
     if (t.kind === 'tool') setEditTool(t.toolId)
-    if (t.kind === 'holder') {
+    // with the holder library on this page, the holder's own card takes the focus
+    if (t.kind === 'holder' && !cadTools) {
       const tool = data?.machine.tools.find((x) => x.holderId === t.holderId)
       if (tool) setEditTool(tool.id)
     }
@@ -75,9 +87,13 @@ export function MachinePage() {
   const feat = featuresOf(s)
   const ns = nestSettingsOf(s)
 
-  const exportTools = async () => {
-    const csv = ['number,type,name,diameter,maxDepth', ...m.tools.map((t) => [t.number, t.type, `"${t.name.replace(/"/g, '""')}"`, t.diameter, t.maxDepth].join(','))].join('\r\n') + '\r\n'
-    const where = await backend.saveFile({ name: 'n200-tools.csv', data: csv }, [{ name: 'CSV', extensions: ['csv'] }])
+  const exportTools = async (kind: 'csv' | 'xlsx' = 'csv') => {
+    // every field (M2.7) when the CAD and tool additions are on; the short Stage 1 table otherwise
+    const csv = cadTools ? toolsCsv(m) : ['number,type,name,diameter,maxDepth', ...m.tools.map((t) => [t.number, t.type, `"${t.name.replace(/"/g, '""')}"`, t.diameter, t.maxDepth].join(','))].join('\r\n') + '\r\n'
+    const where =
+      kind === 'xlsx'
+        ? await backend.saveFile({ name: 'n200-tools.xlsx', data: toolsXlsx(m) }, [{ name: 'Excel', extensions: ['xlsx'] }])
+        : await backend.saveFile({ name: 'n200-tools.csv', data: csv }, [{ name: 'CSV', extensions: ['csv'] }])
     if (where) toast.success(`Tool table saved to ${where}`)
   }
 
@@ -91,12 +107,36 @@ export function MachinePage() {
             <Button size="sm" variant="ghost" onClick={() => setResetOpen(true)}>
               <RotateCcw /> Reset to placeholder
             </Button>
-            <Button size="sm" variant="ghost" onClick={exportTools}>
-              <FileDown /> Export tools CSV
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
-              <FileUp /> Import tools
-            </Button>
+            {cadTools ? (
+              <>
+                <Button size="sm" variant="ghost" onClick={() => setCompareOpen(true)}>
+                  <GitCompareArrows /> Tool data in operations
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <FileDown /> Export tools
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => void exportTools('xlsx')}>Spreadsheet (.xlsx)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void exportTools('csv')}>CSV</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
+                  <FileUp /> Import tools
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" onClick={() => void exportTools()}>
+                  <FileDown /> Export tools CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                  <FileUp /> Import tools
+                </Button>
+              </>
+            )}
           </>
         }
       />
@@ -213,6 +253,8 @@ export function MachinePage() {
             </Section>
             <MachineModelSection machine={m} updateMachine={updateMachine} />
             <CutDefaultsSection machine={m} />
+            {cadTools && <HoldersSection machine={m} updateMachine={updateMachine} />}
+            {cadTools && <AggregatesSection machine={m} updateMachine={updateMachine} />}
             <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${partSpacing(m, s)} mm`}>
               <div className="grid grid-cols-2 gap-2">
                 <NumField label="Edge trim" value={s.nesting.edgeTrim} min={0} max={50} onChange={(v) => updateSettings((x) => (x.nesting.edgeTrim = v))} />
@@ -285,6 +327,7 @@ export function MachinePage() {
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Tool table</h2>
+              {!cadTools && (
               <Button
                 size="sm"
                 onClick={() =>
@@ -296,7 +339,11 @@ export function MachinePage() {
               >
                 <Plus /> Add tool
               </Button>
+              )}
             </div>
+            {cadTools ? (
+              <ToolGrid machine={m} units={s.units} onSave={(tools) => updateMachine((x) => void applyToolTable(x, tools))} onEdit={setEditTool} />
+            ) : (
             <EditableTable
               rows={m.tools}
               columns={TOOL_COLS}
@@ -317,6 +364,7 @@ export function MachinePage() {
               canDelete={(t) => (t.number === m.cutoutToolNumber ? 'This is the cut-out tool' : null)}
               empty="No tools. Import the machine's tool list as CSV."
             />
+            )}
             <p className="text-[11px] text-muted-foreground">
               Drills are matched by exact diameter and depth ≤ max depth. Pockets use the largest router that fits the groove width. Missing tools are reported as errors before export.
             </p>
@@ -324,6 +372,8 @@ export function MachinePage() {
         </div>
       </div>
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} kinds={['tools']} />
+      {cadTools && <ToolSheetDialog open={sheetOpen} onOpenChange={setSheetOpen} machine={m} onApply={(tools) => updateMachine((x) => void applyToolTable(x, tools))} />}
+      {cadTools && <ToolCompareDialog open={compareOpen} onOpenChange={setCompareOpen} />}
       {editTool && m.tools.some((t) => t.id === editTool) && (
         <ToolDialog
           tool={m.tools.find((t) => t.id === editTool)!}

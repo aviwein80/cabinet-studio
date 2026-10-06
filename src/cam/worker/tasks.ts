@@ -28,6 +28,8 @@ import { type FaceAction, grainDirection, machineFaces, placementFrame, refreshS
 import { extendMesh, extrude, flat, loft, revolve, ruled, splitMesh, sweep, type V3 } from '../mesh/surface'
 import { facesMesh, filletFaces, solidEdges, untrimFace } from '../solid/wires'
 import type { Entity, Layer } from '../types'
+import { holderEnvelope, type HolderFromModel } from '../tools/holder'
+import { isSolidFile } from '../solid/format'
 
 export interface ImportedModel {
   mesh: Mesh
@@ -56,6 +58,8 @@ export interface TaskMap {
   /** Read a STEP / IGES / BREP file. `vendor`: URL of the folder with the OpenCascade reader files. */
   'solid.import': { in: { bytes: Uint8Array; name: string; vendor?: string } & SolidReadOptions; out: SolidData }
   'solid.pack': { in: { solid: SolidData }; out: Packed }
+  /** A holder's revolved outline from a model of it (TOOL-04): mesh or solid file, its axis along the file's `up`. */
+  'holder.fromModel': { in: { bytes: Uint8Array; name: string; units?: MeshUnits; up?: UpAxis; step?: number; vendor?: string }; out: HolderFromModel & { triangles: number } }
   'blob.unpackSolid': { in: { gz: Uint8Array; hash: string }; out: SolidData }
   /** Find the features of one body (SOL-01); with `model`, also the layers and shapes for them. */
   'solid.recognize': { in: { solid: SolidData; body: number; opt: Omit<RecognizeOptions, 'frame'>; model?: { id: string; blob: string }; layers?: Layer[]; grainFaces?: number[] }; out: { recognition: Recognition; layers?: Layer[]; entities?: Entity[]; outlineId?: string; rows?: FeatureRow[] } }
@@ -153,6 +157,29 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     work.progress?.(0, 'Loading the solid-model reader')
     const reader = await occt(vendor)
     return readSolid(reader, bytes, name, opt, work)
+  },
+  async 'holder.fromModel'({ bytes, name, units, up, step, vendor }, work) {
+    let mesh: Mesh
+    if (isSolidFile(name)) {
+      work.progress?.(0, 'Loading the solid-model reader')
+      const solid = readSolid(await occt(vendor), bytes, name, {}, work)
+      const n = solid.bodies.reduce((a, b) => a + b.positions.length, 0)
+      const positions = new Float32Array(n)
+      const idx: number[] = []
+      let base = 0
+      for (const b of solid.bodies) {
+        positions.set(b.positions, base * 3)
+        for (const k of b.indices) idx.push(k + base)
+        base += b.positions.length / 3
+      }
+      mesh = { positions, indices: Uint32Array.from(idx) }
+    } else {
+      const soup = await readMeshFile(bytes, name, work)
+      mesh = buildMesh(soup, { units }, work).mesh
+    }
+    const placed = placeMesh(mesh, { ...DEFAULT_PLACEMENT, up: up ?? '+z' })
+    work.progress?.(0.9, 'Revolved outline')
+    return { ...holderEnvelope(placed, { step }), triangles: mesh.indices.length / 3 }
   },
   async 'solid.pack'({ solid }) {
     const raw = encodeSolid(solid)

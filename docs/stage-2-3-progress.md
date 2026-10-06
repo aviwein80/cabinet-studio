@@ -68,12 +68,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.6c Hand-drawn toolpaths, toolpath edits | **Done** (October 2026) | See below. |
 | M2.6d Edge work with a rotating aggregate, screenshots, docs | **Done** (October 2026) | See below. M2.6 complete. |
 | M2.6e Unconfirmed values: Configure badges, confirmation tracking | **Done** (October 2026) | Owner request before M2.7. See below. |
-| M2.7 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.7a Holders and aggregates, tool data compare, spreadsheet, tool grid | **Done** (October 2026) | See below. |
+| M2.7b - M2.7d | Not started | Turn-by-turn sketch and dimensions; queries, fill with holes, panelling; image trace, screenshots, docs. |
+| M2.8 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged).
 
 ## Decisions received from the owner (October 2026)
@@ -982,9 +984,78 @@ sample job uses). Nothing else in the sample output changed.
 - `10-op-editor-saw.png`: a saw cut: blade, tool and the saw unit, plus the per-operation blade field.
 - `11-export-checker-configure.png`: the job's validation list with Configure links on each placeholder message.
 
-## Next run: M2.7 CAD and tool additions
+## M2.7 split
 
-- CAD-02, CAD-08, CAD-17, CAD-18, NEW-05, NEW-06, TOOL-04, TOOL-05, NEW-15 as in the prompt.
+M2.7 is done in named parts, each green, pushed and recorded here before the next starts:
+**M2.7a** holders and aggregates (TOOL-04), tool data compare and spreadsheet export/import
+(TOOL-05), tool table grid (NEW-15); **M2.7b** turn-by-turn sketch (CAD-02) and dimensions with
+print to scale (CAD-08); **M2.7c** geometry queries (CAD-17), fill with holes (CAD-18), panelling
+(NEW-05); **M2.7d** image trace (NEW-06), screenshots, README, ROADMAP. New switch "CAD and tool
+additions" (`camCadTools`, screens only, on). Nothing in M2.7 writes machine output.
+
+## M2.7a holders, aggregates, tool data: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| TOOL-04 | Holders reach every router: a tool's own holder, else the shop's **default holder** (new `MachineProfile.defaultHolderId`, the placeholder collet chuck). Stick-out: the tool's own, else **assumed = the flute length** (the shortest possible, so a check can only report more), with a Configure badge saying "assumed". Drills (drill block), saws and tools on an aggregate have no spindle holder. One function, `toolOutline`, feeds the simulator's tool drawing, the collision checks and the 3D clearance warnings | `effectiveHolder`, `effectiveGauge`, `toolOutline` in `src/core/machineModel.ts`; `collision.ts`, `toolpath.ts`, `SimulateDialog.tsx` |
+| TOOL-04 | Holder library on the Machine page: outlines point by point (height above the face : radius, with a drawing of holder and tool), the default holder, delete when unused. **Holder from a model**: STL, OBJ, 3MF, STEP, IGES or BREP (axis chosen); the outline is the model's widest point in every 1 mm band round the axis, so it is never smaller than the model. Typing an outline in marks it confirmed | `src/cam/tools/holder.ts` (`holderEnvelope`), worker task `holder.fromModel`, `HoldersSection.tsx` |
+| TOOL-04 | Aggregates and angle heads: offsets (spindle to the tool's face), tool tilt, allowed head angles (any, or a list), housing size; assigned per tool. Edge work with an assigned aggregate: the simulator draws its housing and the spindle above it; warnings when the cut needs a head angle the aggregate cannot be set to, when the housing would come within the margin of the panel's edge (stick-out less reach), or reach below the underside into the spoilboard. A placeholder aggregate is in the library with a badge; the machine model still has none fitted | `Aggregate` in `src/core/types.ts`, `anglesOutOfReach`, `genEdge`, `AggregatesSection.tsx`, `FlatToolModel` |
+| TOOL-05 | Each operation keeps the tool data its toolpath was accepted with (`CamOp.toolData`, not an input, never in recipes). The operation editor says what changed in the tool table since ("diameter 8 → 10") with "Update to the table"; Machine page → "Tool data in operations" lists every operation in the jobs and part library that differs, has no data yet, or sets its own feeds, with Update / Use table feeds / Update all | `src/core/toolData.ts` (`toolSnapshot`, `compareOpTool`, `toolDataReport`, `updateOpTool`), `ToolCompareDialog.tsx`, `OpsPanel.tsx` |
+| TOOL-05 | Spreadsheet export (.xlsx with a "Read me" sheet, or CSV) of every tool field, lengths in mm; import with every change shown before it is applied (rows by tool number; an empty cell keeps the value; new numbers become tools; bad rows skipped with the reason). Imported values count as the shop's own (badges clear); the placeholder-table switch is not touched | `toolsXlsx`, `toolsCsv`, `toolsFromRows`, `applyToolTable`, `ToolSheetDialog.tsx` |
+| NEW-15 | The tool table is a grid: arrows, Tab, Enter, Home/End move; typing edits (lengths in the shop unit, inch fractions accepted); Delete clears an optional cell; changes are a draft with Undo / Redo (Ctrl+Z / Ctrl+Y) and Save (Ctrl+S) / Discard; changed cells are tinted; a table changed elsewhere meanwhile blocks Save | `ToolGrid.tsx`, `moveCell`, `parseCell` |
+| Stale | The holder outline, stick-out used and aggregate are inputs of `opInputHash`: changing them marks the operations using that tool stale (a one-time stale mark on existing operations after the update) | `src/cam/doc.ts` |
+
+Placeholder data (all with Configure badges): the 2D routers T101-T104 got invented stick-outs (62,
+50, 40, 32 mm = flute + 20); a shop file saved before M2.7 with the placeholder table gets them only
+on tools still exactly as invented (`normalize.ts`); real tables are never touched. The placeholder
+aggregate (offset Z -120, housing 70 wide, 45 above and 6 below the axis, 90 long, any angle) is
+invented.
+
+### Acceptance (M2.7 criterion: holders appear in the simulator and are used by collision checks, 2D tools included)
+
+| Check | Proof | Measured |
+|---|---|---|
+| 2D tools in holders | `tests/cam-tools-holders.test.ts` | T101-T104: default holder, outline from their stick-out; drills and saws none |
+| Collision checks use a 2D tool's holder | same | 10 mm flat, 45 mm flutes, no stick-out given, 44 mm pocket: holder collisions only, worst 1.0 mm into the 2 mm margin; with the real 60 mm stick-out: clean; with no default holder: clean (as before). T102 in a 49 mm pocket: shank and holder |
+| No false alarms | `tests/cam-collision.test.ts` (unchanged) | The 20 Stage 1 reference parts and the 3D programs stay clean with holders on every router |
+| Simulator draws it | browser check, screenshot 06 | T102 in the default collet chuck in 3D, the holder collision in the log |
+| Holder from a model | same test | Revolved collet chuck (cone 17.5 → 21 over 30 mm, shoulder to 32, 70 high), 1 mm bands: never below the true radius anywhere; at most 0.13 mm over on the cone (one band's growth); 70 mm high, R32 |
+| Aggregates | same | Rectangle edge with angles 0/90/180/270: fine; arched edge: "cannot be turned to N of the angles"; stick-out 5 with 4 mm reach: housing hits the edge; housing 30 mm below the axis at 9.5 mm on a 19 mm panel: spoilboard |
+| Badges, stale | same | Default holder badge on 2D operations ("shop default"), assumed stick-out badge even on a real table; holder or stick-out change: stale; confirming: not stale; confirming an aggregate fits nothing |
+| Spreadsheet | same | .xlsx and CSV of every field read back with zero changes (notes with commas and quotes included); a filled cell changes, an empty one keeps; a new tool with holder by name; two bad rows skipped with reasons; imported parts confirmed, placeholder switch unchanged |
+| Tool data compare | same | Diameter 8 → 10, stick-out 50 → 55, feed 5000 → 7000 listed; after Update none; toolData not in recipes, not an input |
+| Grid | same + browser | Inch fractions, required fields, whole tool numbers; Tab wraps rows; Ctrl+Z undoes |
+
+Goldens: none changed. One existing test changed its expectation on purpose:
+`tests/cam-machine-stock.test.ts` asserted that T102 had no stick-out (M2.1 data); the M2.7 data
+gives it the placeholder 50 mm, as the owner asked for holders on 2D tools. Sample job:
+`validation.txt` lists 17 placeholder values instead of 14 (T101 and T103 stick-outs, the default
+holder); nothing else changed.
+
+### Limits recorded
+
+- **Holder from a model** takes the holder's axis as the vertical through the middle of the
+  model's footprint (after the chosen axis is turned up) and the face at its lowest point.
+- **Aggregate collisions** are checked as above (edge and spoilboard) when edge work is calculated;
+  the stock simulation still does not carve edge work or check the housing against neighbouring
+  parts on a nested sheet.
+- **Drills in the drill block** have no holder outline (the block is not modelled).
+
+### Screenshots
+
+`docs/screenshots/stage-2-3/M2.7/`: `01-tool-grid.png` (grid with an edited cell, Undo / Save),
+`02-holder-editor.png` (outline points and drawing), `03-aggregate.png` (placeholder aggregate),
+`04-tool-dialog-holder.png` (T102 in the shop default holder, stick-out, aggregate),
+`06-simulate-2d-tool-holder.png` (T102 drawn with its holder in a 49 mm pocket; shank and holder
+collisions in the log).
+
+## M2.7 decisions needed (see the report)
+
+1. **Real stick-outs and holders** for every router (2D ones now too), and which holder is the
+   shop's usual one. Until then: invented stick-outs on T101-T104, the placeholder collet chuck as
+   the default, flute length assumed for tools with none (all badged; checks err safe).
+2. **Aggregates**: offsets, housing and allowed angles of any angle head or aggregate the shop
+   has or may buy. Until then: one invented entry, not fitted.
 
 ## Run log
 
@@ -1012,3 +1083,4 @@ sample job uses). Nothing else in the sample output changed.
 - **Run 7 (M2.6c)**: hand-drawn toolpaths and toolpath edits. See `git log`.
 - **Run 7 (M2.6d)**: edge work with a rotating aggregate, screenshots, README, ROADMAP. M2.6 complete.
 - **Run 8 (M2.6e)**: Configure badges and confirmation tracking for every unconfirmed value. See `git log`.
+- **Run 9 (M2.7a)**: holders and aggregates, tool data compare, spreadsheet, tool grid. See `git log`.

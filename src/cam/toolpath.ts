@@ -59,7 +59,7 @@ import { type Layer, waterlineFinish } from './3d/waterline'
 import { zLevelRough } from './3d/zlevel'
 import { DEFAULT_COLLISION_MARGIN } from './collision/collision'
 import { modelClearance } from './collision/model'
-import { cutterOutline, holderOf, machineModelOf } from '@/core/machineModel'
+import { aggregateOf, anglesOutOfReach, effectiveGauge, machineModelOf, toolOutline } from '@/core/machineModel'
 import { placeMesh } from './mesh/place'
 import { type Mesh, meshBounds } from './mesh/types'
 import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, VCarveOp } from './types'
@@ -139,7 +139,14 @@ export interface Toolpath {
    * Edge work with an aggregate (5AX-04): the moves are the tool tip, at the tool axis height; the
    * tool lies flat, square to the path, on the `side` of travel where the material is.
    */
-  edge?: { height: number; r: number; flute: number; side: 'left' | 'right' }
+  edge?: {
+    height: number
+    r: number
+    flute: number
+    side: 'left' | 'right'
+    /** The tool's aggregate (TOOL-04): its housing behind the tool's gauge face, `gauge` from the tip, and the offset up to the spindle. */
+    housing?: { width: number; above: number; below: number; length: number; gauge: number; offset: { x: number; y: number; z: number } }
+  }
 }
 
 export interface GenContext {
@@ -1438,6 +1445,9 @@ function genEdge(op: EdgeOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   const reaches = op.reachPass > 0 ? passDepths(reach, op.reachPass) : [reach]
   const left = op.direction === 'climb'
   const lv = op.levels
+  // head angles the cut needs (the tool pointing into the material), for the aggregate's allowed angles
+  const needed = new Set<number>()
+  const headAngle = (q: P) => Math.round(((Math.atan2(left ? q.x : -q.x, left ? -q.y : q.y) * 180) / Math.PI + 360) % 360 * 10) / 10
   for (const g0 of shapes) {
     let g = g0
     if (g.closed && left !== area(g) > 0) g = reverse(g)
@@ -1469,12 +1479,31 @@ function genEdge(op: EdgeOp, ctx: GenContext, tp: Toolpath, b: Builder) {
       b.rapid(A.x, A.y, lv.safeZ)
       b.feed(A.x, A.y, z, 'lead')
       b.feed(S.x, S.y, z, 'plunge')
-      for (const sg of path.segs) b.seg(sg, z)
+      for (const sg of path.segs) {
+        b.seg(sg, z)
+        const n = sg.k === 'A' ? Math.max(1, Math.ceil(Math.abs(sweep(sg)) / (Math.PI / 180))) : 1
+        for (let i = 0; i <= n; i++) needed.add(headAngle(tangentAt(sg, i / n)))
+      }
       b.feed(B.x, B.y, z, 'lead')
       b.feed(B.x, B.y, lv.safeZ, 'lead')
     }
   }
   tp.edge = { height: op.height, r, flute, side: left ? 'left' : 'right' }
+  const agg = aggregateOf(ctx.machine, tool)
+  // no aggregate given for the tool: the editor says the housing and angles are not checked
+  if (!agg) return
+  const g = effectiveGauge(ctx.machine, tool)
+  tp.edge.housing = { ...agg.housing, gauge: g.gauge, offset: agg.offset }
+  const margin = ctx.machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN
+  const off = anglesOutOfReach(agg, [...needed].sort((a, c) => a - c))
+  if (off.length) tp.warnings.push(`The aggregate “${agg.name}” cannot be turned to ${off.length} of the angles this cut needs (e.g. ${off.slice(0, 3).map((a) => `${a}°`).join(', ')}): it only sets ${agg.angles.mode === 'list' ? agg.angles.list.join(', ') + '°' : 'any angle'}.`)
+  // the housing starts at the tool's gauge face: (stick-out - reach) outside the edge
+  const clear = g.gauge - reach
+  const lo = -op.height - agg.housing.below
+  const hi = -op.height + agg.housing.above
+  if (clear < margin && lo < margin && hi > -T - margin)
+    tp.warnings.push(`The aggregate's housing would hit the panel's edge: T${tool.number} sticks out ${g.gauge} mm${g.assumed ? ' (assumed = flute length)' : ''} and goes ${reach} mm in, so the housing comes within ${clear.toFixed(1)} mm of the edge (margin ${margin} mm).`)
+  if (lo < -T + margin) tp.warnings.push(`The aggregate's housing reaches ${(-lo).toFixed(1)} mm below face 1, ${(-T - lo).toFixed(1)} mm below the part's underside: it would hit the spoilboard (margin ${margin} mm).`)
 }
 
 const CURVE_NO_OUTPUT = 'curve cuts move the tool up and down along the path, which needs true 3D output (off until the format is confirmed)'
@@ -1843,7 +1872,7 @@ function clearanceWarnings(mesh: Mesh, moves: Move[], stock: number, ctx: GenCon
   const tool = tp.tool
   if (!tool || !moves.length) return
   const margin = ctx.machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN
-  const o = cutterOutline(tool, holderOf(ctx.machine, tool))
+  const o = toolOutline(ctx.machine, tool)
   const r = modelClearance(mesh, moves, o, margin, stock, ctx.part)
   const at = (p: { x: number; y: number; z: number }) => `X${p.x.toFixed(1)} Y${p.y.toFixed(1)} Z${p.z.toFixed(1)}`
   if (r.holder)

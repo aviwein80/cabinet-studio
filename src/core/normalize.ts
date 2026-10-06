@@ -1,14 +1,31 @@
 import { migratePart } from '@/cam/doc'
-import { defaultAppData, fillHardwareSpecs } from './defaults'
+import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_MACHINE } from './defaults'
 import { DEFAULT_FEATURES } from './features'
 import { DEFAULT_ROOM } from './room'
-import type { AppData, CarcassParams } from './types'
+import type { AppData, CarcassParams, MachineProfile } from './types'
 
 /** Fill in fields added in later versions so old data files keep loading. */
 const DRAWER_DEFAULT: CarcassParams['drawers'] = { count: 0, frontHeight: 152.4, slide: 'auto' }
 
 function withParams(p: CarcassParams): CarcassParams {
   return { ...p, drawers: { ...DRAWER_DEFAULT, ...(p.drawers ?? {}) } }
+}
+
+/**
+ * A placeholder tool table saved before M2.7 gets the invented stick-outs of the 2D routers, but
+ * only on tools still exactly as invented (same number, diameter and depth); real values are
+ * never touched.
+ */
+function refreshPlaceholderTools(m: MachineProfile): MachineProfile {
+  if (!m.placeholder) return m
+  return {
+    ...m,
+    tools: m.tools.map((t) => {
+      const p = PLACEHOLDER_MACHINE.tools.find((x) => x.id === t.id)
+      if (!p || t.gaugeLength !== undefined || p.gaugeLength === undefined || p.number !== t.number || p.diameter !== t.diameter || p.maxDepth !== t.maxDepth) return t
+      return { ...t, gaugeLength: p.gaugeLength }
+    }),
+  }
 }
 
 export function normalizeData(raw: Partial<AppData> | null): AppData {
@@ -27,7 +44,7 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
   return {
     version: 1,
     library,
-    machine: { ...d.machine, ...(raw.machine ?? {}), contour: { ...d.machine.contour, ...(raw.machine?.contour ?? {}) }, header: { ...d.machine.header, ...(raw.machine?.header ?? {}) } },
+    machine: { ...refreshPlaceholderTools({ ...d.machine, ...(raw.machine ?? {}) }), contour: { ...d.machine.contour, ...(raw.machine?.contour ?? {}) }, header: { ...d.machine.header, ...(raw.machine?.header ?? {}) } },
     settings: {
       ...d.settings,
       ...(raw.settings ?? {}),

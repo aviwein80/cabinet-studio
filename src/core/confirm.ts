@@ -9,7 +9,7 @@
  */
 import { feedsFor } from '@/cam/ops'
 import type { CamOp, CamPart } from '@/cam/types'
-import { machineModelOf, PLACEHOLDER_N200_MODEL } from './machineModel'
+import { aggregateOf, effectiveGauge, effectiveHolder, machineModelOf, PLACEHOLDER_N200_MODEL } from './machineModel'
 import type { MachineProfile, Tool } from './types'
 
 /** Machine-model facts tracked one by one. */
@@ -94,6 +94,7 @@ export type ToolPart = 'data' | 'blade' | 'lengths' | 'feeds'
 export type ConfigTarget =
   | { kind: 'tool'; toolId: string; part: ToolPart }
   | { kind: 'holder'; holderId: string }
+  | { kind: 'aggregate'; aggregateId: string }
   | { kind: 'model'; fact: ModelFact }
   | { kind: 'default'; key: CutDefaultKey }
   | { kind: 'op'; partId: string; jobId?: string; opId: string; key: CutDefaultKey | 'blade' }
@@ -103,7 +104,7 @@ export interface Unconfirmed {
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Machine model' | 'Cutting values' | 'Operations'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Cutting values' | 'Operations'
   target: ConfigTarget
 }
 
@@ -113,6 +114,8 @@ export const keyOf = (t: ConfigTarget): string => {
       return `tool:${t.toolId}:${t.part}`
     case 'holder':
       return `holder:${t.holderId}`
+    case 'aggregate':
+      return `aggregate:${t.aggregateId}`
     case 'model':
       return `model:${t.fact}`
     case 'default':
@@ -124,8 +127,8 @@ export const keyOf = (t: ConfigTarget): string => {
 
 export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) => !!m.confirmed?.includes(key)
 
-/** 3D tools (shapes and lengths matter to collision checks). */
-const is3dTool = (t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || !!t.holderId)
+/** Tools whose lengths matter to collision checks: 3D shapes, and every router in a holder (M2.7). */
+const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || !!effectiveHolder(m, t))
 const fmt = (n: number) => String(Math.round(n * 1000) / 1000)
 
 function factValue(m: MachineProfile, f: ModelFact): string {
@@ -171,12 +174,33 @@ export function toolUnconfirmed(m: MachineProfile, t: Tool): Unconfirmed[] {
   }
   add('data', 'number, diameter and depth', `Ø${fmt(t.diameter)}, ${fmt(t.maxDepth)} deep`, m.placeholder)
   if (t.type === 'saw') add('blade', 'blade diameter', t.bladeDiameter ? `Ø${fmt(t.bladeDiameter)} mm` : 'Ø200 mm (assumed)', m.placeholder || !t.bladeDiameter)
-  if (is3dTool(t)) add('lengths', 'shank, flute and stick-out', `flute ${fmt(t.fluteLength ?? t.maxDepth)}, stick-out ${t.gaugeLength ? fmt(t.gaugeLength) : '?'} mm`, m.placeholder)
+  if (hasLengths(m, t)) {
+    // no stick-out given: the shortest possible (the flute length) is assumed, so checks err safe
+    const g = effectiveGauge(m, t)
+    const stick = g.assumed ? `${fmt(g.gauge)} (assumed = flute length)` : t.gaugeLength ? fmt(t.gaugeLength) : '?'
+    add('lengths', 'shank, flute and stick-out', `flute ${fmt(t.fluteLength ?? t.maxDepth)}, stick-out ${stick} mm`, m.placeholder || g.assumed)
+  }
   if (t.type === 'router' || t.type === 'saw') {
     const f = feedsFor({ feeds: {} } as CamOp, t, null, m)
     add('feeds', 'feeds, speed and step-down', `${f.rpm} rpm, ${Math.round(f.feed)} mm/min${f.source === 'default' ? ' (built-in)' : ''}`, m.placeholder || f.source === 'default')
   }
   return out
+}
+
+/** The holder a tool uses (its own or the shop default), while it is a placeholder. */
+export function holderItem(m: MachineProfile, t: Tool): Unconfirmed | null {
+  const h = effectiveHolder(m, t)
+  const target: ConfigTarget = { kind: 'holder', holderId: h?.id ?? '' }
+  if (!h?.placeholder || isConfirmed(m, keyOf(target))) return null
+  return { key: keyOf(target), label: `Holder ${h.name}${t.holderId ? '' : ' (shop default)'}`, value: 'invented outline', group: 'Holders', target }
+}
+
+/** An aggregate while it is a placeholder. */
+export function aggregateItem(m: MachineProfile, id: string): Unconfirmed | null {
+  const a = aggregateOf(m, { aggregateId: id })
+  const target: ConfigTarget = { kind: 'aggregate', aggregateId: id }
+  if (!a?.placeholder || isConfirmed(m, keyOf(target))) return null
+  return { key: keyOf(target), label: `Aggregate ${a.name}`, value: `offset ${fmt(a.offset.x)} / ${fmt(a.offset.y)} / ${fmt(a.offset.z)} mm, housing ${fmt(a.housing.width)} wide`, group: 'Aggregates', target }
 }
 
 /** Every unconfirmed shop value: tools, holders, machine-model facts, default cutting values. */
@@ -186,6 +210,10 @@ export function machineUnconfirmed(m: MachineProfile): Unconfirmed[] {
   for (const h of m.holders ?? []) {
     const target: ConfigTarget = { kind: 'holder', holderId: h.id }
     if (h.placeholder && !isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: `Holder ${h.name}`, value: 'invented outline', group: 'Holders', target })
+  }
+  for (const a of m.aggregates ?? []) {
+    const u = aggregateItem(m, a.id)
+    if (u) out.push(u)
   }
   if (machineModelOf(m).placeholder)
     for (const fact of MODEL_FACTS) {
@@ -210,6 +238,10 @@ export function confirmKey(m: MachineProfile, key: string) {
   if (key.startsWith('holder:')) {
     const h = m.holders?.find((x) => `holder:${x.id}` === key)
     if (h) h.placeholder = false
+  }
+  if (key.startsWith('aggregate:')) {
+    const a = m.aggregates?.find((x) => `aggregate:${x.id}` === key)
+    if (a) a.placeholder = false
   }
   if (key.startsWith('model:') && MODEL_FACTS.every((f) => m.confirmed!.includes(`model:${f}`))) {
     m.physical = structuredClone(m.physical ?? PLACEHOLDER_N200_MODEL)
@@ -276,11 +308,10 @@ export function opUnconfirmed(op: CamOp, part: Pick<CamPart, 'id'>, m: MachinePr
     // a saw cut with its own blade does not use the tool's
     const ownBlade = op.kind === 'saw' && !!op.saw?.blade
     out.push(...toolUnconfirmed(m, tool).filter((u) => !(ownBlade && u.target.kind === 'tool' && u.target.part === 'blade')).filter((u) => !(u.target.kind === 'tool' && u.target.part === 'feeds' && (op.feeds.feed || op.feeds.rpm))))
-    if (tool.holderId) {
-      const h = m.holders?.find((x) => x.id === tool.holderId)
-      const target: ConfigTarget = { kind: 'holder', holderId: tool.holderId }
-      if (h?.placeholder && !isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: `Holder ${h.name}`, value: 'invented outline', group: 'Holders', target })
-    }
+    const h = holderItem(m, tool)
+    if (h) out.push(h)
+    const a = tool.aggregateId ? aggregateItem(m, tool.aggregateId) : null
+    if (a && op.kind === 'edge') out.push(a)
   }
   if (op.kind === 'edge') {
     const target: ConfigTarget = { kind: 'model', fact: 'aggregate' }
@@ -361,10 +392,8 @@ export function usedUnconfirmed(m: MachineProfile, toolIds: Iterable<string>, pa
     const t = m.tools.find((x) => x.id === id)
     if (!t) continue
     toolUnconfirmed(m, t).forEach(put)
-    if (t.holderId) {
-      const h = m.holders?.find((x) => x.id === t.holderId)
-      if (h?.placeholder && !isConfirmed(m, `holder:${h.id}`)) put({ key: `holder:${h.id}`, label: `Holder ${h.name}`, value: 'invented outline', group: 'Holders', target: { kind: 'holder', holderId: h.id } })
-    }
+    const h = holderItem(m, t)
+    if (h) put(h)
   }
   for (const p of parts) for (const op of p.ops) if (op.enabled) opUnconfirmed(op, p, m, toolOf(op, p)).forEach(put)
   for (const u of machineUnconfirmed(m)) if (u.group === 'Machine model') put(u)

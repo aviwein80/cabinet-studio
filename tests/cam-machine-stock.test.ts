@@ -31,9 +31,12 @@ describe('M2.1 machine model and holder fields', () => {
       expect(o.holder[0].z).toBe(t.gaugeLength)
       expect(o.shankR).toBe(t.shankDiameter! / 2)
     }
+    // M2.7: a 2D router names no holder of its own (it sits in the shop default) and its own
+    // outline without one still has none; its placeholder stick-out is 50 mm
     const plain = PLACEHOLDER_MACHINE.tools.find((t) => t.number === 102)!
-    const o = cutterOutline(plain, holderOf(PLACEHOLDER_MACHINE, plain))
-    expect(o.gauge).toBe(Infinity)
+    expect(holderOf(PLACEHOLDER_MACHINE, plain)).toBeNull()
+    const o = cutterOutline(plain, null)
+    expect(o.gauge).toBe(50)
     expect(o.holder).toEqual([])
   })
 

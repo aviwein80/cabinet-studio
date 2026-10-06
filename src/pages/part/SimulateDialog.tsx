@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
-import { cutterOutline, holderOf, machineModelOf } from '@/core/machineModel'
+import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
 import { formatLength } from '@/core/units'
 import type { MachineProfile, UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -91,7 +91,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const check = checked?.for === checkKey ? checked : { found: null, fraction: 0, error: undefined }
   const outlines = useMemo(() => tl.ops.map((o) => {
     const tool = ordered[o.path]?.tool
-    return tool ? cutterOutline(tool, holderOf(machine, tool)) : null
+    return tool ? toolOutline(machine, tool) : null
   }), [tl, ordered, machine])
   const [t, setT] = useState(tl.total)
   const tRef = useRef(t)
@@ -582,7 +582,7 @@ function ZGauge({ z, thickness }: { z: number; thickness: number }) {
   )
 }
 
-type Outline = ReturnType<typeof cutterOutline>
+type Outline = CutterOutline
 
 /** Saw blade to draw: radius, kerf, tilt and the direction of the cut the tool is on. */
 type Blade = { r: number; kerf: number; tilt: number; dir: number; lean: number }
@@ -607,13 +607,14 @@ function bladeOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b
 }
 
 /** Edge work with an aggregate: the tool lies flat, pointing into the material, square to the move it is on. */
-type Flat = { r: number; length: number; dir: number }
+type Flat = { r: number; length: number; dir: number; housing?: NonNullable<NonNullable<Toolpath['edge']>['housing']> }
 function flatOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b: { x: number; y: number } } | null): Flat | null {
   if (!tp?.edge || !seg) return null
   const along = Math.atan2(seg.b.y - seg.a.y, seg.b.x - seg.a.x)
   const still = Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y) < 1e-9
   // into the material: to the left of travel (or right); on the moves in and out, along the move
-  return { r: tp.edge.r, length: tp.edge.flute, dir: still ? 0 : along + (tp.edge.side === 'left' ? Math.PI / 2 : -Math.PI / 2) }
+  const h = tp.edge.housing
+  return { r: tp.edge.r, length: h && Number.isFinite(h.gauge) ? h.gauge : tp.edge.flute, dir: still ? 0 : along + (tp.edge.side === 'left' ? Math.PI / 2 : -Math.PI / 2), housing: h }
 }
 
 function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opacity, section, spoilboard, onCarved }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; flat: Flat | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number }) {
@@ -647,10 +648,24 @@ function FlatToolModel({ pos, flat, rapid }: { pos: { x: number; y: number; z: n
         <cylinderGeometry args={[flat.r, flat.r, flat.length, 32]} />
         <meshStandardMaterial color={rapid ? '#f87171' : '#e7e5e4'} transparent opacity={0.7} metalness={0.4} roughness={0.3} />
       </mesh>
-      <mesh position={[0, -flat.length - 15, 0]}>
-        <boxGeometry args={[flat.r * 4, 30, flat.r * 4]} />
-        <meshStandardMaterial color="#64748b" transparent opacity={0.6} />
-      </mesh>
+      {flat.housing ? (
+        <>
+          {/* the aggregate's housing behind the tool's face (TOOL-04), and the spindle above it */}
+          <mesh position={[0, -flat.length - flat.housing.length / 2, (flat.housing.above - flat.housing.below) / 2]}>
+            <boxGeometry args={[flat.housing.width, flat.housing.length, flat.housing.above + flat.housing.below]} />
+            <meshStandardMaterial color="#64748b" transparent opacity={0.6} />
+          </mesh>
+          <mesh position={[0, -flat.length - flat.housing.length / 2, flat.housing.above + Math.max(10, -flat.housing.offset.z - flat.housing.above) / 2]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[Math.min(40, flat.housing.width / 2), Math.min(40, flat.housing.width / 2), Math.max(10, -flat.housing.offset.z - flat.housing.above), 24]} />
+            <meshStandardMaterial color="#475569" transparent opacity={0.45} />
+          </mesh>
+        </>
+      ) : (
+        <mesh position={[0, -flat.length - 15, 0]}>
+          <boxGeometry args={[flat.r * 4, 30, flat.r * 4]} />
+          <meshStandardMaterial color="#64748b" transparent opacity={0.6} />
+        </mesh>
+      )}
     </group>
   )
 }

@@ -165,7 +165,7 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
 }
 
 export function toTemplate(op: CamOp): OpTemplate {
-  const { id: _id, geometry: _g, builtHash: _h, ...rest } = op
+  const { id: _id, geometry: _g, builtHash: _h, toolData: _t, ...rest } = op
   // operation ids mean nothing in another part: rest machining then follows every earlier operation
   if (rest.kind === 'pocket' && rest.rest) return { ...rest, rest: { ...rest.rest, from: [] } } as OpTemplate
   if (rest.kind === 'finish3d' && rest.rest) return { ...rest, rest: { ...rest.rest, from: [] } } as OpTemplate

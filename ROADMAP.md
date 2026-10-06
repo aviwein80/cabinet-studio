@@ -22,7 +22,7 @@ Next for the reader: machine edge grooves and edge profiles (needs the aggregate
 underside milling in the turned-over program, and a per-shop "likely features" list so the
 reader recognises the shop's own hardware codes.
 
-## Custom-part Stage 2 and 3 (in progress)
+## Custom-part Stage 2 and 3 (Stage 2 complete; Stage 3 not started)
 
 Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-progress.md`.
 
@@ -71,7 +71,18 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   post on all 44 reference parts; text posts never for the N-200, output switch off); G-code and
   our MPR read back into toolpaths for the simulator; a program manager with an editor (line
   numbers, maths on values), checks and copying to the machine folder (edited programs behind
-  their own switch, off). Next: M2.11 (relief import).
+  their own switch, off). **M2.11 relief import: done** (October 2026): reliefs from relief
+  software (STL, OBJ, 3MF; a base under the carving found and taken off) and height-map pictures
+  (own PNG and TIFF readers, 16-bit kept) made to an exact size and depth, placed on a part, and
+  machined with Z-level roughing and parallel finishing; on a relief the operations stay inside
+  its outline and the panel face round it is never cut. Screens only (new switch "Relief
+  import"); relief toolpaths follow the 3D output rules. **Stage 2 exit test: passed** (October
+  2026): an STL relief door and a STEP shaped door each go from import to simulated,
+  collision-free toolpaths and a checked MPR (custom-part and 3D output still off by default; the
+  program written is read back and simulates the same). One limit stays: parallel finishing of a
+  relief has no woodWOP form yet (decision 2: true 3D output waits for a sample program from
+  woodWOP), so the checker stops it; roughing and waterline can be written once their switch is
+  on. **Stage 2 complete.** Next: Stage 3 (M3.1), when the owner says go.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -84,11 +95,14 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - M2.6: the saw unit and the rotating aggregate count as absent on the N-200 until confirmed;
     their operations ship, and the export checker refuses their output with a clear message. No
     saw or aggregate macro is presented as proven output.
-- Open for M2.10 (see `docs/stage-2-3-progress.md`): how woodWOP reads half-circle arcs given
-  only by their ends and radius (our writer's full circles and split arcs; their centre is only
-  fixed to about 0.05-0.07 mm), and whether to write such arcs in pieces of at most 90 degrees
-  (changes the MPR golden files); whether hand-edited programs should ever be copied to the
-  machine folder (switch off until then); where the machine folder is.
+- M2.10 answered (October 2026): half-circle arcs stay as they are until the owner simulates one
+  circle in woodWOP (option b; pieces of at most 90 degrees only if woodWOP's circle is off);
+  hand-edited programs are not copied to the machine (switch off); the machine folder stays
+  empty; no plugins trusted, nothing granted.
+- Open for M2.11 (see `docs/stage-2-3-progress.md`): how relief-software STL files arrive at the
+  shop (units, with or without a base) - one real file would confirm the importer's defaults; and
+  the cutting values for relief work (tools, step-overs, step-downs) - placeholders with
+  Configure badges until then.
 - M2.9 answered (October 2026): no second machine, the N-200 only (output for other machines
   off); process steps do not share work; the app's own face words; waste areas a report only.
 - M2.8 answered (October 2026): prices later through Configure badges; hold-down and bridge

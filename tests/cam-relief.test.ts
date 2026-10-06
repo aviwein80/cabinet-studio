@@ -254,7 +254,7 @@ describe('M2.11 STL reliefs from relief software', () => {
     expect(r.info.outline[0].length).toBeLessThanOrEqual(16)
   })
 
-  it('without taking the base off, the depth is the whole block; a mesh stays the same shape when only the size changes', () => {
+  it('without taking the base off, the depth is the whole block (base included)', () => {
     const mesh = buildMesh(parseStl(blockStl()), { units: 'in', gapTol: 0 }).mesh
     const sized = sizeRelief(mesh, { length: 101.6, width: 152.4, depth: 12.7 })
     const b = meshBounds(sized)
@@ -321,8 +321,10 @@ describe('M2.11 reliefs on a door, machined with the M2.2 strategies in the simu
       expect(tps[1].moves.length).toBeGreaterThan(10)
       const placed = placeMesh(mesh, part.models![0].place)
       // independent gouge check: ball-nose exact, bull-nose sampled
-      expect(checkGouge(placed, { shape: 'ball', r: 3 }, tps[1].moves, { step: 1 }).max).toBeLessThanOrEqual(0.005)
-      expect(checkGouge(placed, { shape: 'bull', r: 6, cornerRadius: 2 }, tps[0].moves, { stock: 0.5, maxPoints: 1500, resolution: 0.1 }).max).toBeLessThanOrEqual(0.005)
+      const gBall = checkGouge(placed, { shape: 'ball', r: 3 }, tps[1].moves, { step: 1 }).max
+      const gBull = checkGouge(placed, { shape: 'bull', r: 6, cornerRadius: 2 }, tps[0].moves, { stock: 0.5, maxPoints: 1500, resolution: 0.1 }).max
+      expect(gBall).toBeLessThanOrEqual(0.005)
+      expect(gBull).toBeLessThanOrEqual(0.005)
       // simulated: nothing outside the relief is cut, the relief is finished to within the scallop
       const stock = simulate(part, tps)
       const outline = placedReliefOutline(part.models![0])
@@ -346,6 +348,7 @@ describe('M2.11 reliefs on a door, machined with the M2.2 strategies in the simu
           // well inside (away from the edge, where the ball's overhang is held up by the panel face)
           if (x > x0 + 4 && x < x1 - 4 && y > y0 + 4 && y < y1 - 4) worstLeft = Math.max(worstLeft, h - z)
         }
+      console.log(`  [relief] ${label}: ${mesh.indices.length / 3} facets; gouge finishing ${gBall.toFixed(4)} mm, roughing ${gBull.toFixed(4)} mm (independent check); simulated: deepest below the surface ${worstGouge.toFixed(4)} mm, most left inside ${worstLeft.toFixed(3)} mm; cells cut outside the relief ${outsideLow}`)
       expect(outsideLow).toBe(0)
       expect(worstGouge).toBeLessThanOrEqual(0.01)
       // scallop of a 6 mm ball at 1.5 mm step-over is 0.095 mm on the flat; steeper spots and the

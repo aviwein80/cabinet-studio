@@ -145,6 +145,25 @@ export checker. Tool numbers are still placeholders.
   The 3D view shows the stock, the models and the drawing. Model data is stored as compressed
   files in `data/blobs` next to the shop file, never inside it. Part files (`.csp.json`) carry
   their models with them. Unused model files are removed after 30 days.
+- **Relief import** (switch: Relief import, on; part designer → **Relief**, or 3D tab → Import
+  relief): brings in a carved relief made elsewhere, either an STL, OBJ or 3MF exported from
+  relief software, or a greyscale **height-map picture** (PNG or TIFF; 16-bit greyscale keeps
+  the most detail, 8-bit pictures show their 256 steps and can be smoothed). The app imports
+  reliefs; it does not design them.
+  - **Size and depth are exact**: you give the length, width (proportions kept or not) and depth.
+    For a picture, white is the top and black the full depth (or the other way round); its own
+    lightest-to-darkest can be stretched over the depth; transparent pixels count as the top or
+    the bottom; the point spacing sets the detail (a picture has no depth of its own, so the depth
+    must be typed in). For an STL, the file's units are used (or chosen), a flat base under the
+    carving is found and can be taken off, and the relief can be stretched to a new size or depth.
+  - **Placed on the part**: centred or at a corner, its top flush with face 1 or lower.
+  - **Machined with the 3D strategies**: Z-level roughing and parallel finishing can be added at
+    once (placeholder cutting values with their Configure badges). On a relief, every 3D
+    operation stays inside the relief's outline and treats the panel face round it as solid, so
+    **the panel round a relief is never cut** (also for a relief set below the face).
+  - Relief toolpaths follow the 3D output rules: roughing (and waterline) only with "Write 3D
+    roughing and waterline to MPR" (off); parallel finishing is not written to woodWOP until a
+    sample 3D program from woodWOP decides the form. Simulate before cutting.
 - **Solid models** (STEP AP203 / AP214 / AP242, IGES, BREP; switch: Solid models, on):
   - **Import solid** (Custom parts page, also a job's Custom parts tab): each panel in the file
     becomes a part, laid flat (face 1 up, length along X, the smallest rectangle round it), sized

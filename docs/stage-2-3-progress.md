@@ -85,12 +85,13 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.10b Script posts (PST-02) | **Done** (October 2026) | See below. Output switch off; never the N-200. |
 | M2.10c Reading programs back (NEW-22) | **Done** (October 2026) | See below. Also fixes the template post's feed on helical entries, and text posts now refuse operations without one tool. |
 | M2.10d Program manager and editor (PST-04), screenshots, docs | **Done** (October 2026) | See below. M2.10 complete. Copying edited programs has its own switch, off. |
-| M2.11 | Not started | ART-01. Next run. |
+| M2.11a Relief import: readers, sizing, placement, machining guard, dialog (ART-01) | **Done** (October 2026) | See below. Screens only (switch "Relief import", on). |
+| M2.11b Stage 2 exit test, screenshots, docs | **Done** (October 2026) | See below. **M2.11 complete. Stage 2 complete.** |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -136,6 +137,14 @@ files present; fixed in M2.8e, back to 17.)
     checker; script posts never target the N-200 for rotary, 3+2, 5-axis or other unsupported
     work; every machine output switch stays off.
 
+18. With the M2.11 go-ahead, for M2.10: half-circle arcs stay as they are; the owner simulates
+    one circle in woodWOP first (option b), and arcs change only if that circle is off. Copying
+    hand-edited programs to the machine stays off. The machine folder stays empty. No plugins
+    are trusted and nothing is granted.
+19. With the M2.11 go-ahead (repeated): M2.9 and M2.8 answers stand (decisions 15 and 16);
+    stick-outs, holders, aggregates and the T140 blade stay badged placeholders, no aggregate
+    fitted; every machine output switch stays off; reliefs are imported, never modelled.
+
 ## Open questions for the owner
 
 1. **N-200 figures** (machine model): travel limits, table size, origin, spoilboard thickness,
@@ -156,8 +165,9 @@ files present; fixed in M2.8e, back to 17.)
 9. **M2.8**: answered (decision 15); still to come: the prices themselves, the hold-down and bridge
    sizes, and one sheet of each kind checked in woodWOP before any of those switches goes on.
 10. **M2.9**: answered (decision 16).
-11. **M2.10 (half-circle arcs in MPR, hand-edited programs, the machine folder, plugins)**: see
-    "M2.10 decisions needed" below.
+11. **M2.10**: answered (decision 18); still to come: the result of simulating one full circle
+    from our MPR in woodWOP.
+12. **M2.11 (relief import)**: see "M2.11 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -1731,10 +1741,107 @@ libraries.
 5. **Plugins to trust**: the sample plugin and script post are examples; nothing is granted by
    default. Which plugins (if any) the shop wants, and what to grant them, is the owner's call.
 
-## Next run: M2.11 relief import
+## M2.11 split
 
-- ART-01 as in the prompt (Vectric STL and height-map PNG, placed at the right size and depth,
-  machined with the M2.2 strategies in the simulator; no relief modeller).
+- **M2.11a**: height-map readers, relief surfaces made to size and depth, mesh reliefs (base
+  found and taken off), placement, the panel-round-the-relief guard in the 3D operations, the
+  Import relief dialog, switch, tests and goldens.
+- **M2.11b**: the Stage 2 exit test, screenshots, README, ROADMAP and this file.
+
+## M2.11a relief import: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| ART-01 | Height-map pictures: our own PNG reader (every colour type, 1-16 bits, interlaced, palette and transparency, check sums verified) and TIFF reader (strips or tiles; none, LZW, Deflate, PackBits; 8/16/32-bit whole numbers, 32/64-bit floating point; horizontal predictor; either byte order). 16-bit pictures keep all 65,536 heights (a browser canvas would cut them to 256). Damaged files give a plain message | `src/cam/relief/image.ts` |
+| ART-01 | Height map to surface: exactly the length, width and depth given (X along the picture's width, picture top at the far edge), white or black high, stretch to the picture's own lightest-darkest, point spacing (one point per pixel by default, at most 250,000 points; pixels averaged where a point covers several), smoothing passes, transparent pixels as top or bottom; warns about 8-bit steps | `heightMapMesh` in `src/cam/relief/relief.ts` |
+| ART-01 | Mesh reliefs (STL, OBJ, 3MF; units from the file or chosen): a flat base under the carving is found and can be taken off (downward facets and the upright sides below the carving); the relief is made to its size and depth (X, Y and Z separately) | `checkReliefMesh`, `stripBase`, `sizeRelief` |
+| ART-01 | A relief is a normal stored model (blob) already at its size, with `ModelRef.relief` (size, outline seen from above, how it was read). Placed centred or at a corner, top flush with face 1 or lower; optional Z-level roughing and parallel finishing added with the usual placeholder values (Configure badges) | `src/cam/relief/part.ts`, `src/cam/types.ts` |
+| Safety | **The panel round a relief is never cut.** On a relief, 3D operations without a drawn boundary stay inside the relief's outline (not its bounding box), the M2.4a full-panel roughing never applies, and the panel face round the outline (and inside any hole in it) is added as a flat surface at face 1 that the tool drops onto. So a tool overhanging the edge, or roughing that reaches past it, stops at the face, also for a relief set below the face. A relief turned off face up is refused | `model3d`, `genRough3d`, `genFinish3d` in `src/cam/toolpath.ts`; `centreRegion` in `src/cam/3d/region.ts`; `reliefSurround`, `placedReliefOutline` |
+| UI | Import relief dialog (part designer toolbar "Relief", 3D tab "Import relief…"): picture preview and details, size with proportions kept, depth (typed in for a picture: it has none of its own), picture options, base switch for meshes, placement with notes (past the edge, deeper than the part), add roughing and finishing. The 3D tab marks reliefs and keeps them face up | `src/pages/part/ReliefImportDialog.tsx`, `ModelsPanel.tsx`, `PartDesigner.tsx` |
+| Workers | `relief.imageInfo`, `relief.fromImage`, `relief.checkMesh`, `relief.fromMesh` run in the compute worker with progress and cancel | `src/cam/worker/tasks.ts` |
+| Switch | "Relief import" (`camRelief`, on): screens only. No new machine output: relief toolpaths follow the 3D output rules | `src/core/features.ts`, Machine page |
+
+No file format change: the relief's size is in its stored mesh, so an older app reads the same
+geometry (it ignores `relief` and would treat the model as a plain mesh). Stage 1 and earlier
+goldens are unchanged; the hash of operations on plain models is unchanged.
+
+### Acceptance (a relief-software STL and a height-map PNG import at the right size and depth and machine with the M2.2 strategies in the simulator)
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Picture readers exact | `tests/cam-relief.test.ts` against files written by Pillow and ImageMagick (`tests/fixtures/relief/`, `make.py`): 8/16-bit PNG, interlaced, colour, palette, grey + alpha; TIFF none/LZW/Deflate/PackBits, tiles, big-endian with predictor, RGB, float | Every pixel exact (16-bit to 1/65535) |
+| Height map at the right size and depth | same file | Bounds exactly 200 × 100 × 6.35 mm (to 0.0001 mm); black at -6.35, white at 0, mid-grey band where the picture puts it |
+| STL at the right size and depth | same file: an 8 × 12 in block with a 0.75 in base, read in inches | Base found and taken off (12,928 facets of base and sides); made 250.000 × 375.000 × 8.000 mm (to 0.001 mm) |
+| Machined with the M2.2 strategies in the simulator | same file: each relief centred on a 400 × 600 × 19 door, 12 mm R2 bull-nose Z-level roughing (3 mm levels, 0.5 mm stock) then 6 mm ball parallel finishing (1.5 mm step-over), simulated at 0.5 mm cells | Independent gouge check: finishing 0.0006 mm, roughing 0.0009 mm (STL) / 0.0003 mm (PNG), limit 0.005. Simulated: deepest below the relief 0.0002-0.0003 mm; most left inside 0.098 mm (theory 0.095 mm scallop). Cells cut outside the relief: 0. Collisions: none |
+| The guard matters | same file: the same relief without its relief information | Roughed as a model that does not cover the panel (warning; panel cut below -5 mm); with it, nothing outside the outline is cut, also with the relief set 2 mm below the face |
+| Golden digests | `tests/golden/cam3d/relief-png-parallel`, `relief-stl-rough` | New; no existing golden changed |
+
+Speed (cloud container): a 200 × 300 16-bit picture reads in about 0.1 s and becomes a
+120,000-facet surface in about 0.04 s; on that 250 × 375 mm relief, roughing takes about 1.4 s
+and parallel finishing at 1.5 mm step-over about 1.6 s.
+
+### Limits recorded
+
+- **Relief outline**: for a mesh relief, the outline seen from above is stored simplified within
+  0.01 mm. If the model is later simplified (3D tab), the outline is not recalculated; the
+  change is within the simplify tolerance.
+- **A relief must stay face up** (+Z up, no lay-flat turn): turning and scaling about Z are fine.
+- **Base detection** assumes upright sides and a flat bottom (most relief exports). A block with
+  sloping sides keeps them; the depth shown in the dialog then includes them and can be typed in.
+- **The panel round a relief is always kept.** To cut a background away round a relief, draw it
+  as its own pocket, or make the background part of the relief file.
+- **Relief finishing to woodWOP**: parallel finishing has no woodWOP form yet (decision 2), so
+  the checker stops it. Roughing and waterline can be written once their switch is on.
+
+## Stage 2 exit test
+
+`tests/stage2-exit.test.ts`. Spec: "an STL relief door panel and a STEP shaped part each go from
+import to simulated, collision-free toolpaths and a checked MPR (MPR output still off by default),
+all tests green, typecheck and lint clean."
+
+| Part | Steps | Result |
+|---|---|---|
+| STL relief door | STL in inches (block with a base) → base taken off, made 250 × 375 × 8 mm → centred on a 400 × 600 × 18 MDF door → Z-level roughing (T107), finishing (T105, parallel; and a second run with waterline), cut-out (profile) → toolpaths in the compute-worker task → simulated → collision check → export checker → part program written, read back and simulated again | No gouge (0.005 mm limit, exact check); relief carved, nothing outside it cut; no collisions. Checker with the default switches: blocked (`CAM_OUTPUT_OFF`). With custom-part and 3D flat-layer output on (test only): waterline run has **no errors**; parallel run has one, `CAM_3D_NO_OUTPUT` (parallel finishing has no woodWOP form until decision 2). Program read back: same material left as the toolpaths it came from (0.0004 mm parallel run, 0.0012 mm waterline run, 1 mm cells) |
+| STEP shaped door | `shaped-door.step` → feature recognition onto layers → Stage 1 layer rules choose the operations (nothing unmatched) → toolpaths → simulated → collision check → export checker → front and turned-over programs written, read back and simulated again | No collisions. Checker: blocked by default (`CAM_OUTPUT_OFF`), **no errors** with output on. Front program read back: 0.0000 mm difference; turned-over program reads back with no errors |
+
+All tests green (774: 773 + 1 skipped), typecheck clean, lint at the 17 old warnings, build OK.
+**Stage 2 is complete**, with one item that stays with the owner: writing parallel (true 3D)
+finishing to woodWOP (decision 2, open question 4).
+
+## M2.11 screenshots
+
+`docs/screenshots/stage-2-3/M2.11/` (browser preview, Playwright):
+
+- `01-relief-heightmap-dialog.png`: Import relief with a 500 × 750 16-bit PNG: preview, size (proportions kept), depth typed in, points, placement.
+- `02-relief-on-part-3d-tab.png`: the relief on the part; the 3D tab marks it "relief · height map" and keeps it face up.
+- `03-relief-operations.png`: the roughing and finishing added, roughing levels drawn inside the relief.
+- `04-relief-3d-view.png`: the 3D view of the part with the relief.
+- `05-relief-simulated-backplot.png`: the simulator after both operations (top view), collision check clear, placeholder values listed.
+- `06-relief-simulated-material.png`: the material left, in 3D: the relief carved, the panel round it untouched.
+- `07-relief-stl-dialog.png`: Import relief with an STL in inches: block with a base found, base taken off, made 250 × 375 × 8 mm.
+- `08-machine-relief-switch.png`: the Machine page's new "Relief import" switch.
+
+## M2.11 licences
+
+No new dependency. The PNG and TIFF readers are our own; decompression uses the platform's
+built-in `DecompressionStream`. The test pictures were written once with Pillow (HPND licence)
+and ImageMagick (ImageMagick licence, Apache-2.0 style) by `tests/fixtures/relief/make.py`;
+neither is used by the app or the tests at run time.
+
+## M2.11 decisions needed (see the report)
+
+1. **A real relief file from the shop's relief software**: units, with or without a base, and
+   whether the edge of the relief sits at the top of the panel. One sample would confirm the
+   importer's defaults (units as the file says, base taken off when found). Nothing changes
+   until then.
+2. **Relief cutting values**: which tools, step-overs and step-downs the shop uses for reliefs.
+   The added operations use the placeholder values with Configure badges until then.
+3. **Relief finishing to woodWOP**: covered by decision 2 / open question 4 (a sample 3D program
+   saved from woodWOP). Until then parallel finishing is simulation only.
+
+## Next run: Stage 3 (M3.1), only on the owner's go-ahead
+
+- M3.1 more 3-axis finishing (3D-05, 3D-07, 3D-08, 3D-09), as in the prompt.
 
 ## Run log
 
@@ -1774,3 +1881,5 @@ libraries.
 - **Run 12 (M2.10a-d)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and
   API (`0d80ba4`); script posts (`eeb407d`); reading programs back (`33910cd`); program manager,
   screenshots, README, ROADMAP. M2.10 complete. See `git log`.
+- **Run 13 (M2.11a-b)**: relief import (`9546b82`); Stage 2 exit test, screenshots, README,
+  ROADMAP. M2.11 complete; Stage 2 complete. See `git log`.

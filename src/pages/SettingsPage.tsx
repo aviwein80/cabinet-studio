@@ -13,6 +13,7 @@ import { useStore } from "@/app/store";
 import { AboutSection } from "@/components/AboutSection";
 import { StorageSection } from "./settings/StorageSection";
 import { AdminSection } from "./settings/AdminSection";
+import { PluginsSection } from "./settings/PluginsSection";
 import { featuresOf } from "@/core/features";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -127,6 +128,7 @@ export function SettingsPage() {
         </section>
         <StorageSection />
         {featuresOf(data.settings).batchAdditions && <AdminSection />}
+        {featuresOf(data.settings).plugins && <PluginsSection />}
         <AboutSection />
       </div>
     </div>

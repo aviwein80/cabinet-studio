@@ -15,8 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { activeBatchSetup, updateActiveSetup, type BatchResult, type BatchStatus as OrderStatus } from '@/core/batch'
 import { featuresOf } from '@/core/features'
 import { BATCH_EXAMPLE as EXAMPLE } from '@/core/batchExample'
-import { batchSteps } from '@/core/batchSteps'
+import { batchStepChoices } from '@/core/batchSteps'
 import { machineSetups } from '@/core/machines'
+import { quickjsPageBase } from '@/cam/plugin/quickjs'
 import { BatchSetupWizard } from './batch/BatchSetupWizard'
 import { cn } from '@/lib/utils'
 
@@ -149,16 +150,16 @@ function SetupCard() {
           </label>
         ))}
         <div className="mt-2 border-t pt-2 font-medium">Extra steps on each order</div>
-        {batchSteps().map((st) => (
+        {batchStepChoices(data).map((st) => (
           <label key={st.id} className="flex items-start gap-2">
             <Checkbox
               checked={(setup.steps ?? []).includes(st.id)}
-              onCheckedChange={(v) => updateSettings((s) => updateActiveSetup(s, { steps: v === true ? batchSteps().map((x) => x.id).filter((x) => x === st.id || (setup.steps ?? []).includes(x)) : (setup.steps ?? []).filter((x) => x !== st.id) }))}
+              onCheckedChange={(v) => updateSettings((s) => updateActiveSetup(s, { steps: v === true ? batchStepChoices(data).map((x) => x.id).filter((x) => x === st.id || (setup.steps ?? []).includes(x)) : (setup.steps ?? []).filter((x) => x !== st.id) }))}
               className="mt-0.5"
             />
             <span>
               <span className="font-medium">{st.name}</span>
-              <span className="text-muted-foreground"> · {st.description}</span>
+              <span className="text-muted-foreground"> · {st.description}{st.source !== 'built in' ? ` (plugin: ${st.source})` : ''}</span>
             </span>
           </label>
         ))}
@@ -288,7 +289,7 @@ function RunNowCard() {
         worker.current = null
       }
     }
-    w.postMessage({ csvName: csv.name, csvText: await csv.text(), drawings: files, data })
+    w.postMessage({ csvName: csv.name, csvText: await csv.text(), drawings: files, data, pluginBase: quickjsPageBase() })
   }
 
   const cancel = () => {

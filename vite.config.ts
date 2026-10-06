@@ -20,8 +20,11 @@ const csp = (): Plugin => ({
  */
 const VENDOR: { dir: string; from: string; files: string[] }[] = [
   { dir: 'vendor/occt-import-js', from: 'node_modules/occt-import-js/dist', files: ['occt-import-js.js', 'occt-import-js.wasm', 'license.occt-import-js.txt', 'license.occt.txt'] },
+  // the plugin sandbox (M2.10, MIT): its WebAssembly as a separate file, loaded on first use
+  { dir: 'vendor/quickjs', from: 'node_modules/@jitl/quickjs-wasmfile-release-sync/dist', files: ['emscripten-module.wasm'] },
+  { dir: 'vendor/quickjs', from: 'node_modules/@jitl/quickjs-wasmfile-release-sync', files: ['LICENSE'] },
 ]
-const TYPES: Record<string, string> = { '.js': 'text/javascript', '.wasm': 'application/wasm', '.txt': 'text/plain; charset=utf-8' }
+const TYPES: Record<string, string> = { '.js': 'text/javascript', '.wasm': 'application/wasm', '.txt': 'text/plain; charset=utf-8', '': 'text/plain; charset=utf-8' }
 
 const vendorFiles = (): Plugin => ({
   name: 'vendor-files',
@@ -37,7 +40,7 @@ const vendorFiles = (): Plugin => ({
         const prefix = `/${v.dir}/`
         if (!url.startsWith(prefix)) continue
         const name = url.slice(prefix.length)
-        if (!v.files.includes(name)) break
+        if (!v.files.includes(name)) continue
         res.setHeader('Content-Type', TYPES[path.extname(name)] ?? 'application/octet-stream')
         res.end(fs.readFileSync(path.resolve(import.meta.dirname, v.from, name)))
         return

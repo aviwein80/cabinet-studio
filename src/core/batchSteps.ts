@@ -3,7 +3,8 @@
  * one batch engine: after nesting (before the export check decides) and before the files are
  * written. Steps see a frozen copy of the job, its nest and programs, so they can report, hold an
  * order back (an error) and add report files, but never change what is cut. Built-in steps are
- * below; plugins (M2.10) add theirs with `registerBatchStep`.
+ * below; plugins (M2.10) bring theirs for each run (`pluginBatchSteps`, passed as `extra`), and
+ * code can add steps with `registerBatchStep`.
  */
 import { jobCosts } from './areas'
 import type { OutFile } from './output'
@@ -41,6 +42,14 @@ export interface BatchStep {
 
 /** File types a step may not add: machine programs only come from the program writers. */
 const PROGRAM_FILE = /\.(mpr|mprx|nc|cnc|tap|gcode|ngc|iso|xcs|bpp|pgmx)$/i
+
+/**
+ * A plain new file name for the order folder: no folders, no characters Windows treats specially
+ * (a name ending in a dot or space, or with ":", is saved under another name), and not a program.
+ */
+export function stepFileRefused(name: string): boolean {
+  return !name || PROGRAM_FILE.test(name) || /[\\/:*?"<>|]/.test(name) || [...name].some((c) => c.charCodeAt(0) < 32) || /[. ]$/.test(name) || /^\.+$/.test(name) || PROGRAM_FILE.test(name.replace(/[. ]+$/, ''))
+}
 
 function deepFreeze<T>(v: T): T {
   if (v && typeof v === 'object' && !ArrayBuffer.isView(v) && !Object.isFrozen(v)) {
@@ -92,18 +101,31 @@ export function registerBatchStep(step: BatchStep) {
 
 export const batchSteps = (): readonly BatchStep[] => registry
 
+/** Id of a plugin's batch step (M2.10). */
+export const pluginStepId = (plugin: string, step: string) => `plugin:${plugin}/${step}`
+
+/**
+ * The steps a batch setup can choose: the built-in ones, then those of switched-on plugins (as
+ * found when each plugin was last started; the plugin itself runs only in the batch run).
+ */
+export function batchStepChoices(data: Pick<AppData, 'plugins'>): Pick<BatchStep, 'id' | 'name' | 'description' | 'source'>[] {
+  const out: Pick<BatchStep, 'id' | 'name' | 'description' | 'source'>[] = registry.map(({ id, name, description, source }) => ({ id, name, description, source }))
+  for (const p of data.plugins ?? []) if (p.enabled) for (const s of p.contributes?.steps ?? []) out.push({ id: pluginStepId(p.id, s.id), name: s.name, description: s.description, source: p.manifest.name })
+  return out
+}
+
 export interface StepRun {
   messages: BatchStepMessage[]
   files: OutFile[]
 }
 
 /** Run one hook of the chosen steps. A step that fails, or tries to add a program, is an error. */
-export function runSteps(ids: readonly string[], hook: 'afterNest' | 'beforeOutput', ctx: BatchStepContext, files: readonly OutFile[] = []): StepRun {
+export function runSteps(ids: readonly string[], hook: 'afterNest' | 'beforeOutput', ctx: BatchStepContext, files: readonly OutFile[] = [], extra: readonly BatchStep[] = []): StepRun {
   const out: StepRun = { messages: [], files: [] }
   if (!ids.length) return out
   const frozen = deepFreeze(structuredClone({ ...ctx, files: [...files] }))
   for (const id of ids) {
-    const step = registry.find((s) => s.id === id)
+    const step = extra.find((s) => s.id === id) ?? registry.find((s) => s.id === id)
     if (!step) {
       if (hook === 'afterNest') out.messages.push({ severity: 'warning', text: `Batch step "${id}" is not available; skipped.` })
       continue
@@ -114,7 +136,7 @@ export function runSteps(ids: readonly string[], hook: 'afterNest' | 'beforeOutp
       const r = fn.call(step, frozen) ?? {}
       for (const m of r.messages ?? []) out.messages.push({ severity: m.severity, text: `${step.name}: ${m.text}` })
       for (const f of r.files ?? []) {
-        if (PROGRAM_FILE.test(f.name) || /[\\/]/.test(f.name) || [...files, ...out.files].some((x) => x.name === f.name)) out.messages.push({ severity: 'error', text: `${step.name}: may not write ${f.name} (programs come only from the program writers; names must be new and without folders).` })
+        if (stepFileRefused(f.name) || [...files, ...out.files].some((x) => x.name.toLowerCase() === f.name.toLowerCase())) out.messages.push({ severity: 'error', text: `${step.name}: may not write ${f.name} (programs come only from the program writers; names must be new and without folders).` })
         else out.files.push(f)
       }
     } catch (e) {

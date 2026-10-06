@@ -27,6 +27,7 @@ import { OpsPanel } from './part/OpsPanel'
 import { ProgramDialog } from './part/ProgramDialog'
 import { SimulateDialog } from './part/SimulateDialog'
 import { PatternDialog } from './part/PatternDialog'
+import { PluginMenu } from './part/PluginMenu'
 import { usablePatterns } from '@/core/hardware/patterns'
 import { LayersPanel, PropertiesPanel } from './part/SidePanels'
 import { DimsPanel } from './part/DimsPanel'
@@ -393,6 +394,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          {feat.plugins && <PluginMenu part={part} selection={ctx.sel} change={change} />}
           {feat.cam3d && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 border-white/15 bg-transparent" onClick={() => setModelOpen(true)}>
               <Box className="size-3.5" /> 3D model

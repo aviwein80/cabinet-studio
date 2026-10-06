@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 /** Third-party libraries that ship as their own files or need a notice in the app. */
 const COMPONENTS: { name: string; use: string; licence: string; file?: string }[] = [
   { name: 'occt-import-js 0.0.23 with Open CASCADE Technology', use: 'Reads STEP, IGES and BREP solid models. Loaded only when a solid file is opened; shipped as separate, replaceable files.', licence: 'LGPL-2.1', file: 'vendor/occt-import-js/license.occt.txt' },
+  { name: 'QuickJS (quickjs-emscripten 0.32.0)', use: 'The plugin sandbox: runs plugins and script posts with no access to the app, files or the network. Loaded only when a plugin runs; its WebAssembly is a separate, replaceable file.', licence: 'MIT', file: 'vendor/quickjs/LICENSE' },
   { name: 'meshoptimizer 1.3.0', use: 'Simplifies imported 3D meshes.', licence: 'MIT' },
   { name: 'Clipper2 (clipper2-ts)', use: '2D offsets and booleans.', licence: 'BSL-1.0' },
   { name: 'three.js, React, pdf.js, jsPDF, JSZip and others', use: 'Screens, 3D view, PDF and file handling.', licence: 'MIT / Apache-2.0' },

@@ -49,6 +49,7 @@ import { cn } from '@/lib/utils'
 import { AreaCostPanel } from '@/components/AreaCostPanel'
 import { type BackplotMode, SheetBackplot } from '@/components/SheetBackplot'
 import { NestEditor } from './job/NestEditor'
+import { JobPluginMenu } from './job/JobPluginMenu'
 import { jobCosts } from '@/core/areas'
 import { featuresOf } from '@/core/features'
 
@@ -97,6 +98,7 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
               <span>{out.programs.length} sheets</span>
               {counts.error > 0 && <Badge variant="destructive">{counts.error} errors</Badge>}
               {counts.warning > 0 && <Badge className="bg-amber-100 text-amber-900">{counts.warning} warnings</Badge>}
+              {featuresOf(data.settings).plugins && <JobPluginMenu job={job} instances={out.instances} />}
             </div>
           )
         }

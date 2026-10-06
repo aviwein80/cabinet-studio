@@ -11,7 +11,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { nodeBatchFs } from '../electron/batchFs'
-import { runBatchCsv } from '../src/core/batch'
+import { nodePluginIO } from '../electron/pluginIo'
+import { quickjs } from '../src/cam/plugin/quickjs'
+import { pluginBatchSteps } from '../src/cam/plugin/steps'
+import { runBatchCsv, type BatchContext } from '../src/core/batch'
 import { InboxWatcher, writeBatchResult } from '../src/core/batchWatch'
 import { normalizeData } from '../src/core/normalize'
 import { readDbFile } from '../electron/shopStore'
@@ -30,17 +33,29 @@ if (!mode || !target || !out || !['run', 'watch'].includes(mode)) {
 }
 const loadData = () => normalizeData(dataPath && fs.existsSync(dataPath) ? (/\.(sqlite|db)$/i.test(dataPath) ? readDbFile(dataPath) : JSON.parse(fs.readFileSync(dataPath, 'utf8'))) : null)
 const log = (m: string) => console.log(`${new Date().toISOString().slice(11, 19)}  ${m}`)
+// plugin batch steps (M2.10), each in its sandbox with the file access it was granted
+const mod = await quickjs().catch((e: unknown) => (log(`Plugins are not available: ${e instanceof Error ? e.message : String(e)}`), null))
+const runCsv = (name: string, text: string, ctx: Omit<BatchContext, 'data'>) => {
+  const data = loadData()
+  const plugins = pluginBatchSteps(data, mod, (r) => ({ io: nodePluginIO(r.grants), log: (l) => void (l.level !== 'info' && log(`Plugin ${l.plugin}: ${l.text}`)) }))
+  for (const p of plugins.problems) log(`Plugin ${p}`)
+  try {
+    return runBatchCsv(name, text, { ...ctx, data, extraSteps: plugins.steps })
+  } finally {
+    plugins.dispose()
+  }
+}
 
 if (mode === 'run') {
   const csv = path.resolve(target)
   const dir = path.dirname(csv)
   const read = (p: string) => nodeBatchFs.readText(path.isAbsolute(p) ? p : path.join(dir, p))
-  const result = runBatchCsv(path.basename(csv), fs.readFileSync(csv, 'utf8'), { data: loadData(), readFile: read, onProgress: log })
+  const result = runCsv(path.basename(csv), fs.readFileSync(csv, 'utf8'), { readFile: read, onProgress: log })
   const { written } = writeBatchResult(nodeBatchFs, { inbox: dir, outbox: path.resolve(out) }, null, result)
   for (const w of written) log(`wrote ${w}`)
   process.exit(result.orders.every((o) => o.status === 'done') ? 0 : 1)
 } else {
-  const watcher = new InboxWatcher(nodeBatchFs, { inbox: path.resolve(target), outbox: path.resolve(out), pollMs: Number(flag('--poll') ?? 2000) }, (name, text, read) => runBatchCsv(name, text, { data: loadData(), readFile: read, onProgress: log }), log)
+  const watcher = new InboxWatcher(nodeBatchFs, { inbox: path.resolve(target), outbox: path.resolve(out), pollMs: Number(flag('--poll') ?? 2000) }, (name, text, read) => runCsv(name, text, { readFile: read, onProgress: log }), log)
   process.on('SIGINT', () => {
     watcher.stop()
     process.exit(130)

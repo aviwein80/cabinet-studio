@@ -4,6 +4,7 @@ import path from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { aiCall, aiKeyStatus, aiSetKey } from './aiKeys'
 import { collectBlobs } from './blobGc'
+import { pluginIpc } from './pluginIo'
 import { readDbFile, ShopStore, type StoreKind, writeDbFile } from './shopStore'
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL
@@ -170,6 +171,12 @@ function registerIpc() {
   ipcMain.handle('ai:setKey', (_e, id, key: string | null) => aiSetKey(id, key))
   ipcMain.handle('ai:call', (_e, call) => aiCall(call))
 
+  // plugins (M2.10): file and network access, checked again here against the grants
+  ipcMain.handle('plugin:read', (_e, p: string, grants) => pluginIpc.read(p, grants))
+  ipcMain.handle('plugin:write', (_e, p: string, text: string, grants) => pluginIpc.write(p, text, grants))
+  ipcMain.handle('plugin:list', (_e, p: string, grants) => pluginIpc.list(p, grants))
+  ipcMain.handle('plugin:fetch', (_e, url: string, init, grants) => pluginIpc.fetch(url, init ?? {}, grants))
+
   ipcMain.handle('batch:start', (_e, cfg: { inbox: string; outbox: string }) => startBatch(cfg))
   ipcMain.handle('batch:stop', () => stopBatch())
   ipcMain.handle('batch:cancel', () => cancelBatch())
@@ -195,11 +202,23 @@ function emit(ev: BatchEvent) {
   for (const w of BrowserWindow.getAllWindows()) w.webContents.send('batch:event', ev)
 }
 
+/** The plugin sandbox's WebAssembly (M2.10) for the batch thread: shipped next to the app, or from node_modules in development. */
+function quickjsWasm(): Uint8Array | null {
+  for (const f of [path.join(__dirname, '..', 'dist', 'vendor', 'quickjs', 'emscripten-module.wasm'), path.join(__dirname, '..', 'node_modules', '@jitl', 'quickjs-wasmfile-release-sync', 'dist', 'emscripten-module.wasm')]) {
+    try {
+      return new Uint8Array(fs.readFileSync(f))
+    } catch {
+      // try the next place
+    }
+  }
+  return null
+}
+
 function startBatch(cfg: { inbox: string; outbox: string }) {
   if (batch) stopBatch()
   if (!cfg.inbox || !cfg.outbox) return batchStatus()
   const cancel = new SharedArrayBuffer(4)
-  const worker = new Worker(path.join(__dirname, 'batchWorker.cjs'), { workerData: { inbox: cfg.inbox, outbox: cfg.outbox, dataFile: dataFile(), cancel } })
+  const worker = new Worker(path.join(__dirname, 'batchWorker.cjs'), { workerData: { inbox: cfg.inbox, outbox: cfg.outbox, dataFile: dataFile(), cancel, quickjsWasm: quickjsWasm() } })
   const me = { worker, cancel, inbox: cfg.inbox, outbox: cfg.outbox, busy: null as string | null }
   batch = me
   worker.on('message', (ev: BatchEvent) => {

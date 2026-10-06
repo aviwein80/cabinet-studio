@@ -709,6 +709,11 @@ export interface FeatureFlags {
   batchAdditions: boolean
   /** Write program sets for machines other than the main one in batch runs. Off until proven on those machines. */
   batchMachinesOutput: boolean
+  /**
+   * M2.10 screens: plugins (sandboxed, nothing granted until the owner grants it), the macro
+   * recorder, script-post previews, reading programs back and the program manager. Screens only.
+   */
+  plugins: boolean
 }
 
 export interface Library {
@@ -736,6 +741,8 @@ export interface AppData {
   machine: MachineProfile
   /** Other machines and process steps (M2.9). The main machine is `machine`. */
   machines?: MachineSetup[]
+  /** Installed plugins (M2.10), with what the owner granted each. */
+  plugins?: import('../cam/plugin/types').PluginRecord[]
   settings: ShopSettings
   jobs: Job[]
 }

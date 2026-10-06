@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { quickjsPageBase } from '@/cam/plugin/quickjs'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStore } from '@/app/store'
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DEFAULT_BATCH_KINDS, type BatchResult } from '@/core/batch'
 import { BATCH_CHECK_LIST } from '@/core/batchExample'
-import { batchSteps } from '@/core/batchSteps'
+import { batchStepChoices } from '@/core/batchSteps'
 import { featuresOf } from '@/core/features'
 import { machineSetups, MAIN_MACHINE } from '@/core/machines'
 import type { ExportKind } from '@/core/output'
@@ -50,7 +51,7 @@ export function BatchSetupWizard({ open, onOpenChange }: { open: boolean; onOpen
       setCheck(e.data.type === 'done' ? { busy: false, result: e.data.result } : { busy: false, error: e.data.message })
       w.terminate()
     }
-    w.postMessage({ csvName: 'setup-check.csv', csvText: BATCH_CHECK_LIST, drawings: {}, data, setup: batchSetupFromWizard(a, data) })
+    w.postMessage({ csvName: 'setup-check.csv', csvText: BATCH_CHECK_LIST, drawings: {}, data, setup: batchSetupFromWizard(a, data), pluginBase: quickjsPageBase() })
   }
 
   const close = (o: boolean) => {
@@ -110,11 +111,11 @@ export function BatchSetupWizard({ open, onOpenChange }: { open: boolean; onOpen
       )}
       {step === 3 && (
         <div className="flex flex-col gap-2 text-xs">
-          {batchSteps().map((st) => (
+          {batchStepChoices(data).map((st) => (
             <label key={st.id} className="flex items-start gap-2">
-              <Checkbox checked={a.steps.includes(st.id)} onCheckedChange={(v) => setA({ ...a, steps: toggle(a.steps, st.id, v === true, batchSteps().map((x) => x.id)) })} className="mt-0.5" />
+              <Checkbox checked={a.steps.includes(st.id)} onCheckedChange={(v) => setA({ ...a, steps: toggle(a.steps, st.id, v === true, batchStepChoices(data).map((x) => x.id)) })} className="mt-0.5" />
               <span>
-                <span className="font-medium">{st.name}</span> <span className="text-muted-foreground">· {st.description}</span>
+                <span className="font-medium">{st.name}</span> <span className="text-muted-foreground">· {st.description}{st.source !== 'built in' ? ` (plugin: ${st.source})` : ''}</span>
               </span>
             </label>
           ))}

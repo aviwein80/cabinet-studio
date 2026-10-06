@@ -9,6 +9,7 @@ import type { AppData } from '@/core/types'
 import type { OutFile } from '@/core/output'
 import { AI_PROVIDERS, type AiCall, type AiProviderId, callProvider } from '@/core/hardware/aiProviders'
 import type { BlobStore } from '@/cam/model/blobs'
+import type { PluginGrants } from '@/cam/plugin/types'
 export type { OutFile }
 
 interface Bridge {
@@ -34,6 +35,18 @@ interface Bridge {
   aiKeyStatus(): Promise<AiKeyStatus>
   aiSetKey(provider: AiProviderId, key: string | null): Promise<AiKeyStatus>
   aiCall(call: AiCall): Promise<string>
+  pluginRead(p: string, grants: PluginGrants): Promise<string>
+  pluginWrite(p: string, text: string, grants: PluginGrants): Promise<void>
+  pluginList(p: string, grants: PluginGrants): Promise<string[]>
+  pluginFetch(url: string, init: unknown, grants: PluginGrants): Promise<string>
+}
+
+/** File and network access for plugins (desktop app; the main process checks the grants again). */
+export interface PluginBridge {
+  read(p: string, grants: PluginGrants): Promise<string>
+  write(p: string, text: string, grants: PluginGrants): Promise<void>
+  list(p: string, grants: PluginGrants): Promise<string[]>
+  fetch(url: string, init: unknown, grants: PluginGrants): Promise<string>
 }
 
 /** Which providers have a key saved on this computer. Keys themselves never come back. */
@@ -100,6 +113,8 @@ export interface Backend {
   openPath?(p: string): Promise<void>
   batch?: BatchBridge
   storage?: StorageBridge
+  /** Plugin file and network access (desktop app only). */
+  plugins?: PluginBridge
   ai: AiBridge
   /** 3D model data, kept outside the shop file. */
   blobs: BlobStore
@@ -234,6 +249,7 @@ function desktopBackend(b: Bridge): Backend {
       },
     },
     ai: { status: () => b.aiKeyStatus(), setKey: (p, k) => b.aiSetKey(p, k), call: (c) => b.aiCall(c) },
+    plugins: { read: (p, g) => b.pluginRead(p, g), write: (p, t, g) => b.pluginWrite(p, t, g), list: (p, g) => b.pluginList(p, g), fetch: (u, i, g) => b.pluginFetch(u, i, g) },
   }
 }
 

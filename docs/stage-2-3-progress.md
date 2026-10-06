@@ -81,12 +81,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.9b SQLite storage option (AM-06) | **Done** (October 2026) | See below. JSON stays the default. |
 | M2.9c Assemblies and fittings by face, batch steps (AM-09, AM-10) | **Done** (October 2026) | See below. |
 | M2.9d Wizards, admin tools, screenshots, docs (AM-03, AM-13) | **Done** (October 2026) | See below. M2.9 complete. |
-| M2.10 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
+| M2.10a Plugin sandbox and API (API-01) | **Done** (October 2026) | See below. Plugins run sandboxed; nothing granted until the owner grants it. |
+| M2.10b - M2.10d | Not started | Script posts (PST-02); reading programs back (NEW-22); program manager (PST-04), screenshots, docs. See "M2.10 split". |
+| M2.11 | Not started | ART-01. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -1524,10 +1526,70 @@ our own code on the existing libraries.
 4. **Waste areas**: report only (as built), or also cut large scrap into pieces for the vacuum and
    dust extraction? Cutting would be a new output with its own switch, off.
 
-## Next run: M2.10 plugins, script posts, program tools
+## M2.10 split
 
-- API-01, PST-02, PST-04, NEW-22 as in the prompt. The batch-step registry (`registerBatchStep`)
-  and the machine `post` field are ready for the plugin API and script posts.
+M2.10 is done in named parts, each green, pushed and recorded here before the next starts:
+**M2.10a** the plugin sandbox and API (API-01: menu items, batch hooks, grants, macro recorder);
+**M2.10b** script posts (PST-02) on the one post path; **M2.10c** reading programs back (NEW-22,
+G-code and our own MPR into toolpaths for the simulator); **M2.10d** the program manager and
+editor (PST-04), screenshots, README, ROADMAP. New switch "Plugins and program tools" (`plugins`,
+screens only, on). Script-post output gets its own switch, off (M2.10b).
+
+## M2.10a plugin sandbox and API: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| API-01 | **Sandbox**: each plugin runs in its own QuickJS interpreter compiled to WebAssembly (MIT). Inside it there is no `require`, `fetch`, `process`, window or file access; the only way out is the `cs` object, and everything crosses as JSON copies. Each run is stopped after 5 s and at 64 MB (QuickJS's own count); random numbers repeat from run to run | `src/cam/plugin/host.ts`, `prelude.ts`, `quickjs.ts` |
+| API-01 | **Grants**: a plugin's header (comment lines, read without running it) *asks* for folders to read or write, https hosts and machine output; the owner ticks what is granted (only what was asked). Paths are normalised (no `..` climbing, Windows paths without case, `C:/Shop/Lists2` is not inside `C:/Shop/Lists`); hosts must match exactly, https only, no redirects. Every refusal is logged. Grants belong to the exact code (SHA-256): new or changed code starts switched off with nothing granted, and code that does not match its hash will not start. The desktop app's main process checks the grants again on the real file system (following links, so a link in a granted folder cannot lead out) | `access.ts`, `manifest.ts`, `src/core/sha256.ts`, `electron/pluginIo.ts` |
+| API-01 | **Typed API** (`cs`): part (shapes, operations, layers, fields), geometry (rectangles, circles, polylines, offsets, booleans, areas, lengths), operation kinds and defaults, the tool table (read only, marked placeholder), units, files and network (with grants), menu items, batch steps, script posts (M2.10b). Reference for authors: `api.ts`, offered on the Plugins screen as `cabinet-studio-plugin.d.ts`; a test keeps it and the sandbox in step | `api.ts` |
+| API-01 | **Menu items**: the part designer's new Plugins menu and a Plugins menu on the job page. A designer command works on a copy of the part; the copy is checked before it replaces the part as one undo step: well-formed shapes and operations, operations only on shapes that exist, and a plugin cannot confirm a value (Configure badges stay), approve a draft, mark a toolpath up to date or change 3D models; every operation it adds or changes is calculated again. Job commands are read only and may offer a text file to save (never a program). Commands run in a background worker, so the screen never waits on a plugin | `partEdit.ts`, `PluginMenu.tsx`, `JobPluginMenu.tsx`, `src/app/plugin.worker.ts`, `src/app/plugins.ts` |
+| API-01 / AM-10 | **Batch hooks**: a plugin's `cs.batch.step` is a step of the one batch engine, chosen per batch setup like the built-in ones (Batch page and the setup wizard list them). It sees a copy of the order (parts, sheets, programs by name, export-checker results), can report, hold the order back and add report files; it cannot add a program (the file-name check now also refuses names Windows would save as a program, such as `x.mpr.`), a folder or an existing name. A plugin that cannot start holds back orders whose setup uses its steps. Runs in the page's batch worker, the desktop folder watcher and `npm run batch` | `steps.ts`, `runSteps(..., extra)`, `batchStepChoices`, `electron/batchWorker.ts`, `scripts/batch.ts` |
+| API-01 | **Macro recorder**: Plugins → Record a macro; stop and save: what changed (shapes, operations, layers, part fields, operation order) becomes a plugin with one command that makes the same changes, through the API, in the sandbox | `recorder.ts` |
+| Screens | Settings → Plugins: install a file, add the sample, switch on (starts it once to list what it adds), grants per request, what it adds, check, show code, save as file, remove, the session log of refusals; locked while the admin password is set. Machine page: switch "Plugins and program tools" | `PluginsSection.tsx` |
+| Sample | `examples/plugins/sample-shop-tools.js`: a designer command (pocket the closed shapes on layer POCKET), a job command (parts list as text), a batch step (sheet-use check and a parts summary CSV) and a command that reads `C:/Shop/Lists/prices.csv` (asked for, not granted by default) | - |
+
+### Acceptance (a sample plugin adds a menu item and a batch hook and is denied file access it was not granted)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Menu item and batch hook | `tests/plugins.test.ts` | The sample lists 3 menu items (2 designer, 1 job) and 1 batch step. Its designer command adds one pocket on the 2 closed POCKET shapes (the open one left out); the other operation keeps its state; the new one has no confirmations and is calculated again. Browser check: the same from the Plugins menu, undo takes it back |
+| Batch hook in the one engine | same | Order P1 (2 shelves, 1 side): the step's warning ("sheet 1 (PB18-WHT) is only n % used") and `P1_parts-summary.csv` (3 parts); **every other file byte-identical** to the run without the step. Also run end to end through the built desktop folder-watcher thread (`dist-electron/batchWorker.cjs`): the plugin's file written, an ungranted read refused and logged |
+| Denied what it was not granted | same | Without the grant: the price-list command fails with "Reading C:/Shop/Lists/prices.csv was not granted", the file is never read, the log has the refusal. With the grant: read, 3 lines. Also refused: `C:/Shop/Lists/../Accounts/pay.csv`, a relative path, writing with only a read grant, listing the parent folder, an ungranted host and http to a granted host (6 of 6, each logged) |
+| Sandbox | same | No `require`, `process`, `fetch`, `XMLHttpRequest`, `WebSocket`, `importScripts`, `window`, `document` or the bridge function; `cs` frozen. An endless loop is stopped (0.3 s test limit) in set-up and in a command, and the plugin still answers after; a memory grab is stopped at 64 MB |
+| Plugin output cannot reach the machine | same | A step adding `extra.mpr.` or `../up.txt` holds the order back (report only); a plugin that cannot start holds back orders that use its steps; a switched-off plugin's step is reported as not available |
+| Saved and loaded | same | Plugins and grants survive JSON loading (the loader used to drop unknown keys: fixed) and the SQLite option |
+| Recorder | same | 7 kinds of change recorded and replayed on the starting part: identical to the recorded part. Replayed twice: the second run's shape and operation get new ids and the operation follows its shape |
+
+### Limits recorded
+
+- **Batch steps cannot wait for the network** (the batch engine runs straight through); file access in batch steps works in the desktop app and `npm run batch`, not in the browser preview.
+- **The browser preview has no files or network for plugins**; only the desktop app does.
+- **The 64 MB limit is QuickJS's own count**; all plugins share one WebAssembly memory of at most 2 GB.
+- **A recorded macro replays changes**, not the commands that made them (for example "offset by 5 mm" is recorded as the resulting shape).
+- **Two copies of the 0.5 MB WebAssembly** are in the built app (the bundler copies the package's own, unused); harmless.
+- Plugin set-up code (outside its commands) should not use files or the network.
+
+### Test-suite note (M2.10)
+
+This run's container is about 1.8 times slower than earlier ones. On the untouched baseline the
+known timing test "adaptive clearing per Z level" took 169 s in the full suite and **119 s run on
+its own** (limit 90 s; 66 s alone on earlier runs), so it fails here by time alone; the limit was
+not changed. Three heavy geometry tests also hit vitest's 5 s default timeout (alone too); they now
+have the 60 s their neighbours already had (`deefe9e`, no assertion changed). Everything else is
+green.
+
+### Licences (M2.10a)
+
+New: `quickjs-emscripten-core` 0.32.0 and `@jitl/quickjs-wasmfile-release-sync` 0.32.0 (MIT,
+Jake Teton-Landis; contains QuickJS, MIT, Fabrice Bellard and Charlie Gordon); their only
+dependency `@jitl/quickjs-ffi-types` 0.32.0 is MIT. The WebAssembly ships unmodified as
+`vendor/quickjs/emscripten-module.wasm` with its licence; About screen and
+`THIRD_PARTY_NOTICES.md` updated.
+
+## Next: M2.10b script posts
+
+- PST-02 on the one post path (`src/cam/post.ts`), sample script post equal to the template post
+  on the reference parts, its own output switch (off), never the N-200 for unsupported ops.
 
 ## Run log
 
@@ -1564,3 +1626,5 @@ our own code on the existing libraries.
 - **Run 11 (M2.9a-d)**: other machines and process steps (`51ccb91`); SQLite storage option
   (`bc4bcb2`); assemblies, fittings by face and batch steps (`1fafaee`); wizards, admin tools,
   screenshots, README, ROADMAP. M2.9 complete. See `git log`.
+- **Run 12 (M2.10a)**: explicit timeouts for three heavy tests (`deefe9e`); plugin sandbox and API.
+  See `git log`.

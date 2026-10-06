@@ -26,6 +26,10 @@ contextBridge.exposeInMainWorld('cabinetStudio', {
   aiKeyStatus: () => ipcRenderer.invoke('ai:status'),
   aiSetKey: (provider: string, key: string | null) => ipcRenderer.invoke('ai:setKey', provider, key),
   aiCall: (call: unknown): Promise<string> => ipcRenderer.invoke('ai:call', call),
+  pluginRead: (p: string, grants: unknown): Promise<string> => ipcRenderer.invoke('plugin:read', p, grants),
+  pluginWrite: (p: string, text: string, grants: unknown): Promise<void> => ipcRenderer.invoke('plugin:write', p, text, grants),
+  pluginList: (p: string, grants: unknown): Promise<string[]> => ipcRenderer.invoke('plugin:list', p, grants),
+  pluginFetch: (url: string, init: unknown, grants: unknown): Promise<string> => ipcRenderer.invoke('plugin:fetch', url, init, grants),
   onBatchEvent: (cb: (ev: unknown) => void) => {
     const h = (_e: unknown, ev: unknown) => cb(ev)
     ipcRenderer.on('batch:event', h)

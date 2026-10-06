@@ -5,7 +5,7 @@
  */
 import { layerMatches, recipesOf, ruleSetsOf } from '@/cam/rules'
 import type { CamPart, LayerRule, LayerRuleSet } from '@/cam/types'
-import { batchSteps } from './batchSteps'
+import { batchStepChoices } from './batchSteps'
 import { machineSetup } from './machines'
 import type { ExportKind } from './output'
 import type { AppData, BatchSetup, Library } from './types'
@@ -24,7 +24,7 @@ export interface BatchWizardAnswers {
 export const BATCH_WIZARD_STEPS = ['Name', 'Machines', 'Outputs', 'Extra steps', 'Check'] as const
 
 /** What stops the wizard moving on from step `step` (0-based). */
-export function batchWizardProblems(step: number, a: BatchWizardAnswers, data: Pick<AppData, 'machine' | 'machines' | 'settings'>): string[] {
+export function batchWizardProblems(step: number, a: BatchWizardAnswers, data: Pick<AppData, 'machine' | 'machines' | 'settings' | 'plugins'>): string[] {
   const out: string[] = []
   if (step >= 0) {
     if (!a.name.trim()) out.push('Give the setup a name.')
@@ -35,7 +35,7 @@ export function batchWizardProblems(step: number, a: BatchWizardAnswers, data: P
     for (const id of a.machines) if (!machineSetup(data, id)) out.push(`Machine "${id}" is not in the machine list.`)
   }
   if (step >= 2 && !a.kinds.length) out.push('Pick at least one output.')
-  if (step >= 3) for (const id of a.steps) if (!batchSteps().some((s) => s.id === id)) out.push(`Batch step "${id}" is not available.`)
+  if (step >= 3) for (const id of a.steps) if (!batchStepChoices(data).some((s) => s.id === id)) out.push(`Batch step "${id}" is not available.`)
   return out
 }
 

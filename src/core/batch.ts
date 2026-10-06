@@ -19,7 +19,7 @@ import type { CamPart } from '@/cam/types'
 import { Cancelled, checkCancel, type CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import { dataFor, machineFolder, machineSetup, MAIN_MACHINE } from './machines'
-import { runSteps, type BatchStepMessage } from './batchSteps'
+import { runSteps, type BatchStep, type BatchStepMessage } from './batchSteps'
 import { buildFiles, type ExportKind, type OutFile } from './output'
 import { runJob } from './pipeline'
 import type { AppData, BatchSetup, Job, ShopSettings, UnitSystem } from './types'
@@ -379,6 +379,8 @@ export interface BatchContext {
   kinds?: ExportKind[]
   /** The batch setup to run (default: the one chosen in the settings, else the built-in one). */
   setup?: BatchSetup
+  /** Steps provided by plugins for this run (M2.10, `pluginBatchSteps`), beside the built-in ones. */
+  extraSteps?: readonly BatchStep[]
 }
 
 /** Stage 1 behaviour: the main machine only, the default outputs. */
@@ -473,7 +475,7 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
         for (const i of out.issues) (i.severity === 'error' ? m.errors : i.severity === 'warning' ? res.warnings : []).push(`${tag}${i.message}`)
         // M2.9 batch steps, after nesting: they may report and hold the order back, never change it
         const stepCtx = { order: { number: order.number, name: order.name, customer: order.customer }, machine: { id: t.id, name: t.name }, job, output: out, data: d }
-        note(runSteps(steps, 'afterNest', stepCtx).messages, m, tag)
+        note(runSteps(steps, 'afterNest', stepCtx, [], ctx.extraSteps).messages, m, tag)
         if (m.errors.length) m.status = 'blocked'
         else if (!main && !otherOutput) m.status = 'held'
         res.errors.push(...m.errors)
@@ -494,7 +496,7 @@ export function runBatchCsv(csvName: string, csvText: string, ctx: BatchContext)
           const kinds = ctx.kinds ?? setup.kinds ?? DEFAULT_BATCH_KINDS
           const files = buildFiles(s.m.folder ? kinds.filter((k) => PER_MACHINE.includes(k)) : kinds, job, s.data, s.out)
           // batch steps, before output: may add report files and hold the order back
-          const st = runSteps(steps, 'beforeOutput', s.stepCtx, files)
+          const st = runSteps(steps, 'beforeOutput', s.stepCtx, files, ctx.extraSteps)
           note(st.messages, s.m, s.m.folder ? `[${s.m.name}] ` : '')
           res.errors.push(...s.m.errors)
           made.push({ s, files: [...files, ...st.files] })

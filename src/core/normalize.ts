@@ -48,6 +48,8 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
     machine: profile(raw.machine),
     // M2.9: other machines and process steps, each profile filled in like the main one
     ...(raw.machines ? { machines: raw.machines.map((m) => ({ ...m, post: m.post ?? { kind: 'woodwop-mpr' as const }, profile: profile(m.profile) })) } : {}),
+    // M2.10: installed plugins, as stored (their grants belong to their exact code)
+    ...(raw.plugins ? { plugins: raw.plugins } : {}),
     settings: {
       ...d.settings,
       ...(raw.settings ?? {}),

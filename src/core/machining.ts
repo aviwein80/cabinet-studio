@@ -7,6 +7,7 @@ import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
 import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
+import type { ManualInfo } from './manualNest'
 import { type BridgePlan, bridgePlan, type SharedPlan, sharedLinePlan } from './sheetCuts'
 import type { HDrillDir, Job, Library, MachineProfile, NestSettings, OpPurpose, ShopSettings, Tool, Vec2 } from './types'
 
@@ -16,6 +17,8 @@ export interface JobNest {
   spacing: number
   /** Engine and kit result per material. */
   materials?: { materialId: string; engine: 'rect' | 'shape'; strategy: string; splitKits: string[] }[]
+  /** The job's layout was edited by hand (M2.8): what changed since it was saved. */
+  manual?: ManualInfo
 }
 
 export function cutoutTool(machine: MachineProfile): Tool | undefined {
@@ -61,6 +64,11 @@ export const nestSettingsOf = (settings: ShopSettings) => ({ ...NEST_DEFAULTS, .
 
 /** Shared-line cutting is on (it needs the nesting additions screens too). */
 export const sharedLinesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).sharedLines && featuresOf(settings).nestAdditions
+/** Room between parts in the nest: shared lines put neighbours exactly one tool diameter apart, so their tool-centre lines coincide. */
+export function nestSpacing(machine: MachineProfile, settings: ShopSettings) {
+  return sharedLinesOn(settings) && cutoutTool(machine) ? cutoutTool(machine)!.diameter : partSpacing(machine, settings)
+}
+
 /** Flip-side sheets are on. */
 export const flipSheetsOn = (settings: ShopSettings) => !!nestSettingsOf(settings).flipSheets && featuresOf(settings).nestAdditions
 /** Bridged nesting is on. */
@@ -68,8 +76,7 @@ export const bridgesOn = (settings: ShopSettings) => !!nestSettingsOf(settings).
 
 export function nestJob(instances: PartInstance[], lib: Library, machine: MachineProfile, settings: ShopSettings, isCancelled?: CancelCheck, opts: { underside?: (i: PartInstance) => boolean } = {}): JobNest {
   const ns = nestSettingsOf(settings)
-  // shared lines: neighbours exactly one tool diameter apart, so their tool-centre lines coincide
-  const spacing = sharedLinesOn(settings) && cutoutTool(machine) ? cutoutTool(machine)!.diameter : partSpacing(machine, settings)
+  const spacing = nestSpacing(machine, settings)
   const byMaterial = new Map<string, PartInstance[]>()
   for (const inst of instances) {
     const list = byMaterial.get(inst.materialId) ?? []

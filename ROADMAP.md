@@ -52,7 +52,12 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   image trace (own tracer), holders for every router (shop default holder, assumed stick-out =
   flute length, holder from a model) used by the simulator and collision checks, angle heads and
   aggregates, tool grid, spreadsheet export/import and tool data compare. Nothing writes machine
-  output. Next: M2.8 (nesting additions).
+  output. **M2.8 nesting additions: done** (October 2026): areas and costs per sheet and part (no
+  invented prices); shared-line cutting (measured 18-25 % less cutting on rectangle-heavy jobs);
+  bridged nesting; flip-side sheets with a milled reference edge and a sheet backplot
+  (registration 0.000 mm in the tests); editing the layout by hand with snapping, a live check,
+  nest list files and the full export check. Each new kind of program output has its own switch,
+  off. Next: M2.9 (batch additions).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -65,6 +70,10 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   - M2.6: the saw unit and the rotating aggregate count as absent on the N-200 until confirmed;
     their operations ship, and the export checker refuses their output with a clear message. No
     saw or aggregate macro is presented as proven output.
+- Open for M2.8 (see `docs/stage-2-3-progress.md`): material prices (and densities if costed by
+  weight); the hold-down limit for shared lines; bridge width, longest bridge and part size; how
+  the shop turns a sheet over and how wide a reference strip to mill; and, before any of the three
+  output switches goes on, one sheet of each checked in woodWOP.
 - Open for M2.7 (see `docs/stage-2-3-progress.md`): the real stick-outs and holders of every
   router (2D ones now too) and the shop's usual holder; offsets, housing and allowed angles of
   any angle head or aggregate.

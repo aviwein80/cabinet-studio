@@ -48,6 +48,7 @@ import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { AreaCostPanel } from '@/components/AreaCostPanel'
 import { type BackplotMode, SheetBackplot } from '@/components/SheetBackplot'
+import { NestEditor } from './job/NestEditor'
 import { jobCosts } from '@/core/areas'
 import { featuresOf } from '@/core/features'
 
@@ -379,6 +380,8 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
   const [showPlan, setShowPlan] = useState(true)
   const [showBridges, setShowBridges] = useState(true)
   const [view, setView] = useState<'map' | BackplotMode>('map')
+  const [editing, setEditing] = useState(false)
+  const mutate = useStore((s) => s.mutate)
   const instances = useMemo(() => new Map(out.instances.map((i) => [i.uid, i])), [out])
   const additions = featuresOf(data.settings).nestAdditions
   const costs = useMemo(() => (additions ? jobCosts(out.nest, out.instances, data.library) : null), [additions, out, data.library])
@@ -389,6 +392,8 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
         <EmptyState icon={<LayoutGrid className="size-5" />} title="No sheets">Add cabinets to the job to nest parts.</EmptyState>
       </div>
     )
+
+  if (editing) return <NestEditor job={job} data={data} out={out} sheetIdx={sheetIdx} onClose={() => setEditing(false)} />
 
   const prog = out.programs[Math.min(sheetIdx, out.programs.length - 1)]
   const sh = prog.sheet
@@ -451,6 +456,28 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
             {matNest && matNest.splitKits.length > 0 && <span className="text-amber-700">Kits on more than one sheet: {matNest.splitKits.join(', ')}</span>}
           </div>
           <div className="flex items-center gap-4">
+            {additions && (
+              <div className="flex items-center gap-1">
+                {job.nestEdit && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-900">laid out by hand</span>}
+                <Button size="xs" variant="outline" onClick={() => setEditing(true)}>
+                  <Pencil /> Edit layout
+                </Button>
+                {job.nestEdit && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() =>
+                      mutate((d) => {
+                        const j = d.jobs.find((x) => x.id === job.id)
+                        if (j) delete j.nestEdit
+                      })
+                    }
+                  >
+                    Automatic nest
+                  </Button>
+                )}
+              </div>
+            )}
             <label className="flex items-center gap-1.5">
               <Switch checked={showLabels} onCheckedChange={setShowLabels} /> Labels
             </label>

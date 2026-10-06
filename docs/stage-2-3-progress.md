@@ -76,14 +76,16 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M2.8b Shared-line cutting (NST-04) | **Done** (October 2026) | See below. Output switch off. |
 | M2.8c Bridged nesting (NST-05) | **Done** (October 2026) | See below. Output switch off. |
 | M2.8d Flip-side sheets (NST-07), sheet backplot | **Done** (October 2026) | See below. Output switch off. |
-| M2.8e Manual nesting (NST-09), screenshots, docs | In progress | | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
+| M2.8e Manual nesting (NST-09), screenshots, docs | **Done** (October 2026) | See below. M2.8 complete. | Shared-line cutting, bridged nesting, flip-side sheets, manual nesting. See "M2.8 split". |
 | M2.9 - M2.11 | Not started | Order as in the prompt. ART-01 stays at M2.11. |
 | M3.1 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped).
-Lint baseline: 17 warnings, all pre-existing (unchanged).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped).
+Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
+warning in the new material price field, missed because the comparison list was taken with new
+files present; fixed in M2.8e, back to 17.)
 
 ## Decisions received from the owner (October 2026)
 
@@ -133,6 +135,8 @@ Lint baseline: 17 warnings, all pre-existing (unchanged).
    straight-wall depth were confirmed with the M2.6 go-ahead.)
 7. **M2.6 (saw, aggregate, cutting values)**: see "M2.6 decisions needed" below.
 8. **M2.7 (holders, aggregates)**: see "M2.7 decisions needed" below.
+9. **M2.8 (prices, hold-down limits, turning sheets over, output checks)**: see "M2.8 decisions
+   needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -1286,12 +1290,70 @@ Sample job output unchanged (the new CSV is a separate export).
 - **The registration is only as good as the stops and the reference cut.** Not machine-proven; output off.
 - **With the output off the front program's sheet is 5 mm shorter than the sheet** (the strip is left at the far end, unprogrammed); this is harmless but is noted.
 
-### Test-suite note
+## M2.8e manual nesting: what was built
+
+| Spec ID | What | Where |
+|---|---|---|
+| NST-09 | Nesting tab → **Edit layout**: drag parts on a sheet; **snap** (on by default) puts a part's edge at the nest spacing beside a neighbour, in line with a neighbour's edge (edge alignment) or on the trim line, each direction separately, within 20 mm; **Turn** a quarter about the middle (R), or **end for end** (a grain-locked part on a grained sheet only turns end for end); arrow keys nudge 1 mm (Shift 10 mm); Shift-click picks several; **Move to sheet** or **New sheet** (split); **Undo**; **Save layout** keeps it with the job (`Job.nestEdit`); **Automatic nest** goes back. A **live check** marks parts that overlap, are closer than the cut-out tool, closer than the nest spacing (amber), off the trim or turned against the grain. **Nest list** files: save the layout as JSON and load it again, parts matched by id or by label part id, materials by id or code; parts in the list that the job no longer has are reported | `src/core/manualNest.ts`, `src/pages/job/NestEditor.tsx`, `applySavedNest` in `runJob` |
+| Re-validation | A saved layout goes through the same sheet programs and the same export checker as an automatic nest (`OVERLAP`, `SPACING`, `OUT_OF_SHEET`, `GRAIN`, `THICKNESS`, every machining check), plus `NEST_SPACING` (closer than the nest spacing although the tool fits, warning), `NEST_MISSING` (parts in the layout no longer in the job), `NEST_MATERIAL`, `NEST_ADDED` (new parts nested after the saved sheets) and `NEST_MANUAL` info. Parts sitting in another part's opening keep "cut first" | `validator.ts`, `openingsOf` |
+
+### Acceptance (manual edits keep spacing rules and are re-validated)
+
+| Check | Proof | Measured |
+|---|---|---|
+| Unchanged layout = same programs | `tests/nest-manual.test.ts` | The automatic nest saved as a layout gives identical placements and programs |
+| Re-validated | same | Part moved over a neighbour: `OVERLAP`; 5 mm away: `SPACING` (error); 13 mm (tool fits, nest wants 14): `NEST_SPACING` only; past the far trim: `OUT_OF_SHEET`; grain-locked part turned on a grained sheet: `GRAIN` |
+| Job changed after saving | same | A cabinet removed: `NEST_MISSING`; one added: its parts nested on extra sheets, every part placed once, nothing overlapping |
+| Split | same | Two parts moved to a new sheet: one more program, same errors as before |
+| Snap and turn | same | Beside a neighbour at the spacing, top edges in line, the trim corner; nothing near: left alone; a quarter turn about the middle and back |
+| Nest list | same | Saved and reloaded unchanged; a part with a changed id found by its label id; a part not in the job reported; other files refused with a plain message |
+| In the browser | screenshots 08, 09 | Dragging #13 onto its neighbours marks it red ("#13 overlaps #41 / #16 / #7"); Undo; Save layout; "laid out by hand" |
+
+## M2.8 screenshots
+
+`docs/screenshots/stage-2-3/M2.8/` (browser preview, Playwright; a sample job with three panels
+that have underside holes, and a price on the white melamine):
+
+- `01-areas-and-costs.png`: the Nesting tab's area and cost panel (parts, remnants, scrap, sheet; the selected part's area, material cost and share of the sheet; the unpriced HDF with its Configure badge).
+- `02-material-price-configure.png`: Configure on the HDF price opens the material with the price field focused.
+- `03-nesting-settings-badges.png`: shared-line cutting, bridged nesting and flip-side sheets on the Machine page, each placeholder with Configure / Mark as confirmed.
+- `04-shared-lines-and-bridges.png`: a sheet with the shared-line plan (tool-centre paths, a dot where each starts) and two bridged groups.
+- `05-flip-backplot-side1.png`: backplot of side 1: the sheet face down, parts mirrored, underside holes, reference strip.
+- `06-flip-backplot-side2.png`: side 2 as turned over, the milled edge at the stop.
+- `07-flip-both-sides-registration.png`: both sides together, underside holes on their parts, "within 0.000 mm".
+- `08-manual-nesting-live-check.png`: the layout editor with a part dragged onto its neighbours, the live check listing the overlaps.
+- `09-manual-layout-checked.png`: the saved layout's export checks (Output tab).
+
+## M2.8 licences
+
+No new dependencies. Everything uses the existing kernel (Clipper2, BSL-1.0) and our own code.
+
+## M2.8 decisions needed (see the report)
+
+1. **Material prices** (per m² or per ft², or per kg with the density). Until then nothing is
+   costed and each material shows a Configure badge.
+2. **Hold-down limits**: the smallest part that shares lines (0.05 m² / 120 mm, from the export
+   checker's small-part rule); bridge width 6 mm, longest bridge 20 mm, parts under 0.1 m². All
+   placeholders with badges.
+3. **Turning a sheet over**: end for end (as the Stage 1 turned-over part programs) or over the
+   long edge, and the reference strip (5 mm placeholder; it has to be less than the edge trim).
+   Recommendation: end for end, 5 mm, and check one sheet in woodWOP.
+4. **Before switching on any of the three new outputs** (shared-line cuts, bridged groups,
+   flip-side programs): open one generated sheet of each in woodWOP and simulate it. In
+   particular: the tool-centre contour (`RK="NOWRK"`) with a vertical or ramped entry on the line
+   for shared lines, and the side-1 program with its reference cut and program stop.
+
+## M2.8 test-suite note
 
 `tests/perf.test.ts` "adaptive clearing per Z level" (limit 90 s with the whole suite running in
 parallel, about 37 s alone) measured 90.2 s on the untouched M2.7d code in this container this run,
-so it fails by timing alone when the full suite runs; it passes when run on its own. The limit was
-not changed.
+so it fails by timing alone when the full suite runs; it passes when run on its own (66-75 s this
+run). In the full suite it passed once and failed four times this run, on the old and new code
+alike. The limit was not changed.
+
+## Next run: M2.9 batch additions
+
+- AM-03, AM-06, AM-08, AM-09, AM-10, AM-13 as in the prompt.
 
 ## Run log
 
@@ -1323,3 +1385,5 @@ not changed.
 - **Run 9 (M2.7b)**: turn-by-turn sketch, dimensions, print to scale. See `git log`.
 - **Run 9 (M2.7c)**: geometry queries, fill with holes, panelling. See `git log`.
 - **Run 9 (M2.7d)**: image trace, screenshots, README, ROADMAP. M2.7 complete. See `git log`.
+- **Run 10 (M2.8a-e)**: areas and costs; shared-line cutting; bridged nesting; flip-side sheets and
+  the sheet backplot; manual nesting, screenshots, README, ROADMAP. M2.8 complete. See `git log`.

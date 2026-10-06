@@ -46,6 +46,31 @@ tool table, are paused.
 6. **Nesting** (built in): MaxRects with 16 heuristic and order combinations, keeping the result
    with the fewest sheets. It respects grain, rotation rules, edge trim and part spacing (the
    cut-out tool diameter plus extra). The cut order puts small parts first.
+   **Nesting additions** (switch "Nesting additions", on; each kind of program output has its
+   own switch, **off**):
+   - **Area and cost**: each part's true area, and per sheet the parts, the remnants kept and the
+     scrap; cost per m² (per ft² in inches) or per kg with the density, entered per material
+     (Library → Materials → Edit). A sheet costs its whole area; each part also shows its share
+     of the sheet. No price is invented: until one is entered the material shows a Configure
+     badge. "Areas and costs CSV" on the Output tab.
+   - **Shared-line cutting**: rectangular parts nest exactly one cut-out tool diameter apart and
+     the line between neighbours is cut once (whole rows in one straight pass). Small parts keep
+     their own cut-out for hold-down (0.05 m² / 120 mm, placeholder, badged). The sample kitchen
+     needs 18 % less cutting, an eight-cabinet job 25 % less. Shown on the sheet; written only
+     with "Write shared-line cuts to MPR" (off).
+   - **Bridged nesting**: small parts are linked by short bridges and cut as one path round each
+     group, so they stay one piece on the vacuum (with the onion skin when set); bridge width,
+     longest bridge and part size are placeholders with badges. Written only with its own switch.
+   - **Flip-side sheets**: parts with underside holes nest on their own sheets. Side 1 (run first,
+     sheet face down) mills a reference strip off one end and drills the underside; the sheet is
+     turned over onto that milled edge for its normal program. The sheet backplot shows side 1,
+     side 2 and both together, with the registration (0.000 mm in the tests). Written only with
+     its own switch and the custom-part switch.
+   - **Edit layout**: drag parts on a sheet, turn them, snap them beside their neighbours, in line
+     with their edges or to the trim, move them to another or a new sheet, undo, and save the
+     layout with the job (or as a nest list file to load again). A live check marks overlaps,
+     parts too close, off the trim or against the grain; the export checker runs in full on the
+     saved layout. Parts added later are nested after the saved sheets; parts removed are listed.
 7. **MPR per sheet**: `[H` header, `[001` variables, sheet contours, `<100 WerkStck`, then:
    - `<102 BohrVert`, addressed by diameter or by tool number.
    - `<103 BohrHoriz`, only when a horizontal unit is configured; otherwise the holes are listed
@@ -474,6 +499,10 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   construction/    parametric carcass generator -> parts with drilling/grooves in part coords
   cutlist.ts       job expansion, part numbering/IDs, edgeband cut-size compensation, BOM
   nesting.ts       MaxRects nesting with grain/rotation/spacing/trim
+  sheetCuts.ts     shared-line cutting and bridged groups (plans, measuring, independent checks)
+  flipSide.ts      flip-side sheets: side-1 program, reference edge, registration
+  manualNest.ts    layouts edited by hand: apply, snap, turn, live check, nest list files
+  areas.ts         areas and costs per sheet and part
   machining.ts     sheet programs: tool selection, placement transforms, contours, pockets
   mpr/             woodWOP MPR 4.0 writer + minimal parser (tests)
   validator.ts     pre-export checks

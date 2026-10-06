@@ -4,6 +4,7 @@ import { generatePart, type Toolpath } from '@/cam/toolpath'
 import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInstance } from './cutlist'
 import { placeLabels, type LabelSpot } from './labels/placement'
 import { needsUnderside, sideOneProgram, sideTwoNote } from './flipSide'
+import { applySavedNest } from './manualNest'
 import { bridgesOn, buildAllPrograms, flipSheetsOn, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
@@ -59,7 +60,13 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
   const { library: lib, machine, settings } = data
   const expanded = expandJob(job, lib, settings)
   const flip = flipSheetsOn(settings)
-  const nest = nestJob(expanded.instances, lib, machine, settings, opts.isCancelled, flip ? { underside: (i) => needsUnderside(i, machine) } : {})
+  const nestOpts = flip ? { underside: (i: PartInstance) => needsUnderside(i, machine) } : {}
+  // M2.8 manual nesting: a layout edited by hand (or loaded from a nest list) is used as saved;
+  // parts added since are nested automatically, parts gone are reported
+  const nest =
+    job.nestEdit && featuresOf(settings).nestAdditions
+      ? applySavedNest(job.nestEdit, expanded.instances, lib, machine, settings, opts.isCancelled, nestOpts)
+      : nestJob(expanded.instances, lib, machine, settings, opts.isCancelled, nestOpts)
   const ns = nestSettingsOf(settings)
   const programs = buildAllPrograms(job, nest, expanded.instances, lib, machine, {
     camOutput: featuresOf(settings).camMprOutput,

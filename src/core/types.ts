@@ -314,6 +314,23 @@ export interface Job {
   room?: Room
   /** Custom (CAD/CAM) parts cut with this job. They share materials, tools, nesting and labels. */
   camParts?: CamPart[]
+  /** Sheet layout edited by hand (M2.8, NST-09). Absent = the automatic nest. */
+  nestEdit?: SavedNest
+}
+
+/** A nest edited by hand, or loaded from a nest list: sheets and where each part sits. */
+export interface SavedNest {
+  savedAt: string
+  sheets: SavedSheet[]
+}
+
+export interface SavedSheet {
+  materialId: string
+  sheetLength: number
+  sheetWidth: number
+  offcutId?: string
+  flip?: { axis: 'end' | 'side'; reference: number; length: number; width: number }
+  placements: { uid: string; x: number; y: number; rotated: boolean; flip?: boolean; inside?: string }[]
 }
 
 // ---------------------------------------------------------------------------------------------

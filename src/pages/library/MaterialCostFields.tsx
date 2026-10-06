@@ -1,5 +1,5 @@
 /** Material cost (M2.8, NEW-20): price per m² or per kg, and the density. Empty = not set. */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ConfigureBadge } from '@/components/Configure'
 import { focusField } from '@/components/configureFocus'
 import { Field, SelectField } from '@/components/fields'
@@ -12,10 +12,10 @@ import type { Material, MaterialCost } from '@/core/types'
 const M2_PER_FT2 = 0.09290304
 const round = (n: number) => Math.round(n * 1e6) / 1e6
 
-function OptNum({ value, onChange, placeholder }: { value: number | undefined; onChange: (v: number | undefined) => void; placeholder?: string }) {
+/** Optional number. Rendered with `key` = the value shown, so a new value from outside starts it afresh. */
+function OptNumInput({ value, onChange, placeholder }: { value: number | undefined; onChange: (v: number | undefined) => void; placeholder?: string }) {
   const shown = value === undefined ? '' : String(value)
   const [text, setText] = useState(shown)
-  useEffect(() => setText(shown), [shown])
   return (
     <Input
       className="h-8"
@@ -33,6 +33,8 @@ function OptNum({ value, onChange, placeholder }: { value: number | undefined; o
     />
   )
 }
+
+const OptNum = (p: { value: number | undefined; onChange: (v: number | undefined) => void; placeholder?: string }) => <OptNumInput key={p.value === undefined ? '' : String(p.value)} {...p} />
 
 export function MaterialCostFields({ material, currency, onChange }: { material: Material; currency: string; onChange: (c: MaterialCost | undefined) => void }) {
   const inches = useStore((st) => st.data?.settings.units === 'in')

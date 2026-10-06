@@ -14,6 +14,7 @@ import type { Library, MachineProfile, ShopSettings } from './types'
 import { machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed } from './confirm'
 import { resolveTool } from '@/cam/ops'
 import { pathToRegion, uncutLength } from './sheetCuts'
+import { checkSheet } from './manualNest'
 
 export type Severity = 'error' | 'warning' | 'info'
 
@@ -81,6 +82,26 @@ export function validateJob(
   for (const u of nest.unplaced) {
     const inst = byUid.get(u.uid)
     add({ severity: 'error', code: 'NOT_NESTED', message: `Part ${inst?.partId ?? u.uid} could not be nested: ${u.reason}`, partUid: u.uid, partNo: inst?.no })
+  }
+
+  // M2.8 manual nesting: the layout was edited by hand; say what changed since, and hold it to
+  // the nest's spacing (closer than the cut-out tool itself is an error below, as for any nest)
+  if (nest.manual) {
+    const m = nest.manual
+    add({ severity: 'info', code: 'NEST_MANUAL', message: `Sheets laid out by hand (saved ${m.savedAt.slice(0, 16).replace('T', ' ')}). Every check below runs on the edited layout.` })
+    if (m.missing.length)
+      add({ severity: 'warning', code: 'NEST_MISSING', message: `${m.missing.length} part(s) in the saved layout are no longer in the job: ${m.missing.slice(0, 8).map((x) => x.partId ?? x.uid).join(', ')}${m.missing.length > 8 ? ', …' : ''}. Their places are empty; save the layout again to drop them.` })
+    if (m.moved.length) add({ severity: 'warning', code: 'NEST_MATERIAL', message: `${m.moved.length} part(s) changed material since the layout was saved; they were nested again on their new material.` })
+    if (m.added.length) add({ severity: 'info', code: 'NEST_ADDED', message: `${m.added.length} part(s) are not in the saved layout and were nested automatically after the saved sheets.` })
+    for (const sh of nest.sheets) {
+      const mat = lib.materials.find((x) => x.id === sh.materialId)
+      const seen = new Set<string>()
+      for (const c of checkSheet(sh, byUid, { minGap: cutoutTool(machine)?.diameter ?? 0, spacing: nest.spacing, trim: settings.nesting.edgeTrim, grain: !!mat?.grain }))
+        if (c.kind === 'spacing' && c.other && !seen.has([c.uid, c.other].sort().join())) {
+          seen.add([c.uid, c.other].sort().join())
+          add({ severity: 'warning', code: 'NEST_SPACING', sheet: sh.index, partNo: byUid.get(c.uid)?.no, partUid: c.uid, message: `Parts #${byUid.get(c.uid)?.no} and #${byUid.get(c.other)?.no} are closer than the nesting spacing of ${fmt(nest.spacing)} mm (the cut-out tool still fits).` })
+        }
+    }
   }
 
   for (const prog of programs) {

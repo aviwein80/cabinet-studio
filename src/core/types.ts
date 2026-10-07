@@ -884,6 +884,14 @@ export interface FeatureFlags {
    * a licensed engine. Off. Also needs `scriptPostOutput` and the plugin's grant.
    */
   multiAxisPostOutput: boolean
+  /**
+   * M3.6 screens: machine simulation (the whole machine replayed from the toolpaths or a post's
+   * output, with its parts checked against the table, the part and its fixtures), part compare
+   * (the simulated stock against the 3D model as a colour map, for several parts) and clamps, pods
+   * and rails on parts (placed by hand, by dragging or automatically). Screens and checks only:
+   * nothing new is written to any machine; fixture collisions block the export like any collision.
+   */
+  camMachineSim: boolean
 }
 
 export interface Library {

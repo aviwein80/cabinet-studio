@@ -28,6 +28,7 @@ import { ToolSheetDialog } from './machine/ToolSheetDialog'
 import { ToolCompareDialog } from './machine/ToolCompareDialog'
 import { HoldersSection } from './machine/HoldersSection'
 import { AggregatesSection } from './machine/AggregatesSection'
+import { FixtureLibrarySection, MachineBodiesSection } from './machine/MachineSimSections'
 import { MachinesSection } from './machine/MachinesSection'
 import { ToolOrderSection } from './machine/ToolOrderSection'
 import { AdminLocked } from '@/components/AdminLock'
@@ -58,6 +59,7 @@ const FEATURE_ROWS: [keyof FeatureFlags, string, string][] = [
   ['camRotary', 'Rotary (4-axis)', 'A part turned on a rotary axis: the axis, the blank (round or square) and wrapped planes round it (from a radius, extents or a model\'s cylindrical face); passes along the axis, rings round it or a spiral on a model, roughing in levels, and shapes drawn on a wrapped plane cut into the cylinder (also with a saw blade, along or round the axis). Simulated on a rotary stock with the gouge and collision checks. Screens only: the N-200 has no rotary axis, so a turned part is never nested or written to woodWOP; see the rotary output switch below.'],
   ['camPositional', 'Positional 3+2', 'Tilted work planes at any angle (typed in, a side of the part\'s block, or a flat face of a solid) with drilling, pockets, profiles and engraving on them, the tool along the plane\'s normal. Our own kinematics turn them into a machine\'s two locked rotary angles and its X, Y, Z (or into the plane\'s own frame), and the simulator replays them with the tool tilted, with the collision checks. Screens only: the N-200 cannot tilt its tool, so a part with tilted operations is never nested or written to woodWOP; see the 3+2 output switch below.'],
   ['camMultiAxis', 'Simultaneous 5-axis', 'Operations whose tool tilts while it cuts: along 3D curves or solid edges, swarf with the side of the tool along a wall, surface finishing and multi-axis roughing, with tool-axis control (surface or curve normal with lead and tilt, fixed tilt, through or away from a point or line, towards a guide curve), axis smoothing, cutting reversed or both ways and the head flip; barrel and form tools. The toolpaths come from a licensed 5-axis engine: none is installed (not licensed), and the built-in preview engine makes simple ones for the simulator only. Simulated with the tool tilted on every move and replayed through a machine\'s kinematics. Screens only: the N-200 has three axes, so a part with 5-axis operations is never nested or written to woodWOP; see the 5-axis output switch below.'],
+  ['camMachineSim', 'Machine simulation, part compare and fixtures', 'Clamps, pods and rails on parts, from sizes, from a shape drawn on the part or from a model file, placed by hand, by dragging on the drawing or automatically clear of the toolpaths; the collision checks keep the tool, shank and holder clear of them (a hit blocks the export like any collision). The whole machine replayed in the simulator from the toolpaths or from a program read back (a post\'s output, or the part\'s own woodWOP program), its parts (gantry, head, spindle, rotary table: invented until measured) checked against the table, the part and its fixtures, and every axis against its travel. Part compare colours the simulated stock against the 3D model: gouges red, material left blue, within the tolerance green; for one part or several. Screens and checks only: nothing new is written to any machine.'],
   ['camExtras', 'Small extras', 'Thread milling (simulation only: no woodWOP form is confirmed for its helical moves); fold, flatten and wrap; hatching, detail views and line types on the drawing and in prints to scale; the stroke-font editor for engraving; rapid moves over a cylinder or sphere instead of a flat safe height (simulation and text posts; woodWOP makes its own moves between macros).'],
   ['camAdaptive', 'Rest machining and adaptive clearing', 'Pocket options: cut only what earlier operations left; clear at a steady width of cut.'],
   ['camSolids', 'Solid models', 'Import STEP, IGES and BREP solids: faces and colours, holes, pockets and outlines found and put on layers, assemblies split into parts, machining picked faces.'],
@@ -97,7 +99,7 @@ export function MachinePage() {
   const [compareOpen, setCompareOpen] = useState(false)
   // a "Configure" badge elsewhere asked for a field on this page: open its tool, then focus it
   const cadTools = featuresOf(data?.settings).camCadTools
-  useConfigureTarget(['tool', 'holder', 'aggregate', 'model', 'default', 'nest'], (t) => {
+  useConfigureTarget(['tool', 'holder', 'aggregate', 'model', 'default', 'nest', 'bodies', 'fixtureType'], (t) => {
     if (t.kind === 'tool') setEditTool(t.toolId)
     // with the holder library on this page, the holder's own card takes the focus
     if (t.kind === 'holder' && !cadTools) {
@@ -315,6 +317,8 @@ export function MachinePage() {
             {!other && <CutDefaultsSection machine={m} />}
             {cadTools && <HoldersSection machine={m} updateMachine={updateMachine} />}
             {cadTools && <AggregatesSection machine={m} updateMachine={updateMachine} />}
+            {feat.camMachineSim && <MachineBodiesSection machine={m} updateMachine={updateMachine} />}
+            {feat.camMachineSim && <FixtureLibrarySection machine={m} updateMachine={updateMachine} />}
             {feat.batchAdditions && <ToolOrderSection machine={m} updateMachine={updateMachine} />}
             {!other && (
             <>

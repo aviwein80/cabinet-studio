@@ -1,11 +1,12 @@
 import { modelFootprint } from '@/cam/mesh/place'
 import { planeRect } from '@/cam/rotary/frame'
 import { tiltedRect } from '@/cam/positional/frame'
+import { fixtureFootprint, shapeHeight } from '@/cam/fixtures/fixture'
 import { formatLength } from '@/core/units'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { moveNode, nodesOf } from '@/cam/cad'
 import { entityContours, layerOf } from '@/cam/doc'
-import { boxOf, closestOnContour, type Contour, dist, pointAt, type P, rect, tangentAt } from '@/cam/geom'
+import { boxOf, closestOnContour, type Contour, dist, pointAt, type P, polyline, rect, tangentAt } from '@/cam/geom'
 import { snap, type SnapMode, type SnapResult } from '@/cam/snap'
 import type { Toolpath } from '@/cam/toolpath'
 import type { CamPart, Entity } from '@/cam/types'
@@ -90,6 +91,8 @@ export interface CanvasProps {
   onSelect: (ids: string[], additive: boolean) => void
   onNodeMove: (id: string, idx: number, p: P) => void
   onSegPick: (id: string, seg: number) => void
+  /** M3.6: a fixture dragged on the drawing to a new place (its reference point). */
+  onFixtureMove?: (id: string, at: P) => void
 }
 
 /** A toolpath drawn with more points than this shows its centre line only (not the tool's width). */
@@ -106,6 +109,8 @@ export function PartCanvas(props: CanvasProps) {
   const [hover, setHover] = useState<string | null>(null)
   const [boxSel, setBoxSel] = useState<{ a: P; b: P } | null>(null)
   const [drag, setDrag] = useState<{ id: string; idx: number; p: P } | null>(null)
+  // M3.6: a fixture being dragged: where the pointer went down and where it is now
+  const [fxDrag, setFxDrag] = useState<{ id: string; from: P; to: P } | null>(null)
   const pan = useRef<{ x: number; y: number; view: View; moved: boolean; button: number } | null>(null)
   const space = useRef(false)
 
@@ -120,13 +125,15 @@ export function PartCanvas(props: CanvasProps) {
 
   const fit = useCallback(() => {
     const cs = part.entities.filter((e) => e.face === 1).flatMap(entityContours)
-    const b = boxOf([...cs, rect(0, 0, part.length, part.width)])
+    // (clamps and pods round the part too, M3.6)
+    const fx = (part.fixtures ?? []).flatMap(fixtureFootprint).filter((l) => l.length > 2).map((l) => polyline(l.map(([x, y]) => ({ x, y })), true))
+    const b = boxOf([...cs, ...fx, rect(0, 0, part.length, part.width)])
     const w = Math.max(1, b.maxX - b.minX)
     const h = Math.max(1, b.maxY - b.minY)
     const s = Math.min((size.w - 80) / w, (size.h - 80) / h)
     setView({ cx: (b.minX + b.maxX) / 2, cy: (b.minY + b.maxY) / 2, s: Math.max(0.01, s) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size.w, size.h, part.id, part.length, part.width])
+  }, [size.w, size.h, part.id, part.length, part.width, (part.fixtures ?? []).length])
 
   useEffect(() => fit(), [fit, props.fitKey])
 
@@ -212,6 +219,13 @@ export function PartCanvas(props: CanvasProps) {
         return
       }
       const h = hitEntity(part, w, tol)
+      // a fixture under the pointer (no shape there): drag it
+      const fx = !h && tool.id === 'select' && props.onFixtureMove ? fixtureAt(part, w) : null
+      if (fx) {
+        setFxDrag({ id: fx, from: w, to: w })
+        ;(e.target as Element).setPointerCapture?.(e.pointerId)
+        return
+      }
       if (h) {
         if (tool.id === 'nodes' && sel.includes(h)) {
           const ent = part.entities.find((x) => x.id === h)!
@@ -244,6 +258,10 @@ export function PartCanvas(props: CanvasProps) {
       setDrag({ ...drag, p: s.p })
       return
     }
+    if (fxDrag) {
+      setFxDrag({ ...fxDrag, to: w })
+      return
+    }
     if (boxSel) {
       setBoxSel({ ...boxSel, b: w })
       return
@@ -266,6 +284,13 @@ export function PartCanvas(props: CanvasProps) {
       setDrag(null)
       return
     }
+    if (fxDrag) {
+      const f = part.fixtures?.find((x) => x.id === fxDrag.id)
+      // (moved to the nearest 0.1 mm; a click without moving leaves it)
+      if (f && dist(fxDrag.from, fxDrag.to) * view.s >= 2) props.onFixtureMove?.(f.id, { x: Math.round((f.at.x + fxDrag.to.x - fxDrag.from.x) * 10) / 10, y: Math.round((f.at.y + fxDrag.to.y - fxDrag.from.y) * 10) / 10 })
+      setFxDrag(null)
+      return
+    }
     if (boxSel) {
       const tiny = dist(boxSel.a, boxSel.b) * view.s < 4
       if (tiny) props.onSelect([], e.shiftKey)
@@ -274,7 +299,8 @@ export function PartCanvas(props: CanvasProps) {
     }
   }
 
-  const shown = drag ? moveNode(part, drag.id, drag.idx, drag.p) : part
+  const moved = drag ? moveNode(part, drag.id, drag.idx, drag.p) : part
+  const shown = fxDrag ? { ...moved, fixtures: moved.fixtures?.map((f) => (f.id === fxDrag.id ? { ...f, at: { ...f.at, x: f.at.x + fxDrag.to.x - fxDrag.from.x, y: f.at.y + fxDrag.to.y - fxDrag.from.y } } : f)) } : moved
   const tx = size.w / 2 - view.cx * view.s
   const ty = size.h / 2 + view.cy * view.s
   const worldTf = `matrix(${view.s},0,0,${-view.s},${tx},${ty})`
@@ -480,6 +506,7 @@ export function PartCanvas(props: CanvasProps) {
         <NotesLayer part={shown} px={px} />
         <PlanesLayer part={shown} px={px} />
         <TiltedLayer part={shown} px={px} />
+        <FixturesLayer part={shown} px={px} dragging={fxDrag?.id ?? null} />
         <DimsLayer part={shown} px={px} />
         {cursor &&
           cursor.guides.map((g, i) => {
@@ -497,6 +524,52 @@ export function PartCanvas(props: CanvasProps) {
         )}
       </svg>
     </div>
+  )
+}
+
+/** The fixture whose outline (seen from above) holds point w, the top one first. */
+function fixtureAt(part: CamPart, w: P): string | null {
+  const fs = part.fixtures ?? []
+  for (let i = fs.length - 1; i >= 0; i--) {
+    for (const loop of fixtureFootprint(fs[i])) {
+      let inside = false
+      for (let a = 0, b = loop.length - 1; a < loop.length; b = a++) {
+        const [xi, yi] = loop[a]
+        const [xj, yj] = loop[b]
+        if (yi > w.y !== yj > w.y && w.x < ((xj - xi) * (w.y - yi)) / (yj - yi) + xi) inside = !inside
+      }
+      if (inside) return fs[i].id
+    }
+  }
+  return null
+}
+
+/** Clamps, pods and rails (M3.6): their outlines seen from above, those under the part dashed, with names. */
+function FixturesLayer({ part, px, dragging }: { part: CamPart; px: (p: P) => P; dragging: string | null }) {
+  const fs = part.fixtures ?? []
+  if (!fs.length) return null
+  return (
+    <g data-testid="fixtures">
+      {fs.map((f) => {
+        const under = f.at.z + shapeHeight(f.shape) <= -part.thickness + 1e-6
+        const color = f.off ? '#78716c' : under ? '#60a5fa' : '#f59e0b'
+        const loops = fixtureFootprint(f)
+        const pts = loops.flat()
+        const top = pts.reduce((a, q) => (q[1] > a[1] ? q : a), pts[0] ?? [f.at.x, f.at.y])
+        const at = px({ x: top[0], y: top[1] })
+        return (
+          <g key={f.id} className="cursor-move" data-testid="fixture-outline">
+            {loops.map((l, i) => (
+              <polygon key={i} points={l.map(([x, y]) => px({ x, y })).map((q) => `${q.x},${q.y}`).join(' ')} fill={color} fillOpacity={dragging === f.id ? 0.35 : 0.18} stroke={color} strokeWidth={dragging === f.id ? 2 : 1.25} strokeDasharray={under ? '4 3' : undefined} />
+            ))}
+            <text x={at.x} y={at.y - 4} fontSize={10.5} fill={color} stroke="#16181d" strokeWidth={3} paintOrder="stroke" pointerEvents="none">
+              {f.name}
+              {under ? ' (under)' : ''}
+            </text>
+          </g>
+        )
+      })}
+    </g>
   )
 }
 

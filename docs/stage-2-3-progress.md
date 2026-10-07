@@ -104,11 +104,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.5a 5-axis core: `MultiAxisEngine` interface, "not licensed" stub, preview / test engine, tool axes in the IR, barrel and form tools, format 10 | **Done** (October 2026) | See below. No engine licence bought, nothing downloaded. |
 | M3.5b Simultaneous kinematics with head flip, 5-axis simulation, axis-turn check, N-200 refusal, script post | **Done** (October 2026) | See below. 5-axis-post switch off; never the N-200. Closes the M3.4 limit on the axis turn between planes. |
 | M3.5c 5-axis screens, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.5 complete.** |
-| M3.6 - M3.7 | Not started | |
+| M3.6a Clamps, pods and rails (FIX-01), convex distance engine, fixtures in every collision check, format 11 | **Done** (October 2026) | See below. A tool, shank or holder into a fixture blocks the export (`CAM_COLLISION`). |
+| M3.6b Machine simulation (SIM-06) and part compare (SIM-04) cores | **Done** (October 2026) | See below. Simulator only; nothing new is written to any machine. |
+| M3.6c Machine view, compare screens, fixtures panel, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.6 complete.** |
+| M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -187,6 +190,14 @@ files present; fixed in M2.8e, back to 17.)
     not collision-checked; the remaining ~2 s step-back on the screen's thread) may stay deferred,
     listed here, and are closed where M3.5 builds the same machinery; (3) there is no 3+2 or
     5-axis machine in the shop: do not ask for a real post or sample program.
+
+23. With the M3.6 go-ahead, on the M3.5 report: (1) **do not buy a 5-axis engine licence**
+    (ModuleWorks or any other engine): the shop's engine stays the "not licensed" stub, 5-axis
+    output stays off and the N-200 always refuses 5-axis work; (2) the two M3.5c fixes are
+    approved (a groove cut as deep as asked is not a gouge; near-flat normals snapped upright in
+    the preview engine only); (3) the remaining deferred items (3D finishing, through cuts, rest
+    and adaptive on tilted planes; the ~2 s step-back on the screen's thread; the hold on far
+    jumps) stay deferred and listed, closed where a later milestone builds the same machinery.
 
 ## Open questions for the owner
 
@@ -2653,9 +2664,136 @@ Playwright (Apache-2.0) installed outside the project, not added to it.
 2. **Placeholder 5-axis cutting values** (step-over, step-down, largest tilt, axis smoothing) and
    the barrel T110: Configure badges, like every other placeholder (no answer needed now).
 
+## M3.6 split
+
+Three green parts, each pushed to `main`: **M3.6a** clamps, pods and rails (FIX-01) with our own
+convex distance engine and fixtures in every collision check (part format 11), **M3.6b** the
+machine simulation (SIM-06: the machine's parts on its kinematic chain, the replay of toolpaths
+or of a program read back, the machine collision check) and the part compare (SIM-04) as worker
+tasks, **M3.6c** the screens (machine view, compare views, fixtures panel and drawing layer,
+Machine & tools sections), screenshots and docs.
+
+## M3.6 machine simulation, part compare and fixtures: what was built
+
+Commits `5d28787` (M3.6a), `54131fe` (M3.6b), M3.6c (screens, screenshots and docs; see `git log`).
+Part format 11 (fixtures on parts; format 10 parts read unchanged). Switch "Machine simulation,
+part compare and fixtures" (screens, on). No new dependencies.
+
+| Item | What | Where |
+|---|---|---|
+| Convex distance engine | Solids given by their support function: prisms, frusta with a rounded edge, spheres, boxes; a solid swept along a straight move (exact: the swept volume of a moving convex solid is convex), two poses joined (hull) and grown (the bulge of a turn), placed and turned. Distance by GJK (Ericson's closest point on the simplex), an overlap depth estimate, boxes for quick rejection. Our own code | `src/cam/collision/convex.ts` |
+| Fixtures (FIX-01) | A fixture on a part: clamp, pod or rail; a block, a round, a closed shape drawn on the part stood up to a height (triangulated, exact), or a model file (STL, OBJ, 3MF, STEP, IGES, BREP) kept as 12 height slices, each the convex outline of what the model has between two heights (an arm over the part leaves the space under it free). Placed at X, Y, Z and turned; switched off = not checked. Clamps stand on the table beside the part, pods and rails under it | `src/cam/fixtures/fixture.ts`, `Fixture` in `src/cam/types.ts` |
+| Fixture library | The shop's clamps, pods and rails (Machine & tools → Fixtures). Four invented examples (toggle clamp 60 x 40 x 50, vacuum pod 120 x 120 x 100, round pod Ø120 x 100, rail 1500 x 100 x 50) with Configure badges until the shop enters its own; a fixture placed from an invented type carries its own badge | `PLACEHOLDER_FIXTURE_TYPES`, `src/core/confirm.ts`, `src/pages/machine/MachineSimSections.tsx` |
+| Automatic placing | Clamps round the part (its outline split into stretches, the nearest station to each stretch's middle, pushed out until clear), pods under it on a grid where no tool reaches below; each kept clear of the whole tool (cutter, shank and holder plus the collision margin) along every move, swept, in the worker | `src/cam/fixtures/place.ts` |
+| Fixtures in the collision checks | 3-axis, tilted (3+2) and 5-axis: cutter, shank and holder against every fixture, swept along each move (rapids too), the first place found by halving, with the collision margin (2 mm, the machine's own). A hit is a collision (`fixture`) naming the part of the tool and the fixture, jumping to its move, and **blocks the export** (`CAM_COLLISION`). The tool is never expected to cut a fixture | `src/cam/collision/fixtureCheck.ts`, `collision.ts`, `src/cam/positional/sim.ts` |
+| Machine's parts (SIM-06) | Boxes and cylinders, each carried by one link of the kinematic chain (frame, X, Y, Z, the head's two rotary axes, the table's two). Invented for each layout until measured (N-200: gantry beam and legs, Y carriage, head plate, spindle motor, vertical drill block; fork head, table-table and table-head examples), one Configure badge for the set; the spoilboard and table from the machine model's figures | `src/cam/machine/model.ts`, `MachineModel.bodies` |
+| Kinematic replay | The toolpaths as machine moves: 3-axis through the straight moves (arcs within 0.01 mm), 3+2 through `machineProgram`, 5-axis through the simultaneous kinematics; or a program read back: the part's own woodWOP program (MPR reader) or a program file such as a post's output (G-code with the rotary words; G53 Z from the top of the Z travel; G54 at the part's origin). Between operations it goes to the tool change, and rises and turns the axes while moving over, as the sample posts do. Every link placed by the chain at any time | `src/cam/machine/replay.ts`, `readGcodeAxes` in `src/cam/programRead.ts` |
+| Machine collision check | Every machine part against the table, the part's block and its fixtures; the tool and holder against the fixtures and the table; exact along straight moves (swept), in half-degree steps where a rotary axis turns (each step grown by its bulge); every axis against its travel. Each hit names what hits what, the operation, move or line, the axes, how deep, and jumps there. **Simulator only** (the machine's parts are invented): it does not block the export | `src/cam/machine/check.ts` |
+| Part compare (SIM-04) | The finished stock (the simulator's own, simulated to the end) against the part's visible 3D models: signed distance from each stock surface point (one per cell) to the design, a closed model as its solid, an open one (a relief or surface) counted down to the underside inside its outline. Gouges red, material left blue, within the tolerance (0.05 mm, settable) green, full colour at 2 mm (settable); the deepest gouge and the most material left with where they are; a small top view. In the worker | `src/cam/compare/compare.ts`, `src/cam/compare/parts.ts` |
+| Screens | Part designer 3D tab → Clamps, pods and rails (cards with sizes and badges; add from the library, from closed shapes, from a model file; Place automatically); fixtures drawn on the drawing and dragged there; Simulate → **Machine** (machine and source chosen, part placement, the machine in 3D with its own player, hits list, readout); Simulate → 3D → **Compare with the model** (colour map, red dot at the deepest gouge, legend, tolerance); Custom parts → **Compare with models…** (several parts, a row each with a top view); Machine & tools → Machine parts, Fixtures; the switch | `src/pages/part/FixturesPanel.tsx`, `Canvas.tsx`, `MachineView.tsx`, `SimulateDialog.tsx`, `CompareDialog.tsx`, `src/pages/machine/MachineSimSections.tsx` |
+
+### Acceptance
+
+Spec (M3.6): the machine model drives a kinematic replay; a deliberate head-into-clamp case is
+caught; part compare colours a known gouge correctly. Measured in `tests/cam-fixtures.test.ts`,
+`tests/cam-machine-sim.test.ts` and `tests/cam-compare.test.ts`:
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| The machine model drives a kinematic replay | `cam-machine-sim.test.ts` | 3 layouts x 300 random poses: the replayed chain's tool tip, direction and axes agree with the 3+2 kinematics within 5.1e-13 mm. 3-axis: every straight cutting move played, times rising, the tool change first; tip within 0.0101 mm of the toolpath's arcs. The sample 3+2 post's G-code read back as machine axes: 2167 steps, 2097 cutting points played within 0.0014 mm. A 5-axis program along a curve on the dome on a fork head C/B without tip control (pivot 150 mm): every toolpath point played within 0.0000 mm, the rotary axes turning while cutting. A table-table machine turns the part and its clamps with the table (within 1e-9 mm). The N-200 cannot replay tilted work: said, and the flat work replays |
+| A deliberate head-into-clamp case is caught | `cam-machine-sim.test.ts`, `cam-fixtures.test.ts` | N-200, a tall clamp beside a pocket: the holder clears it (the cutting check is clean) but "Pocket, move 150: Spindle motor hits fixture "Clamp A" … (3.95 mm)"; 0.05 mm lower it is clear. With the N-200's invented parts a tall clamp is caught by the spindle motor (22.60 mm), a low one is not. 3+2 fork head: drilling the 45° chamfer, "Spindle housing hits fixture "Clamp A" … C0.00 B45.00 (76.28 mm)". The same caught from the sample 3+2 post's output read back (with its line number) and from the N-200's own woodWOP program read back. A tall clamp between the tool change and the part is hit "between operations". An axis past its travel: "X goes to 3756.000, beyond its travel (0 to 3658 mm)" |
+| Fixtures in the cutting checks (FIX-01) | `cam-fixtures.test.ts` | Distances against exact answers over 4000 random cases: worst 1.3e-8 mm. The holder into a tall clamp: "Pocket, moves 47-49: holder hits fixture "Clamp A" (2.88 mm)", where it starts, within the holder's reach; 0.05 mm further away it is clear. A through cut over a pod: "cutter hits fixture "Pod 1" (2.30 mm)"; moved clear, or switched off, not reported. First place along a 300 mm move by halving: 194.01 mm (exact). A tilted (45°) holder over a clamp: caught (42.40 mm). Four clamps placed round a part 14-16 mm off it (cutter 12 + margin 2), four pods under it, every one clear of every move; one pushed onto the cut-out is caught. A part whose holder hits its clamp blocks the job export (`CAM_COLLISION` naming the fixture); clear, it does not. An imported L-shaped clamp keeps the space under its arm (10 mm and 1 mm off as built). Round trip in a part file; Configure badge until confirmed |
+| Part compare colours a known gouge correctly | `cam-compare.test.ts` | A flat design 5 mm down, a Ø8 spot 0.5 mm too deep: 208 red points, all inside the spot, deepest 0.5000 mm; nothing else red; a strip left uncut is blue at 5.000 mm; the rest within ±0.05 mm. A closed design: a groove 2 mm too deep red at 2.000 mm, a strip left outside it 0.750 mm, the part cut away round it clean. Three parts simulated to their ends: clean (within 100.0 %, no red in its top view), gouged (0.800 mm at the spot), short (5.000 mm left). The compare uses the simulator's own stock, one point per cell |
+
+In the app (screenshot 07): the demo relief door with a spot pocket cut 1 mm below the flat
+shows "Deepest gouge 1 at X 213.625 Y 32.125 Z -15", red at the spot, and the material the ball
+leaves where the dome meets the flat in blue (0.479 mm).
+
+Also: `npm run sample` output unchanged (byte for byte); every Stage 1 and 3D golden unchanged;
+lint 17 warnings (the old ones).
+
+### Limits recorded
+
+- **The machine's parts are invented** (sizes and places) until the shop measures them, so the
+  machine collision check is only as good as those figures: it is shown in the simulator and does
+  **not** block the export. Fixture hits by the tool, shank or holder do block it.
+- **Fixtures from a model** are convex per height slice (12 slices): within a slice a hollow is
+  filled, so a hit may be reported a little early, never missed; a drawn shape is exact.
+- **Turns** are checked in half-degree steps, each grown by its bulge: safe, a little cautious.
+- **Programs read back**: G-code with G0/G1/G2/G3 (arcs as straight moves within 0.01 mm), the
+  rotary words, G53/G54, G90/G91, G20/G21, G93/G94, tool changes; drill cycles are refused. The
+  woodWOP program is read with our MPR reader (what it understands).
+- **Part compare** is as fine as the simulator's cells (0.5 mm or more) and compares the top
+  surface the stock keeps (a heightfield has no undercuts; the tilted stock is used for tilted
+  work); distances beyond the full-colour range are capped, except the highest 256 points, which
+  are measured exactly. Gouges at the very edge of the cut can read a little deeper than the
+  vertical depth (the distance is to the nearest point of the design).
+- **Pocket toolpaths start with a rapid to the part's corner 3 mm above the top** (X0 Y0 Z3,
+  then up to the safe height over the start), as before M3.6. The woodWOP output is not affected
+  (pockets go out as macros); a script post would write that move; the collision checks would
+  catch it against a fixture there (see decision 3). Not changed here (it changes goldens).
+
+### Deferred items still open (owner decisions 22 and 23)
+
+- 3D finishing, through cuts, rest machining and adaptive clearing on tilted planes.
+- Going back in the simulator: the remaining stretch (about 2 s on the turned leg) still replays
+  on the screen's thread.
+- Jumping far ahead on a big 3+2 or 5-axis part replays on the screen's thread and can hold it.
+- M3.6 did not build this machinery (the machine view replays the axes, not the stock), so none
+  is closed.
+
+### Test-suite note (M3.6)
+
+The known timing test `tests/perf.test.ts` "adaptive clearing per Z level" (limit 90 s with the
+whole suite running) failed by timing alone in the final full run: 108.9 s, everything else green
+(1047 passed, 1 skipped). Run on its own it passes: 79.9 s after M3.6c and 76.2 s on the untouched
+M3.5c baseline, the same 165,624 moves. M3.6 changes nothing it runs. The limit was not changed.
+
+## M3.6 screenshots
+
+In `docs/screenshots/stage-2-3/M3.6/` (demo data: a 500 x 350 panel with a pocket, holes and a
+cut-out, four clamps placed automatically and a tall clamp over the cut-out; a relief door with a
+dome, roughed and finished, and a spot pocket 1 mm too deep; the M3.4 test block with a tall
+clamp, on an example 5-axis router): `01-fixtures-on-the-drawing` (the four clamps and the tall
+one on the drawing, beside the fixtures panel), `02-fixtures-panel` (fixture cards with sizes,
+Configure badges, add from the library / shapes / a model, Place), `03-cutting-check-fixture`
+(Simulate: "Cut-out, move 7: cutter hits fixture "Tall clamp" … (18.00 mm)"),
+`04-machine-n200-head-into-clamp` (Simulate → Machine on the N-200: gantry, head, spindle motor
+and the clamps; "Spindle motor hits fixture "Tall clamp""), `05-machine-replay-woodwop-program`
+(the same from the part's own woodWOP program read back), `06-machine-fork-head-into-clamp` (the
+example router's fork head at B45 swinging its spindle housing into "Clamp B"),
+`07-compare-relief-door` (Compare with the model: the gouge red with its dot, the dome green, the
+material left at its foot blue; "Deepest gouge 1"), `08-compare-parts` (Compare with models…: the
+relief door's row, deepest gouge 1, most left 0.479, 97.4 % within, top view),
+`09-machine-parts` (Machine & tools → Machine parts: invented, Configure badge, gantry beam carried
+by X), `10-fixture-library` (the shop's clamps and pods with badges), `11-feature-switch` (the
+switch and what it covers).
+
+## M3.6 licences
+
+No new dependencies. All new code is our own (convex solids and GJK distance, fixtures, automatic
+placing, the machine's parts and replay, the machine collision check, part compare). The
+screenshots were taken with Playwright (Apache-2.0) installed outside the project, not added to it.
+
+## M3.6 decisions needed
+
+1. **The N-200's real head and gantry sizes** (for the machine simulation): the spindle motor,
+   head plate, vertical drill block, gantry beam and legs as boxes or cylinders. Invented until
+   then, with a Configure badge (Machine & tools → Machine parts). No answer needed now; the
+   machine check stays simulator-only meanwhile.
+2. **The shop's real clamps, pods and rails** (sizes; the N-200 is a vacuum nesting table, so
+   possibly none): invented examples with Configure badges until then.
+3. **Should a machine-part hit ever block the export?** Today only a tool, shank or holder hit on
+   a fixture blocks it. Recommendation: keep machine-part hits simulator-only until decision 1 is
+   answered, then make them block like any collision.
+4. **The pocket's opening rapid to the part's corner** (X0 Y0, 3 mm above the top): fix it to go
+   to the safe height first? It changes no woodWOP output but changes pocket goldens and any
+   script post's text. Recommendation: fix it in a later run with the goldens explained. Safe
+   meanwhile: the collision checks catch it against a fixture, and script-post output is off.
+
 ## Next run
 
-- M3.6, when the owner says go.
+- M3.7 (record the out-of-scope items in ROADMAP.md; nothing built), when the owner says go.
 
 ## Run log
 
@@ -2718,3 +2856,7 @@ Playwright (Apache-2.0) installed outside the project, not added to it.
   and form tools, format 10 (`4e80843`); simultaneous kinematics with head flip, 5-axis
   simulation, axis-turn check, N-200 refusal, script post (`836c846`); 5-axis screens,
   screenshots, docs. **M3.5 complete.** See `git log`.
+- **Run 19 (M3.6a-c)**: clamps, pods and rails, convex distance engine, fixtures in every
+  collision check, format 11 (`5d28787`); machine simulation and part compare cores (`54131fe`);
+  machine view, compare screens, fixtures panel, screenshots, docs. **M3.6 complete.** See
+  `git log`.

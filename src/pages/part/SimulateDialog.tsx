@@ -40,6 +40,15 @@ import { ROTARY_LETTER } from '@/cam/rotary/frame'
 import { RotaryView3D } from './RotaryView3D'
 import { needsPositional, positionalStock, positionalTimeline } from '@/cam/positional/sim'
 import { type TriDexelStock, tridexelCell } from '@/cam/stock/tridexel'
+import { useStore } from '@/app/store'
+import { featuresOf } from '@/core/features'
+import { machineSetups } from '@/core/machines'
+import { stockSpans } from '@/cam/machine/replay'
+import { compareColor, type CompareOptions, DEFAULT_COMPARE } from '@/cam/compare/compare'
+import type { PartCompare } from '@/cam/compare/parts'
+import { loadModelMesh } from './modelData'
+import { LenInput } from '@/components/LenInput'
+import { MachineView } from './MachineView'
 
 const SPEEDS = [1, 4, 16, 64, 256]
 const RAPID_SPEEDS = [1, 4, 16, 64, 256, 1024]
@@ -159,7 +168,35 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const [stopTool, setStopTool] = useState(false)
   const [stopped, setStopped] = useState<StopReason | null>(null)
   const [mark, setMark] = useState<number | undefined>(undefined)
-  const [view, setView] = useState<'top' | '3d'>('top')
+  const [view, setView] = useState<'top' | '3d' | 'machine'>('top')
+  // M3.6: the machine simulation and part compare (their own switch, on)
+  const appData = useStore((st) => st.data)
+  const simOn = featuresOf(appData?.settings).camMachineSim
+  const machines = useMemo(() => (appData ? machineSetups(appData).map((m) => ({ id: m.id, name: m.name, profile: m.id === 'main' ? machine : m.profile })) : [{ id: 'main', name: machine.name, profile: machine }]), [appData, machine])
+  const spans = useMemo(() => (run32 ? stockSpans(tl, run32.paths) : stockSpans(tl, ordered)), [tl, ordered, run32])
+  const hasModels = !!part.models?.some((m) => m.visible !== false)
+  const [compareOn, setCompareOn] = useState(false)
+  const [cmpOpt, setCmpOpt] = useState<CompareOptions>(DEFAULT_COMPARE)
+  const [compared, setCompared] = useState<{ key: unknown; r: PartCompare | null; fraction: number; error?: string } | null>(null)
+  const compareKey = useMemo(() => ({ toolpaths, machine, models: part.models, cmpOpt }), [toolpaths, machine, part.models, cmpOpt])
+  useEffect(() => {
+    if (!compareOn || !hasModels) return
+    const abort = new AbortController()
+    ;(async () => {
+      try {
+        const meshes: Record<string, import('@/cam/mesh/types').Mesh> = {}
+        for (const m of part.models ?? []) if (m.visible !== false && !meshes[m.blob]) meshes[m.blob] = await loadModelMesh(m.blob)
+        const r = await compute().run('sim.compare', { part, toolpaths, machine, meshes, opt: cmpOpt }, { signal: abort.signal, onProgress: (fraction) => setCompared({ key: compareKey, r: null, fraction }) })
+        setCompared({ key: compareKey, r, fraction: 1 })
+      } catch (e) {
+        if (!(e instanceof Cancelled) && !abort.signal.aborted) setCompared({ key: compareKey, r: null, fraction: 1, error: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+    return () => abort.abort()
+    // (`part` for its models and size; the key holds them)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compareOn, compareKey, hasModels])
+  const cmp = compareOn && compared?.key === compareKey ? compared : null
   const [showPaths, setShowPaths] = useState(true)
   const [showRapids, setShowRapids] = useState(true)
   const [through, setThrough] = useState(false)
@@ -269,9 +306,9 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
           <div className="flex rounded-md border border-white/10 p-0.5">
-            {(['top', '3d'] as const).map((v) => (
+            {(simOn && !rot ? (['top', '3d', 'machine'] as const) : (['top', '3d'] as const)).map((v) => (
               <Button key={v} size="sm" variant={view === v ? 'secondary' : 'ghost'} className="h-6 px-2.5 text-xs" onClick={() => setView(v)}>
-                {v === 'top' ? 'Top view' : '3D'}
+                {v === 'top' ? 'Top view' : v === '3d' ? '3D' : 'Machine'}
               </Button>
             ))}
           </div>
@@ -287,8 +324,13 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
                 <Switch checked={through} onCheckedChange={setThrough} size="sm" /> Through cuts only
               </label>
             </>
-          ) : (
+          ) : view === 'machine' ? null : (
             <>
+              {simOn && hasModels && !rot && (
+                <label className="flex items-center gap-1.5" title="Colour the finished part against its 3D model: gouges red, material left blue, within the tolerance green">
+                  <Switch checked={compareOn} onCheckedChange={setCompareOn} size="sm" /> Compare with the model
+                </label>
+              )}
               <label className="flex items-center gap-1.5">
                 Stock
                 <Slider className="w-20" min={0.15} max={1} step={0.05} value={[opacity]} onValueChange={([v]) => setOpacity(v)} aria-label="Stock opacity" />
@@ -320,7 +362,19 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
             </>
           )}
         </div>
-        {view === 'top' ? (
+        {view === 'machine' ? (
+          <MachineView
+            part={part}
+            toolpaths={toolpaths}
+            machines={machines}
+            units={units}
+            spans={spans}
+            renderStock={(st) => <StockMesh sim={sim} t={st} base={base} opacity={1} section={{ on: false, axis: 'y', at: 0.5 }} onCarved={onCarved} />}
+            renderTool={(p, ax, o) => <ToolModel pos={p} outline={o?.outline ?? null} r={o?.cutter.r ?? 3} rapid={false} axis={ax} profile={o?.cutter.profile} />}
+          />
+        ) : view === '3d' && cmp?.r ? (
+          <CompareView3D part={part} result={cmp.r} opt={cmpOpt} />
+        ) : view === 'top' ? (
           <TopView sim={sim} t={t} part={viewPart} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} outline={outline} onPieces={setPieces} wrap={rot ? stock.hf.width : undefined} />
         ) : rot ? (
           <RotaryView3D
@@ -342,6 +396,8 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
         ) : (
           <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} axis={cur?.axis ?? (op ? tl.segs.find((x) => x.op === pos.op)?.axis : undefined)} profile={cutter.profile} />
         )}
+        {view !== 'machine' && (
+          <>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="icon-sm" variant="ghost" aria-label="Previous operation" title="Previous operation" onClick={prevOp}>
             <SkipBack />
@@ -416,6 +472,8 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           {where && <span>move {(where.move + 1).toLocaleString('en')}</span>}
           <span className="truncate font-sans text-stone-400">{op ? `${op.name} · ${op.tool}` : ''}</span>
         </div>
+          </>
+        )}
       </div>
       <aside className="flex min-w-0 flex-col gap-3 text-xs">
         <section>
@@ -447,6 +505,9 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
             <p className="mb-1.5 text-[11px] text-stone-400">The simulation and collision check use these; they are not confirmed yet.</p>
             <UnconfirmedList items={placeholders} tone="dark" limit={5} />
           </section>
+        )}
+        {compareOn && view === '3d' && (
+          <CompareSummary state={cmp} opt={cmpOpt} setOpt={setCmpOpt} units={units} />
         )}
         <section>
           <h3 className="mb-1.5 font-medium text-stone-300">Collision check</h3>
@@ -935,5 +996,88 @@ function HeightfieldStockMesh({ sim, t, base, opacity, section, onCarved }: Pick
     <mesh geometry={geo}>
       <meshStandardMaterial color={color} roughness={0.85} transparent={opacity < 1} opacity={opacity} depthWrite={opacity >= 1} side={opacity < 1 ? THREE.FrontSide : THREE.DoubleSide} />
     </mesh>
+  )
+}
+
+/** M3.6 part compare: the finished part coloured against its model (part frame, as View3D). */
+function CompareView3D({ part, result, opt }: { part: CamPart; result: PartCompare; opt: CompareOptions }) {
+  const max = Math.max(part.length, part.width)
+  const geo = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    const P = result.mesh.positions
+    const n = P.length / 3
+    const col = new Float32Array(n * 3)
+    for (let v = 0; v < n; v++) {
+      const c = compareColor(result.d[v], opt) ?? [120, 113, 108]
+      col[v * 3] = c[0] / 255
+      col[v * 3 + 1] = c[1] / 255
+      col[v * 3 + 2] = c[2] / 255
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(P, 3))
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3))
+    g.setIndex(new THREE.BufferAttribute(result.mesh.indices, 1))
+    g.computeVertexNormals()
+    return g
+  }, [result, opt])
+  useEffect(() => () => geo.dispose(), [geo])
+  return (
+    <div className="h-[56vh] min-h-72 overflow-hidden rounded-md border border-white/10 bg-[#0e1013]" data-testid="compare-view">
+      <Canvas camera={{ position: [0, max * 0.75, max * 0.85], fov: 40, near: 1, far: max * 20 }}>
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[-max, max * 1.5, max]} intensity={1.3} />
+        <group rotation={[-Math.PI / 2, 0, 0]} position={[-part.length / 2, 0, part.width / 2]}>
+          <mesh geometry={geo}>
+            <meshStandardMaterial vertexColors roughness={0.8} side={THREE.DoubleSide} />
+          </mesh>
+          {result.summary.gouge && (
+            <mesh position={result.summary.gouge.at}>
+              <sphereGeometry args={[Math.max(1, max / 150), 16, 12]} />
+              <meshBasicMaterial color="#ef4444" />
+            </mesh>
+          )}
+        </group>
+        <OrbitControls makeDefault />
+      </Canvas>
+    </div>
+  )
+}
+
+/** M3.6 part compare: legend, tolerance and range, and what was found. */
+function CompareSummary({ state, opt, setOpt, units }: { state: { r: PartCompare | null; fraction: number; error?: string } | null; opt: CompareOptions; setOpt: (o: CompareOptions) => void; units: UnitSystem }) {
+  const fmt = (n: number) => formatLength(n, units)
+  const sw = (c: [number, number, number] | null) => (c ? `rgb(${c[0]},${c[1]},${c[2]})` : '#78716c')
+  const s = state?.r?.summary
+  return (
+    <section className="rounded-md border border-white/10 p-2" data-testid="compare-summary">
+      <h3 className="mb-1 font-medium text-stone-300">Compare with the model (the finished part)</h3>
+      <div className="mb-1.5 flex items-center gap-1 text-[11px] text-stone-400">
+        <span className="inline-block h-2.5 w-10 rounded-sm" style={{ background: `linear-gradient(to right, ${sw(compareColor(-opt.range, opt))}, ${sw(compareColor(-opt.tol * 1.01, opt))})` }} /> gouge
+        <span className="ml-1 inline-block h-2.5 w-4 rounded-sm" style={{ background: sw(compareColor(0, opt)) }} /> within ±{fmt(opt.tol)}
+        <span className="ml-1 inline-block h-2.5 w-10 rounded-sm" style={{ background: `linear-gradient(to right, ${sw(compareColor(opt.tol * 1.01, opt))}, ${sw(compareColor(opt.range, opt))})` }} /> left
+      </div>
+      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-stone-400">
+        Tolerance <LenInput label="Compare tolerance" value={opt.tol} units={units} onChange={(v) => Number.isFinite(v) && v > 0 && setOpt({ ...opt, tol: v })} className="h-6 w-16 text-xs" />
+        Full colour at <LenInput label="Compare range" value={opt.range} units={units} onChange={(v) => Number.isFinite(v) && v > opt.tol && setOpt({ ...opt, range: v })} className="h-6 w-16 text-xs" />
+      </div>
+      {state?.error ? (
+        <p className="text-red-200">Could not compare: {state.error}</p>
+      ) : !s ? (
+        <p className="text-stone-400">Simulating to the end and comparing… {Math.round((state?.fraction ?? 0) * 100)}%</p>
+      ) : (
+        <div className="flex flex-col gap-0.5 text-[11px] text-stone-300">
+          <span className={cn(s.gouge ? 'text-red-200' : 'text-emerald-200')}>{s.gouge ? `Deepest gouge ${fmt(s.gouge.depth)} at X ${fmt(s.gouge.at[0])} Y ${fmt(s.gouge.at[1])} Z ${fmt(s.gouge.at[2])} (red dot)` : 'No gouge past the tolerance.'}</span>
+          <span>{s.left ? `Most material left ${fmt(s.left.depth)} at X ${fmt(s.left.at[0])} Y ${fmt(s.left.at[1])}` : 'No material left past the tolerance.'}</span>
+          <span className="text-stone-400">
+            {s.compared.toLocaleString('en')} points compared: {((s.within / Math.max(1, s.compared)) * 100).toFixed(1)}% within the tolerance, {s.gouged.toLocaleString('en')} gouged, {s.leftover.toLocaleString('en')} left.
+          </span>
+          {state?.r?.notes.map((n, i) => (
+            <span key={i} className="text-amber-200">
+              {n}
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="mt-1 text-[11px] text-stone-500">Our simulated stock against the part's 3D models (a closed model is its own solid; an open one counts down to the underside inside its outline). Only as fine as the stock's cells.</p>
+    </section>
   )
 }

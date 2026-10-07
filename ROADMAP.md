@@ -131,7 +131,21 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   replay; the axis turn between operations is now checked (M3.4 limit closed). Output only through
   a script post for a machine model with simultaneous 5-axis, from a licensed engine (switch off);
   the N-200 export always refuses (`CAM_MULTIAXIS`). **No engine licence bought, nothing
-  downloaded.** Part format 10. Next: M3.6 when the owner says go.
+  downloaded.** Part format 10.
+  **Owner decision on M3.5 (October 2026): do not buy a 5-axis engine licence** (ModuleWorks or
+  any other). The shop's engine stays the "not licensed" stub, 5-axis output stays off, and the
+  N-200 always refuses 5-axis work.
+  **M3.6 machine simulation, part compare and fixtures: done** (October 2026): clamps, pods and
+  rails on parts (from sizes, drawn shapes or a model file; placed by typing, dragging or
+  automatically clear of the toolpaths) kept clear of the tool, shank and holder by every collision
+  check (a hit blocks the export); the whole machine (gantry, head, spindle, tables, the part and
+  its fixtures) replayed from the machine model, from the toolpaths or from a post's output read
+  back, with every machine part checked against the table, the part and its fixtures and every
+  axis against its travel (a deliberate head-into-clamp is caught on the N-200 and on a 3+2 fork
+  head); part compare colours the finished stock against the 3D model (a known gouge red, where
+  and as deep as it is), for one part or several. The machine's parts and the fixture library are
+  invented placeholders with Configure badges; nothing new is written to any machine. Part format
+  11. Next: M3.7 (recording the out-of-scope items) when the owner says go.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

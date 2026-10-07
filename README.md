@@ -522,6 +522,40 @@ export checker. Tool numbers are still placeholders.
     machine-validated), with "Write 5-axis programs through script posts" on (off by default),
     the script-post switch, the plugin's machine-output grant, our gouge check passing and every
     angle and position inside the travel.
+- **Clamps, pods and rails** (switch: Machine simulation, part compare and fixtures, on; part
+  designer → 3D tab → Clamps, pods and rails): fixtures that hold the part, from the shop's
+  library (Machine & tools → Fixtures; invented example sizes with Configure badges until the shop
+  enters its own), from closed shapes drawn on the part (stood up to a height), or from a model
+  file (STL, OBJ, 3MF, STEP, IGES, BREP; kept as slices, each the convex outline of all the model
+  has between two heights, so an arm reaching over the part leaves the space under it free). Place
+  them by typing, by **dragging them on the drawing**, or **automatically**: clamps round the part
+  as close as the toolpaths let them, pods under it where no tool reaches below, each kept clear
+  of the whole tool (cutter, shank and holder plus the collision margin). The collision checks
+  (3-axis, tilted and 5-axis) keep the tool the margin away from every fixture: a hit is a
+  collision (`fixture`) that names the fixture, jumps to its move and **blocks the export**
+  (`CAM_COLLISION`). Fixtures are never machined or written to a machine. Less used on a vacuum
+  nesting table like the N-200.
+- **Machine simulation** (switch as above; Simulate → **Machine**): the whole machine replayed in
+  3D from the machine model: gantry, carriage, head, spindle, tool and holder, the table and
+  spoilboard (or a rotary table and cradle), the part with its fixtures and the material left.
+  What is replayed: the toolpaths converted for the chosen machine (the N-200, or another machine
+  from Machines and process steps; 3+2 and 5-axis through the machine model's own kinematics), the
+  part's **own woodWOP program read back**, or a **program file** such as a post's output (G-code
+  with the rotary axes; G53 Z read from the top of the Z travel). Between operations it goes to the
+  tool change, and rises and turns the rotary axes as the sample posts do. Every moving part is
+  checked against the table, the part's block and its fixtures (exactly along straight moves;
+  where the rotary axes turn, in half-degree steps), keeping the collision margin, and every axis
+  against its travel; each hit names what hits what, its line or move, and jumps there. The
+  machine's parts are **invented** until measured (Machine & tools → Machine parts, Configure
+  badge): boxes and cylinders carried by an axis. A check of our own programs against the
+  machine's parts as entered, not of the real machine; nothing new is written to any machine.
+- **Part compare** (switch as above; Simulate → 3D → **Compare with the model**, or Custom parts →
+  **Compare with models…** for several parts at once): the finished stock coloured against the
+  part's 3D models: **gouges** (cut into the model) red, **material left** blue, within the
+  tolerance (0.05 mm, settable) green, with the deepest gouge marked and the most material left,
+  for one part or a list of parts with a small top view each. A closed model is its own solid; an
+  open one (a relief or a surface) counts down to the underside inside its outline. As fine as the
+  simulation's cells.
 - **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
   the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
   aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
@@ -811,7 +845,12 @@ src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpat
   model/           model data store (compressed, by SHA-256, outside the shop file), part files
   stock/           stock model interface, the heightfield, rotary and three-way (tri-dexel) stocks,
                    playback, cut-free pieces
-  collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)
+  collision/       shank, holder, rapid, spoilboard and fixture checks (simulation, and against 3D
+                   models); convex solids and their distances (GJK) for fixtures and the machine
+  fixtures/        clamps, pods and rails: shapes, slices of a model, the library, automatic placing
+  machine/         machine simulation: the machine's parts and kinematic chain, the replay of
+                   toolpaths or a program read back, the machine collision check
+  compare/         part compare: the stock against the design model, colour map, several parts
 src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its real value goes
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
                    Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse),
@@ -862,6 +901,9 @@ All of these can be set on the **Machine & tools** page:
   diameter, flute length, stick-out, holder and aggregate. The ball-nose 6 and 3 mm, bull-nose
   12 mm, the stick-outs of the 2D routers T101-T104, the collet-chuck holder (the shop default)
   and the rotating aggregate in the built-in table are invented placeholders.
+
+- The **machine's parts** for the machine simulation (gantry, head, spindle, tables) and the
+  **fixture library** (clamps, pods, rails): invented sizes with Configure badges.
 
 - Tool numbers and diameters (placeholder data).
 - Whether drills are addressed by diameter or by tool number.

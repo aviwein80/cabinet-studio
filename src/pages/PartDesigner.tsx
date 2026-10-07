@@ -41,6 +41,7 @@ import { Model3DView } from './part/Model3DView'
 import { ModelImportDialog } from './part/ModelImportDialog'
 import { ReliefImportDialog } from './part/ReliefImportDialog'
 import { ModelsPanel } from './part/ModelsPanel'
+import { FixturesPanel } from './part/FixturesPanel'
 import { use3dToolpaths } from './part/use3dToolpaths'
 import { appendStep } from '@/cam/more25d/edits'
 import { useConfigureTarget } from '@/components/configureFocus'
@@ -194,7 +195,8 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
   }
 
   // a "Configure" badge asked for one of this part's operation values: pick the operation, then the field
-  useConfigureTarget(['op'], (t) => {
+  useConfigureTarget(['op', 'fixture'], (t) => {
+    if (t.kind === 'fixture') return setTab('models')
     if (t.kind !== 'op') return
     setTab('ops')
     setSelectedOp(t.opId)
@@ -624,6 +626,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
                 setNodeSeg({ id, seg })
                 setTab('props')
               }}
+              onFixtureMove={feat.camMachineSim ? (id, at) => change({ ...part, fixtures: (part.fixtures ?? []).map((f) => (f.id === id ? { ...f, at: { ...f.at, x: at.x, y: at.y }, auto: undefined } : f)) }) : undefined}
             />
             {view3d && <Model3DView part={part} />}
             {!view3d && part.entities.length <= 1 && part.ops.length === 0 && toolId === 'select' && (
@@ -710,6 +713,11 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             {feat.cam3d && (
               <TabsContent value="models" className="min-h-0 flex-1 overflow-auto">
                 <ModelsPanel part={part} units={units} sel={sel} onChange={change} onImport={() => setModelOpen(true)} onRelief={feat.camRelief ? () => setReliefOpen(true) : undefined} rotary={feat.camRotary} positional={feat.camPositional} />
+                {feat.camMachineSim && (
+                  <div className="px-3 pb-3 text-xs">
+                    <FixturesPanel part={part} units={units} sel={ctx.sel} machine={machine} toolpaths={toolpaths} jobId={jobId} onChange={change} />
+                  </div>
+                )}
               </TabsContent>
             )}
             {feat.camMachining && (

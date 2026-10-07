@@ -69,7 +69,7 @@ export function withRotaryAxis(m: MachineModel, letter: RotaryLetter | null, tra
 export function withPositional(m: MachineModel, kin: PositionalKinematics | null, travel: { first: { min: number; max: number }; second: { min: number; max: number } } = { first: { min: -360, max: 360 }, second: { min: -120, max: 120 } }): MachineModel {
   const old = positionalLetters(m)
   let axes = m.axes.filter((a) => !old.has(a.id))
-  if (!kin) return { ...m, axes, capabilities: { ...m.capabilities, positional: false }, positional: undefined }
+  if (!kin) return { ...m, axes, capabilities: { ...m.capabilities, positional: false, simultaneous5: false }, positional: undefined }
   axes = axes.filter((a) => a.id !== kin.first && a.id !== kin.second)
   const rotaryLeft = axes.some((a) => a.id === 'A' || a.id === 'B' || a.id === 'C')
   return {
@@ -78,6 +78,14 @@ export function withPositional(m: MachineModel, kin: PositionalKinematics | null
     capabilities: { ...m.capabilities, positional: true, rotary: m.capabilities.rotary && rotaryLeft },
     positional: kin,
   }
+}
+
+/**
+ * The machine model with simultaneous 5-axis (M3.5) declared or not: its two rotary axes for 3+2
+ * also move while it cuts. Only with 3+2 axes set (`withPositional`); never for the N-200.
+ */
+export function withSimultaneous(m: MachineModel, on: boolean): MachineModel {
+  return { ...m, capabilities: { ...m.capabilities, simultaneous5: on && m.capabilities.positional && !!m.positional } }
 }
 
 /** Invented 3+2 kinematics for a new set-up: a fork head turning C then B (shown with a Configure badge). */

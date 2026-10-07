@@ -66,8 +66,13 @@ export interface SimSeg {
    * straight up. Only the tilted-tool stock carves along it.
    */
   axis?: V3
-  /** The move between two operations on differently tilted planes, made while the rotary axes turn (not checked against the stock here; M3.6 machine simulation). */
+  /**
+   * The move between two operations with different tool directions, made while the rotary axes turn
+   * (M3.4); `turnFrom` is the tool direction at its start (M3.5: the turn is checked as an even turn
+   * of the tool along the move).
+   */
   turn?: boolean
+  turnFrom?: V3
 }
 
 export interface SimOp {

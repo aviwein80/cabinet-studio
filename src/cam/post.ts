@@ -17,6 +17,7 @@ import { planeToCyl, ROTARY_LETTER } from './rotary/frame'
 import { planeFrame } from './positional/frame'
 import { machineProgram, toVertical } from './positional/convert'
 import { positionalAxes } from './positional/kinematics'
+import { simultaneousProgram } from './multiaxis/kinematics5'
 import type { RotaryAxis } from './types'
 
 export interface PostTemplate {
@@ -155,6 +156,27 @@ export interface PostOp {
   }
   /** On a tilted plane, but the machine has no 3+2 axes (or the conversion failed): no moves; a post must not write it. */
   tilted?: { plane: string }
+  /**
+   * Simultaneous 5-axis (M3.5), in a program for a machine model with simultaneous 5-axis that holds
+   * at least one 5-axis operation: every operation of it comes this way (tilted and flat ones with
+   * their angles held). `moves` are the machine's X, Y, Z (straight moves only); `multiAxis.moves`
+   * the same moves with both rotary angles (degrees, `letters` in order, never wrapped), the tool
+   * direction in the part (tip to spindle) and, on feed moves, how far the tip travels on the part
+   * (`len`, mm) for posts that write inverse-time feeds. `solution`: the branch it runs on (head flip).
+   */
+  multiAxis?: {
+    letters: [string, string]
+    layout: PositionalKinematics['layout']
+    tcp: boolean
+    partAt: { x: number; y: number; z: number }
+    L: number
+    solution: 'usual' | 'other'
+    /** A 5-axis toolpath (axes moving while cutting), or a flat / tilted one with its angles held. */
+    simultaneous: boolean
+    moves: { t: 'rapid' | 'feed'; x: number; y: number; z: number; a1: number; a2: number; tool: [number, number, number]; f?: number; kind?: FeedKind; len?: number }[]
+  }
+  /** A 5-axis operation in a program for a machine without simultaneous 5-axis (or the conversion failed): no moves; a post must not write it. */
+  fiveAxis?: { blocked: string }
 }
 export interface PostInput {
   name: string
@@ -166,11 +188,38 @@ export interface PostInput {
 export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number; part?: { length: number; width: number; thickness: number }; machine?: MachineProfile } = {}): PostInput {
   const zTop = opts.zTop ?? 0
   // M3.4: a program holding tilted (3+2) work, for a machine with 3+2 axes, goes out in machine axes
-  const positional = paths.some((tp) => tp.tilt) && !!opts.machine && !('error' in positionalAxes(machineModelOf(opts.machine)))
+  const model = opts.machine ? machineModelOf(opts.machine) : null
+  // M3.5: a program holding 5-axis work, for a machine with simultaneous 5-axis, goes out through the
+  // simultaneous conversion (every operation of it)
+  const five = paths.some((tp) => tp.multiAxis) && !!model && model.capabilities.simultaneous5 && !('error' in positionalAxes(model))
+  const prog5 = five ? simultaneousProgram(paths, opts.machine!) : null
+  const positional = !five && paths.some((tp) => tp.tilt) && !!model && !('error' in positionalAxes(model))
   const prog = positional ? machineProgram(paths, opts.machine!) : null
   const ops = paths.map((tp, i): PostOp => {
     if (tp.rotary) return rotaryPostOp(tp)
     const head = { name: tp.name, kind: tp.kind, tool: tp.tool ? { number: tp.tool.number, name: tp.tool.name, diameter: tp.tool.diameter } : null, rpm: Math.round(tp.feeds.rpm) }
+    if (prog5) {
+      const mo = prog5.ops.find((o) => o.path === i)
+      if (!mo) return { ...head, moves: [], ...(tp.multiAxis ? { fiveAxis: { blocked: prog5.problems.find((p) => p.startsWith(tp.name)) ?? 'not converted' } } : tp.tilt ? { tilted: { plane: tp.tilt.plane.name } } : {}) }
+      const feed = (f: FeedKind | undefined, k?: number) => Math.round((f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (k ?? 1))
+      const k = model!.positional!
+      return {
+        ...head,
+        moves: mo.moves.map((m) => (m.t === 'rapid' ? { t: 'rapid', x: m.x, y: m.y, z: m.z } : { t: 'feed', x: m.x, y: m.y, z: m.z, f: feed(m.f, m.k), kind: m.f ?? 'cut' })),
+        multiAxis: {
+          letters: mo.letters,
+          layout: k.layout,
+          tcp: k.tcp,
+          partAt: { ...k.partAt },
+          L: mo.L,
+          solution: mo.solution,
+          simultaneous: mo.simultaneous,
+          moves: mo.moves.map((m) => ({ t: m.t, x: m.x, y: m.y, z: m.z, a1: m.a1, a2: m.a2, tool: [m.tool[0], m.tool[1], m.tool[2]] as [number, number, number], ...(m.t === 'feed' ? { f: feed(m.f, m.k), kind: m.f ?? 'cut', len: m.len ?? 0 } : {}) })),
+        },
+      }
+    }
+    // without simultaneous 5-axis a 5-axis operation has no program form here
+    if (tp.multiAxis) return { ...head, moves: [], fiveAxis: { blocked: model ? 'its machine model does not declare simultaneous 5-axis' : 'no machine model' } }
     if (prog) {
       const mo = prog.ops.find((o) => o.path === i)
       if (!mo) return { ...head, moves: [], ...(tp.tilt ? { tilted: { plane: tp.tilt.plane.name } } : {}) }
@@ -280,6 +329,11 @@ export function runTemplate(template: PostTemplate, input: PostInput): { ext: st
     // export checker refuses such a program; this keeps a preview from showing them as X Y Z)
     if (op.rotary) {
       emit('comment', { TEXT: `${op.name}: ROTARY (${op.rotary.letter} AXIS) - NOT WRITTEN BY A TEMPLATE POST` })
+      continue
+    }
+    // nor 5-axis work (M3.5): its axes move while it cuts
+    if (op.multiAxis || op.fiveAxis) {
+      emit('comment', { TEXT: `${op.name}: 5-AXIS - NOT WRITTEN BY A TEMPLATE POST` })
       continue
     }
     // nor tilted (3+2) work: it needs the machine's two rotary axes (M3.4)

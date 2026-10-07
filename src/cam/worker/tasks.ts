@@ -113,8 +113,8 @@ export interface TaskMap {
   /** Collision check of a part's rotary toolpaths on its rotary stock (M3.3). */
   'sim.rotaryCollide': { in: { setup: RotarySetup; toolpaths: Toolpath[]; machine: MachineProfile; cell: number }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out'] } }
   /**
-   * Collision check of a part's 3+2 program on its tri-dexel stock (M3.4); `replay`: through this
-   * machine's kinematics. The stock at the end and at evenly spaced points comes back too.
+   * Collision check of a part's 3+2 (M3.4) or 5-axis (M3.5) program on its tri-dexel stock; `replay`:
+   * through this machine's kinematics. The stock at the end and at evenly spaced points comes back too.
    */
   'sim.positionalCollide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile; cell: number; replay?: MachineProfile }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out']; problems: string[] } }
 }
@@ -205,7 +205,7 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     const stock = positionalStock(panel, cell)
     const marks: StockMarks = { every: 100, max: markCount(stock.snapshot().data.byteLength), out: [] }
     const r = positionalCollisions(panel, toolpaths, machine, { work, stock, replay, marks })
-    return { found: r.found, snapshot: r.stock.snapshot(), marks: marks.out, problems: r.run.program?.problems ?? [] }
+    return { found: r.found, snapshot: r.stock.snapshot(), marks: marks.out, problems: [...(r.run.program?.problems ?? []), ...(r.run.program5?.problems ?? [])] }
   },
   async 'relief.imageInfo'({ bytes, name }, work) {
     return summarise(await readHeightImage(bytes, name, work))

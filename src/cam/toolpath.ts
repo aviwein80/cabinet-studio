@@ -76,7 +76,7 @@ import { type MultiAxisEngine, STUB_ENGINE } from './multiaxis/engine'
 import { PREVIEW_ENGINE } from './multiaxis/fake'
 import { multiAxisRequest } from './multiaxis/request'
 import { axisStats, engineMoveProblems, withDirection } from './multiaxis/result'
-import { checkAxisGouge, meshGroups } from './multiaxis/check'
+import { checkAxisGouge, GOUGE_TOL, meshGroups } from './multiaxis/check'
 import { blankRadius, inPlane, setupProblems } from './rotary/frame'
 import { RotaryDrop } from './rotary/drop'
 import { modelPaths, type RotaryPaths, wrapPaths, type WrapShape } from './rotary/paths'
@@ -2428,8 +2428,7 @@ export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
 /** 5-axis toolpaths (M3.5) are never written to woodWOP: the N-200 has three axes. */
 export const MULTIAXIS_NO_MPR = 'it is simultaneous 5-axis work, which needs a machine with two rotary axes that move while cutting; woodWOP programs for the N-200 cannot hold it'
 
-/** Gouges deeper than this (mm) are reported by the independent check (the shop's gouge tolerance). */
-export const GOUGE_TOL = 0.005
+export { GOUGE_TOL } from './multiaxis/check'
 
 /**
  * A simultaneous 5-axis operation (5AX-02, 5AX-03, M3.5). The engine it names makes the moves: the

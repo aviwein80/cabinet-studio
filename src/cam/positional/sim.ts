@@ -27,12 +27,35 @@ import type { CamPart } from '../types'
 import { type V3 } from './frame'
 import { type MachineProgram, machineProgram, partFrameMoves, replayMachine } from './convert'
 import { positionalAxes } from './kinematics'
+import { angleDeg, slerp } from '../multiaxis/axis'
+import { type MachineProgram5, replaySimultaneous, simultaneousProgram } from '../multiaxis/kinematics5'
+import { simpleMoves } from '../moves'
 
-/** Is this toolpath on a tilted work plane? */
-export const isTiltedPath = (tp: Pick<Toolpath, 'tilt'>) => !!tp.tilt
+/** Is this toolpath on a tilted work plane, or a 5-axis one (M3.5)? */
+export const isTiltedPath = (tp: Pick<Toolpath, 'tilt' | 'multiAxis'>) => !!tp.tilt || !!tp.multiAxis
 
-/** Does the program need the 3+2 simulation (any tilted toolpath)? */
-export const needsPositional = (paths: readonly Pick<Toolpath, 'tilt'>[]) => paths.some(isTiltedPath)
+/** Does the program need the tilted-tool simulation (any tilted or 5-axis toolpath)? */
+export const needsPositional = (paths: readonly Pick<Toolpath, 'tilt' | 'multiAxis'>[]) => paths.some(isTiltedPath)
+
+/** A 5-axis toolpath's moves (M3.5) split so the tool axis turns at most `deg` degrees per move, each with its direction. */
+export function axisMovesForSim(moves: readonly Move[], deg = 1): Move[] {
+  const out: Move[] = []
+  let prev: { p: V3; a: V3 } | null = null
+  for (const m of simpleMoves(moves as Move[])) {
+    if (m.t !== 'rapid' && m.t !== 'feed') continue
+    const a: V3 = m.a ? [m.a[0], m.a[1], m.a[2]] : [0, 0, 1]
+    const p: V3 = [m.x, m.y, m.z]
+    const n = prev ? Math.max(1, Math.ceil(angleDeg(prev.a, a) / deg)) : 1
+    for (let s = 1; s <= n; s++) {
+      const f = s / n
+      const q: V3 = prev && s < n ? [prev.p[0] + (p[0] - prev.p[0]) * f, prev.p[1] + (p[1] - prev.p[1]) * f, prev.p[2] + (p[2] - prev.p[2]) * f] : p
+      const w = prev && s < n ? slerp(prev.a, a, f) : a
+      out.push(m.t === 'rapid' ? { t: 'rapid', x: q[0], y: q[1], z: q[2], a: w } : { t: 'feed', x: q[0], y: q[1], z: q[2], f: m.f, a: w, ...(m.k ? { k: m.k } : {}) })
+    }
+    prev = { p, a }
+  }
+  return out
+}
 
 /** Clearance beyond the block the tool backs off to before the rotary axes turn (mm). */
 export const TURN_CLEAR = 10
@@ -65,10 +88,12 @@ export interface PositionalRun {
   tl: SimTimeline
   /** The toolpaths as played: part frame, straight moves (index = `SimOp.path`). */
   paths: Toolpath[]
-  /** Tool direction per played toolpath, part frame. */
+  /** Tool direction per played toolpath, part frame (a 5-axis toolpath: where it starts). */
   axes: V3[]
   /** The machine program, when replayed through a machine model's kinematics. */
   program?: MachineProgram
+  /** The 5-axis machine program (M3.5), when the program holds 5-axis work and was replayed. */
+  program5?: MachineProgram5
 }
 
 /**
@@ -81,7 +106,23 @@ export function positionalTimeline(toolpaths: readonly Toolpath[], part: Block, 
   let paths: Toolpath[]
   let axes: V3[]
   let program: MachineProgram | undefined
-  if (opts.replay) {
+  let program5: MachineProgram5 | undefined
+  if (opts.replay && ordered.some((tp) => tp.multiAxis)) {
+    // M3.5: a program with 5-axis work goes through the simultaneous conversion and back
+    program5 = simultaneousProgram(ordered, opts.replay, { tol: opts.tol === undefined ? undefined : Math.max(opts.tol, 0.001) })
+    const ax = positionalAxes(machineModelOf(opts.replay))
+    paths = []
+    axes = []
+    if (!('error' in ax))
+      for (const op of program5.ops) {
+        const src = ordered[op.path]
+        const { tilt: _t, ...rest } = src
+        const moves = replaySimultaneous(op, ax.kin)
+        paths.push({ ...rest, moves, intents: [], multiAxis: src.multiAxis ?? { engine: '', engineName: '', licensed: false, preview: false, strategy: 'curve', headFlip: 'auto', maxTilt: 0, maxTurn: 0, gouge: null } })
+        const a = moves.find((m) => m.t === 'rapid' || m.t === 'feed') as { a?: readonly number[] } | undefined
+        axes.push(a?.a ? [a.a[0], a.a[1], a.a[2]] : [0, 0, 1])
+      }
+  } else if (opts.replay) {
     program = machineProgram(ordered, opts.replay, { tol: opts.tol })
     const ax = positionalAxes(machineModelOf(opts.replay))
     if ('error' in ax) {
@@ -92,34 +133,73 @@ export function positionalTimeline(toolpaths: readonly Toolpath[], part: Block, 
     paths = []
     axes = []
     for (const tp of ordered) {
+      if (tp.multiAxis) {
+        // a 5-axis toolpath as made (part frame), every move with its tool direction
+        const { tilt: _t, ...rest } = tp
+        const moves = axisMovesForSim(tp.moves)
+        paths.push({ ...rest, moves, intents: [] })
+        const a = (moves[0] as { a?: readonly number[] } | undefined)?.a
+        axes.push(a ? [a[0], a[1], a[2]] : [0, 0, 1])
+        continue
+      }
       const r = partFrameMoves(tp, opts.tol)
       const { tilt: _t, ...rest } = tp
       paths.push({ ...rest, moves: r.moves, intents: [] })
       axes.push(r.axis)
     }
   }
-  // back off clear of the block where the tool direction changes (and before the first tilted one)
+  // 5-axis toolpaths: the tool direction on every move (split to turn at most 1° each)
+  paths = paths.map((tp) => (tp.multiAxis && opts.replay ? { ...tp, moves: axisMovesForSim(tp.moves) } : tp))
+  const dirOf = (m: Move | undefined, w: V3): V3 => (m && (m.t === 'rapid' || m.t === 'feed') && m.a ? [m.a[0], m.a[1], m.a[2]] : w)
+  const startAxis = paths.map((tp, i) => dirOf(tp.moves.find((m) => m.t === 'rapid' || m.t === 'feed'), axes[i]))
+  const endAxis = paths.map((tp, i) => dirOf([...tp.moves].reverse().find((m) => m.t === 'rapid' || m.t === 'feed'), axes[i]))
+  // where the tool direction changes between operations (and before the first tilted one): back off
+  // along the tool clear of the block, rise straight up clear above it, turn the axes while moving
+  // over, come down, go in along the new direction (the way the sample posts retract before they
+  // turn the axes); the moves of the turn are checked like any other
   const up: V3 = [0, 0, 1]
-  const turnAt = new Set<number>()
+  const firstOf = (tp: Toolpath) => tp.moves.find((m) => m.t === 'rapid' || m.t === 'feed') as { x: number; y: number; z: number } | undefined
+  const lastOf = (tp: Toolpath) => [...tp.moves].reverse().find((m) => m.t === 'rapid' || m.t === 'feed') as { x: number; y: number; z: number } | undefined
+  const backOff = (m: { x: number; y: number; z: number } | undefined, w: V3): V3 | null => {
+    if (!m) return null
+    const p = [m.x, m.y, m.z]
+    const d = exitDistance(part, p, w) + TURN_CLEAR
+    return [p[0] + w[0] * d, p[1] + w[1] * d, p[2] + w[2] * d]
+  }
+  const offStart = paths.map((tp, i) => (!same(i === 0 ? up : endAxis[i - 1], startAxis[i]) ? backOff(firstOf(tp), startAxis[i]) : null))
+  const offEnd = paths.map((tp, i) => (!same(i + 1 < paths.length ? startAxis[i + 1] : up, endAxis[i]) ? backOff(lastOf(tp), endAxis[i]) : null))
+  // the height the axes turn at, per change: above both backed-off points and the block's top
+  const turnZ = (a: V3 | null, b: V3 | null) => Math.max(0, a?.[2] ?? -Infinity, b?.[2] ?? -Infinity) + TURN_CLEAR
+  const turnAt = new Map<number, V3>()
   paths = paths.map((tp, i) => {
-    const w = axes[i]
-    const before = i === 0 ? up : axes[i - 1]
-    const after = i + 1 < axes.length ? axes[i + 1] : up
+    const five = !!tp.multiAxis
+    const w0 = startAxis[i]
+    const w1 = endAxis[i]
     const moves: Move[] = [...tp.moves]
-    const first = moves.find((m) => m.t === 'rapid' || m.t === 'feed')
-    const last = [...moves].reverse().find((m) => m.t === 'rapid' || m.t === 'feed')
-    if (first && !same(before, w)) {
-      const p = [first.x, first.y, (first as { z: number }).z]
-      const d = exitDistance(part, p, w) + TURN_CLEAR
-      moves.unshift({ t: 'rapid', x: p[0] + w[0] * d, y: p[1] + w[1] * d, z: p[2] + w[2] * d })
-      turnAt.add(i)
+    const s0 = offStart[i]
+    if (s0) {
+      const zs = turnZ(i > 0 ? offEnd[i - 1] : null, s0)
+      moves.unshift({ t: 'rapid', x: s0[0], y: s0[1], z: zs, ...(five ? { a: w0 } : {}) }, { t: 'rapid', x: s0[0], y: s0[1], z: s0[2], ...(five ? { a: w0 } : {}) })
+      turnAt.set(i, i === 0 ? up : endAxis[i - 1])
     }
-    if (last && !same(after, w)) {
-      const p = [last.x, last.y, (last as { z: number }).z]
-      const d = exitDistance(part, p, w) + TURN_CLEAR
-      moves.push({ t: 'rapid', x: p[0] + w[0] * d, y: p[1] + w[1] * d, z: p[2] + w[2] * d })
+    const e1 = offEnd[i]
+    if (e1) {
+      const zs = turnZ(e1, i + 1 < paths.length ? offStart[i + 1] : null)
+      moves.push({ t: 'rapid', x: e1[0], y: e1[1], z: e1[2], ...(five ? { a: w1 } : {}) }, { t: 'rapid', x: e1[0], y: e1[1], z: zs, ...(five ? { a: w1 } : {}) })
     }
     return { ...tp, moves }
+  })
+  // each 5-axis move's direction: halfway between where it starts and ends
+  const moveAxes = paths.map((tp) => {
+    if (!tp.multiAxis) return null
+    const out: V3[] = []
+    let prev: V3 | null = null
+    for (const m of simpleMoves(tp.moves)) {
+      const a: V3 = m.t === 'rapid' || m.t === 'feed' ? dirOf(m, prev ?? up) : (prev ?? up)
+      out.push(prev ? slerp(prev, a, 0.5) : a)
+      prev = a
+    }
+    return out
   })
   const tl = buildTimeline(paths)
   const flutes = paths.map((tp) => (tp.tool ? (tp.tool.fluteLength ?? tp.tool.maxDepth) : undefined))
@@ -130,7 +210,7 @@ export function positionalTimeline(toolpaths: readonly Toolpath[], part: Block, 
   }
   for (const s of tl.segs) {
     const path = tl.ops[s.op].path
-    const w = axes[path]
+    const w = moveAxes[path]?.[s.move] ?? axes[path]
     s.axis = { x: w[0], y: w[1], z: w[2] }
     // drilling along a tilted tool is carved (not edge drilling)
     delete s.side
@@ -138,10 +218,17 @@ export function positionalTimeline(toolpaths: readonly Toolpath[], part: Block, 
     if (f) s.cutter = { ...s.cutter, flute: f }
     if (!seen.has(s.op)) {
       seen.add(s.op)
-      if (turnAt.has(path)) s.turn = true
+      const from = turnAt.get(path)
+      if (from) {
+        s.turn = true
+        s.turnFrom = { x: from[0], y: from[1], z: from[2] }
+        // (the turn ends on the operation's first direction)
+        const w0 = startAxis[path]
+        s.axis = { x: w0[0], y: w0[1], z: w0[2] }
+      }
     }
   }
-  return { tl, paths, axes, ...(program ? { program } : {}) }
+  return { tl, paths, axes, ...(program ? { program } : {}), ...(program5 ? { program5 } : {}) }
 }
 
 /** A tri-dexel stock of the part's block (fewer pieces per ray on big blocks, to keep memory down). */
@@ -194,6 +281,9 @@ function lowestZ(P: readonly number[], w: readonly number[], ps: readonly ToolPi
   return low
 }
 
+/** The turn between operations (M3.5). */
+const TURN_TEXT = 'tool or holder hits material while the rotary axes turn between operations'
+
 const KIND_TEXT: Record<CollisionKind, string> = {
   shank: 'shank hits material above the flutes (tool too short for this depth)',
   holder: 'holder hits material',
@@ -238,6 +328,29 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
   const segs = tl.segs
   // shank, holder and rapid checks every `spacing` mm along each operation
   const spacing = Math.max(stock.cell, 1)
+  /**
+   * M3.5 (closes the M3.4 limit): the move between operations while the rotary axes turn, checked as
+   * an even turn of the tool from one direction to the other along the move: the whole tool, its
+   * shank and its holder against the material left, and against the table round the part.
+   */
+  const checkTurn = (s: (typeof segs)[number]) => {
+    const o = outlines[s.op]
+    const from: V3 = s.turnFrom ? [s.turnFrom.x, s.turnFrom.y, s.turnFrom.z] : [0, 0, 1]
+    const to: V3 = s.axis ? [s.axis.x, s.axis.y, s.axis.z] : [0, 0, 1]
+    const ps = [...toolPieces(s.cutter, s.cutter.flute ?? o?.flute ?? top), ...(o ? [...shankPieces(o, M, top), ...holderPieces(o, M, top)] : [])]
+    const L = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y, s.b.z - s.a.z)
+    const n = Math.max(2, Math.ceil(Math.max(L / spacing, angleDeg(from, to))))
+    for (let q = 0; q <= n; q++) {
+      const k = q / n
+      const p = { x: s.a.x + (s.b.x - s.a.x) * k, y: s.a.y + (s.b.y - s.a.y) * k, z: s.a.z + (s.b.z - s.a.z) * k }
+      const w = slerp(from, to, k)
+      const t = s.t0 + (s.t1 - s.t0) * k
+      const r = stock.probe(p, { x: w[0], y: w[1], z: w[2] }, ps)
+      if (r.depth > COLLISION_TOL) report('rapid', TURN_TEXT, s.op, s.move, t, p, r.depth)
+      const low = lowestZ([p.x, p.y, p.z], w, ps)
+      if (low < -T - COLLISION_TOL) report('table', 'tool or holder reaches below the part\'s underside while the rotary axes turn', s.op, s.move, t, p, -T - low)
+    }
+  }
   let lastOp = -1
   let travelled = 0
   let mark = 0
@@ -249,7 +362,10 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
     }
     const s = segs[si]
     if (opts.marks) mark = takeMarks(opts.marks, stock, s.t0, mark, carved)
-    if (s.turn) continue
+    if (s.turn) {
+      checkTurn(s)
+      continue
+    }
     const w: V3 = s.axis ? [s.axis.x, s.axis.y, s.axis.z] : [0, 0, 1]
     // the tip below the spoilboard limit or into the table, where it first goes below
     for (const [kind, lim] of [

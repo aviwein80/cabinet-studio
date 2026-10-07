@@ -1,6 +1,7 @@
 import { partApertures, partOutline as camOutline } from '@/cam/doc'
 import { toPoints } from '@/cam/geom'
 import { hasTiltedWork } from '@/cam/positional/frame'
+import { hasMultiAxisWork } from '@/cam/multiaxis/engine'
 import type { CamPart } from '@/cam/types'
 import { buildCabinet, partOutline } from './construction/carcass'
 import { EPS, r3 } from './geometry'
@@ -146,6 +147,11 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
     // M3.4: nor is a part with operations on tilted work planes (3+2): the N-200 cannot tilt its tool
     if (hasTiltedWork(cp)) {
       warnings.push(`Custom part ${cp.name} has operations on tilted work planes (3+2). It is left out of the cut list and nesting.`)
+      continue
+    }
+    // M3.5: nor is a part with simultaneous 5-axis operations: the N-200 has three axes
+    if (hasMultiAxisWork(cp)) {
+      warnings.push(`Custom part ${cp.name} has simultaneous 5-axis operations. It is left out of the cut list and nesting.`)
       continue
     }
     const material = cp.materialId ? lib.materials.find((m) => m.id === cp.materialId) : undefined

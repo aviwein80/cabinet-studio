@@ -2,6 +2,8 @@
  * Pre-export safety checks on generated sheet programs. These catch obvious mistakes; they are
  * NOT a substitute for simulating every program in woodWOP before it runs on the machine.
  */
+import { simultaneousProgram } from '@/cam/multiaxis/kinematics5'
+import { GOUGE_TOL } from '@/cam/multiaxis/check'
 import { boxOf, type Seg, toPoints } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
@@ -634,6 +636,29 @@ export function positionalIssues(job: Pick<import('./types').Job, 'camParts'>, m
 }
 
 /**
+ * M3.5: custom parts with simultaneous 5-axis operations in a job. The N-200 (and any machine whose
+ * model does not declare simultaneous 5-axis) cannot move rotary axes while cutting: such a part is
+ * not nested (`cutlist.ts`) and the job's export is refused while it is in the job, naming the part
+ * and its 5-axis operations. Only a script post for a machine model with simultaneous 5-axis may
+ * write it, from a licensed engine's toolpath (Program dialog, `checkTextPost`).
+ */
+export function multiAxisIssues(job: Pick<import('./types').Job, 'camParts'>, machine: MachineProfile): Issue[] {
+  const out: Issue[] = []
+  const caps = machineModelOf(machine).capabilities
+  for (const cp of job.camParts ?? []) {
+    const five = cp.ops.filter((o) => o.enabled && o.kind === 'multiaxis')
+    if (!five.length) continue
+    const names = five.map((o) => `"${o.name}"`).join(', ')
+    out.push({
+      severity: 'error',
+      code: 'CAM_MULTIAXIS',
+      message: `Custom part ${cp.name} has ${five.length} simultaneous 5-axis operation(s): ${names}. ${caps.simultaneous5 ? 'Sheet programs cannot hold 5-axis work' : `The machine model (${machine.model || machine.name}) cannot move rotary axes while cutting (it has no simultaneous 5-axis)`}, so the part is not nested and nothing of it is written to woodWOP. Simulate it on the Parts page; only a script post for a machine model with simultaneous 5-axis can write it, from a licensed 5-axis engine's toolpath (Program dialog). Remove ${cp.name} from this job (or switch its 5-axis operations off) to export the rest of it.`,
+    })
+  }
+  return out
+}
+
+/**
  * M2.10b: may a text post (template or script) write programs of these toolpaths for this machine?
  * Every error blocks writing; previews are always allowed. On top of the export checker's own
  * results for the part on that machine (`issues`, all kept), a text post is refused:
@@ -645,11 +670,14 @@ export function positionalIssues(job: Pick<import('./types').Job, 'camParts'>, m
  *   anything not on face 1, 3D or rotary / tilted work the machine model does not declare, and
  *   any toolpath that has no confirmed program form;
  * - for tilted (3+2) work (M3.4): the template post, its own switch off, a machine model without
- *   two rotary axes for 3+2, angles or positions outside the axes' travel, turned work with it.
+ *   two rotary axes for 3+2, angles or positions outside the axes' travel, turned work with it;
+ * - for simultaneous 5-axis work (M3.5): the template post, its own switch off, a toolpath not made
+ *   by a licensed engine (the built-in preview never), a gouge found by our own check, a machine
+ *   model without simultaneous 5-axis, axes or positions outside the travel, turned work with it.
  */
 export function checkTextPost(
   setup: import('./types').MachineSetup,
-  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[]; rotaryOn?: boolean; positionalOn?: boolean },
+  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[]; rotaryOn?: boolean; positionalOn?: boolean; multiAxisOn?: boolean },
 ): Issue[] {
   const out: Issue[] = []
   const err = (code: string, message: string) => out.push({ severity: 'error', code, message })
@@ -683,12 +711,33 @@ export function checkTextPost(
     if (rotary.length) err('POST_POSITIONAL_MIXED', 'Turned (rotary) and tilted (3+2) operations cannot share one program: switch one kind off for this program.')
     const kp = kinematicsProblems(model)
     if (kp.length) for (const m of kp) err('POST_POSITIONAL_MACHINE', `${setup.name}: ${m.replace(/^Its /, 'its ')}`)
-    else for (const m of machineProgram(opts.toolpaths.filter((tp) => !tp.rotary), setup.profile).problems) err('POST_POSITIONAL_TRAVEL', m)
+    else for (const m of machineProgram(opts.toolpaths.filter((tp) => !tp.rotary && !tp.multiAxis), setup.profile).problems) err('POST_POSITIONAL_TRAVEL', m)
+  }
+  // M3.5 simultaneous 5-axis: a script post (never the template), its own switch, a licensed engine's
+  // toolpath that our own gouge check passes, a machine model with simultaneous 5-axis, every angle
+  // and position inside the travel, no turned work with it
+  const five = opts.toolpaths.filter((tp) => tp.multiAxis)
+  if (five.length) {
+    if (post.kind === 'template') err('POST_MULTIAXIS_TEMPLATE', 'The template post writes X, Y and Z only: 5-axis operations need a script post written for a machine whose two rotary axes move while it cuts.')
+    if (!opts.multiAxisOn) err('POST_MULTIAXIS_OFF', '"Write 5-axis programs through script posts" is off (Machine page): 5-axis programs are shown, not written.')
+    if (rotary.length) err('POST_MULTIAXIS_MIXED', 'Turned (rotary) and 5-axis operations cannot share one program: switch one kind off for this program.')
+    for (const tp of five) {
+      const info = tp.multiAxis!
+      if (!info.licensed) err('POST_MULTIAXIS_ENGINE', info.preview ? `${tp.name}: made by the built-in preview engine, which is for the simulator only (it plans no collision avoidance for the shaft and holder and no real axis optimisation): a licensed 5-axis engine must make it.` : `${tp.name}: no licensed 5-axis engine made it (${info.engineName}).`)
+      if (!tp.moves.length) err('POST_MULTIAXIS_EMPTY', `${tp.name}: no toolpath (${tp.warnings[0] ?? 'not calculated'}).`)
+      const g = info.gouge
+      if (g && g.method === 'exact' && g.depth > GOUGE_TOL) err('POST_MULTIAXIS_GOUGE', `${tp.name}: our own gouge check finds the tool ${g.depth.toFixed(3)} mm into the model (more than ${GOUGE_TOL} mm).`)
+      else if (tp.moves.length && (!g || g.method === 'none')) out.push({ severity: 'warning', code: 'POST_MULTIAXIS_UNCHECKED', message: `${tp.name}: not gouge-checked against the model here (${g ? 'exact for ball-nose tools only' : 'no model, or the check is off'}); simulate it before running it.` })
+    }
+    const kp = kinematicsProblems(model)
+    if (kp.length) for (const m of kp) err('POST_MULTIAXIS_MACHINE', `${setup.name}: ${m.replace(/^Its /, 'its ')}`)
+    else if (!caps.simultaneous5) err('POST_MULTIAXIS_MACHINE', `${setup.name}: its machine model does not declare simultaneous 5-axis (its rotary axes do not move while it cuts).`)
+    else for (const m of simultaneousProgram(opts.toolpaths.filter((tp) => !tp.rotary), setup.profile).problems) err('POST_MULTIAXIS_TRAVEL', m)
   }
   for (const tp of opts.toolpaths) {
     const what = (why: string) => err('POST_UNSUPPORTED', `${tp.name}: ${why}`)
-    // (a tilted toolpath's "no woodWOP form" is for the N-200; the 3+2 rules above stand for it here)
-    if (tp.noOutput && !tp.tilt) what(tp.noOutput)
+    // (a tilted or 5-axis toolpath's "no woodWOP form" is for the N-200; the rules above stand for it here)
+    if (tp.noOutput && !tp.tilt && !tp.multiAxis) what(tp.noOutput)
     // a text post changes tools per operation: without one tool the machine would cut with whatever is in the spindle
     if (!tp.tool) what('has no single tool from the tool table (for example holes drilled by diameter); a text post needs one tool number per operation.')
     if (tp.intents.some((i) => i.k === 'hdrill')) what('edge (horizontal) drilling cannot be written by a text post.')

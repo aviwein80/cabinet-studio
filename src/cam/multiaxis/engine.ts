@@ -110,6 +110,9 @@ export interface MultiAxisEngine {
   generate(req: MultiAxisRequest, work?: Work): MultiAxisResult
 }
 
+/** Does the part have (enabled) simultaneous 5-axis operations? Such a part is never nested on a sheet. */
+export const hasMultiAxisWork = (part: { ops: readonly { enabled: boolean; kind: string }[] }) => part.ops.some((o) => o.enabled && o.kind === 'multiaxis')
+
 /** What the stub says. */
 export const NOT_LICENSED = '5-axis engine not licensed: simultaneous 5-axis toolpaths need a licensed 5-axis engine, and none is installed (an owner decision; nothing is bought or downloaded without the owner\'s written OK). The built-in preview engine can make a toolpath for the simulator only.'
 

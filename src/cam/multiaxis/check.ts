@@ -16,6 +16,9 @@ import type { Move } from '../toolpath'
 import { add, mul, slerp } from './axis'
 import { axisNodes } from './result'
 
+/** Gouges deeper than this (mm) are reported by the independent check and block 5-axis output (the shop's gouge tolerance). */
+export const GOUGE_TOL = 0.005
+
 export interface AxisGougeReport {
   /** Checked exactly (ball-nose), or not checked (other shapes). */
   method: 'exact' | 'none'

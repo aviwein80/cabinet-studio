@@ -61,13 +61,14 @@ export function planPartPost(data: AppData, machineId: string, part: CamPart, op
   const job: Job = { id: `post-${part.id}`, number: 'POST', name: part.name, customer: '', notes: '', createdAt: at, updatedAt: at, cabinets: [], camParts: [{ ...part, qty: 1 }] }
   // M3.3: a turned part is refused for sheets (CAM_ROTARY); a text post writes the part itself, so
   // its rotary rules (`checkTextPost`) stand in for that one
-  // (M3.4: likewise CAM_POSITIONAL for a part with tilted operations: the 3+2 rules stand for it)
-  const jobIssues = setup.post.kind === 'woodwop-mpr' ? [] : runJob(job, d).issues.filter((i) => i.severity === 'error' && !(part.rotary && i.code === 'CAM_ROTARY') && i.code !== 'CAM_POSITIONAL')
+  // (M3.4: likewise CAM_POSITIONAL for a part with tilted operations: the 3+2 rules stand for it;
+  // M3.5: and CAM_MULTIAXIS for a part with 5-axis operations: the 5-axis rules stand for it)
+  const jobIssues = setup.post.kind === 'woodwop-mpr' ? [] : runJob(job, d).issues.filter((i) => i.severity === 'error' && !(part.rotary && i.code === 'CAM_ROTARY') && i.code !== 'CAM_POSITIONAL' && i.code !== 'CAM_MULTIAXIS')
   const plugin = setup.post.kind === 'script' ? ((data.plugins ?? []).find((p) => p.id === (setup.post as { plugin: string }).plugin) ?? null) : null
   const f = featuresOf(data.settings)
-  const issues = checkTextPost(setup, { switchOn: f.scriptPostOutput, rotaryOn: f.rotaryPostOutput, positionalOn: f.positionalPostOutput, plugin, toolpaths, issues: jobIssues })
-  // rotary operations calculated in the background and not handed over: the program would miss them
-  for (const t of all) if (t.kind === 'rotary' && !t.moves.length) issues.push({ severity: 'error', code: 'POST_NOT_READY', message: `${t.name}: no toolpath (${t.warnings[0] ?? 'not calculated'}).` })
+  const issues = checkTextPost(setup, { switchOn: f.scriptPostOutput, rotaryOn: f.rotaryPostOutput, positionalOn: f.positionalPostOutput, multiAxisOn: f.multiAxisPostOutput, plugin, toolpaths, issues: jobIssues })
+  // rotary and 5-axis operations calculated in the background and not handed over: the program would miss them
+  for (const t of all) if ((t.kind === 'rotary' || t.kind === 'multiaxis') && !t.moves.length) issues.push({ severity: 'error', code: 'POST_NOT_READY', message: `${t.name}: no toolpath (${t.warnings[0] ?? 'not calculated'}).` })
   return {
     machineName: setup.name,
     post: setup.post,

@@ -287,8 +287,8 @@ export function takeMarks(marks: StockMarks, stock: StockModel, t0: number, k: n
  * (cells of 0.5 mm, coarser only for very large parts). Used by the export checker.
  */
 export function partCollisions(part: Pick<CamPart, 'length' | 'width' | 'thickness'>, toolpaths: Toolpath[], machine: MachineProfile, work?: Work): { found: Collision[]; tl: SimTimeline } {
-  // (toolpaths on tilted planes are checked along their own tool direction: `positionalCollisions`)
-  const paths = programOrder(toolpaths.filter((tp) => !tp.tilt))
+  // (toolpaths on tilted planes and 5-axis ones are checked along their own tool direction: `positionalCollisions`)
+  const paths = programOrder(toolpaths.filter((tp) => !tp.tilt && !tp.multiAxis))
   const tl = buildTimeline(paths)
   const cell = Math.max(0.5, simCell(part.length, part.width))
   // (a lollipop under an overhang needs the dexel stock: the lip stays in it)

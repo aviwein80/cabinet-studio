@@ -13,7 +13,7 @@ import type { Placement } from './nesting'
 import { machineModelOf } from './machineModel'
 import { featuresOf } from './features'
 import type { Library, MachineProfile, ShopSettings } from './types'
-import { machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed } from './confirm'
+import { bodiesItem, machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed } from './confirm'
 import { resolveTool } from '@/cam/ops'
 import { pathToRegion, uncutLength } from './sheetCuts'
 import { checkSheet } from './manualNest'
@@ -453,6 +453,21 @@ export function validateJob(
           code: 'CAM_COLLISION',
           message: `Custom part #${c.partNo} ${name}: the simulation found ${c.collisions.length} collision(s). ${c.collisions.slice(0, 3).join(' ')}${c.collisions.length > 3 ? ` And ${c.collisions.length - 3} more.` : ''} Open Simulate on the part to see each one.`,
         })
+      // M3.6e (owner decision 24.3): a machine part (gantry, head, spindle...) hitting something warns
+      // while the machine's parts are invented sizes, and blocks the export once they are confirmed
+      if (c.machineHits?.length) {
+        const invented = bodiesItem(machine)
+        const hits = `${c.machineHits.slice(0, 3).join(' ')}${c.machineHits.length > 3 ? ` And ${c.machineHits.length - 3} more.` : ''}`
+        add({
+          ...ref,
+          severity: invented ? 'warning' : 'error',
+          code: 'CAM_MACHINE_HIT',
+          message: invented
+            ? `Custom part #${c.partNo} ${name}: the machine simulation found ${c.machineHits.length} place(s) where a part of the machine hits something. ${hits} Not blocking: the machine's parts are invented sizes (Machine & tools > Machine parts). Once real sizes are entered and confirmed, a hit like this blocks the export. Open Simulate > Machine on the part to see each one.`
+            : `Custom part #${c.partNo} ${name}: the machine simulation found ${c.machineHits.length} place(s) where a part of the machine hits something. ${hits} Open Simulate > Machine on the part to see each one.`,
+          ...(invented ? { configure: [invented] } : {}),
+        })
+      }
       for (const b of c.blocked ?? [])
         add({ ...ref, severity: 'error', code: 'CAM_NO_OUTPUT', message: `Custom part #${c.partNo} ${name}: "${b.name}" cannot be written to woodWOP (${b.reason}). Only simulate it, or switch it off.` })
       if (c.more25d && !c.more25dWritten)

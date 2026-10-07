@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 import { partCollisions } from '@/cam/collision/collision'
 import { makeEntity, newPart } from '@/cam/doc'
 import { rect } from '@/cam/geom'
-import { machineCollisions } from '@/cam/machine/check'
+import { machineCollisions, machinePartHits } from '@/cam/machine/check'
 import { bodiesOf, defaultBodies, kinOf, machinePose, rotations } from '@/cam/machine/model'
 import { replayAt, replayProgram, replayToolpaths } from '@/cam/machine/replay'
 import { writePartMpr } from '@/cam/mpr'
@@ -25,11 +25,13 @@ import { fromMachine, headLength, toMachine } from '@/cam/positional/kinematics'
 import { readGcodeAxes } from '@/cam/programRead'
 import { generatePart, type Toolpath } from '@/cam/toolpath'
 import type { CamOp, CamPart, Fixture } from '@/cam/types'
-import { PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { defaultAppData, PLACEHOLDER_MACHINE } from '@/core/defaults'
+import { placementTransform } from '@/core/machining'
+import { runJob } from '@/core/pipeline'
 import { machineModelOf } from '@/core/machineModel'
 import { bodiesItem, confirmKey, machineUnconfirmed } from '@/core/confirm'
 import { newMachineSetup } from '@/core/machines'
-import type { AppData, MachineBody, MachineProfile, PositionalKinematics } from '@/core/types'
+import type { AppData, Job, MachineBody, MachineProfile, PositionalKinematics } from '@/core/types'
 import { data } from './helpers'
 import { rng } from './mesh-fixtures'
 import { blockPart, machine32, MACHINES_32 } from './positional-fixtures'
@@ -298,6 +300,111 @@ describe('M3.6 replay from the post output', () => {
     expect(r.letters).toBeNull()
     const hits = machineCollisions(r, part, m)
     expect(hits.some((x) => x.kind === 'fixture' && x.mover === 'Spindle motor')).toBe(true)
+  })
+})
+
+describe("M3.6e export: machine-part hits warn while the machine's parts are invented and block once confirmed (owner decision 24.3)", () => {
+  const exportOf = (part: CamPart, machine?: MachineProfile) => {
+    const d = defaultAppData()
+    if (machine) d.machine = machine
+    const job: Job = { id: 'j', number: 'JM', name: 'Machine hits', customer: '', notes: '', createdAt: '', updatedAt: '', cabinets: [], camParts: [part] }
+    d.jobs = [job]
+    return runJob(job, d).issues
+  }
+  const tall = (id: string) => ({ ...pocketPart([clamp(196 + 20, 90, 40, 140, 200, -19)]), id })
+  const low = (id: string) => ({ ...pocketPart([clamp(196 + 20, 90, 40, 140, 30, -19)]), id })
+  const hitsIn = (issues: ReturnType<typeof exportOf>) => issues.filter((i) => i.code === 'CAM_MACHINE_HIT')
+
+  it("invented machine parts: a head part into a tall clamp is a warning with the machine-parts badge (the export is not blocked by it); a low clamp gives nothing", () => {
+    expect(bodiesItem(PLACEHOLDER_MACHINE)).not.toBeNull()
+    const issues = exportOf(tall('mh-tall'))
+    const hit = hitsIn(issues)
+    expect(hit).toHaveLength(1)
+    expect(hit[0].severity).toBe('warning')
+    expect(hit[0].message).toMatch(/hits fixture "Clamp A"/)
+    expect(hit[0].message).toMatch(/Not blocking: the machine's parts are invented sizes/)
+    expect(hit[0].configure?.map((u) => u.key)).toEqual(['bodies:machine'])
+    // the tool, shank and holder clear it: no cutting collision
+    expect(issues.filter((i) => i.code === 'CAM_COLLISION')).toEqual([])
+    say(`export, invented parts: ${hit[0].severity}: ${hit[0].message.slice(0, 160)}…`)
+    expect(hitsIn(exportOf(low('mh-low')))).toEqual([])
+  })
+
+  it('confirmed machine parts (badge cleared), or real sizes entered: the same hit blocks the export; a low clamp still exports', () => {
+    const confirmed = structuredClone(PLACEHOLDER_MACHINE)
+    confirmKey(confirmed, 'bodies:machine')
+    expect(bodiesItem(confirmed)).toBeNull()
+    const hit = hitsIn(exportOf(tall('mh-tall-c'), confirmed))
+    expect(hit).toHaveLength(1)
+    expect(hit[0].severity).toBe('error')
+    expect(hit[0].configure).toBeUndefined()
+    expect(hit[0].message).not.toMatch(/Not blocking/)
+    say(`export, confirmed parts: ${hit[0].severity}: ${hit[0].message.slice(0, 160)}…`)
+    expect(hitsIn(exportOf(low('mh-low-c'), confirmed))).toEqual([])
+    // the shop's own parts typed in (no invented part left): blocks too
+    const own = motorOnly()
+    expect(bodiesItem(own)).toBeNull()
+    expect(hitsIn(exportOf(tall('mh-tall-own'), own)).map((i) => i.severity)).toEqual(['error'])
+    // one part still invented among them: a warning again
+    const mixed = motorOnly()
+    mixed.physical!.bodies = [...mixed.physical!.bodies!, { ...defaultBodies(machineModelOf(mixed))[0], placeholder: true }]
+    expect(hitsIn(exportOf(tall('mh-tall-mixed'), mixed)).map((i) => i.severity)).toEqual(['warning'])
+  })
+
+  it('the part is checked where it sits on the sheet: turned a quarter or half turn as nested, the head meets each clamp where it really is', () => {
+    const m = PLACEHOLDER_MACHINE
+    // a tall clamp on the part's left (-X) side, 164 to 204 mm from the pocket's walls: inside the
+    // reach of the vertical drill block (on the head's -X side, 90 to 260 mm out), beyond the motor's
+    // (and two more: Clamp C on the +Y side comes to the head's -X side when the part is turned a quarter round)
+    const part = pocketPart([clamp(-80, 90, 40, 140, 200, -19), clamp(150, 230, 120, 30, 120, -19, 'Clamp B'), clamp(130, 300, 140, 40, 200, -19, 'Clamp C')])
+    const paths = generatePart(part, m)
+    const at = { x: 500, y: 300 }
+    const plain = machinePartHits(part, paths, m, { at, turn: 0 })
+    expect(plain.some((h) => h.mover === 'Vertical drill block' && h.other === 'fixture "Clamp A"')).toBe(true)
+    // turned half round, that clamp is on the head's +X side: the drill block no longer reaches it
+    const half = machinePartHits(part, paths, m, { at: { x: at.x + 300, y: at.y + 200 }, turn: 180 })
+    expect(half.some((h) => h.other === 'fixture "Clamp A"')).toBe(false)
+    // the same as moving the toolpaths and clamps onto the sheet by hand with the nesting's own transform
+    const sig = (hs: typeof plain) => hs.map((h) => `${h.mover} > ${h.other}`).sort()
+    for (const pl of [{ x: 0, y: 0, rotated: true }, { x: 0, y: 0, rotated: false, flip: true }, { x: 0, y: 0, rotated: true, flip: true }]) {
+      const { pt, angle } = placementTransform({ cutLength: 300, cutWidth: 200 }, pl)
+      const viaTurn = machinePartHits(part, paths, m, { at: pt(0, 0), turn: angle })
+      const mv = (q: { x: number; y: number }) => pt(q.x, q.y)
+      const moved: Toolpath[] = paths.map((tp) => ({
+        ...tp,
+        moves: tp.moves.map((q) => {
+          if (q.t === 'arc') {
+            const c = mv({ x: q.cx, y: q.cy })
+            return { ...q, ...mv(q), cx: c.x, cy: c.y }
+          }
+          return q.t === 'rapid' || q.t === 'feed' || q.t === 'drill' ? { ...q, ...mv(q) } : q
+        }),
+      }))
+      const odd = pl.rotated
+      const movedPart = { ...part, length: odd ? 200 : 300, width: odd ? 300 : 200, fixtures: part.fixtures!.map((f) => ({ ...f, at: { ...f.at, ...mv(f.at) }, rot: f.rot + angle })) }
+      const byHand = machinePartHits(movedPart, moved, m, { at: { x: 0, y: 0 }, turn: 0 })
+      expect(sig(viaTurn), `turn ${angle}`).toEqual(sig(byHand))
+      // hit for hit, in order, as deep (the hand-moved toolpaths are rounded to 0.001 mm)
+      expect(viaTurn.map((h) => [h.mover, h.other, h.step])).toEqual(byHand.map((h) => [h.mover, h.other, h.step]))
+      viaTurn.forEach((h, i) => expect(Math.abs(h.depth - byHand[i].depth), `turn ${angle} hit ${i}`).toBeLessThan(0.01))
+      if (angle === 90) expect(viaTurn.some((h) => h.mover === 'Vertical drill block' && h.other === 'fixture "Clamp C"')).toBe(true)
+      if (angle === 180) expect(viaTurn.length).toBeGreaterThan(0)
+      say(`nested turn ${angle}°: ${viaTurn.length} machine-part hit(s), the same as the part moved by hand (${[...new Set(sig(viaTurn))].join('; ') || 'none'})`)
+    }
+  })
+
+  it("on a sheet the whole sheet counts as material: a low part of the head over the sheet beside the part is caught", () => {
+    // a low arm beside the spindle (210 to 250 mm out on +X, its underside 45 mm above the gauge
+    // point): while the pocket is cut it is over the sheet just past the part's end, 5 mm into it
+    const m = structuredClone(PLACEHOLDER_MACHINE)
+    m.physical = { ...machineModelOf(m), bodies: [{ id: 'arm', name: 'Low arm', link: 'z', shape: { k: 'box', min: [210, -20, -45], max: [250, 20, 0] } }] }
+    const part = pocketPart([])
+    const paths = generatePart(part, m)
+    expect(machinePartHits(part, paths, m, { at: { x: 0, y: 0 }, turn: 0 })).toEqual([])
+    const onSheet = machinePartHits(part, paths, m, { at: { x: 0, y: 0 }, turn: 0, sheet: { length: 3658, width: 1524 } })
+    expect(onSheet.length).toBeGreaterThan(0)
+    expect(onSheet.every((h) => h.mover === 'Low arm' && h.other === 'the sheet')).toBe(true)
+    say(`the sheet as material: ${onSheet[0].message}`)
   })
 })
 

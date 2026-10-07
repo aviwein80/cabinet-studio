@@ -35,10 +35,10 @@ export function MachineBodiesSection({ machine, updateMachine }: { machine: Mach
       <div className="flex flex-wrap items-center gap-2 text-xs" data-cfg="bodies:machine">
         {item ? (
           <>
-            <span className="text-amber-700 dark:text-amber-300">Invented sizes and places: {item.value}.</span> <ValueBadges item={item} />
+            <span className="text-amber-700 dark:text-amber-300">Invented sizes and places: {item.value}. A hit by one of them is a warning on the export (it does not block it) until they are measured and confirmed.</span> <ValueBadges item={item} />
           </>
         ) : (
-          <span className="text-muted-foreground">{list.length} parts, entered for this machine.</span>
+          <span className="text-muted-foreground">{list.length} parts, entered for this machine. A hit by one of them blocks the export.</span>
         )}
         <Button size="sm" variant="ghost" className="ml-auto h-7 text-xs" onClick={() => upd(() => defaultBodies(mm))} title="Start again from the invented parts for this machine's layout">
           <RotateCcw /> Invented parts for this layout

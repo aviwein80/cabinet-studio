@@ -311,8 +311,9 @@ export function machineUnconfirmed(m: MachineProfile): Unconfirmed[] {
     const target: ConfigTarget = { kind: 'model', fact: 'positional' }
     if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: POSITIONAL_FACT_LABEL, value: factValue(m, 'positional'), group: 'Machine model', target })
   }
-  // M3.6: the machine's own parts for the machine simulation while invented (the simulator only:
-  // never part of what is written, so not part of the machine-model warning on exports)
+  // M3.6: the machine's own parts for the machine simulation while invented (never part of what is
+  // written, so not part of the machine-model warning on exports; while they are invented the
+  // export checker's machine-part hits are warnings, confirmed they block it, M3.6e)
   const bodies = bodiesItem(m)
   if (bodies) out.push(bodies)
   // M3.6: the shop's clamps, pods and rails while their sizes are invented

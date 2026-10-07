@@ -25,7 +25,8 @@ import { type BodyPiece, toolBody } from '../collision/fixtureCheck'
 import { fixturePieces } from '../fixtures/fixture'
 import type { CamPart } from '../types'
 import { type AxisState, bodiesOf, bodyConvex, bodyReachFrom, HEAD_SIDE, kinOf, machinePose, type MachinePose, type Pose, tableBodies } from './model'
-import type { MachineReplay, ReplayStep } from './replay'
+import type { Toolpath } from '../toolpath'
+import { type MachineReplay, replayToolpaths, type ReplayStep, turnCs } from './replay'
 
 export type MachineHitKind = 'fixture' | 'table' | 'part' | 'machine' | 'travel'
 
@@ -43,6 +44,8 @@ export interface MachineHit {
   /** What moves into what. */
   mover: string
   other: string
+  /** What moves: a part of the machine (gantry, head, spindle...), the tool (cutter, shank, holder), or an axis past its travel. */
+  moverKind: 'machine' | 'tool' | 'axis'
   /** Fixture index (part's fixtures), for a fixture hit. */
   fixture?: number
   /** Travel: the axis value furthest past its travel. */
@@ -96,10 +99,12 @@ function fixedAt(f: Fixed, p: MachinePose, partPose: Pose): Convex {
 }
 
 /**
- * Check a replay on `machine` with the part (its block and fixtures) where the replay put it.
- * Hits are merged into runs (one per moving part and thing hit, while the steps follow on).
+ * Check a replay on `machine` with the part (its block and fixtures) where the replay put it (turned
+ * as it says). `sheet`: on a 3-axis machine, the part sits on a sheet of this size with its corner
+ * at the table's X0 Y0 (a nested job): the whole sheet counts as material for the machine's parts
+ * (M3.6e). Hits are merged into runs (one per moving part and thing hit, while the steps follow on).
  */
-export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length' | 'width' | 'thickness' | 'fixtures'>, machine: MachineProfile, opts: { work?: Work } = {}): MachineHit[] {
+export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length' | 'width' | 'thickness' | 'fixtures'>, machine: MachineProfile, opts: { work?: Work; sheet?: { length: number; width: number } } = {}): MachineHit[] {
   const model = machineModelOf(machine)
   const k = kinOf(model)
   const M = Math.max(0, machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN)
@@ -115,6 +120,11 @@ export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length'
     ...fixturePieces(part.fixtures).map((p): Fixed => ({ name: `fixture "${p.name}"`, kind: 'fixture', local: p.c, fixture: p.fixture, reach: Math.hypot(...p.box.hi.map((v, i) => Math.max(Math.abs(v + at[i] - centre[i]), Math.abs(p.box.lo[i] + at[i] - centre[i])))) })),
     { name: "the part's block", kind: 'part', local: { centre: [part.length / 2, part.width / 2, -T / 2], support: (d) => [d[0] >= 0 ? part.length : 0, d[1] >= 0 ? part.width : 0, d[2] >= 0 ? 0 : -T] }, reach: Math.hypot(part.length, part.width, T) + Math.hypot(...sub(at, centre)) },
   ]
+  // the sheet the part is nested on (the table does not move on a 3-axis machine)
+  if (opts.sheet && !k) {
+    const sheet: MachineBody = { id: 'sheet', name: 'the sheet', link: 'frame', shape: { k: 'box', min: [0, 0, at[2] - T], max: [opts.sheet.length, opts.sheet.width, at[2]] } }
+    fixedList.push({ name: sheet.name, kind: 'part', body: sheet, reach: 0 })
+  }
   const headBodies = bodies.filter((b) => HEAD_SIDE.includes(b.link))
   const tableTurns = !!k && k.layout !== 'head-head'
   const out: MachineHit[] = []
@@ -155,9 +165,12 @@ export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length'
   }
   const skip = (mv: Mover, f: Fixed) => !!mv.tool && (f.kind === 'part' || (f.body?.id === 'spoilboard' && mv.tool.part === 'cutter'))
   const fmt = (s: AxisState) => `X${s.x.toFixed(1)} Y${s.y.toFixed(1)} Z${s.z.toFixed(1)}${letters ? ` ${letters[0]}${s.a1.toFixed(2)} ${letters[1]}${s.a2.toFixed(2)}` : ''}`
+  // the part turned where it sits (a nested part's quarter turn on its sheet)
+  const [cs, sn] = turnCs(r.partTurn ?? 0)
   const partPoseOf = (p: MachinePose): Pose => {
     const tp = p.links.table2
-    return { R: tp.R, t: [tp.t[0] + (tp.R[0][0] * at[0] + tp.R[0][1] * at[1] + tp.R[0][2] * at[2]), tp.t[1] + (tp.R[1][0] * at[0] + tp.R[1][1] * at[1] + tp.R[1][2] * at[2]), tp.t[2] + (tp.R[2][0] * at[0] + tp.R[2][1] * at[1] + tp.R[2][2] * at[2])] }
+    const R = tp.R.map((row) => [row[0] * cs + row[1] * sn, -row[0] * sn + row[1] * cs, row[2]]) as Pose['R']
+    return { R, t: [tp.t[0] + (tp.R[0][0] * at[0] + tp.R[0][1] * at[1] + tp.R[0][2] * at[2]), tp.t[1] + (tp.R[1][0] * at[0] + tp.R[1][1] * at[1] + tp.R[1][2] * at[2]), tp.t[2] + (tp.R[2][0] * at[0] + tp.R[2][1] * at[1] + tp.R[2][2] * at[2])] }
   }
   r.steps.forEach((st: ReplayStep, si: number) => {
     if ((si & 255) === 0) {
@@ -169,7 +182,7 @@ export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length'
       const v = axisValue(st.to, a.id)
       if (!Number.isFinite(v)) continue
       const past = v < a.min - 1e-6 ? a.min - v : v > a.max + 1e-6 ? v - a.max : 0
-      if (past > 0) report({ kind: 'travel', step: si, t: st.t1, s: st.to, depth: past, value: v, mover: a.id, other: `its travel (${a.min} to ${a.max}${a.id === 'X' || a.id === 'Y' || a.id === 'Z' ? ' mm' : '°'})` })
+      if (past > 0) report({ kind: 'travel', moverKind: 'axis', step: si, t: st.t1, s: st.to, depth: past, value: v, mover: a.id, other: `its travel (${a.min} to ${a.max}${a.id === 'X' || a.id === 'Y' || a.id === 'Z' ? ' mm' : '°'})` })
     }
     if (st.kind === 'change') return
     const o = r.ops[st.op]
@@ -223,7 +236,7 @@ export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length'
             kk = (i + hi) / n
           }
           const s = lerpState(st.from, st.to, kk)
-          report({ kind: f.kind, step: si, t: st.t0 + (st.t1 - st.t0) * kk, s, depth, mover: mv.name, other: f.name, ...(f.fixture !== undefined ? { fixture: f.fixture } : {}) })
+          report({ kind: f.kind, moverKind: mv.body ? 'machine' : 'tool', step: si, t: st.t0 + (st.t1 - st.t0) * kk, s, depth, mover: mv.name, other: f.name, ...(f.fixture !== undefined ? { fixture: f.fixture } : {}) })
         }
       }
     }
@@ -239,4 +252,17 @@ export function machineCollisions(r: MachineReplay, part: Pick<CamPart, 'length'
         : `${op?.name ?? 'Program'}, ${where}${line}: ${h.mover} ${h.depth > M + 1e-9 ? 'hits' : 'comes within the margin of'} ${h.other} at ${fmt(h.s)} (${h.depth.toFixed(2)} mm).`
   }
   return out
+}
+
+/**
+ * The export checker's machine check (M3.6e, owner decision 24.3): the part's toolpaths replayed on
+ * the machine where the part sits on its sheet (its face-1 corner at `at`, turned by `turn` as
+ * nested), and the hits of the machine's own parts (gantry, head, spindle, drill block, tables)
+ * against the table, the sheet, the part and its fixtures. The tool, shank and holder are left to
+ * the cutting check (`partCollisions`) and positions on the table to the sheet checks. Whether a
+ * hit warns or blocks is the export checker's call (on whether the machine's parts are confirmed).
+ */
+export function machinePartHits(part: Pick<CamPart, 'length' | 'width' | 'thickness' | 'fixtures'>, paths: readonly Toolpath[], machine: MachineProfile, place: { at: { x: number; y: number }; turn: number; sheet?: { length: number; width: number } }, opts: { work?: Work } = {}): MachineHit[] {
+  const r = replayToolpaths(paths, part, machine, { at: place.at, turn: place.turn })
+  return machineCollisions(r, part, machine, { ...opts, ...(place.sheet ? { sheet: place.sheet } : {}) }).filter((h) => h.moverKind === 'machine')
 }

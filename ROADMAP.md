@@ -148,7 +148,11 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   11.
   **M3.6d (owner decision on M3.6, October 2026):** pocket and facing toolpaths now open at the
   safe height straight over their first cut, no longer with a rapid to the part's corner 3 mm
-  above the top; woodWOP output byte-identical. Next: M3.7 (recording the out-of-scope items).
+  above the top; woodWOP output byte-identical.
+  **M3.6e (owner decision on M3.6, October 2026):** the export checker replays each custom part
+  where it is nested on its sheet: a machine-part hit (spindle motor, head plate, drill block...)
+  is a warning while the machine's parts are invented and blocks the export once they are
+  confirmed. Next: M3.7 (recording the out-of-scope items).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

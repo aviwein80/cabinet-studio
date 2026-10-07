@@ -549,6 +549,11 @@ export checker. Tool numbers are still placeholders.
   machine's parts are **invented** until measured (Machine & tools → Machine parts, Configure
   badge): boxes and cylinders carried by an axis. A check of our own programs against the
   machine's parts as entered, not of the real machine; nothing new is written to any machine.
+  **On the export** each custom part is replayed where the nesting put it on its sheet (its corner
+  and quarter turn, the whole sheet counting as material): a hit by a machine part is a
+  **warning** (`CAM_MACHINE_HIT`, with the Machine parts badge) while the machine's parts are
+  invented, and **blocks the export** once they are confirmed or the shop's own sizes are typed
+  in. Tool, shank and holder hits always block (`CAM_COLLISION`).
 - **Part compare** (switch as above; Simulate → 3D → **Compare with the model**, or Custom parts →
   **Compare with models…** for several parts at once): the finished stock coloured against the
   part's 3D models: **gouges** (cut into the model) red, **material left** blue, within the
@@ -903,7 +908,8 @@ All of these can be set on the **Machine & tools** page:
   and the rotating aggregate in the built-in table are invented placeholders.
 
 - The **machine's parts** for the machine simulation (gantry, head, spindle, tables) and the
-  **fixture library** (clamps, pods, rails): invented sizes with Configure badges.
+  **fixture library** (clamps, pods, rails): invented sizes with Configure badges. While the
+  machine's parts are invented, a machine-part hit only warns on the export; confirmed, it blocks.
 
 - Tool numbers and diameters (placeholder data).
 - Whether drills are addressed by diameter or by tool number.

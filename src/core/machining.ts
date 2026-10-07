@@ -1,5 +1,6 @@
 import type { Seg } from '@/cam/geom'
 import { partCollisions } from '@/cam/collision/collision'
+import { machinePartHits } from '@/cam/machine/check'
 import { partProgramOps } from '@/cam/mpr'
 import { generatePart, type Intent, isAdaptive, isFlatLayer, isMore25d, OPS_3D, pathKey, ROTARY_NO_MPR, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
@@ -266,6 +267,12 @@ export interface SheetProgram {
     flat3dWritten?: boolean
     /** Collisions found by simulating the part's toolpaths (shank, holder, rapids, spoilboard, table). */
     collisions?: string[]
+    /**
+     * Hits of the machine's own parts (gantry, head, spindle...) found by replaying the part's
+     * toolpaths on the machine where the part sits on the sheet (M3.6e): the export checker warns
+     * while the machine's parts are invented and blocks once they are confirmed.
+     */
+    machineHits?: string[]
     /** Operations with no confirmed woodWOP form (never written): name and reason. */
     blocked?: { name: string; reason: string }[]
     /** M2.6 operations with a woodWOP form (facing, chamfer, saw-cut settings), and whether they were written. */
@@ -301,21 +308,38 @@ export interface ProgramOptions {
   bridges?: { width: number; maxLength: number; maxArea: number; write: boolean }
 }
 
-/** Collision messages for a custom part's toolpaths, worked out once per part, machine and toolpath set. */
-const collisionCache = new WeakMap<object, { machine: MachineProfile; key: string; found: string[] }>()
-function collisionsOf(part: NonNullable<PartInstance['cam']>, paths: Toolpath[], machine: MachineProfile): string[] {
-  // (a checksum of every move and tool, so an edited part never reuses old results)
+/** A key for a custom part's toolpaths: a checksum of every move and tool, so an edited part never reuses old results. */
+function pathsKey(part: NonNullable<PartInstance['cam']>, paths: Toolpath[]) {
   let sum = 0
   for (const p of paths)
     for (const m of p.moves) {
       if (m.t === 'poly') for (let i = 0; i < m.pts.length; i++) sum = (sum * 31 + m.pts[i] * 1000) % 1e15
       else sum = (sum * 31 + m.x * 1000 + m.y * 7 + m.z * 13) % 1e15
     }
-  const key = `${part.length}x${part.width}x${part.thickness}:${paths.map((p) => `${p.opId}:${p.tool?.id}:${p.moves.length}`).join('|')}:${sum}:${JSON.stringify(part.fixtures ?? [])}`
+  return `${part.length}x${part.width}x${part.thickness}:${paths.map((p) => `${p.opId}:${p.tool?.id}:${p.moves.length}`).join('|')}:${sum}:${JSON.stringify(part.fixtures ?? [])}`
+}
+
+/** Collision messages for a custom part's toolpaths, worked out once per part, machine and toolpath set. */
+const collisionCache = new WeakMap<object, { machine: MachineProfile; key: string; found: string[] }>()
+function collisionsOf(part: NonNullable<PartInstance['cam']>, paths: Toolpath[], machine: MachineProfile, key: string): string[] {
   const hit = collisionCache.get(part)
   if (hit && hit.machine === machine && hit.key === key) return hit.found
   const found = partCollisions(part, paths, machine).found.map((c) => c.message)
   collisionCache.set(part, { machine, key, found })
+  return found
+}
+
+/** Machine-part hits for a custom part where it sits on a sheet (M3.6e), worked out once per part, machine, toolpath set and place. */
+const machineHitCache = new WeakMap<object, { machine: MachineProfile; found: Map<string, string[]> }>()
+function machineHitsOf(part: NonNullable<PartInstance['cam']>, paths: Toolpath[], machine: MachineProfile, key: string, place: Parameters<typeof machinePartHits>[3]): string[] {
+  let c = machineHitCache.get(part)
+  if (!c || c.machine !== machine) machineHitCache.set(part, (c = { machine, found: new Map() }))
+  const k = `${key}@${place.at.x},${place.at.y},${place.turn},${place.sheet?.length}x${place.sheet?.width}`
+  const hit = c.found.get(k)
+  if (hit) return hit
+  const found = machinePartHits(part, paths, machine, place).map((h) => h.message)
+  if (c.found.size > 32) c.found.delete(c.found.keys().next().value!)
+  c.found.set(k, found)
   return found
 }
 
@@ -414,7 +438,11 @@ export function buildSheetProgram(
       const flatIds = new Set(flat.map((o) => o.id))
       const flat3dMissing = flat.filter((o) => !opts.paths3d?.has(pathKey(o, inst.cam!, machine))).length
       const write3d = !!opts.camOutput && !!opts.cam3dOutput
-      const collisions = collisionsOf(inst.cam, paths, machine)
+      const key = pathsKey(inst.cam, paths)
+      const collisions = collisionsOf(inst.cam, paths, machine, key)
+      // the machine's own parts, with the part where it sits on the sheet (turned as nested)
+      const origin = pt(0, 0)
+      const machineHits = machineHitsOf(inst.cam, paths, machine, key, { at: { x: origin.x, y: origin.y }, turn: angle, sheet: { length: sheet.sheetLength, width: sheet.sheetWidth } })
       // (rotary work never goes to woodWOP, M3.3)
       const unwritable = (tp: Toolpath) => !!tp.noOutput || tp.kind === 'rotary'
       const blockedIds = new Set(paths.filter(unwritable).map((tp) => tp.opId))
@@ -433,6 +461,7 @@ export function buildSheetProgram(
         ...(adaptiveOps ? { adaptiveOps } : {}),
         ...(flat.length ? { flat3d: flat.length, flat3dMissing, flat3dWritten: write3d && !flat3dMissing } : {}),
         ...(collisions.length ? { collisions } : {}),
+        ...(machineHits.length ? { machineHits } : {}),
         ...(blocked.length ? { blocked } : {}),
         ...(more.length ? { more25d: more.length, more25dWritten: write25d } : {}),
       })

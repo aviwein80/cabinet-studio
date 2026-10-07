@@ -108,11 +108,12 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.6b Machine simulation (SIM-06) and part compare (SIM-04) cores | **Done** (October 2026) | See below. Simulator only; nothing new is written to any machine. |
 | M3.6c Machine view, compare screens, fixtures panel, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.6 complete.** |
 | M3.6d Pocket and facing toolpaths open over their first cut (owner decision 24.4) | **Done** (October 2026) | See below. Goldens explained; woodWOP output byte-identical. |
+| M3.6e Machine-part hits on the export: a warning while the machine's parts are invented, blocking once confirmed (owner decision 24.3) | **Done** (October 2026) | See below. Nothing new is written; no check weakened. |
 | M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -2853,6 +2854,81 @@ top) over that same point, then rises diagonally to the safe height over the nex
 Both ends are over the area just cut, so it is wasted motion rather than a risk; removing it would
 change every multi-level pocket golden. It can go in a later run if the owner wants it.
 
+## M3.6e machine-part hits on the export: what was built (owner decision 24.3)
+
+Until now the machine simulation's hits (a part of the machine, such as the spindle motor or the
+head plate, running into a clamp, the table or the part) showed in the simulator only. Now the
+export checker runs the same check on every custom part in a job, and the owner's rule decides
+what a hit does:
+
+| The machine's parts (Machine & tools → Machine parts) | A machine-part hit on the export |
+|---|---|
+| Invented (the placeholder set, or any part still marked invented), not confirmed | **Warning** `CAM_MACHINE_HIT`, with the Machine parts Configure badge; the export is not blocked by it |
+| Confirmed ("Mark as confirmed" on the set), or the shop's own sizes typed in | **Error** `CAM_MACHINE_HIT`: blocks the export like any collision |
+
+| Item | What | Where |
+|---|---|---|
+| Where the part sits | The part's toolpaths are replayed on the machine where the nesting put the part: its face-1 corner and its quarter or half turn on the sheet (the program's own placement transform), so each clamp is met by the side of the head that really meets it (the N-200's drill block sits on one side of the spindle) | `replayToolpaths` `turn`, `turnCs` in `src/cam/machine/replay.ts`; the part's pose in `machineCollisions` |
+| The sheet as material | On a nested sheet the whole sheet (its full thickness) counts as material for the machine's parts, not only the part's own block | `machineCollisions` `sheet` |
+| Machine parts only | Only hits by the machine's own parts count here. The tool, shank and holder stay with the cutting check (`CAM_COLLISION`, always blocking, unchanged); an axis past its travel stays in the simulator (positions on the table are the sheet checks' job). Each hit now says what moves (`moverKind`: machine, tool or axis) | `machinePartHits` in `src/cam/machine/check.ts` |
+| Export checker | The hits per custom part on each sheet (worked out once per part, machine, toolpath set and place); the warning or error with up to three hits named and "Open Simulate > Machine on the part to see each one" | `machineHitsOf` in `src/core/machining.ts`, `CAM_MACHINE_HIT` in `src/core/validator.ts` |
+| Screens | Simulate → Machine: a line under "Machine collision check" says what a hit does on the export (warning while invented, blocking once confirmed). Machine & tools → Machine parts: the same next to the invented-sizes badge, or "A hit by one of them blocks the export" once they are the shop's own. The feature switch's description says it | `MachineView.tsx`, `MachineSimSections.tsx`, `MachinePage.tsx` |
+
+It runs whatever the "Machine simulation, part compare and fixtures" switch says (a safety check
+does not hang on a screens switch). Nothing new is written to any machine; confirming the machine's
+parts switches no output on.
+
+### Acceptance (owner decision 24.3: both states tested)
+
+`tests/cam-machine-sim.test.ts`, "M3.6e export":
+
+| Criterion | Measured |
+|---|---|
+| Invented parts: a hit warns, does not block | A job with a 300 x 200 panel, a 60 x 60 pocket and a 200 mm clamp 40 mm off it: one `CAM_MACHINE_HIT`, severity warning, naming `hits fixture "Clamp A"`, carrying the `bodies:machine` Configure badge; no `CAM_COLLISION` (the tool, shank and holder clear the clamp). A 30 mm clamp in the same place: no hit |
+| Confirmed: the same hit blocks | After "Mark as confirmed" on the machine parts (badge cleared): the same job gives `CAM_MACHINE_HIT` as an error, no badge; the low clamp still gives nothing. With the shop's own parts typed in (no invented part left): error. With one invented part added back among them: warning again |
+| The part checked where it sits | Unturned, the N-200's vertical drill block (on the head's -X side) reaches a tall clamp on the part's -X side; turned half round on the sheet it does not. For a quarter, half and three-quarter turn, the hits from the turned replay are the same, hit for hit and in order, as those from the toolpaths and clamps moved onto the sheet by hand with the program's own placement transform (depths within 0.01 mm; the hand-moved copy is rounded to 0.001 mm). The quarter turn brings a clamp on the part's +Y side to the drill block's side: caught |
+| The sheet as material | A low arm beside the spindle, over the sheet just past the part's end while the pocket is cut: not caught against the part's block alone; caught on the sheet ("Low arm hits the sheet … (7.00 mm)") |
+
+In the app (demo job "Clamped panel", 500 x 350 with a pocket and a 200 mm clamp beside it):
+27 machine-part hits; a warning with the badge while invented (screenshot 01), an error once
+confirmed (02), the cutting check clear while the machine check lists the spindle motor and head
+plate on the clamp (03).
+
+**Speed** (cloud container, Linux x64): a 200,000-move toolpath on a 600 x 400 part, turned a
+quarter on a full sheet: the machine-part check 3.2 s, against 23.3 s for the existing cutting
+check on the same toolpath. The demo job's whole export check: 267 ms.
+
+### Limits recorded
+
+- **It runs on the job page's thread**, like the cutting check it sits beside, and **each copy of
+  a part on a sheet is checked in its own place** (a job with many copies of a very large 3D part
+  pays the check per copy; results are kept per place, so a re-check is instant).
+- **The Simulate → Machine view** shows the part at the X and Y typed there, not turned; the export
+  check uses the nested place and turn, so the two hit lists can differ (the demo: the export's
+  first hit is on the way down from the tool change at the nested place).
+- **The sheet counts as a full block**: the other parts' cut-outs are not taken off, so a hit over
+  a cut-out may be reported a little early; never missed.
+- **The sheet's corner is taken at the table's X0 Y0** (as the simulator's part placement does);
+  where the sheet really lies and where its origin is are still open shop facts (ROADMAP Phase 0,
+  item 5). Against the clamps and the part this does not matter (they move with the part); it
+  matters only near the table's own edges.
+- **Axis travel** in the export stays with the sheet and machine-model checks (the replay's travel
+  check stays in the simulator).
+- **Machine parts are still invented** (decision 24.1), so today these are warnings only.
+
+## M3.6d and M3.6e screenshots
+
+In `docs/screenshots/stage-2-3/M3.7/` (this run's folder; M3.7 itself has no screens): demo job
+"Clamped panel" (500 x 350 MDF 18, a 120 x 100 pocket 10 deep, a 200 mm clamp beside it),
+`01-export-machine-hit-warning` (Output → Validation: `CAM_MACHINE_HIT` as a warning, "Not
+blocking: the machine's parts are invented sizes", the Machine parts Configure badge),
+`02-export-machine-hit-blocks` (the same job after "Mark as confirmed" on the machine parts: an
+error, 2 errors), `03-machine-view-export-note` (Simulate → Machine: the cutting check clear, the
+spindle motor and head plate into the clamp, the new line on what a hit does on the export),
+`04-machine-parts-export-note` (Machine & tools → Machine parts: invented sizes, a hit is a warning
+until measured and confirmed). M3.6d has no new screen (the simulator's backplot simply no longer
+draws a rapid from the part's corner; no before-and-after was captured).
+
 ## Next run
 
 - M3.7 (record the out-of-scope items in ROADMAP.md; nothing built), when the owner says go.
@@ -2923,4 +2999,6 @@ change every multi-level pocket golden. It can go in a later run if the owner wa
   machine view, compare screens, fixtures panel, screenshots, docs. **M3.6 complete.** See
   `git log`.
 - **Run 20 (M3.6d)**: pocket and facing toolpaths open over their first cut (owner decision 24.4),
-  goldens explained, woodWOP output byte-identical. See `git log`.
+  goldens explained, woodWOP output byte-identical (`3e45bad`).
+- **Run 20 (M3.6e)**: machine-part hits on the export, warning while invented, blocking once
+  confirmed (owner decision 24.3); screenshots. See `git log`.

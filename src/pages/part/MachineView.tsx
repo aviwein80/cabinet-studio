@@ -336,6 +336,7 @@ export function MachineView(props: {
         <h3 className="flex flex-wrap items-center gap-2 font-medium text-stone-300">
           Machine collision check {placeholder && <span className="flex items-center gap-1 text-[11px] font-normal text-amber-200">machine parts invented <ValueBadges item={placeholder} /></span>}
         </h3>
+        <p className="text-[11px] text-stone-400">{placeholder ? "On the export a hit by a machine part is a warning while the machine's parts are invented; once they are confirmed it blocks the export." : 'On the export a hit by a machine part blocks the export.'} The tool, shank and holder are checked by the cutting simulation.</p>
         {cur?.error ? (
           <p className="text-red-200">Could not replay: {cur.error}</p>
         ) : source === 'file' && !file ? (

@@ -62,6 +62,8 @@ export interface MachineReplay {
   letters: [string, string] | null
   /** Where the part's face-1 corner is, machine coordinates with every axis at 0. */
   partAt: Vec
+  /** How far the part is turned about Z where it sits (degrees, counter-clockwise; 3-axis machines). */
+  partTurn: number
   /** What could not be replayed, and why. */
   problems: string[]
   notes: string[]
@@ -143,12 +145,22 @@ export function stockSpans(tl: SimTimeline, ordered: readonly Pick<Toolpath, 'op
   return out
 }
 
+/** Cosine and sine of a turn in degrees, exact for quarter turns. */
+export function turnCs(deg: number): [number, number] {
+  const q = ((Math.round(deg) % 360) + 360) % 360
+  if (Math.abs(deg - Math.round(deg)) < 1e-12 && q % 90 === 0) return [[1, 0, -1, 0][q / 90], [0, 1, 0, -1][q / 90]]
+  const a = (deg * Math.PI) / 180
+  return [Math.cos(a), Math.sin(a)]
+}
+
 /**
  * The part's toolpaths as the machine runs them (rotary toolpaths left out). `at`: where a part
- * goes on a 3-axis machine's table (its face-1 corner, X and Y). `spans`: each operation's stretch
- * of the cutting simulation's timeline (`stockSpans`), so each step knows the stock to show.
+ * goes on a 3-axis machine's table (its face-1 corner, X and Y). `turn`: the part turned about Z by
+ * this many degrees (counter-clockwise) round that corner, as a nested part sits on its sheet
+ * (3-axis machines; M3.6e). `spans`: each operation's stretch of the cutting simulation's
+ * timeline (`stockSpans`), so each step knows the stock to show.
  */
-export function replayToolpaths(toolpaths: readonly Toolpath[], part: Block, machine: MachineProfile, opts: { at?: { x: number; y: number }; spans?: Record<string, { start: number; end: number }> } = {}): MachineReplay {
+export function replayToolpaths(toolpaths: readonly Toolpath[], part: Block, machine: MachineProfile, opts: { at?: { x: number; y: number }; turn?: number; spans?: Record<string, { start: number; end: number }> } = {}): MachineReplay {
   const model = machineModelOf(machine)
   const k = kinOf(model)
   const problems: string[] = []
@@ -162,6 +174,8 @@ export function replayToolpaths(toolpaths: readonly Toolpath[], part: Block, mac
     paths = paths.filter((tp) => !tp.tilt && !tp.multiAxis)
   }
   const partAt = partPlacement(machine, part, opts.at)
+  const partTurn = k ? 0 : (opts.turn ?? 0)
+  const [cs, sn] = turnCs(partTurn)
   const tc = model.toolChange
   const home: AxisState = { x: tc.x, y: tc.y, z: tc.z, a1: 0, a2: 0 }
   const S = new Steps(home)
@@ -180,7 +194,7 @@ export function replayToolpaths(toolpaths: readonly Toolpath[], part: Block, mac
         .filter((m) => m.t === 'rapid' || m.t === 'feed')
         .map((m) => {
           const q = m as { t: 'rapid' | 'feed'; x: number; y: number; z: number; f?: string; k?: number }
-          return { t: q.t, x: q.x + partAt[0], y: q.y + partAt[1], z: q.z + partAt[2], a1: 0, a2: 0, f: q.f, k: q.k }
+          return { t: q.t, x: cs * q.x - sn * q.y + partAt[0], y: sn * q.x + cs * q.y + partAt[1], z: q.z + partAt[2], a1: 0, a2: 0, f: q.f, k: q.k }
         })
       list.push({ path, name: tp.name, moves })
     })
@@ -227,7 +241,7 @@ export function replayToolpaths(toolpaths: readonly Toolpath[], part: Block, mac
       S.go({ x: m.x, y: m.y, z: m.z, a1: m.a1, a2: m.a2 }, m.t, oi, i, rate, stockT !== undefined ? { stockT } : {})
     })
   }
-  return { steps: S.steps, ops, total: S.t, letters, partAt, problems, notes, source: 'toolpaths' }
+  return { steps: S.steps, ops, total: S.t, letters, partAt, partTurn, problems, notes, source: 'toolpaths' }
 }
 
 /**
@@ -285,7 +299,7 @@ export function replayProgram(text: string, part: Block, machine: MachineProfile
     const rate = b.t === 'rapid' ? RAPID_RATE / 60 : b.inverse ? (b.f > 0 ? (l * b.f) / 60 : 1000 / 60) : Math.max(1, b.f || op.tool?.feed || 1000) / 60
     S.go(to, b.t, ops.length - 1, move++, rate, { line: b.ln })
   })
-  return { steps: S.steps, ops, total: S.t, letters: [k.first, k.second], partAt, problems, notes, source: 'program' }
+  return { steps: S.steps, ops, total: S.t, letters: [k.first, k.second], partAt, partTurn: 0, problems, notes, source: 'program' }
 }
 
 /** The step at program time t (binary search) and where the axes are. */

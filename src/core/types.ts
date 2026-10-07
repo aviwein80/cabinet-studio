@@ -890,6 +890,8 @@ export interface FeatureFlags {
    * (the simulated stock against the 3D model as a colour map, for several parts) and clamps, pods
    * and rails on parts (placed by hand, by dragging or automatically). Screens and checks only:
    * nothing new is written to any machine; fixture collisions block the export like any collision.
+   * The export checker's machine-part hits (M3.6e) run whatever this switch says: a warning while the
+   * machine's parts are invented, blocking once they are confirmed.
    */
   camMachineSim: boolean
 }

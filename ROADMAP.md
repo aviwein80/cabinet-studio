@@ -104,6 +104,14 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   length within 0.01 mm); hatching, detail views and layer line types, printed to scale; a
   stroke-font editor for engraving; rapid moves over a cylinder or dome (simulation, checks and
   text posts; woodWOP output unchanged). Part format 7.
+  **M3.3 rotary (4-axis): done** (October 2026): a rotary axis along X, Y or Z with a round or
+  square blank; wrapped planes (from a radius, extents or a solid's cylindrical face) drawn
+  unrolled, with shapes drawn on them wrapping onto the cylinder; passes along the axis, rings
+  round it and a spiral on a model, roughing in levels, wrapped shapes to a depth (also with a
+  saw blade). Simulated on a new rotary stock with the collision check; a turned leg and a fluted
+  column simulate with no gouges (independent check, within 0.005 mm). Output only through a
+  script post for a machine model that declares that rotary axis (switch off); the N-200 export
+  always refuses a turned part (`CAM_ROTARY`). Part format 8.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

@@ -95,11 +95,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.1f Screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.1 complete.** |
 | M3.1g Owner follow-ups: flat-area flat layers, lollipop badges, undercut roughing, solid face rows and columns, plan view | **Done** (October 2026) | See below. Output switches all off; undercut roughing simulation only. |
 | M3.2 Small extras (NEW-08, NEW-07, NEW-21, NEW-24, 2D-18) | **Done** (October 2026) | See below. Thread milling simulation only; rapid surfaces not in woodWOP output; every output switch still off. |
-| M3.3 - M3.7 | Not started | |
+| M3.3a Rotary core: wrapped planes (NEW-14), rotary machining (3D-10), rotary stock, checks, format v8 | **Done** (October 2026) | See below. Simulation only; the N-200 export refuses a turned part. |
+| M3.3b Rotary output through a script post for a machine model with a rotary axis | **Done** (October 2026) | See below. Rotary-post switch off. |
+| M3.3c Rotary screens, simulator, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.3 complete.** |
+| M3.4 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -189,6 +192,7 @@ files present; fixed in M2.8e, back to 17.)
 13. **M3.1 (more 3D finishing)**: answered (decision 20); still to come: real lollipop sizes
     (see "M3.1g decisions needed").
 14. **M3.1g / M3.2**: see "M3.1g decisions needed" and "M3.2 decisions needed" below.
+15. **M3.3 (rotary)**: see "M3.3 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -2290,9 +2294,95 @@ at Z 12.5 over the arch).
 4. **Rapid surfaces on other machines**: they reach text programs today (the script post path);
    the N-200 is unaffected. Confirm that is wanted before any non-N-200 machine runs them.
 
+## M3.3 split
+
+Three green parts, each pushed to `main`: **M3.3a** the rotary core (set-up, wrapped planes,
+rotary passes, rotary stock, checks, part format 8), **M3.3b** output through a script post for a
+machine model with a rotary axis, **M3.3c** the screens (3D tab, operation editor, drawing,
+simulator, Machine page, Program dialog), screenshots and docs.
+
+## M3.3 rotary (4-axis): what was built
+
+Commits `d966d34` (M3.3a), `f73544e` (M3.3b), `1d5a33e` (M3.3c), then screenshots and docs. Part format 8 (a part's optional rotary
+set-up and the rotary operation; format 7 parts read unchanged).
+
+| Item | What | Where |
+|---|---|---|
+| NEW-14 Wrapped work planes | A part's rotary set-up: the axis along X, Y or Z of the drawing through a point, angles from straight up, right-handed (A about X, B about Y, C about Z); a round blank (diameter) or a square one (side), between two places along the axis. Wrapped planes: a radius, angles from/to, along from/to; made from the blank's radius, from extents, or fitted to a solid's cylindrical face on the axis (radius, length and angle span from the face; a face off the axis is refused). Each is drawn unrolled on the part's drawing (along the axis as it is; round it as arc length at its radius) with 90° ticks; shapes drawn inside it wrap onto it, keeping their lengths at that radius. The axis can also be put on a solid's cylindrical face | `src/cam/rotary/frame.ts`, `src/cam/rotary/face.ts`, `src/pages/part/RotaryPanel.tsx` (3D tab), planes in `src/pages/part/Canvas.tsx` |
+| 3D-10 Rotary machining | One rotary operation with four strategies on a plane: passes along the axis, rings round it (one-way or zig-zag), one spiral, on a model (a drop-cutter turned round the axis, refined against the tool tip's surface; roughing in levels from the blank's surface in, with stock to leave); wrapped shapes drawn on the plane cut to a depth below the plane or below the model (drive geometry through the axis). Saw blades straight along the axis (blade in the axis plane) or round it (blade square to it). The tool stands square to the axis and points at it; between passes it lifts a clearance above the blank before it turns. Moves are made on the plane's unrolled frame, so a straight move there is a straight move of the machine's axes. Step-over and roughing step-down are placeholders with Configure badges | `src/cam/rotary/paths.ts`, `src/cam/rotary/drop.ts`, `genRotary` in `src/cam/toolpath.ts`, `src/pages/part/RotaryFields.tsx` |
+| Rotary stock | A new stock model behind the same `StockModel` interface: rays out from the axis on a grid along and round it, each holding up to 8 pieces of material (so groove walls are kept). Exact for moves straight along or round the axis and for plunges; other moves sampled at a quarter cell. Used by the one timeline, playback, the collision check (new kind: the tool tip reaching the axis) and the simulator | `src/cam/rotary/stock.ts`, `src/cam/rotary/sim.ts` |
+| Checks | Independent gouge check (exact for a ball-nose, sampled otherwise; no drop-cutter code). Collision check: shank, holder, rapids through material, tip past the axis; positions written as X, A and the distance from the axis | `src/cam/rotary/check.ts`, `rotaryCollisions` in `src/cam/rotary/sim.ts` |
+| N-200 refuses | A turned part is left out of the cut list and nesting (warning) and the job export is refused (`CAM_ROTARY`, error, whatever the switches); a rotary operation never reaches the MPR writer; a job holding only a turned part now lists why nothing is written on its Output tab | `src/core/validator.ts`, `src/core/pipeline.ts`, `src/pages/JobPage.tsx` |
+| Output through a script post | Post input carries the rotary axis and letter; moves against the axis (along it, 0, the tip's distance from it) with the angle in degrees (never wrapped) and each feed move's tip travel for inverse-time feeds. Text-post checks: a script post (the template post refuses and never writes the moves), the "Write rotary programs through script posts" switch (off), a machine model declaring that axis, angles inside its travel, a saw unit for a blade, no flat operations mixed in. Rotary toolpaths for that machine are calculated in the background in the Program dialog. Sample `examples/plugins/rotary-4axis-post.js` (G-code with the A word, G93 inverse-time feeds when the axis turns; not machine-validated), added from Settings → Plugins | `src/cam/post.ts`, `checkTextPost` in `src/core/validator.ts`, `src/cam/plugin/posts.ts`, `src/pages/part/ProgramDialog.tsx` |
+| Machine model rotary axis | Machine & tools → machine model → Rotary axis (none, A, B or C) and its travel, for machines other than the N-200 (the N-200 shows "none") | `rotaryAxisOf` / `withRotaryAxis` in `src/core/machineModel.ts`, `src/pages/machine/MachineModelSection.tsx` |
+| Simulator | Rotary mode: the top view is the blank's surface unrolled (backplot wrapped across the seam); 3D turns the stock under an upright tool (or blade) as the machine would, with section and see-through; readout X, A, distance from the axis; the collision check runs in the background and hands back the finished stock, so the dialog opens straight away and shows the end. Flat operations on a turned part are left out of the rotary simulation (noted) | `src/pages/part/SimulateDialog.tsx`, `src/pages/part/RotaryView3D.tsx`, `sim.rotaryCollide` in `src/cam/worker/tasks.ts` |
+| Switches | "Rotary (4-axis)" (screens, on) and "Write rotary programs through script posts" (off) | `src/core/features.ts`, `src/pages/MachinePage.tsx` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| A turned leg simulates in a rotary stock with no gouges | `tests/cam-rotary.test.ts` | Leg 300 mm on a 40 mm square blank: a 50 mm square pommel, then bead, cove, taper and foot (a revolved mesh). Roughing along the axis (T102 flat Ø8, 4 mm step-over, 5 levels, 0.5 mm left) and finishing in rings (T105 ball Ø6, 2 mm step): independent gouge check 0.0004 mm (roughing, sampled, against 0.5 mm stock) and 0.0005 mm (finishing, exact); simulated on the rotary stock (0.5 mm cells), no collisions; the stock against the model on 213,000 rays at most 0.0011 mm below it; what is left on the turned part within the 2 mm / Ø6 cusp (95th percentile); the pommel stays square. Goldens `rotary-leg-rough-along`, `rotary-leg-finish-rings` |
+| A fluted column simulates with no gouges | `tests/cam-rotary.test.ts` | Ø50 × 200 column, eight stopped flutes drawn on a wrapped plane (x 30 to 170), 2.5 mm deep with a Ø6 ball: eight plunges, no collisions; the stock within 1e-6 mm of the analytic design on 502,400 rays; the flute floor 22.5 mm from the axis (within 0.001 mm); lands and ends untouched. Golden `rotary-column-flutes` |
+| Output only through a script post for a machine model with a rotary axis | `tests/cam-rotary-post.test.ts` | The fluted column through the sample post for a router with an A axis reads back move for move within 0.0005 (mm and degrees); the leg's rings with G93 inverse-time feeds where the axis turns. Refused, each with its reason: the N-200, a machine without that axis, the template post, the switch off, flat work mixed in, angles past the axis's travel, a blade without a saw unit |
+| The N-200 export refuses it | `tests/cam-rotary.test.ts`, `tests/cam-rotary-post.test.ts` | A job with a turned part: left out of nesting, `CAM_ROTARY` error with every switch on; no MPR holds a rotary operation; a rotary operation on a flat part is refused like any operation without a woodWOP form |
+| Wrapped planes (NEW-14) | `tests/cam-rotary.test.ts` | Frames round X, Y, Z round-trip; unrolled shapes keep their length; plane fitted to a cylindrical face on the axis (and one off it refused); from a STEP solid's Ø5 hole wall: radius 2.5, length 13, 0° to 360°, moved with the model's placement |
+
+Also: `npm run sample` output unchanged (byte for byte); Stage 1 goldens and every earlier 3D
+golden unchanged; four new goldens (`rotary-*`).
+
+### Limits recorded
+
+- **Simulation and checks**: the rotary stock is a grid of rays (cells of 0.5 mm or more in the
+  simulator; 0.25 to 0.5 mm in the tests); moves that go along and round at once are sampled at a quarter
+  cell. The independent gouge check is exact for a ball-nose and sampled for flat and bull-nose
+  tools. The simulator's top view shows the outer surface; material inside a groove (walls) is
+  seen in 3D.
+- **Tool orientation**: the tool always points at the axis (no lead or lag angle, no tilt); the
+  axis runs along X, Y or Z of the drawing (not at an angle). Indexed 3+2 work and 5-axis are later
+  milestones.
+- **From a cylindrical face**: the face must run along the set-up's axis; its angle span comes
+  from the face's mesh points (a face with very few points round it is read as the whole way
+  round when no gap is wider than three times the usual spacing).
+- **Output**: the sample rotary post is an example for a generic G-code router with an A axis,
+  not for any machine in the shop; nothing is machine-validated. Rotary output switch off.
+- **Simulator opening**: a rotary simulation opens at the end (the background check hands back
+  the finished stock); going back replays on the screen's own thread from the start (or an
+  operation's start once reached), which can hold the screen for some seconds on a part as big
+  as the leg.
+
+## M3.3 screenshots
+
+In `docs/screenshots/stage-2-3/M3.3/`: `01-rotary-setup` (3D tab → Rotary: axis, square blank,
+a wrapped plane; the plane unrolled on the drawing with the roughing passes), `02-rotary-operations`
+(rings round the axis: plane, step-over and step-down with Configure badges), `03-leg-simulated-unrolled`
+(the turned leg's surface unrolled, collision check clear, readout X / A / distance from the axis),
+`04-leg-simulated-3d` (the leg turned: square pommel, bead, taper), `05-fluted-column` (eight
+flutes drawn on the unrolled plane, wrapped shapes operation), `06-column-simulated-3d` (the
+fluted column), `07-machine-rotary-axis` (another machine's model with an A axis and its travel),
+`08-feature-switches` (Rotary (4-axis) switch), `09-program-rotary-post` (the column through the
+sample rotary post: A words; not written because the script-post and rotary-post switches are
+off), `10-n200-refuses` (a job with the turned leg: `CAM_ROTARY`, nothing written for the N-200).
+
+## M3.3 licences
+
+No new dependencies. All new code is our own (frames, wrap maths, rotary stock, checks).
+
+## M3.3 decisions needed
+
+1. **Rotary step-over and step-down**: placeholders (Configure badges) until the shop gives
+   values for turned work.
+2. **A real rotary machine**: none is in the shop as far as this file knows. The sample post is
+   an example only; before any rotary program is run, the machine's own post (or its sample
+   program) and its axis conventions (zero angle, direction, work offset on the axis) are needed,
+   and the rotary-post switch stays off until then.
+3. **Turned parts in N-200 jobs**: today they are refused with an error (the job cannot be
+   exported while one is in it). If you would rather they were left out with a warning so the
+   rest of the job still exports, say so.
+
 ## Next run
 
-- M3.3 (rotary), when the owner says go.
+- M3.4, when the owner says go.
 
 ## Run log
 
@@ -2345,3 +2435,6 @@ at Z 12.5 over the arch).
 - **Run 15 (M3.2)**: thread milling, fold/flatten/wrap, hatching, detail views and line types
   (`d68e3d3`); stroke fonts and rapid surfaces (`9d40204`); screenshots (M3.1g and M3.2), docs.
   **M3.2 complete.** See `git log`.
+- **Run 16 (M3.3a-c)**: rotary core, wrapped planes, rotary stock and checks, format 8
+  (`d966d34`); rotary output through a script post (`f73544e`); rotary screens and simulator
+  (`1d5a33e`); screenshots, docs. **M3.3 complete.** See `git log`.

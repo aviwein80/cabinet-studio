@@ -402,6 +402,38 @@ export checker. Tool numbers are still placeholders.
     Never below the clearance height. The cutting moves are unchanged; the simulation, the
     collision check and text (G-code) programs use it. woodWOP programs move between cuts at the
     machine's own safety height, so MPR output is not affected.
+- **Rotary (4-axis)** (switch: Rotary (4-axis), on; screens and simulation only on the N-200):
+  - **Set-up** (3D tab → Rotary): the axis (along X, Y or Z of the part's drawing, through a
+    point you give), the blank (round, by diameter, or square, by side) and where it starts and
+    ends along the axis. Or put the axis on a cylindrical face of an imported solid (**Axis onto
+    this face**).
+  - **Wrapped planes**: a cylinder round the axis at a radius, from one angle to another and
+    between two places along the axis, drawn unrolled on the part's drawing (along the axis as
+    it is; round it as arc length at its radius, with 90° ticks). Made from the blank's radius,
+    from extents, or **from a solid's cylindrical face** (radius, length and angles fitted to the
+    face). Shapes drawn inside a plane's rectangle wrap onto it.
+  - **Rotary operations** (Machining → Add operation → Rotary roughing, finishing, rings,
+    spiral or wrapped shapes): passes **along the axis**, **rings round it** or **one spiral**,
+    on a model (STL, OBJ, 3MF or a solid); roughing in
+    levels from the blank's surface in to the model, or one finishing pass; **wrapped shapes**
+    (drawn on a plane) cut to a depth below the plane or below the model, also with a saw
+    blade straight along or round the axis. The tool stands square to the axis and points at
+    it; between passes it lifts clear of the blank before it turns. Step-over and roughing
+    step-down are placeholders with Configure badges.
+  - **Simulated on a rotary stock**: the top view shows the blank's surface unrolled; 3D turns
+    the blank under the tool as the machine would. Positions read as X, A and the distance from
+    the axis. The collision check covers the shank, holder, rapids through material and a tool
+    tip reaching the axis. (The tests check every pass against the model with an independent
+    gouge check that shares no code with the toolpaths.)
+  - **Output**: never to woodWOP. The N-200 has no rotary axis, so a turned part is left out of
+    nesting and the job export refuses it with a clear message (`CAM_ROTARY`). Another machine
+    whose machine model declares an A, B or C axis (Machine & tools → machine model → Rotary
+    axis) can write rotary programs only through a **script post** written for it (a sample,
+    `examples/plugins/rotary-4axis-post.js`: Settings → Plugins → **Add the sample rotary
+    post**), with the new "Write rotary programs through script posts" switch on (off by default) as well as the
+    script-post switch and the plugin's machine-output grant. The built-in template post never
+    writes a rotary operation. Until then the Program dialog shows the program as a preview with
+    the reasons it is not written.
 - **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
   the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
   aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
@@ -695,6 +727,8 @@ src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its 
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
                    Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse),
                    thread milling, rapid surfaces
+  rotary/          rotary (4-axis): axis frames and wrapped planes, rotary passes, the rotary stock,
+                   gouge and collision checks, planes from a solid's cylindrical faces
   worker/          background compute worker (3D tasks) with progress and cancel
   plugin/          plugin sandbox (QuickJS), the typed API, grants, part-change checks, batch
                    steps, script posts, macro recorder

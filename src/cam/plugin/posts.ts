@@ -56,15 +56,16 @@ export function planPartPost(data: AppData, machineId: string, part: CamPart, op
   // (`paths3d`: operations calculated in the background for this machine's tools, by `pathKey`)
   const all = generatePart(part, d.machine, undefined, opts.paths3d, true)
   const toolpaths = all.filter((t) => t.moves.length)
-  const input = postInput(part.name, toolpaths, { part: { length: part.length, width: part.width, thickness: part.thickness } })
+  const input = postInput(part.name, toolpaths, { part: { length: part.length, width: part.width, thickness: part.thickness }, machine: d.machine })
   const at = '2026-01-01T00:00:00.000Z'
   const job: Job = { id: `post-${part.id}`, number: 'POST', name: part.name, customer: '', notes: '', createdAt: at, updatedAt: at, cabinets: [], camParts: [{ ...part, qty: 1 }] }
   // M3.3: a turned part is refused for sheets (CAM_ROTARY); a text post writes the part itself, so
   // its rotary rules (`checkTextPost`) stand in for that one
-  const jobIssues = setup.post.kind === 'woodwop-mpr' ? [] : runJob(job, d).issues.filter((i) => i.severity === 'error' && !(part.rotary && i.code === 'CAM_ROTARY'))
+  // (M3.4: likewise CAM_POSITIONAL for a part with tilted operations: the 3+2 rules stand for it)
+  const jobIssues = setup.post.kind === 'woodwop-mpr' ? [] : runJob(job, d).issues.filter((i) => i.severity === 'error' && !(part.rotary && i.code === 'CAM_ROTARY') && i.code !== 'CAM_POSITIONAL')
   const plugin = setup.post.kind === 'script' ? ((data.plugins ?? []).find((p) => p.id === (setup.post as { plugin: string }).plugin) ?? null) : null
   const f = featuresOf(data.settings)
-  const issues = checkTextPost(setup, { switchOn: f.scriptPostOutput, rotaryOn: f.rotaryPostOutput, plugin, toolpaths, issues: jobIssues })
+  const issues = checkTextPost(setup, { switchOn: f.scriptPostOutput, rotaryOn: f.rotaryPostOutput, positionalOn: f.positionalPostOutput, plugin, toolpaths, issues: jobIssues })
   // rotary operations calculated in the background and not handed over: the program would miss them
   for (const t of all) if (t.kind === 'rotary' && !t.moves.length) issues.push({ severity: 'error', code: 'POST_NOT_READY', message: `${t.name}: no toolpath (${t.warnings[0] ?? 'not calculated'}).` })
   return {

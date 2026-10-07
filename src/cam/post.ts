@@ -10,8 +10,13 @@
  * {NAME:4} forces 4 decimals. A line starting with "?NAME " is written only when NAME is set.
  * Words listed in `modal` are dropped when their value did not change.
  */
+import type { MachineProfile, PositionalKinematics } from '@/core/types'
+import { machineModelOf } from '@/core/machineModel'
 import { simpleMoves, type FeedKind, type Toolpath } from './toolpath'
 import { planeToCyl, ROTARY_LETTER } from './rotary/frame'
+import { planeFrame } from './positional/frame'
+import { machineProgram, toVertical } from './positional/convert'
+import { positionalAxes } from './positional/kinematics'
 import type { RotaryAxis } from './types'
 
 export interface PostTemplate {
@@ -124,6 +129,32 @@ export interface PostOp {
    * x the tip's distance from it. `a` gives the angle. Set the machine's work offset on the axis.
    */
   rotary?: { axis: RotaryAxis; letter: 'A' | 'B' | 'C'; blade?: { R: number; plane: 'axial' | 'ring' } }
+  /**
+   * Positional 3+2 (M3.4), in a program for a machine model with two rotary axes for 3+2 that holds
+   * at least one operation on a tilted plane (every operation of such a program has it; a face-1
+   * operation runs with the tool straight up). `moves` are then the machine's X, Y, Z (straight
+   * moves only: arcs within 0.001 mm, drill cycles spelled out along the tool) with the two rotary
+   * axes locked at `angles` (degrees, `letters` in order, first = nearer the machine frame).
+   * `partAt`: the part's origin in machine coordinates with every rotary axis at 0 (a work offset
+   * there gives work coordinates). `vertical`: the same operation in its plane's own frame (x, y
+   * from the plane's origin, z along its normal; arcs and drill cycles kept), for a controller that
+   * tilts its own working plane; `plane` gives that frame in the part.
+   */
+  positional?: {
+    letters: [string, string]
+    angles: [number, number]
+    layout: PositionalKinematics['layout']
+    tcp: boolean
+    partAt: { x: number; y: number; z: number }
+    /** Pivot plus stick-out used for the head (0 with tool-centre-point control or table axes only). */
+    L: number
+    /** Tool direction (tip to spindle), part frame. */
+    tool: [number, number, number]
+    plane: { name: string; origin: [number, number, number]; x: [number, number, number]; y: [number, number, number]; z: [number, number, number] } | null
+    vertical: PostMove[]
+  }
+  /** On a tilted plane, but the machine has no 3+2 axes (or the conversion failed): no moves; a post must not write it. */
+  tilted?: { plane: string }
 }
 export interface PostInput {
   name: string
@@ -132,26 +163,60 @@ export interface PostInput {
   ops: PostOp[]
 }
 
-export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number; part?: { length: number; width: number; thickness: number } } = {}): PostInput {
+export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number; part?: { length: number; width: number; thickness: number }; machine?: MachineProfile } = {}): PostInput {
   const zTop = opts.zTop ?? 0
-  let x = 0
-  let y = 0
-  const ops = paths.map((tp): PostOp => {
+  // M3.4: a program holding tilted (3+2) work, for a machine with 3+2 axes, goes out in machine axes
+  const positional = paths.some((tp) => tp.tilt) && !!opts.machine && !('error' in positionalAxes(machineModelOf(opts.machine)))
+  const prog = positional ? machineProgram(paths, opts.machine!) : null
+  const ops = paths.map((tp, i): PostOp => {
     if (tp.rotary) return rotaryPostOp(tp)
-    const moves: PostMove[] = []
-    for (const m of simpleMoves(tp.moves)) {
-      const z = m.z + zTop
-      if (m.t === 'rapid') moves.push({ t: 'rapid', x: m.x, y: m.y, z })
-      else if (m.t === 'feed') moves.push({ t: 'feed', x: m.x, y: m.y, z, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)), kind: m.f })
-      // arcs that plunge (helical entries) run at the plunge feed, as the toolpath and the simulator say (M2.10c fix)
-      else if (m.t === 'arc') moves.push({ t: 'arc', x: m.x, y: m.y, z, i: m.cx - x, j: m.cy - y, cx: m.cx, cy: m.cy, ccw: m.ccw, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)) })
-      else moves.push({ t: 'drill', x: m.x, y: m.y, z, r: m.r + zTop, peck: m.peck, dwell: m.dwell, f: Math.round(tp.feeds.plunge) })
-      x = m.x
-      y = m.y
+    const head = { name: tp.name, kind: tp.kind, tool: tp.tool ? { number: tp.tool.number, name: tp.tool.name, diameter: tp.tool.diameter } : null, rpm: Math.round(tp.feeds.rpm) }
+    if (prog) {
+      const mo = prog.ops.find((o) => o.path === i)
+      if (!mo) return { ...head, moves: [], ...(tp.tilt ? { tilted: { plane: tp.tilt.plane.name } } : {}) }
+      const feed = (f: FeedKind | undefined, k?: number) => Math.round((f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (k ?? 1))
+      const k = machineModelOf(opts.machine!).positional!
+      const pl = tp.tilt?.plane
+      const f = pl ? planeFrame(pl) : null
+      return {
+        ...head,
+        moves: mo.moves.map((m) => (m.t === 'rapid' ? { t: 'rapid', x: m.x, y: m.y, z: m.z } : { t: 'feed', x: m.x, y: m.y, z: m.z, f: feed(m.f, m.k), kind: m.f ?? 'cut' })),
+        positional: {
+          letters: mo.letters,
+          angles: [mo.angles.first, mo.angles.second],
+          layout: k.layout,
+          tcp: k.tcp,
+          partAt: { ...k.partAt },
+          L: mo.L,
+          tool: mo.tool,
+          plane: pl && f ? { name: pl.name, origin: f.o, x: f.x, y: f.y, z: f.z } : null,
+          vertical: plainMoves(toVertical(tp), 0),
+        },
+      }
     }
-    return { name: tp.name, kind: tp.kind, tool: tp.tool ? { number: tp.tool.number, name: tp.tool.name, diameter: tp.tool.diameter } : null, rpm: Math.round(tp.feeds.rpm), moves }
+    // without 3+2 axes a tilted operation has no program form here
+    if (tp.tilt) return { ...head, moves: [], tilted: { plane: tp.tilt.plane.name } }
+    return { ...head, moves: plainMoves(tp, zTop) }
   })
   return { name, units: 'mm', ...(opts.part ? { part: { ...opts.part } } : {}), ops }
+}
+
+/** A toolpath's moves as post moves: Z from the top (`zTop` added), feeds worked out, arc centres absolute and relative. */
+function plainMoves(tp: Toolpath, zTop: number): PostMove[] {
+  let x = 0
+  let y = 0
+  const moves: PostMove[] = []
+  for (const m of simpleMoves(tp.moves)) {
+    const z = m.z + zTop
+    if (m.t === 'rapid') moves.push({ t: 'rapid', x: m.x, y: m.y, z })
+    else if (m.t === 'feed') moves.push({ t: 'feed', x: m.x, y: m.y, z, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)), kind: m.f })
+    // arcs that plunge (helical entries) run at the plunge feed, as the toolpath and the simulator say (M2.10c fix)
+    else if (m.t === 'arc') moves.push({ t: 'arc', x: m.x, y: m.y, z, i: m.cx - x, j: m.cy - y, cx: m.cx, cy: m.cy, ccw: m.ccw, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)) })
+    else moves.push({ t: 'drill', x: m.x, y: m.y, z, r: m.r + zTop, peck: m.peck, dwell: m.dwell, f: Math.round(tp.feeds.plunge) })
+    x = m.x
+    y = m.y
+  }
+  return moves
 }
 
 /** A rotary toolpath as post data: positions against the rotary axis, the angle in degrees. */
@@ -215,6 +280,11 @@ export function runTemplate(template: PostTemplate, input: PostInput): { ext: st
     // export checker refuses such a program; this keeps a preview from showing them as X Y Z)
     if (op.rotary) {
       emit('comment', { TEXT: `${op.name}: ROTARY (${op.rotary.letter} AXIS) - NOT WRITTEN BY A TEMPLATE POST` })
+      continue
+    }
+    // nor tilted (3+2) work: it needs the machine's two rotary axes (M3.4)
+    if (op.positional || op.tilted) {
+      emit('comment', { TEXT: `${op.name}: TILTED PLANE (3+2) - NOT WRITTEN BY A TEMPLATE POST` })
       continue
     }
     if (op.tool) emit('toolchange', { T: String(op.tool.number), S: String(op.rpm), TOOLNAME: op.tool.name })

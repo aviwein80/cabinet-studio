@@ -15,6 +15,8 @@ import { machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed
 import { resolveTool } from '@/cam/ops'
 import { pathToRegion, uncutLength } from './sheetCuts'
 import { checkSheet } from './manualNest'
+import { kinematicsProblems } from '@/cam/positional/kinematics'
+import { machineProgram } from '@/cam/positional/convert'
 
 export type Severity = 'error' | 'warning' | 'info'
 
@@ -641,11 +643,13 @@ export function positionalIssues(job: Pick<import('./types').Job, 'camParts'>, m
  * - for work a G-code style post cannot describe: edge (horizontal) drilling, drilling from the
  *   underside after turning the part, edge work with an aggregate, saw cuts without a saw unit,
  *   anything not on face 1, 3D or rotary / tilted work the machine model does not declare, and
- *   any toolpath that has no confirmed program form.
+ *   any toolpath that has no confirmed program form;
+ * - for tilted (3+2) work (M3.4): the template post, its own switch off, a machine model without
+ *   two rotary axes for 3+2, angles or positions outside the axes' travel, turned work with it.
  */
 export function checkTextPost(
   setup: import('./types').MachineSetup,
-  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[]; rotaryOn?: boolean },
+  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[]; rotaryOn?: boolean; positionalOn?: boolean },
 ): Issue[] {
   const out: Issue[] = []
   const err = (code: string, message: string) => out.push({ severity: 'error', code, message })
@@ -670,9 +674,21 @@ export function checkTextPost(
     const flat = opts.toolpaths.filter((tp) => !tp.rotary)
     if (flat.length) err('POST_ROTARY_MIXED', `${flat.map((tp) => tp.name).join(', ')}: not rotary, so it would be written in the part's flat frame, not round the axis. Switch it off for this program, or machine it in a set-up of its own.`)
   }
+  // M3.4 positional 3+2: a script post (never the template), its own switch, a machine model with
+  // two rotary axes for 3+2, every angle and position inside the axes' travel, no turned work with it
+  const tilted = opts.toolpaths.filter((tp) => tp.tilt)
+  if (tilted.length) {
+    if (post.kind === 'template') err('POST_POSITIONAL_TEMPLATE', 'The template post writes X, Y and Z only: operations on tilted planes (3+2) need a script post written for a machine with two rotary axes.')
+    if (!opts.positionalOn) err('POST_POSITIONAL_OFF', '"Write 3+2 programs through script posts" is off (Machine page): 3+2 programs are shown, not written.')
+    if (rotary.length) err('POST_POSITIONAL_MIXED', 'Turned (rotary) and tilted (3+2) operations cannot share one program: switch one kind off for this program.')
+    const kp = kinematicsProblems(model)
+    if (kp.length) for (const m of kp) err('POST_POSITIONAL_MACHINE', `${setup.name}: ${m.replace(/^Its /, 'its ')}`)
+    else for (const m of machineProgram(opts.toolpaths.filter((tp) => !tp.rotary), setup.profile).problems) err('POST_POSITIONAL_TRAVEL', m)
+  }
   for (const tp of opts.toolpaths) {
     const what = (why: string) => err('POST_UNSUPPORTED', `${tp.name}: ${why}`)
-    if (tp.noOutput) what(tp.noOutput)
+    // (a tilted toolpath's "no woodWOP form" is for the N-200; the 3+2 rules above stand for it here)
+    if (tp.noOutput && !tp.tilt) what(tp.noOutput)
     // a text post changes tools per operation: without one tool the machine would cut with whatever is in the spindle
     if (!tp.tool) what('has no single tool from the tool table (for example holes drilled by diameter); a text post needs one tool number per operation.')
     if (tp.intents.some((i) => i.k === 'hdrill')) what('edge (horizontal) drilling cannot be written by a text post.')

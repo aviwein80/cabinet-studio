@@ -33,6 +33,22 @@ export function machineModelOf(machine: Pick<MachineProfile, 'physical'>): Machi
   return machine.physical ?? PLACEHOLDER_N200_MODEL
 }
 
+export type RotaryLetter = 'A' | 'B' | 'C'
+
+/** The machine's rotary axis (M3.3): A turns about X, B about Y, C about Z; null when it has none. */
+export function rotaryAxisOf(m: MachineModel): MachineModel['axes'][number] | null {
+  return m.capabilities.rotary ? (m.axes.find((a) => a.id === 'A' || a.id === 'B' || a.id === 'C') ?? null) : null
+}
+
+/**
+ * The machine model with its rotary axis set, or taken away (null). Travel in degrees; the default
+ * is a hundred turns each way (a rotary axis that keeps turning). Never for the N-200 (3 axes).
+ */
+export function withRotaryAxis(m: MachineModel, letter: RotaryLetter | null, travel: { min: number; max: number } = { min: -36000, max: 36000 }): MachineModel {
+  const axes = m.axes.filter((a) => a.id !== 'A' && a.id !== 'B' && a.id !== 'C')
+  return { ...m, axes: letter ? [...axes, { id: letter, min: travel.min, max: travel.max }] : axes, capabilities: { ...m.capabilities, rotary: !!letter } }
+}
+
 export const holderOf = (machine: Pick<MachineProfile, 'holders'>, tool: Pick<Tool, 'holderId'> | null | undefined): ToolHolder | null =>
   (tool?.holderId && machine.holders?.find((h) => h.id === tool.holderId)) || null
 

@@ -49,17 +49,24 @@ export interface PartPostPlan {
  * toolpaths made with that machine's own tools, the post input, and the export checks for that
  * machine (the part as a one-part job, then the text-post rules).
  */
-export function planPartPost(data: AppData, machineId: string, part: CamPart): PartPostPlan {
+export function planPartPost(data: AppData, machineId: string, part: CamPart, opts: { paths3d?: ReadonlyMap<string, Toolpath> } = {}): PartPostPlan {
   const setup = machineSetup(data, machineId)
   if (!setup) throw new Error(`Machine "${machineId}" is not in the machine list.`)
   const d = dataFor(data, machineId)
-  const toolpaths = generatePart(part, d.machine, undefined, undefined, true).filter((t) => t.moves.length)
+  // (`paths3d`: operations calculated in the background for this machine's tools, by `pathKey`)
+  const all = generatePart(part, d.machine, undefined, opts.paths3d, true)
+  const toolpaths = all.filter((t) => t.moves.length)
   const input = postInput(part.name, toolpaths, { part: { length: part.length, width: part.width, thickness: part.thickness } })
   const at = '2026-01-01T00:00:00.000Z'
   const job: Job = { id: `post-${part.id}`, number: 'POST', name: part.name, customer: '', notes: '', createdAt: at, updatedAt: at, cabinets: [], camParts: [{ ...part, qty: 1 }] }
-  const jobIssues = setup.post.kind === 'woodwop-mpr' ? [] : runJob(job, d).issues.filter((i) => i.severity === 'error')
+  // M3.3: a turned part is refused for sheets (CAM_ROTARY); a text post writes the part itself, so
+  // its rotary rules (`checkTextPost`) stand in for that one
+  const jobIssues = setup.post.kind === 'woodwop-mpr' ? [] : runJob(job, d).issues.filter((i) => i.severity === 'error' && !(part.rotary && i.code === 'CAM_ROTARY'))
   const plugin = setup.post.kind === 'script' ? ((data.plugins ?? []).find((p) => p.id === (setup.post as { plugin: string }).plugin) ?? null) : null
-  const issues = checkTextPost(setup, { switchOn: featuresOf(data.settings).scriptPostOutput, plugin, toolpaths, issues: jobIssues })
+  const f = featuresOf(data.settings)
+  const issues = checkTextPost(setup, { switchOn: f.scriptPostOutput, rotaryOn: f.rotaryPostOutput, plugin, toolpaths, issues: jobIssues })
+  // rotary operations calculated in the background and not handed over: the program would miss them
+  for (const t of all) if (t.kind === 'rotary' && !t.moves.length) issues.push({ severity: 'error', code: 'POST_NOT_READY', message: `${t.name}: no toolpath (${t.warnings[0] ?? 'not calculated'}).` })
   return {
     machineName: setup.name,
     post: setup.post,

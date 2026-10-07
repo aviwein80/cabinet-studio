@@ -622,7 +622,7 @@ export function rotaryIssues(job: Pick<import('./types').Job, 'camParts'>, machi
  */
 export function checkTextPost(
   setup: import('./types').MachineSetup,
-  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[] },
+  opts: { switchOn: boolean; plugin?: import('@/cam/plugin/types').PluginRecord | null; toolpaths: readonly import('@/cam/toolpath').Toolpath[]; issues?: readonly Issue[]; rotaryOn?: boolean },
 ): Issue[] {
   const out: Issue[] = []
   const err = (code: string, message: string) => out.push({ severity: 'error', code, message })
@@ -637,7 +637,16 @@ export function checkTextPost(
     else if (!p.grants.machineOutput) err('POST_NO_GRANT', `The plugin ${p.manifest.name} has not been granted machine output (Settings → Plugins).`)
     else if (!p.contributes?.posts.some((x) => x.id === post.post)) err('POST_MISSING', `The plugin ${p.manifest.name} has no post "${post.post}".`)
   }
-  const caps = machineModelOf(setup.profile).capabilities
+  const model = machineModelOf(setup.profile)
+  const caps = model.capabilities
+  // M3.3 rotary: a script post (never the template), its own switch, nothing flat mixed in
+  const rotary = opts.toolpaths.filter((tp) => tp.rotary)
+  if (rotary.length) {
+    if (post.kind === 'template') err('POST_ROTARY_TEMPLATE', 'The template post writes X, Y and Z only: rotary operations need a script post written for a machine with that rotary axis.')
+    if (!opts.rotaryOn) err('POST_ROTARY_OFF', '"Write rotary programs through script posts" is off (Machine page): rotary programs are shown, not written.')
+    const flat = opts.toolpaths.filter((tp) => !tp.rotary)
+    if (flat.length) err('POST_ROTARY_MIXED', `${flat.map((tp) => tp.name).join(', ')}: not rotary, so it would be written in the part's flat frame, not round the axis. Switch it off for this program, or machine it in a set-up of its own.`)
+  }
   for (const tp of opts.toolpaths) {
     const what = (why: string) => err('POST_UNSUPPORTED', `${tp.name}: ${why}`)
     if (tp.noOutput) what(tp.noOutput)
@@ -648,6 +657,27 @@ export function checkTextPost(
     if (tp.kind === 'edge' || tp.edge) what('edge work with an aggregate cannot be written by a text post.')
     if (tp.kind === 'saw' && !caps.saw) what(`${setup.name} has no saw unit in its machine model.`)
     if ((tp.kind === 'finish3d' || tp.kind === 'rough3d') && !caps.mill3d) what(`${setup.name} does not declare 3D milling in its machine model.`)
+    if (tp.kind === 'rotary' && !tp.rotary) what('it has no rotary set-up to turn on.')
+    if (tp.rotary) {
+      const letter = ({ X: 'A', Y: 'B', Z: 'C' } as const)[tp.rotary.setup.axis]
+      const ax = model.axes.find((a) => a.id === letter)
+      if (!caps.rotary || !ax) what(`${setup.name} has no rotary ${letter} axis in its machine model (the part turns about ${tp.rotary.setup.axis}).`)
+      else {
+        // the angles the program turns through must be within the axis's travel
+        let lo = Infinity
+        let hi = -Infinity
+        for (const m of tp.moves) {
+          const ys = m.t === 'poly' ? Array.from({ length: m.pts.length / 3 }, (_, k) => m.pts[k * 3 + 1]) : m.t === 'rapid' || m.t === 'feed' ? [m.y] : []
+          for (const y of ys) {
+            const deg = tp.rotary.plane.a0 + ((y - tp.rotary.plane.at.y) / tp.rotary.plane.radius) * (180 / Math.PI)
+            lo = Math.min(lo, deg)
+            hi = Math.max(hi, deg)
+          }
+        }
+        if (lo < ax.min - 1e-6 || hi > ax.max + 1e-6) what(`it turns the ${letter} axis from ${lo.toFixed(1)}° to ${hi.toFixed(1)}°, outside its travel (${ax.min}° to ${ax.max}°) in ${setup.name}'s machine model.`)
+      }
+      if (tp.rotary.blade && !caps.saw) what(`${setup.name} has no saw unit in its machine model.`)
+    }
   }
   for (const i of opts.issues ?? []) out.push(i)
   return out

@@ -11,6 +11,8 @@
  * Words listed in `modal` are dropped when their value did not change.
  */
 import { simpleMoves, type FeedKind, type Toolpath } from './toolpath'
+import { planeToCyl, ROTARY_LETTER } from './rotary/frame'
+import type { RotaryAxis } from './types'
 
 export interface PostTemplate {
   name: string
@@ -97,9 +99,15 @@ export interface PostToolInfo {
   name: string
   diameter: number
 }
+/**
+ * Rotary operations' moves (M3.3) also carry `a`: the angle of the part under the tool in degrees
+ * (0 = straight up, right-handed about the axis, counting on past 360: never wrapped), and feed
+ * moves `len`: how far the tool's tip travels on the part (mm), for posts that write inverse-time
+ * feeds.
+ */
 export type PostMove =
-  | { t: 'rapid'; x: number; y: number; z: number }
-  | { t: 'feed'; x: number; y: number; z: number; f: number; kind: FeedKind }
+  | { t: 'rapid'; x: number; y: number; z: number; a?: number }
+  | { t: 'feed'; x: number; y: number; z: number; f: number; kind: FeedKind; a?: number; len?: number }
   | { t: 'arc'; x: number; y: number; z: number; i: number; j: number; cx: number; cy: number; ccw: boolean; f: number }
   | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number; f: number }
 export interface PostOp {
@@ -108,6 +116,14 @@ export interface PostOp {
   tool: PostToolInfo | null
   rpm: number
   moves: PostMove[]
+  /**
+   * Rotary operation (M3.3): the part axis it turns about and the machine's letter for that axis.
+   * Its moves are against the rotary axis, not the part's corner: for an axis along X, x is the
+   * position along the axis (part coordinate), y = 0 (the tool over the axis) and z the tip's
+   * distance from the axis; along Y the same with x and y swapped; along Z, z is along the axis and
+   * x the tip's distance from it. `a` gives the angle. Set the machine's work offset on the axis.
+   */
+  rotary?: { axis: RotaryAxis; letter: 'A' | 'B' | 'C'; blade?: { R: number; plane: 'axial' | 'ring' } }
 }
 export interface PostInput {
   name: string
@@ -121,6 +137,7 @@ export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number
   let x = 0
   let y = 0
   const ops = paths.map((tp): PostOp => {
+    if (tp.rotary) return rotaryPostOp(tp)
     const moves: PostMove[] = []
     for (const m of simpleMoves(tp.moves)) {
       const z = m.z + zTop
@@ -135,6 +152,34 @@ export function postInput(name: string, paths: Toolpath[], opts: { zTop?: number
     return { name: tp.name, kind: tp.kind, tool: tp.tool ? { number: tp.tool.number, name: tp.tool.name, diameter: tp.tool.diameter } : null, rpm: Math.round(tp.feeds.rpm), moves }
   })
   return { name, units: 'mm', ...(opts.part ? { part: { ...opts.part } } : {}), ops }
+}
+
+/** A rotary toolpath as post data: positions against the rotary axis, the angle in degrees. */
+function rotaryPostOp(tp: Toolpath): PostOp {
+  const r = tp.rotary!
+  const axis = r.setup.axis
+  const at = (u: number, rho: number) => (axis === 'X' ? { x: u, y: 0, z: rho } : axis === 'Y' ? { x: 0, y: u, z: rho } : { x: rho, y: 0, z: u })
+  const moves: PostMove[] = []
+  let prev: { u: number; theta: number; rho: number } | null = null
+  for (const m of simpleMoves(tp.moves)) {
+    if (m.t !== 'rapid' && m.t !== 'feed') continue
+    const c = planeToCyl(r.plane, m.x, m.y, m.z)
+    const a = (c.theta * 180) / Math.PI
+    if (m.t === 'rapid') moves.push({ t: 'rapid', ...at(c.u, c.rho), a })
+    else {
+      const len = prev ? Math.hypot(c.u - prev.u, ((c.rho + prev.rho) / 2) * (c.theta - prev.theta), c.rho - prev.rho) : 0
+      moves.push({ t: 'feed', ...at(c.u, c.rho), a, f: Math.round((m.f === 'plunge' ? tp.feeds.plunge : tp.feeds.feed) * (m.k ?? 1)), kind: m.f, len })
+    }
+    prev = c
+  }
+  return {
+    name: tp.name,
+    kind: tp.kind,
+    tool: tp.tool ? { number: tp.tool.number, name: tp.tool.name, diameter: tp.tool.diameter } : null,
+    rpm: Math.round(tp.feeds.rpm),
+    moves,
+    rotary: { axis, letter: ROTARY_LETTER[axis], ...(r.blade ? { blade: { ...r.blade } } : {}) },
+  }
 }
 
 /** The template post on a post input. */
@@ -166,6 +211,12 @@ export function runTemplate(template: PostTemplate, input: PostInput): { ext: st
   }
   emit('start', { NAME: input.name })
   for (const op of input.ops) {
+    // a template has no rotary axis: a rotary operation's moves are never written by it (the
+    // export checker refuses such a program; this keeps a preview from showing them as X Y Z)
+    if (op.rotary) {
+      emit('comment', { TEXT: `${op.name}: ROTARY (${op.rotary.letter} AXIS) - NOT WRITTEN BY A TEMPLATE POST` })
+      continue
+    }
     if (op.tool) emit('toolchange', { T: String(op.tool.number), S: String(op.rpm), TOOLNAME: op.tool.name })
     emit('comment', { TEXT: op.name })
     for (const m of op.moves) {

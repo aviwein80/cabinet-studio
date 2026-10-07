@@ -2501,7 +2501,7 @@ export function generatePart(part: CamPart, machine: MachineProfile, meshes?: Re
               feeds: feedsFor(op, tool, part.materialId, machine),
               moves: [],
               intents: [],
-              warnings: [op.kind === 'curve' ? 'Not calculated for export (it is never written; it is calculated in the part designer).' : 'Not calculated for export (adaptive clearing is calculated in the part designer).'],
+              warnings: [op.kind === 'curve' ? 'Not calculated for export (it is never written; it is calculated in the part designer).' : op.kind === 'rotary' ? 'not calculated yet: rotary passes on a model are calculated in the background' : 'Not calculated for export (adaptive clearing is calculated in the part designer).'],
               stats: { cut: 0, rapid: 0, minutes: 0 },
               ...(op.kind === 'curve' ? { noOutput: CURVE_NO_OUTPUT } : {}),
             }

@@ -34,6 +34,8 @@ export interface Cutter {
    * `r` is then half the kerf.
    */
   blade?: { R: number; plane: 'axial' | 'ring' }
+  /** Cutting length from the tip along the tool (tilted-tool stock, M3.4); absent = no limit. */
+  flute?: number
 }
 
 /** A thread mill's tooth flanks: 30° from square to the axis (a 60° thread form). */
@@ -53,6 +55,13 @@ export interface SimSeg {
   side?: boolean
   /** Move number within its operation (0-based, 3D chains counted point by point). */
   move: number
+  /**
+   * Tool direction, tip to spindle, part frame (M3.4: a tool tilted onto a tilted plane); absent =
+   * straight up. Only the tilted-tool stock carves along it.
+   */
+  axis?: V3
+  /** The move between two operations on differently tilted planes, made while the rotary axes turn (not checked against the stock here; M3.6 machine simulation). */
+  turn?: boolean
 }
 
 export interface SimOp {

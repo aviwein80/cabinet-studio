@@ -26,7 +26,8 @@ export function carveStock(stock: StockModel, tl: SimTimeline, t0: number, t1: n
     const k0 = s.t1 > s.t0 ? Math.max(0, (t0 - s.t0) / (s.t1 - s.t0)) : 0
     const k1 = s.t1 > s.t0 ? Math.min(1, (t1 - s.t0) / (s.t1 - s.t0)) : 1
     if (k1 < k0) continue
-    stock.carve(lerp(s.a, s.b, k0), lerp(s.a, s.b, k1), s.cutter)
+    if (s.axis) stock.carve(lerp(s.a, s.b, k0), lerp(s.a, s.b, k1), s.cutter, s.axis)
+    else stock.carve(lerp(s.a, s.b, k0), lerp(s.a, s.b, k1), s.cutter)
   }
 }
 

@@ -71,12 +71,13 @@ import { aggregateOf, anglesOutOfReach, effectiveGauge, machineModelOf, toolOutl
 import { placeMesh } from './mesh/place'
 import { mergeMeshes, placedReliefOutline, reliefSurround } from './relief/relief'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, RotaryOp, RotarySetup, SawOp, SweepOp, ThreadOp, VCarveOp, WrappedPlane } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, RotaryOp, RotarySetup, SawOp, SweepOp, ThreadOp, TiltedPlane, VCarveOp, WrappedPlane } from './types'
 import { blankRadius, inPlane, setupProblems } from './rotary/frame'
 import { RotaryDrop } from './rotary/drop'
 import { modelPaths, type RotaryPaths, wrapPaths, type WrapShape } from './rotary/paths'
 import { isoDepth, threadMoves } from './more25d/thread'
 import { onRapidSurface } from './more25d/rapidSurface'
+import { inTilted, planeFrame, planeToPart, TILTED_KINDS, tiltedProblems, tiltedRect } from './positional/frame'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
 export type Move =
@@ -156,6 +157,13 @@ export interface Toolpath {
    * machine model with that rotary axis may write it. `blade`: a saw blade and how it stands.
    */
   rotary?: { setup: RotarySetup; plane: WrappedPlane; blade?: { R: number; plane: 'axial' | 'ring' } }
+  /**
+   * Positional 3+2 (M3.4): the moves lie on tilted work plane `plane` (drawing x, y on its
+   * rectangle; z = height above the plane along its normal, negative into the material) and the
+   * tool stands along the plane's normal. Never written to woodWOP; only a script post for a
+   * machine model with two rotary axes for 3+2 may write it (`src/cam/positional/convert.ts`).
+   */
+  tilt?: { plane: TiltedPlane }
   /**
    * Edge work with an aggregate (5AX-04): the moves are the tool tip, at the tool axis height; the
    * tool lies flat, square to the path, on the `side` of travel where the material is.
@@ -2357,9 +2365,103 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
   // rotary: no facing re-sets its stock, no toolpath edits or rapid surfaces (it lifts to its own clearance radius)
   if (op.kind === 'rotary') return generateAt(op, ctx)
+  // a tilted work plane (3+2): its own frame, depths from the plane
+  if (op.tiltedPlane) return generateTilted(op, ctx)
   const tp = generateShifted(op, ctx)
   const edited = hasMoveEdits(op.edits) && op.kind !== 'code' ? editToolpath(tp, op) : tp
-  return op.rapidSurface && op.kind !== 'code' ? withRapidSurface(edited, op) : edited
+  const out = op.rapidSurface && op.kind !== 'code' ? withRapidSurface(edited, op) : edited
+  onTiltedRect(op, ctx.part, out)
+  return out
+}
+
+/** Tilted-plane toolpaths (M3.4) are never written to woodWOP: the N-200 cannot tilt its tool. */
+export const TILTED_NO_MPR = 'it is on a tilted work plane (3+2), which needs a machine with two rotary axes; woodWOP programs for the N-200 cannot hold it'
+
+/** A face-1 operation whose shapes lie on a tilted plane's rectangle (off the part): say so. */
+function onTiltedRect(op: CamOp, part: CamPart, tp: Toolpath) {
+  if (!part.tilted?.length || op.face !== 1) return
+  for (const { e, contours } of geometryOf(op, part)) {
+    const pts = contours.flatMap((c) => c.segs.flatMap((s) => [s.a, s.b]))
+    if (e.g.t === 'circle') pts.push(e.g.c)
+    if (e.g.t === 'point') pts.push(e.g.p)
+    if (!pts.length || pts.every((q) => q.x >= -1e-6 && q.y >= -1e-6 && q.x <= part.length + 1e-6 && q.y <= part.width + 1e-6)) continue
+    const pl = part.tilted.find((p) => pts.every((q) => inTilted(p, q)))
+    if (pl) {
+      tp.warnings.push(`Its shapes lie on tilted plane "${pl.name}": pick that plane as the operation's work plane to cut them there.`)
+      return
+    }
+  }
+}
+
+/**
+ * An operation on a tilted work plane (5AX-01, M3.4): the plane's shapes cut along its -z with the
+ * tool on its normal. The same generators as face 1 run on the shapes as drawn (inside the plane's
+ * rectangle), depths measured from the plane, so a straight move stays straight once the frame is
+ * turned into the part. `tp.tilt` says which plane; nothing of it reaches woodWOP.
+ */
+function generateTilted(op: CamOp, ctx: GenContext): Toolpath {
+  const part = ctx.part
+  const plane = (part.tilted ?? []).find((p) => p.id === op.tiltedPlane) ?? null
+  const blank = (warnings: string[]): Toolpath => ({ opId: op.id, kind: op.kind, name: op.name, tool: null, feeds: feedsFor(op, null, part.materialId, ctx.machine), moves: [], intents: [], warnings, stats: { cut: 0, rapid: 0, minutes: 0 }, noOutput: TILTED_NO_MPR, ...(plane ? { tilt: { plane } } : {}) })
+  if (!plane) return blank(['Its tilted work plane is gone: pick another plane, or none for face 1.'])
+  const problems = tiltedProblems(plane)
+  if (problems.length) return blank(problems.map((m) => `Tilted plane "${plane.name}": ${m}`))
+  if (!TILTED_KINDS.has(op.kind)) return blank(['Only drilling, pockets, profiles and engraving work on a tilted plane.'])
+  if (op.face !== 1) return blank(['On a tilted plane the shapes are drawn on the plane\'s rectangle: set the operation to face 1.'])
+  if (op.levels.through) return blank(['Through cuts are not made on a tilted plane (the block\'s depth below it changes from place to place): give the depth instead.'])
+  if (op.kind === 'pocket' && (op.rest || op.pattern === 'adaptive')) return blank(['Rest machining and adaptive clearing are not made on a tilted plane: use offset, zig-zag or spiral.'])
+  // the tool sits in the main spindle (the drill block cannot tilt)
+  const tool = op.kind === 'drill' ? (op.toolId ? (ctx.machine.tools.find((t) => t.id === op.toolId) ?? null) : null) : resolveTool(op, ctx.machine)
+  if (op.kind === 'drill' && !tool) return blank(['Pick the tool for tilted holes: a drill or end mill in the main spindle (the vertical drill block cannot tilt).'])
+  if (tool && tool.type !== 'router') return blank([`T${tool.number} sits in the ${tool.type === 'saw' ? 'saw unit' : 'drill block'}, which cannot tilt: pick a tool in the main spindle.`])
+  if (tool?.aggregateId) return blank([`T${tool.number} sits in an aggregate: on a tilted plane pick a tool in the main spindle.`])
+  if (tool && (tool.shape === 'lollipop' || tool.shape === 'thread')) return blank([`T${tool.number} (${tool.shape === 'lollipop' ? 'lollipop' : 'thread mill'}) is not used on a tilted plane: pick a flat, ball-nose, bull-nose, V or drill tool.`])
+  // the plane's own shapes only
+  const inside: string[] = []
+  let outside = 0
+  for (const id of op.geometry) {
+    const e = part.entities.find((x) => x.id === id)
+    if (!e) continue
+    const pts = entityContours(e).flatMap((c) => c.segs.flatMap((s) => [s.a, s.b]))
+    if (e.g.t === 'circle') pts.push({ x: e.g.c.x - e.g.r, y: e.g.c.y - e.g.r }, { x: e.g.c.x + e.g.r, y: e.g.c.y + e.g.r })
+    if (e.g.t === 'point') pts.push(e.g.p)
+    if (e.face === 1 && pts.length && pts.every((q) => inTilted(plane, q))) inside.push(id)
+    else outside++
+  }
+  const warnings: string[] = []
+  if (outside) warnings.push(`${outside} picked shape(s) are not inside tilted plane "${plane.name}"'s rectangle and are left out.`)
+  if (op.edits && hasMoveEdits(op.edits)) warnings.push('Toolpath edits are not used on a tilted plane.')
+  if (op.rapidSurface) warnings.push('A rapid surface is not used on a tilted plane: moves between cuts stay at the safe height above the plane.')
+  // generated as if the plane were face 1; "through" never applies (thickness out of reach)
+  const f = planeFrame(plane)
+  const flat: CamOp = { ...op, geometry: inside, tiltedPlane: undefined, rapidSurface: undefined, edits: undefined }
+  const tp = generateAt(flat, { ...ctx, part: { ...part, thickness: 1e6 } })
+  // a generator's first lift happens where the builder starts (the drawing's 0, 0, off the plane):
+  // the toolpath starts at the first rapid to the safe height instead
+  const start = tp.moves.findIndex((m) => m.t !== 'rapid' || m.z >= op.levels.safeZ - 1e-9)
+  if (start > 0) {
+    tp.moves = tp.moves.slice(start)
+    tp.stats = stats(tp.moves, tp.feeds.feed)
+  }
+  tp.tilt = { plane }
+  tp.intents = []
+  tp.noOutput = TILTED_NO_MPR
+  tp.warnings = [...warnings, ...tp.warnings]
+  if (op.kind === 'drill' && tool) {
+    const other = new Set<number>()
+    for (const id of inside) {
+      const e = part.entities.find((x) => x.id === id)
+      if (e?.g.t === 'circle' && Math.abs(e.g.r * 2 - tool.diameter) > 0.01) other.add(Math.round(e.g.r * 2000) / 1000)
+    }
+    if (other.size) tp.warnings.push(`Hole(s) of Ø${[...other].join(', Ø')} are drilled with T${tool.number} (Ø${tool.diameter}): the hole comes out the tool's size.`)
+  }
+  // the deepest point the tip reaches, in the part
+  let low = Infinity
+  for (const m of simpleMoves(tp.moves)) if (m.t !== 'rapid') low = Math.min(low, planeToPart(plane, m.x, m.y, m.z, f)[2])
+  if (low < -part.thickness - 1e-6) tp.warnings.push(`The tool tip goes ${(-low - part.thickness).toFixed(2)} mm below the part's underside (into the table under it).`)
+  const r = tiltedRect(plane)
+  if (!inside.length && op.geometry.length) tp.warnings.push(`Draw the shapes inside the plane's rectangle (x ${r.x0.toFixed(1)} to ${r.x1.toFixed(1)}, y ${r.y0.toFixed(1)} to ${r.y1.toFixed(1)} on the drawing).`)
+  return tp
 }
 
 /** Moves between cuts on the operation's rapid surface (2D-18); the cutting moves are untouched. */

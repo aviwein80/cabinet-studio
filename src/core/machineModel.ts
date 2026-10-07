@@ -2,7 +2,7 @@
  * The machine model: what the machine has and can do. Until the shop confirms the real figures
  * every value for the N-200 is a PLACEHOLDER, and the export checker says so on every export.
  */
-import type { Aggregate, MachineModel, MachineProfile, Tool, ToolHolder } from './types'
+import type { Aggregate, MachineModel, MachineProfile, PositionalKinematics, Tool, ToolHolder } from './types'
 
 /**
  * PLACEHOLDER model of the HOMAG CENTATEQ N-200. Table = one 5 x 12 ft sheet; travel, tool change
@@ -35,19 +35,52 @@ export function machineModelOf(machine: Pick<MachineProfile, 'physical'>): Machi
 
 export type RotaryLetter = 'A' | 'B' | 'C'
 
-/** The machine's rotary axis (M3.3): A turns about X, B about Y, C about Z; null when it has none. */
+/** Rotary letters the model's 3+2 axes use (M3.4), when it has them. */
+const positionalLetters = (m: MachineModel): Set<string> => new Set(m.capabilities.positional && m.positional ? [m.positional.first, m.positional.second] : [])
+
+/**
+ * The machine's rotary axis (M3.3): A turns about X, B about Y, C about Z; null when it has none.
+ * On a machine with 3+2 axes (M3.4) it is a fourth axis of its own, not one of those two.
+ */
 export function rotaryAxisOf(m: MachineModel): MachineModel['axes'][number] | null {
-  return m.capabilities.rotary ? (m.axes.find((a) => a.id === 'A' || a.id === 'B' || a.id === 'C') ?? null) : null
+  const used = positionalLetters(m)
+  return m.capabilities.rotary ? (m.axes.find((a) => (a.id === 'A' || a.id === 'B' || a.id === 'C') && !used.has(a.id)) ?? null) : null
 }
 
 /**
  * The machine model with its rotary axis set, or taken away (null). Travel in degrees; the default
  * is a hundred turns each way (a rotary axis that keeps turning). Never for the N-200 (3 axes).
+ * The 3+2 axes (M3.4) are kept.
  */
 export function withRotaryAxis(m: MachineModel, letter: RotaryLetter | null, travel: { min: number; max: number } = { min: -36000, max: 36000 }): MachineModel {
-  const axes = m.axes.filter((a) => a.id !== 'A' && a.id !== 'B' && a.id !== 'C')
+  const used = positionalLetters(m)
+  if (letter && used.has(letter)) return m
+  const axes = m.axes.filter((a) => (a.id !== 'A' && a.id !== 'B' && a.id !== 'C') || used.has(a.id))
   return { ...m, axes: letter ? [...axes, { id: letter, min: travel.min, max: travel.max }] : axes, capabilities: { ...m.capabilities, rotary: !!letter } }
 }
+
+/**
+ * The machine model with two rotary axes for positional 3+2 (M3.4) set, or taken away (null),
+ * each with its travel in degrees. A new set-up's values are invented until confirmed
+ * (`placeholder`, Configure badge). Never for the N-200 (3 axes). A rotary (turning) axis on the
+ * same letter is taken off.
+ */
+export function withPositional(m: MachineModel, kin: PositionalKinematics | null, travel: { first: { min: number; max: number }; second: { min: number; max: number } } = { first: { min: -360, max: 360 }, second: { min: -120, max: 120 } }): MachineModel {
+  const old = positionalLetters(m)
+  let axes = m.axes.filter((a) => !old.has(a.id))
+  if (!kin) return { ...m, axes, capabilities: { ...m.capabilities, positional: false }, positional: undefined }
+  axes = axes.filter((a) => a.id !== kin.first && a.id !== kin.second)
+  const rotaryLeft = axes.some((a) => a.id === 'A' || a.id === 'B' || a.id === 'C')
+  return {
+    ...m,
+    axes: [...axes, { id: kin.first, ...travel.first }, { id: kin.second, ...travel.second }],
+    capabilities: { ...m.capabilities, positional: true, rotary: m.capabilities.rotary && rotaryLeft },
+    positional: kin,
+  }
+}
+
+/** Invented 3+2 kinematics for a new set-up: a fork head turning C then B (shown with a Configure badge). */
+export const PLACEHOLDER_POSITIONAL: PositionalKinematics = { layout: 'head-head', first: 'C', second: 'B', pivot: 150, centre: { x: 0, y: 0, z: 0 }, partAt: { x: 0, y: 0, z: 0 }, tcp: true, placeholder: true }
 
 export const holderOf = (machine: Pick<MachineProfile, 'holders'>, tool: Pick<Tool, 'holderId'> | null | undefined): ToolHolder | null =>
   (tool?.holderId && machine.holders?.find((h) => h.id === tool.holderId)) || null

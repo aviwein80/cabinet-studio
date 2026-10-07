@@ -1,0 +1,24 @@
+{
+ "op": "Holes Ø8 (45° chamfer)",
+ "kind": "drill",
+ "tool": 102,
+ "moves": {
+  "rapid": 2,
+  "feed": 0,
+  "arc": 0,
+  "drill": 2,
+  "poly": 0,
+  "points": 0
+ },
+ "cutMm": 60,
+ "box": [
+  30,
+  134,
+  -12,
+  80,
+  134,
+  -12
+ ],
+ "warnings": [],
+ "hash": "d57046e3"
+}

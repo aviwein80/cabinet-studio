@@ -465,6 +465,35 @@ export interface MachineModel {
     positional: boolean
     simultaneous5: boolean
   }
+  /**
+   * Positional 3+2 machining (M3.4): how the machine's two rotary axes tilt the tool or the part.
+   * Read only when `capabilities.positional` is set and both axes are in `axes`.
+   */
+  positional?: PositionalKinematics
+}
+
+/**
+ * How a machine's two rotary axes (M3.4) turn the tool or the part for positional (3+2)
+ * machining. A turns about X, B about Y, C about Z, each right-handed: a head axis turns the
+ * tool, a table axis turns the table and the part on it. `first` is the axis nearer the machine's
+ * frame, `second` the one it carries: 'head-head' both turn the head (e.g. C then B), 'table-table'
+ * both turn the table (e.g. a cradle A carrying a rotary table C), 'table-head' the first turns the
+ * table and the second the head. Their travel comes from the machine model's `axes`.
+ */
+export interface PositionalKinematics {
+  layout: 'head-head' | 'table-table' | 'table-head'
+  first: 'A' | 'B' | 'C'
+  second: 'A' | 'B' | 'C'
+  /** Head axes: from the spindle's gauge face up the tool to the point the head turns about, mm. */
+  pivot: number
+  /** Table axes: the point they turn about, machine coordinates with every rotary axis at 0. */
+  centre: { x: number; y: number; z: number }
+  /** Where the part's origin (its corner at face 1) sits in machine coordinates with every rotary axis at 0. */
+  partAt: { x: number; y: number; z: number }
+  /** The controller keeps the tool tip on the programmed point as the head turns (tool-centre-point control): X, Y, Z are then the tip. */
+  tcp: boolean
+  /** Invented values: shown with a Configure badge until confirmed. */
+  placeholder?: boolean
 }
 
 /** Feeds and speeds for one tool in one material; overrides the tool's own values. */
@@ -761,6 +790,17 @@ export interface FeatureFlags {
    * model declares that rotary axis. Off. Also needs `scriptPostOutput` and the plugin's grant.
    */
   rotaryPostOutput: boolean
+  /**
+   * M3.4 screens: tilted work planes and drilling, pockets, profiles and engraving on them
+   * (positional 3+2), simulated on the tri-dexel stock with the tool tilted. Screens only: tilted
+   * work is never written to woodWOP (the N-200 cannot tilt its tool); see `positionalPostOutput`.
+   */
+  camPositional: boolean
+  /**
+   * M3.4: write 3+2 programs through script posts, for a machine (not the N-200) whose machine
+   * model declares two rotary axes for 3+2. Off. Also needs `scriptPostOutput` and the plugin's grant.
+   */
+  positionalPostOutput: boolean
 }
 
 export interface Library {

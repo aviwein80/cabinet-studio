@@ -411,58 +411,7 @@ export class DexelStock implements StockModel {
    * but it shows material under an overhang, which a heightfield cannot.
    */
   toMesh(limit: { i1?: number; j1?: number } = {}): Mesh {
-    const pos: number[] = []
-    const quad = (a: number[], b: number[], c: number[], d: number[]) => pos.push(...a, ...b, ...c, ...a, ...c, ...d)
-    const c = this.cell
-    const X = (i: number) => Math.min(i * c, this.hf.length)
-    const Y = (j: number) => Math.min(j * c, this.hf.width)
-    // (a section: only the columns before i1 / j1, with their walls on the cut)
-    const ni = Math.min(this.nx, limit.i1 ?? this.nx)
-    const nj = Math.min(this.ny, limit.j1 ?? this.ny)
-    const inside = (i: number, j: number) => i < ni && j < nj
-    const col = (i: number, j: number) => (i < 0 || j < 0 || i >= this.nx || j >= this.ny || !inside(i, j) ? [] : this.column(j * this.nx + i))
-    /** Parts of intervals `a` not covered by `b`. */
-    const minus = (a: [number, number][], b: [number, number][]) => {
-      const out: [number, number][] = []
-      for (const [lo, hi] of a) {
-        let cur: [number, number][] = [[lo, hi]]
-        for (const [l2, h2] of b) {
-          const next: [number, number][] = []
-          for (const [l, h] of cur) {
-            if (h2 <= l || l2 >= h) next.push([l, h])
-            else {
-              if (l2 > l) next.push([l, l2])
-              if (h2 < h) next.push([h2, h])
-            }
-          }
-          cur = next
-        }
-        out.push(...cur.filter(([l, h]) => h - l > 1e-6))
-      }
-      return out
-    }
-    for (let j = 0; j < nj; j++)
-      for (let i = 0; i < ni; i++) {
-        const me = col(i, j)
-        if (!me.length) continue
-        const x0 = X(i)
-        const x1 = X(i + 1)
-        const y0 = Y(j)
-        const y1 = Y(j + 1)
-        for (const [lo, hi] of me) {
-          quad([x0, y0, hi], [x1, y0, hi], [x1, y1, hi], [x0, y1, hi])
-          quad([x0, y0, lo], [x0, y1, lo], [x1, y1, lo], [x1, y0, lo])
-        }
-        // walls facing each neighbour where it has no material
-        for (const [lo, hi] of minus(me, col(i + 1, j))) quad([x1, y0, lo], [x1, y1, lo], [x1, y1, hi], [x1, y0, hi])
-        for (const [lo, hi] of minus(me, col(i - 1, j))) quad([x0, y0, lo], [x0, y0, hi], [x0, y1, hi], [x0, y1, lo])
-        for (const [lo, hi] of minus(me, col(i, j + 1))) quad([x0, y1, lo], [x0, y1, hi], [x1, y1, hi], [x1, y1, lo])
-        for (const [lo, hi] of minus(me, col(i, j - 1))) quad([x0, y0, lo], [x1, y0, lo], [x1, y0, hi], [x0, y0, hi])
-      }
-    const positions = Float32Array.from(pos)
-    const indices = new Uint32Array(positions.length / 3)
-    for (let q = 0; q < indices.length; q++) indices[q] = q
-    return { positions, indices }
+    return columnsMesh({ nx: this.nx, ny: this.ny, cell: this.cell, length: this.hf.length, width: this.hf.width }, (k) => this.column(k), limit)
   }
 
   reset() {
@@ -498,4 +447,65 @@ export class DexelStock implements StockModel {
     }
     this.dirty = { minX: 0, minY: 0, maxX: this.hf.length, maxY: this.hf.width, through: true }
   }
+}
+
+/**
+ * Closed mesh of columns of material (dexel stocks): per interval a top and a bottom square, and
+ * walls wherever a column holds material its neighbour does not (the stock's edges included).
+ * Blocky (one cell), but it shows material under an overhang, which a heightfield cannot.
+ * `limit`: a section, only the columns before i1 / j1, with their walls on the cut.
+ */
+export function columnsMesh(g: { nx: number; ny: number; cell: number; length: number; width: number }, column: (k: number) => [number, number][], limit: { i1?: number; j1?: number } = {}): Mesh {
+  const pos: number[] = []
+  const quad = (a: number[], b: number[], c: number[], d: number[]) => pos.push(...a, ...b, ...c, ...a, ...c, ...d)
+  const c = g.cell
+  const X = (i: number) => Math.min(i * c, g.length)
+  const Y = (j: number) => Math.min(j * c, g.width)
+  // (a section: only the columns before i1 / j1, with their walls on the cut)
+  const ni = Math.min(g.nx, limit.i1 ?? g.nx)
+  const nj = Math.min(g.ny, limit.j1 ?? g.ny)
+  const inside = (i: number, j: number) => i < ni && j < nj
+  const col = (i: number, j: number) => (i < 0 || j < 0 || i >= g.nx || j >= g.ny || !inside(i, j) ? [] : column(j * g.nx + i))
+  /** Parts of intervals `a` not covered by `b`. */
+  const minus = (a: [number, number][], b: [number, number][]) => {
+    const out: [number, number][] = []
+    for (const [lo, hi] of a) {
+      let cur: [number, number][] = [[lo, hi]]
+      for (const [l2, h2] of b) {
+        const next: [number, number][] = []
+        for (const [l, h] of cur) {
+          if (h2 <= l || l2 >= h) next.push([l, h])
+          else {
+            if (l2 > l) next.push([l, l2])
+            if (h2 < h) next.push([h2, h])
+          }
+        }
+        cur = next
+      }
+      out.push(...cur.filter(([l, h]) => h - l > 1e-6))
+    }
+    return out
+  }
+  for (let j = 0; j < nj; j++)
+    for (let i = 0; i < ni; i++) {
+      const me = col(i, j)
+      if (!me.length) continue
+      const x0 = X(i)
+      const x1 = X(i + 1)
+      const y0 = Y(j)
+      const y1 = Y(j + 1)
+      for (const [lo, hi] of me) {
+        quad([x0, y0, hi], [x1, y0, hi], [x1, y1, hi], [x0, y1, hi])
+        quad([x0, y0, lo], [x0, y1, lo], [x1, y1, lo], [x1, y0, lo])
+      }
+      // walls facing each neighbour where it has no material
+      for (const [lo, hi] of minus(me, col(i + 1, j))) quad([x1, y0, lo], [x1, y1, lo], [x1, y1, hi], [x1, y0, hi])
+      for (const [lo, hi] of minus(me, col(i - 1, j))) quad([x0, y0, lo], [x0, y0, hi], [x0, y1, hi], [x0, y1, lo])
+      for (const [lo, hi] of minus(me, col(i, j + 1))) quad([x0, y1, lo], [x0, y1, hi], [x1, y1, hi], [x1, y1, lo])
+      for (const [lo, hi] of minus(me, col(i, j - 1))) quad([x0, y0, lo], [x1, y0, lo], [x1, y0, hi], [x0, y0, hi])
+    }
+  const positions = Float32Array.from(pos)
+  const indices = new Uint32Array(positions.length / 3)
+  for (let q = 0; q < indices.length; q++) indices[q] = q
+  return { positions, indices }
 }

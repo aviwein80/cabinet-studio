@@ -1,0 +1,24 @@
+{
+ "op": "Holes Ø8 (Corner facet)",
+ "kind": "drill",
+ "tool": 102,
+ "moves": {
+  "rapid": 1,
+  "feed": 0,
+  "arc": 0,
+  "drill": 1,
+  "poly": 0,
+  "points": 0
+ },
+ "cutMm": 36,
+ "box": [
+  31.82,
+  255.027,
+  -15,
+  31.82,
+  255.027,
+  -15
+ ],
+ "warnings": [],
+ "hash": "65bec8a2"
+}

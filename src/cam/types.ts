@@ -235,10 +235,43 @@ export interface RotarySetup {
   planes: WrappedPlane[]
 }
 
+/**
+ * A tilted work plane (5AX-01, M3.4): a plane through the part at any angle, with its own x and y
+ * along it and z (its normal) out of the material, the way the tool points from its tip to the
+ * spindle. Its frame (`src/cam/positional/frame.ts`): turned `toward + 90 + spin` degrees about Z,
+ * then tilted `tilt` degrees so its normal leans from +Z towards the plan direction `toward`
+ * (degrees from +X). Shapes drawn inside its rectangle on the drawing (corner `at`, `size` along
+ * its x and y) lie on the plane; an operation on it (`OpBase.tiltedPlane`) cuts them into the part
+ * along -z, depths measured from the plane, the tool along z. A machine with two rotary axes locks
+ * them at the angles that turn the tool onto z (positional "3+2" machining). The N-200 has none and
+ * refuses such operations.
+ */
+export interface TiltedPlane {
+  id: string
+  name: string
+  /** The plane's x = y = 0 point, part coordinates. */
+  origin: { x: number; y: number; z: number }
+  /** Degrees from level (0 = like face 1, 90 = upright, 180 = facing down). */
+  tilt: number
+  /** Plan direction the normal leans towards, degrees from +X counter-clockwise seen from above. */
+  toward: number
+  /** Turn of the plane's x about its normal, degrees (0 = x level, y up the slope). */
+  spin: number
+  /** Its rectangle on the drawing: corner `at` (the origin) and size along its x and y. */
+  at: P
+  size: { x: number; y: number }
+  /** How it was set: angles typed in, a side of the part's block, or fitted to a model's flat face. */
+  from: 'angles' | 'side' | 'face'
+  /** The face it was fitted to: model, face id (solids) and how far the face's points stray from the plane (mm). */
+  face?: { modelId: string; faceId?: number; fit: number }
+  /** Use the machine's other angle solution (head or table turned the other way round). */
+  flip?: boolean
+}
+
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
   materialId: string | null
   length: number
   width: number
@@ -280,6 +313,8 @@ export interface CamPart {
   workVolume?: { modelId: string; oversize: { xy: number; top: number; bottom: number } }
   /** Turned on a rotary axis (M3.3): the axis, the blank and the wrapped planes. Such a part is never nested on a sheet. */
   rotary?: RotarySetup
+  /** Tilted work planes (M3.4, positional 3+2 machining). A part with operations on one is never nested on a sheet. */
+  tilted?: TiltedPlane[]
   /** Keep ops on unchanged geometry ids when imports refresh. */
   updatedAt: string
 }
@@ -416,6 +451,12 @@ interface OpBase {
   toolData?: ToolSnapshot
   /** Moves between cuts follow this surface instead of the flat safe height (2D-18). */
   rapidSurface?: RapidSurface
+  /**
+   * Tilted work plane this operation works on (M3.4, positional 3+2): its shapes are drawn inside
+   * the plane's rectangle and cut into the part along the plane's -z, the tool tilted onto the
+   * plane's normal. Drilling, pockets, profiles and engraving only. Absent = face 1 as usual.
+   */
+  tiltedPlane?: string
 }
 
 /**

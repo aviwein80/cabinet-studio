@@ -1,0 +1,24 @@
+{
+ "op": "table-table A45/C90 A30/C180 A-54.735610317/C135 A-90/C180 A45/C90 A30/C180 A-90/C180",
+ "kind": "drill",
+ "tool": null,
+ "moves": {
+  "rapid": 36,
+  "feed": 2097,
+  "arc": 0,
+  "drill": 0,
+  "poly": 0,
+  "points": 0
+ },
+ "cutMm": 0,
+ "box": [
+  458,
+  373.929,
+  -120,
+  542,
+  477,
+  -58.076
+ ],
+ "warnings": [],
+ "hash": "ecc6a6e5"
+}

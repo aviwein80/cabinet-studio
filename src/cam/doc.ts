@@ -25,8 +25,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * rapid surfaces. An older app refuses a v7 part instead of leaving them out without a word.
  * 8 (M3.3): rotary set-ups (`rotary`: axis, blank, wrapped planes) and rotary operations. An older
  * app refuses a v8 part instead of nesting a turned part on a sheet or dropping its operations.
+ * 9 (M3.4): tilted work planes (`tilted`) and operations on them (`tiltedPlane`). An older app
+ * refuses a v9 part instead of cutting a tilted plane's shapes straight down on face 1.
  */
-export const CAM_FILE_VERSION = 8
+export const CAM_FILE_VERSION = 9
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -265,6 +267,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   6: (p) => ({ ...p, version: 7 }),
   // v7 -> v8: the rotary set-up and rotary operations are new and optional.
   7: (p) => ({ ...p, version: 8 }),
+  // v8 -> v9: tilted work planes and operations on them are new and optional.
+  8: (p) => ({ ...p, version: 9 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */
@@ -389,6 +393,8 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
     deps.push(r ? { axis: r.axis, centre: r.centre, blank: r.blank, plane: r.planes.find((p) => p.id === op.planeId) ?? null } : null)
     deps.push({ models: modelsFor(op, part).map((id) => part.models?.find((m) => m.id === id)).map((m) => (m ? { blob: m.blob, place: m.place } : null)) })
   }
+  // a tilted work plane (3+2): where it is and how it is turned
+  if (op.tiltedPlane) deps.push({ tilted: part.tilted?.find((p) => p.id === op.tiltedPlane) ?? null })
   // scallop start shapes (not in `geometry`, which holds the boundary)
   if (op.kind === 'finish3d' && op.startFrom?.length) deps.push({ starts: op.startFrom.map((id) => part.entities.find((e) => e.id === id) ?? id) })
   // curve-driven: the drive shapes, and the surface whose rows and columns it follows

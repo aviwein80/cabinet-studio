@@ -114,7 +114,7 @@ export type ConfigTarget =
   | { kind: 'tool'; toolId: string; part: ToolPart }
   | { kind: 'holder'; holderId: string }
   | { kind: 'aggregate'; aggregateId: string }
-  | { kind: 'model'; fact: ModelFact }
+  | { kind: 'model'; fact: ModelFact | 'positional' }
   | { kind: 'default'; key: CutDefaultKey }
   | { kind: 'op'; partId: string; jobId?: string; opId: string; key: CutDefaultKey | 'blade' }
   | { kind: 'material'; materialId: string; part: 'price' | 'density' }
@@ -159,9 +159,16 @@ export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) =
 const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || t.shape === 'lollipop' || !!effectiveHolder(m, t))
 const fmt = (n: number) => String(Math.round(n * 1000) / 1000)
 
-function factValue(m: MachineProfile, f: ModelFact): string {
+/** M3.4: the 3+2 kinematics of a machine model (another machine's, never the N-200's) while invented. */
+export const POSITIONAL_FACT_LABEL = '3+2 axes: pivot, table centre and where the part sits'
+
+function factValue(m: MachineProfile, f: ModelFact | 'positional'): string {
   const mm = machineModelOf(m)
   switch (f) {
+    case 'positional': {
+      const k = mm.positional
+      return k ? `${k.layout} ${k.first}/${k.second}, pivot ${fmt(k.pivot)} mm, ${k.tcp ? 'tip control' : 'no tip control'}` : 'none'
+    }
     case 'table':
       return `${fmt(mm.table.length)} x ${fmt(mm.table.width)} mm`
     case 'travel':
@@ -253,6 +260,12 @@ export function machineUnconfirmed(m: MachineProfile): Unconfirmed[] {
       const target: ConfigTarget = { kind: 'model', fact }
       if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: MODEL_FACT_LABEL[fact], value: factValue(m, fact), group: 'Machine model', target })
     }
+  // M3.4: invented 3+2 kinematics (a machine model with two rotary axes for 3+2)
+  const pm = machineModelOf(m)
+  if (pm.capabilities.positional && pm.positional?.placeholder) {
+    const target: ConfigTarget = { kind: 'model', fact: 'positional' }
+    if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: POSITIONAL_FACT_LABEL, value: factValue(m, 'positional'), group: 'Machine model', target })
+  }
   const d = cutDefaultsOf(m)
   for (const k of CUT_DEFAULT_KEYS) {
     const target: ConfigTarget = { kind: 'default', key: k }
@@ -275,6 +288,10 @@ export function confirmKey(m: MachineProfile, key: string) {
   if (key.startsWith('aggregate:')) {
     const a = m.aggregates?.find((x) => `aggregate:${x.id}` === key)
     if (a) a.placeholder = false
+  }
+  if (key === 'model:positional' && m.physical?.positional) {
+    m.physical = structuredClone(m.physical)
+    m.physical.positional!.placeholder = false
   }
   if (key.startsWith('model:') && MODEL_FACTS.every((f) => m.confirmed!.includes(`model:${f}`))) {
     m.physical = structuredClone(m.physical ?? PLACEHOLDER_N200_MODEL)

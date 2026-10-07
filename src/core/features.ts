@@ -33,6 +33,8 @@ export const DEFAULT_FEATURES: FeatureFlags = {
   camExtras: true,
   camRotary: true,
   rotaryPostOutput: false,
+  camPositional: true,
+  positionalPostOutput: false,
 }
 
 export const featuresOf = (s: Pick<ShopSettings, 'features'> | undefined): FeatureFlags => ({ ...DEFAULT_FEATURES, ...(s?.features ?? {}) })

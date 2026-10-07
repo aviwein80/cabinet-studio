@@ -497,7 +497,8 @@ describe('M3.3 the N-200 export refuses rotary work', () => {
 
 describe('M3.3 part format 8', () => {
   it('keeps the rotary set-up and operations through a save; an older part reads unchanged; a newer one is refused', () => {
-    expect(CAM_FILE_VERSION).toBe(8)
+    // format 8 brought the rotary set-up (9 since M3.4 keeps it as it is)
+    expect(CAM_FILE_VERSION).toBeGreaterThanOrEqual(8)
     const { part, flutes } = columnPart()
     const withOp = { ...part, ops: [rotaryOp('wrap', { toolId: 't105', geometry: flutes })] }
     const back = parsePart(serializePart(withOp))
@@ -507,11 +508,11 @@ describe('M3.3 part format 8', () => {
     v7.version = 7
     v7.part.version = 7
     const old = parsePart(JSON.stringify(v7))
-    expect(old.version).toBe(8)
+    expect(old.version).toBe(CAM_FILE_VERSION)
     expect(old.rotary).toBeUndefined()
-    const v9 = JSON.parse(serializePart(newPart({ name: 'New' })))
-    v9.version = 9
-    expect(() => parsePart(JSON.stringify(v9))).toThrow(/newer than this app/)
+    const newer = JSON.parse(serializePart(newPart({ name: 'New' })))
+    newer.version = CAM_FILE_VERSION + 1
+    expect(() => parsePart(JSON.stringify(newer))).toThrow(/newer than this app/)
     // and the generator: a part's rotary toolpaths come through generatePart with their plane
     const tps = generatePart(withOp, PLACEHOLDER_MACHINE)
     expect(tps[0].rotary?.plane.id).toBe('p1')

@@ -602,7 +602,30 @@ export function rotaryIssues(job: Pick<import('./types').Job, 'camParts'>, machi
     out.push({
       severity: 'error',
       code: 'CAM_ROTARY',
-      message: `Custom part ${cp.name} is turned on a rotary axis${n ? ` (${n} rotary operation(s))` : ''}. ${caps.rotary ? 'Sheet programs cannot hold rotary work' : `The machine model (${machine.model || machine.name}) has no rotary axis`}, so it is not nested and nothing of it is written to woodWOP. Simulate it on the Parts page; only a script post for a machine model with a rotary axis can write it (Program dialog). Take it out of this job to export the sheets.`,
+      message: `Custom part ${cp.name} is turned on a rotary axis${n ? ` (${n} rotary operation(s))` : ''}. ${caps.rotary ? 'Sheet programs cannot hold rotary work' : `The machine model (${machine.model || machine.name}) has no rotary axis`}, so it is not nested and nothing of it is written to woodWOP. Simulate it on the Parts page; only a script post for a machine model with a rotary axis can write it (Program dialog). Remove ${cp.name} from this job to export the rest of it.`,
+    })
+  }
+  return out
+}
+
+/**
+ * M3.4: custom parts with operations on tilted work planes (positional 3+2) in a job. The N-200
+ * (and any machine whose model has no two rotary axes for 3+2) cannot tilt its tool: such a part is
+ * not nested (`cutlist.ts`) and the job's export is refused while it is in the job, naming the part
+ * and its tilted operations. Only a script post for a machine model with 3+2 axes may write it
+ * (Program dialog, `checkTextPost`).
+ */
+export function positionalIssues(job: Pick<import('./types').Job, 'camParts'>, machine: MachineProfile): Issue[] {
+  const out: Issue[] = []
+  const caps = machineModelOf(machine).capabilities
+  for (const cp of job.camParts ?? []) {
+    const tilted = cp.ops.filter((o) => o.enabled && o.tiltedPlane)
+    if (!tilted.length) continue
+    const names = tilted.map((o) => `"${o.name}"`).join(', ')
+    out.push({
+      severity: 'error',
+      code: 'CAM_POSITIONAL',
+      message: `Custom part ${cp.name} has ${tilted.length} operation(s) on tilted work planes (3+2): ${names}. ${caps.positional ? 'Sheet programs cannot hold tilted work' : `The machine model (${machine.model || machine.name}) cannot tilt the tool (it has no rotary axes for 3+2)`}, so the part is not nested and nothing of it is written to woodWOP. Simulate it on the Parts page; only a script post for a machine model with two rotary axes for 3+2 can write it (Program dialog). Remove ${cp.name} from this job (or switch its tilted operations off) to export the rest of it.`,
     })
   }
   return out

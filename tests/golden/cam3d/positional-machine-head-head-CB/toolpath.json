@@ -1,0 +1,24 @@
+{
+ "op": "head-head C0/B45 C-90/B30 C-45/B-54.735610317 C90/B90 C0/B45 C-90/B30 C90/B90",
+ "kind": "drill",
+ "tool": null,
+ "moves": {
+  "rapid": 36,
+  "feed": 2097,
+  "arc": 0,
+  "drill": 0,
+  "poly": 0,
+  "points": 0
+ },
+ "cutMm": 0,
+ "box": [
+  348.19,
+  265.161,
+  -280,
+  686.218,
+  640,
+  -92.616
+ ],
+ "warnings": [],
+ "hash": "501424f3"
+}

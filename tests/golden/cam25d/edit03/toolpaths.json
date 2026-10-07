@@ -4,7 +4,7 @@
   "kind": "pocket",
   "tool": 102,
   "moves": {
-   "rapid": 4,
+   "rapid": 3,
    "feed": 81,
    "arc": 0,
    "drill": 0
@@ -28,12 +28,6 @@
   "first": [
    {
     "t": "rapid",
-    "x": 0,
-    "y": 0,
-    "z": 3
-   },
-   {
-    "t": "rapid",
     "x": 296,
     "y": 215.4,
     "z": 20
@@ -50,10 +44,17 @@
     "y": 215.4,
     "z": 0,
     "f": "plunge"
+   },
+   {
+    "t": "feed",
+    "x": 250.28,
+    "y": 215.4,
+    "z": -4,
+    "f": "plunge"
    }
   ],
   "edited": {
-   "base": "139ltzo",
+   "base": "g21yju",
    "applied": 2,
    "moved": 0,
    "lost": 0,

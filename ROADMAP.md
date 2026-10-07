@@ -145,7 +145,10 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   head); part compare colours the finished stock against the 3D model (a known gouge red, where
   and as deep as it is), for one part or several. The machine's parts and the fixture library are
   invented placeholders with Configure badges; nothing new is written to any machine. Part format
-  11. Next: M3.7 (recording the out-of-scope items) when the owner says go.
+  11.
+  **M3.6d (owner decision on M3.6, October 2026):** pocket and facing toolpaths now open at the
+  safe height straight over their first cut, no longer with a rapid to the part's corner 3 mm
+  above the top; woodWOP output byte-identical. Next: M3.7 (recording the out-of-scope items).
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

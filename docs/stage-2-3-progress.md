@@ -107,11 +107,12 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.6a Clamps, pods and rails (FIX-01), convex distance engine, fixtures in every collision check, format 11 | **Done** (October 2026) | See below. A tool, shank or holder into a fixture blocks the export (`CAM_COLLISION`). |
 | M3.6b Machine simulation (SIM-06) and part compare (SIM-04) cores | **Done** (October 2026) | See below. Simulator only; nothing new is written to any machine. |
 | M3.6c Machine view, compare screens, fixtures panel, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.6 complete.** |
+| M3.6d Pocket and facing toolpaths open over their first cut (owner decision 24.4) | **Done** (October 2026) | See below. Goldens explained; woodWOP output byte-identical. |
 | M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -198,6 +199,17 @@ files present; fixed in M2.8e, back to 17.)
     the preview engine only); (3) the remaining deferred items (3D finishing, through cuts, rest
     and adaptive on tilted planes; the ~2 s step-back on the screen's thread; the hold on far
     jumps) stay deferred and listed, closed where a later milestone builds the same machinery.
+
+24. With the M3.7 go-ahead, on the M3.6 report: (1) the N-200's head and gantry sizes are not
+    known yet: keep the invented machine parts with their Configure badge; (2) the shop's clamps,
+    pods and rails are not known (a vacuum table, maybe none): keep the badged examples, and a part
+    with no fixtures is a valid set-up; (3) a machine-part hit is a **warning** on the export (it
+    does not block it) while the machine's parts are invented; once real sizes are entered and
+    confirmed (badge cleared) it **blocks** the export; build that switch-over now and test both
+    states (M3.6e); (4) fix the pocket toolpath's opening rapid to the part's corner 3 mm above the
+    top: start with a proper approach over the first cut, update the affected goldens with a
+    one-line reason each, woodWOP output byte-identical (M3.6d); (5) the deferred items stay
+    listed and are closed only if M3.7 builds the same machinery.
 
 ## Open questions for the owner
 
@@ -2728,10 +2740,8 @@ lint 17 warnings (the old ones).
   work); distances beyond the full-colour range are capped, except the highest 256 points, which
   are measured exactly. Gouges at the very edge of the cut can read a little deeper than the
   vertical depth (the distance is to the nearest point of the design).
-- **Pocket toolpaths start with a rapid to the part's corner 3 mm above the top** (X0 Y0 Z3,
-  then up to the safe height over the start), as before M3.6. The woodWOP output is not affected
-  (pockets go out as macros); a script post would write that move; the collision checks would
-  catch it against a fixture there (see decision 3). Not changed here (it changes goldens).
+- ~~Pocket toolpaths start with a rapid to the part's corner 3 mm above the top~~ (X0 Y0 Z3,
+  then up to the safe height over the start). **Fixed in M3.6d** (pockets and facings), see below.
 
 ### Deferred items still open (owner decisions 22 and 23)
 
@@ -2790,6 +2800,58 @@ screenshots were taken with Playwright (Apache-2.0) installed outside the projec
    to the safe height first? It changes no woodWOP output but changes pocket goldens and any
    script post's text. Recommendation: fix it in a later run with the goldens explained. Safe
    meanwhile: the collision checks catch it against a fixture, and script-post output is off.
+
+## M3.6d pocket and facing opening move: what was fixed (owner decision 24.4)
+
+**The fault.** Pocket toolpaths (offset, back-and-forth and spiral; not adaptive or rest, which
+already checked) lifted "out of the cut" before their first ring, but before the first move there
+is no cut: the toolpath builder starts at X0 Y0, so every pocket opened with a rapid to the part's
+corner 3 mm above the top, then rose diagonally to the safe height over the real start. A scan of
+every reference part's toolpaths found the same fault in **facing** (M2.6a), which has the same
+code; it is fixed the same way (the owner's decision named pockets; this is the identical move,
+noted in the report). Every other generator already opened over its first cut.
+
+**The fix** (`src/cam/toolpath.ts`, `genPocket` and `genFace`): no lift before the first move. A
+pocket or facing now opens with a rapid at the safe height straight over its first cut, then down
+to the rapid height and the entry (helix, ramp or plunge), like profiles and drilling. Nothing else
+in the toolpaths changes: the same cuts, entries, links and lifts between levels.
+
+**What it touches.** The moves only (simulator, collision and machine checks, script posts, times).
+The woodWOP output is untouched: pockets go out as pocket or contour macros and facings as contour
+macros, which never carried that move. The 3+2 generator already cut that opening move off its
+tilted pockets (its goldens are unchanged); the guard stays. A part saved with hand edits on a
+pocket keeps them: edits are anchored to the point a move ends at, and each now sits one move
+earlier, so they re-attach with a one-time "moved to the matching moves" note and none is lost
+(decision 7: one-time marks are acceptable).
+
+**Goldens changed** (each: one rapid fewer, the opening rapid to X0 Y0 removed from the first
+moves listed; cut length, extents, depths, intents, warnings and every `.mpr` unchanged):
+
+| Golden | Reason |
+|---|---|
+| `tests/golden/cam/ref07/toolpaths.json` | Pocket opens at safe height over (229.2, 145.8), not with a rapid to X0 Y0 Z3. |
+| `tests/golden/cam/ref08/toolpaths.json` | Pocket with an island opens over (350.589, 142.227), not at X0 Y0 Z3. |
+| `tests/golden/cam/ref09/toolpaths.json` | Back-and-forth pocket opens over (340.182, 56), not at X0 Y0 Z3. |
+| `tests/golden/cam/ref10/toolpaths.json` | Spiral pocket opens over its centre (150, 150), not at X0 Y0 Z3. |
+| `tests/golden/cam25d/edit03/toolpaths.json` | Pocket with a start point opens over (296, 215.4), not at X0 Y0 Z3; the unedited toolpath's hash (`edited.base`) changes with it; both edits still applied as made. |
+| `tests/golden/cam25d/face01/toolpaths.json` | Facing opens over (0, 2.7) and the pocket after it over (320.4, 199.6), not at X0 Y0 (Z3 and Z2 below the faced top). |
+| `tests/golden/cam25d/face02/toolpaths.json` | Facing in rings opens over (100, 100), not at X0 Y0 Z3. |
+| `tests/golden/cam25d/face03/toolpaths.json` | Round-top facing opens over (341.908, 17.51), not at X0 Y0 Z3. |
+
+Stage 1 MPR goldens (`tests/golden/cam/ref01..ref20/part.mpr`), every `cam25d` `part.mpr`, the
+Stage 1 cabinet goldens and `npm run sample` (diffed): **byte-identical**. The Stage 1 part files
+(`part.json`, version 1) are unchanged.
+
+**Test added** (`tests/cam-golden.test.ts`): every toolpath of the 20 reference parts and the 2.5D
+reference parts (saw, facing, chamfer, curves, hand-drawn, edited, edge work; 59 toolpaths) opens
+with a rapid at its safe height (measured from a faced top where there is one) and goes straight
+down from there. It fails on the code before the fix (ref07 opened at Z3).
+
+**Limit recorded (unchanged, not part of decision 24.4).** Between depth levels a pocket or facing
+still rises to the safe height at the end of a level, drops to the rapid height (3 mm above the
+top) over that same point, then rises diagonally to the safe height over the next level's start.
+Both ends are over the area just cut, so it is wasted motion rather than a risk; removing it would
+change every multi-level pocket golden. It can go in a later run if the owner wants it.
 
 ## Next run
 
@@ -2860,3 +2922,5 @@ screenshots were taken with Playwright (Apache-2.0) installed outside the projec
   collision check, format 11 (`5d28787`); machine simulation and part compare cores (`54131fe`);
   machine view, compare screens, fixtures panel, screenshots, docs. **M3.6 complete.** See
   `git log`.
+- **Run 20 (M3.6d)**: pocket and facing toolpaths open over their first cut (owner decision 24.4),
+  goldens explained, woodWOP output byte-identical. See `git log`.

@@ -777,7 +777,9 @@ function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
       const near = started && Math.hypot(S.x - b.x, S.y - b.y) <= step * 1.6 + 1e-6 && linkInside(slack, { x: b.x, y: b.y }, S)
       if (near) b.feed(S.x, S.y, z)
       else {
-        b.rapid(b.x, b.y, op.levels.rapidZ)
+        // lift out of the cut first (not before the first move: there is nothing to lift out of,
+        // and the builder's start at X0 Y0 is not a real place, M3.6d)
+        if (b.moves.length) b.rapid(b.x, b.y, op.levels.rapidZ)
         b.rapid(S.x, S.y, op.levels.safeZ)
         b.rapid(S.x, S.y, Math.max(prevZ, 0) + op.levels.rapidZ)
         enterAt(entry, c, S, prevZ, z, op, r, slack, b, tp)
@@ -1370,7 +1372,8 @@ function genFace(op: FaceOp, ctx: GenContext, tp: Toolpath, b: Builder) {
         b.feed(S.x, S.y, z)
       } else {
         flush()
-        b.rapid(b.x, b.y, op.levels.rapidZ)
+        // (no lift before the first move, M3.6d: see genPocket)
+        if (b.moves.length) b.rapid(b.x, b.y, op.levels.rapidZ)
         b.rapid(S.x, S.y, op.levels.safeZ)
         b.rapid(S.x, S.y, Math.max(prevZ, 0) + op.levels.rapidZ)
         if (ramp) {
@@ -2545,8 +2548,8 @@ function generateTilted(op: CamOp, ctx: GenContext): Toolpath {
   const f = planeFrame(plane)
   const flat: CamOp = { ...op, geometry: inside, tiltedPlane: undefined, rapidSurface: undefined, edits: undefined }
   const tp = generateAt(flat, { ...ctx, part: { ...part, thickness: 1e6 } })
-  // a generator's first lift happens where the builder starts (the drawing's 0, 0, off the plane):
-  // the toolpath starts at the first rapid to the safe height instead
+  // the toolpath starts at the first rapid to the safe height (pockets opened with a lift where the
+  // builder starts, the drawing's 0, 0, off the plane, until M3.6d; kept as a guard)
   const start = tp.moves.findIndex((m) => m.t !== 'rapid' || m.z >= op.levels.safeZ - 1e-9)
   if (start > 0) {
     tp.moves = tp.moves.slice(start)

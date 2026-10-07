@@ -9,6 +9,7 @@ import { digest } from './cam-digest'
 export { digest }
 import { PLACEHOLDER_MACHINE } from '../src/core/defaults'
 import { referenceParts } from './cam-reference'
+import { chamferParts, curveParts, edgeParts, editParts, faceParts, manualParts, sawParts } from './cam-reference-25d'
 
 const DIR = path.join(import.meta.dirname, 'golden', 'cam')
 const UPDATE = process.env.UPDATE_GOLDEN === '1'
@@ -95,5 +96,25 @@ describe('reference part checks that do not depend on goldens', () => {
     const levels = new Set([...simpleMoves(tp.moves)].filter((m) => m.t !== 'rapid').map((m) => Math.round(m.z * 1000) / 1000))
     expect([...levels].filter((z) => z < 0).length).toBeGreaterThanOrEqual(3)
     expect(Math.min(...levels)).toBeCloseTo(-(38 + machine.throughDepth))
+  })
+
+  // M3.6d: pockets and facings used to open with a rapid to the part's corner (X0 Y0) 3 mm above
+  // the top, then rise to the safe height over the start; every toolpath now opens over its first cut
+  it('every toolpath opens at its safe height straight over its first cut, never at the part corner (M3.6d)', () => {
+    const all = [...parts, ...sawParts(), ...faceParts(), ...chamferParts(), ...curveParts(), ...manualParts(), ...editParts(), ...edgeParts()]
+    let n = 0
+    for (const p of all)
+      for (const tp of generatePart(p, machine)) {
+        const mv = [...simpleMoves(tp.moves)]
+        if (mv.length < 2) continue
+        const op = p.ops.find((o) => o.id === tp.opId)!
+        const what = `${p.id} ${tp.name}`
+        expect(mv[0].t, what).toBe('rapid')
+        // (depths below a facing count from the faced top, safe height too)
+        expect(mv[0].z, what).toBeGreaterThanOrEqual(op.levels.safeZ - (tp.top ?? 0) - 1e-9)
+        expect(Math.hypot(mv[1].x - mv[0].x, mv[1].y - mv[0].y), what).toBeLessThan(1e-9)
+        n++
+      }
+    expect(n).toBeGreaterThan(50)
   })
 })

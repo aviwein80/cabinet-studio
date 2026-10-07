@@ -1,7 +1,7 @@
 import type { Seg } from '@/cam/geom'
 import { partCollisions } from '@/cam/collision/collision'
 import { partProgramOps } from '@/cam/mpr'
-import { generatePart, type Intent, isAdaptive, isFlatLayer, isMore25d, OPS_3D, pathKey, type Toolpath } from '@/cam/toolpath'
+import { generatePart, type Intent, isAdaptive, isFlatLayer, isMore25d, OPS_3D, pathKey, ROTARY_NO_MPR, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
@@ -415,8 +415,10 @@ export function buildSheetProgram(
       const flat3dMissing = flat.filter((o) => !opts.paths3d?.has(pathKey(o, inst.cam!, machine))).length
       const write3d = !!opts.camOutput && !!opts.cam3dOutput
       const collisions = collisionsOf(inst.cam, paths, machine)
-      const blockedIds = new Set(paths.filter((tp) => tp.noOutput).map((tp) => tp.opId))
-      const blocked = paths.filter((tp) => tp.noOutput).map((tp) => ({ name: tp.name, reason: tp.noOutput! }))
+      // (rotary work never goes to woodWOP, M3.3)
+      const unwritable = (tp: Toolpath) => !!tp.noOutput || tp.kind === 'rotary'
+      const blockedIds = new Set(paths.filter(unwritable).map((tp) => tp.opId))
+      const blocked = paths.filter(unwritable).map((tp) => ({ name: tp.name, reason: tp.noOutput ?? ROTARY_NO_MPR }))
       const more = inst.cam.ops.filter((o) => o.enabled && isMore25d(o) && !blockedIds.has(o.id))
       const moreIds = new Set(more.map((o) => o.id))
       const write25d = !!opts.camOutput && !!opts.cam25dOutput

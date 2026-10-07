@@ -50,7 +50,7 @@ import { planAdaptive } from './adaptive/adaptive'
 import { DEFAULT_ADAPTIVE, feedsFor, passDepths, PLACEHOLDER_BLADE, resolveTool } from './ops'
 import type { Work } from '@/core/cancel'
 import { type CurveInputs, curveFinish, type DrivePath, toolpathRuns } from './3d/curve'
-import { type Cutter3D, cutterOfTool } from './3d/cutter'
+import { type Cutter3D, cutterOfTool, grownCutter } from './3d/cutter'
 import { parallelFinish } from './3d/parallel'
 import { radialFinish, spiralFinish } from './3d/radial'
 import { scallopFinish } from './3d/scallop'
@@ -71,7 +71,10 @@ import { aggregateOf, anglesOutOfReach, effectiveGauge, machineModelOf, toolOutl
 import { placeMesh } from './mesh/place'
 import { mergeMeshes, placedReliefOutline, reliefSurround } from './relief/relief'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, SawOp, SweepOp, ThreadOp, VCarveOp } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, RotaryOp, RotarySetup, SawOp, SweepOp, ThreadOp, VCarveOp, WrappedPlane } from './types'
+import { blankRadius, inPlane, setupProblems } from './rotary/frame'
+import { RotaryDrop } from './rotary/drop'
+import { modelPaths, type RotaryPaths, wrapPaths, type WrapShape } from './rotary/paths'
 import { isoDepth, threadMoves } from './more25d/thread'
 import { onRapidSurface } from './more25d/rapidSurface'
 
@@ -146,6 +149,13 @@ export interface Toolpath {
    * how many point edits were applied as made, moved to the matching move, or lost.
    */
   edited?: { base: string; applied: number; moved: number; lost: number; reversed: boolean }
+  /**
+   * Rotary machining (M3.3): the moves lie on wrapped plane `plane` of the part's rotary set-up
+   * (unrolled drawing x, y; z = the tip's distance from the axis less the plane's radius). The tool
+   * stands square to the axis, pointing at it. Never written to woodWOP; only a script post for a
+   * machine model with that rotary axis may write it. `blade`: a saw blade and how it stands.
+   */
+  rotary?: { setup: RotarySetup; plane: WrappedPlane; blade?: { R: number; plane: 'axial' | 'ring' } }
   /**
    * Edge work with an aggregate (5AX-04): the moves are the tool tip, at the tool axis height; the
    * tool lies flat, square to the path, on the `side` of travel where the material is.
@@ -1595,6 +1605,111 @@ function genThread(op: ThreadOp, ctx: GenContext, tp: Toolpath, b: Builder) {
   if (op.side === 'internal' && op.travel === 'up') tp.warnings.push('Bottom-up: the tool goes straight down the middle of the core hole to the thread\'s bottom first, so the core hole must be at least as deep as the thread.')
 }
 
+/** Rotary toolpaths are never written to woodWOP (the N-200 has no rotary axis): simulation, and a script post for a machine with one. */
+export const ROTARY_NO_MPR = 'it turns the part on a rotary axis, which woodWOP programs for the N-200 cannot hold'
+
+/**
+ * Rotary machining (3D-10, M3.3): passes along, round or in a spiral about the rotary axis on a
+ * model, or shapes drawn on a wrapped plane cut into the cylinder (`rotary/paths.ts`). The moves
+ * are on the operation's wrapped plane; `tp.rotary` says which.
+ */
+function genRotary(op: RotaryOp, ctx: GenContext, tp: Toolpath, b: Builder) {
+  const setup = ctx.part.rotary
+  if (!setup) {
+    tp.warnings.push('This part has no rotary set-up: set the axis and the blank first (3D tab, Rotary).')
+    return
+  }
+  const problems = setupProblems(setup)
+  if (problems.length) {
+    tp.warnings.push(...problems.map((m) => `Rotary set-up: ${m}`))
+    return
+  }
+  const plane = setup.planes.find((p) => p.id === op.planeId)
+  if (!plane) {
+    tp.warnings.push('Pick the wrapped plane this operation works on.')
+    return
+  }
+  tp.rotary = { setup, plane }
+  const tool = tp.tool
+  if (!tool) {
+    tp.warnings.push('No tool for this rotary operation.')
+    return
+  }
+  const saw = tool.type === 'saw'
+  if (saw && op.strategy !== 'wrap') {
+    tp.warnings.push(`T${tool.number} is a saw blade: a blade cuts drawn grooves only (Wrapped shapes), straight along or round the axis.`)
+    return
+  }
+  if (!saw && (tool.shape === 'lollipop' || tool.shape === 'thread')) {
+    tp.warnings.push(`T${tool.number} (${tool.shape === 'lollipop' ? 'lollipop' : 'thread mill'}) cannot be used for rotary machining: use a flat, ball-nose, bull-nose or V cutter.`)
+    return
+  }
+  const ct = saw ? null : cutterOfTool(tool)
+  if (ct && 'error' in ct) {
+    tp.warnings.push(ct.error)
+    return
+  }
+  const s = Math.max(0, op.stockToLeave)
+  // the model(s): placed in the part, merged
+  const needModel = op.strategy !== 'wrap' || !!op.onModel
+  let drop: RotaryDrop | null = null
+  if (needModel && ct) {
+    const models = (ctx.part.models ?? []).filter((m) => (op.modelId ? m.id === op.modelId : m.visible !== false))
+    const meshes: Mesh[] = []
+    for (const m of models) {
+      const mesh = ctx.meshes?.get(m.blob)
+      if (!mesh) {
+        tp.warnings.push(`The 3D model "${m.name}" is not loaded, so no toolpath was calculated.`)
+        return
+      }
+      meshes.push(placeMesh(mesh, m.place))
+    }
+    if (!meshes.length) {
+      tp.warnings.push(op.strategy === 'wrap' ? '"Below the model" needs a model on the part.' : 'Pick the model to machine (or add one on the 3D tab).')
+      return
+    }
+    const grown = grownCutter(ct.cutter, s)
+    if (!grown) {
+      tp.warnings.push('Stock to leave needs a ball-nose, bull-nose or flat tool (not a V cutter).')
+      return
+    }
+    drop = new RotaryDrop(meshes.length === 1 ? meshes[0] : mergeMeshes(meshes), setup, grown)
+  }
+  const R = saw ? (tool.kerf ?? 4) / 2 : tool.diameter / 2
+  const inp = { setup, plane, op, R, drop, work: ctx.work }
+  let res: RotaryPaths & { bladePlane?: 'axial' | 'ring' }
+  if (op.strategy === 'wrap') {
+    const tol = Math.max(0.001, op.tolerance || 0.01)
+    const shapes: WrapShape[] = []
+    let outside = 0
+    for (const { e, contours } of geometryOf(op, ctx.part)) {
+      if (e.face !== 1) continue
+      for (const c of contours) {
+        const pts = toPoints(c, tol)
+        if (!pts.every((p) => inPlane(plane, p, 1e-6))) {
+          outside++
+          continue
+        }
+        shapes.push({ pts, closed: c.closed })
+      }
+    }
+    if (outside) tp.warnings.push(`${outside} picked shape(s) are not inside the wrapped plane's rectangle and are left out.`)
+    const blade = saw ? { R: (tool.bladeDiameter ?? PLACEHOLDER_BLADE) / 2, kerf: tool.kerf ?? 4 } : undefined
+    if (saw && !tool.bladeDiameter) tp.warnings.push(`T${tool.number} has no blade diameter: a ${PLACEHOLDER_BLADE} mm placeholder blade is assumed.`)
+    res = wrapPaths(inp, shapes, Math.max(0, op.levels.depth), Math.max(0, op.levels.passDepth ?? 0), blade)
+    if (blade && res.bladePlane) tp.rotary.blade = { R: blade.R, plane: res.bladePlane }
+  } else res = modelPaths(inp)
+  tp.warnings.push(...res.warnings)
+  for (const m of res.moves) b.moves.push(m)
+  const lastMove = res.moves[res.moves.length - 1]
+  if (lastMove && lastMove.t !== 'poly') Object.assign(b, { x: lastMove.x, y: lastMove.y, z: lastMove.z })
+  if (res.levels.length) tp.warnings.push(`Roughing in ${res.levels.length} level(s) from the blank's surface (${blankRadius(setup.blank).toFixed(1)} mm from the axis) in to ${res.levels[res.levels.length - 1].toFixed(2)} mm.`)
+  // reach: how far in from the blank's surface the tip goes, against the cutting length
+  const flute = saw ? Infinity : (tool.fluteLength ?? tool.maxDepth)
+  if (res.deepest > flute + 1e-9) tp.warnings.push(`Cuts ${res.deepest.toFixed(2)} mm in from the blank's farthest reach but T${tool.number} cuts only ${flute} mm deep: the shank or holder may rub. Check in simulation.`)
+  if (!saw && tool.centreCutting === false && res.moves.some((m) => m.t === 'feed' && m.f === 'plunge')) tp.warnings.push(`T${tool.number} is not centre-cutting, but the passes start by going straight in: use a centre-cutting tool.`)
+}
+
 /** Tool-tip chains as 3D moves: down to each chain's start, along it, up again. */
 function emitChains(chains: Chain3[], op: CamOp, b: Builder) {
   for (const ch of chains) {
@@ -1906,6 +2021,8 @@ export const isAdaptive = (op: CamOp) => (op.kind === 'pocket' && op.pattern ===
  */
 export function inBackground(op: CamOp, part: CamPart): boolean {
   if (OPS_3D.has(op.kind) || isAdaptive(op) || (op.kind === 'curve' && op.mode === 'between')) return true
+  // rotary on a model (drop-cutter round the axis); shapes cut below the plane are quick
+  if (op.kind === 'rotary') return op.strategy !== 'wrap' || !!op.onModel
   return op.kind === 'pocket' && !!op.rest && restSources(op, part).some(isAdaptive)
 }
 
@@ -2238,6 +2355,8 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 // ---------------------------------------------------------------------------------------------
 
 export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
+  // rotary: no facing re-sets its stock, no toolpath edits or rapid surfaces (it lifts to its own clearance radius)
+  if (op.kind === 'rotary') return generateAt(op, ctx)
   const tp = generateShifted(op, ctx)
   const edited = hasMoveEdits(op.edits) && op.kind !== 'code' ? editToolpath(tp, op) : tp
   return op.rapidSurface && op.kind !== 'code' ? withRapidSurface(edited, op) : edited
@@ -2336,6 +2455,9 @@ function generateAt(op: CamOp, ctx: GenContext): Toolpath {
         break
       case 'thread':
         genThread(op, ctx, tp, b)
+        break
+      case 'rotary':
+        genRotary(op, ctx, tp, b)
         break
     }
   tp.stats = stats(b.moves, feeds.feed)

@@ -1,0 +1,24 @@
+{
+ "op": "Rotary rings round the axis",
+ "kind": "rotary",
+ "tool": 105,
+ "moves": {
+  "rapid": 268,
+  "feed": 133,
+  "arc": 0,
+  "drill": 0,
+  "poly": 133,
+  "points": 65371
+ },
+ "cutMm": 18466,
+ "box": [
+  52,
+  60,
+  -11.011,
+  300,
+  185.664,
+  7.52
+ ],
+ "warnings": [],
+ "hash": "946f8368"
+}

@@ -27,7 +27,7 @@ import type { Toolpath } from '../toolpath'
 import type { CamPart } from '../types'
 import type { StockModel } from '../stock/types'
 
-export type CollisionKind = 'shank' | 'holder' | 'rapid' | 'spoilboard' | 'table'
+export type CollisionKind = 'shank' | 'holder' | 'rapid' | 'spoilboard' | 'table' | 'axis'
 
 export interface Collision {
   kind: CollisionKind
@@ -55,6 +55,13 @@ export interface CollisionSetup {
   spoilboardThickness: number
   /** Clearance kept round the shank and holder (mm); any intrusion is a collision. */
   margin: number
+  /**
+   * Rotary stock (M3.3): `thickness` is the blank's farthest reach from the axis, and the only
+   * depth limit is the axis itself (no spoilboard or table under a turned part).
+   */
+  rotary?: boolean
+  /** How a position is written in messages (default X, Y, Z of the part frame). */
+  place?: (at: V3) => string
 }
 
 /** Material reaching into the envelope less than this (mm) is not reported (cell quantisation). */
@@ -118,6 +125,7 @@ const kindText: Record<CollisionKind, string> = {
   rapid: 'rapid move through material',
   spoilboard: 'cuts deeper into the spoilboard than allowed',
   table: 'goes through the spoilboard into the table',
+  axis: 'tool tip reaches the rotary axis',
 }
 
 /**
@@ -161,10 +169,12 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
     const s = segs[si]
     if (s.side) continue
     // depth limits, exactly: where the move first goes below the limit, and how far
-    for (const [kind, lim] of [
-      ['table', table],
-      ['spoilboard', limit],
-    ] as const) {
+    for (const [kind, lim] of setup.rotary
+      ? ([['axis', -setup.thickness]] as const)
+      : ([
+          ['table', table],
+          ['spoilboard', limit],
+        ] as const)) {
       const lo = Math.min(s.a.z, s.b.z)
       if (lo >= lim - 1e-6) continue
       const k = s.a.z < lim - 1e-6 ? 0 : (s.a.z - lim) / (s.a.z - s.b.z)
@@ -206,7 +216,7 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
   }
   for (const c of out) {
     const name = tl.ops[c.op]?.name ?? 'Operation'
-    const where = `X${c.at.x.toFixed(1)} Y${c.at.y.toFixed(1)} Z${c.at.z.toFixed(1)}`
+    const where = setup.place ? setup.place(c.at) : `X${c.at.x.toFixed(1)} Y${c.at.y.toFixed(1)} Z${c.at.z.toFixed(1)}`
     const span = c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`
     c.message = `${name}, ${span}: ${kindText[c.kind]} at ${where} (${c.depth.toFixed(2)} mm).`
   }

@@ -137,6 +137,11 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
       warnings.push(`${blocked} It is left out of the cut list and nesting.`)
       continue
     }
+    // M3.3: a part turned on a rotary axis is not a sheet part (the export checker refuses the job)
+    if (cp.rotary) {
+      warnings.push(`Custom part ${cp.name} is turned on a rotary axis. It is left out of the cut list and nesting.`)
+      continue
+    }
     const material = cp.materialId ? lib.materials.find((m) => m.id === cp.materialId) : undefined
     if (!cp.materialId) warnings.push(`Custom part ${cp.name}: no material chosen, so it cannot be nested.`)
     else if (!material) warnings.push(`Custom part ${cp.name}: material ${cp.materialId} missing from library.`)

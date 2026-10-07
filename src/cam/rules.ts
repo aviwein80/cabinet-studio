@@ -83,7 +83,7 @@ export interface ApplyResult {
   missingRecipes: string[]
 }
 
-const KIND_ORDER: Record<CamOpKind, number> = { face: -1, code: 0, curve: 4.5, manual: 4.6, chamfer: 6.5, edge: 7.5, drill: 1, pocket: 2, thread: 2.5, engrave: 3, vcarve: 4, sweep: 5, saw: 6, profile: 7, rough3d: 8, finish3d: 9 }
+const KIND_ORDER: Record<CamOpKind, number> = { face: -1, code: 0, curve: 4.5, manual: 4.6, chamfer: 6.5, edge: 7.5, drill: 1, pocket: 2, thread: 2.5, engrave: 3, vcarve: 4, sweep: 5, saw: 6, profile: 7, rough3d: 8, finish3d: 9, rotary: 10 }
 
 /**
  * Apply a rule set: each shape is claimed by the first rule (lowest `order`) that matches its

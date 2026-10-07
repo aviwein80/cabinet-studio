@@ -15,8 +15,13 @@ export interface StockSnapshot {
 }
 
 export interface StockModel {
-  /** Heightfield: one height per cell (vertical tools). Dexel: intervals per cell (material under overhangs too). */
-  readonly kind: 'heightfield' | 'dexel'
+  /**
+   * Heightfield: one height per cell (vertical tools). Dexel: intervals per cell (material under
+   * overhangs too). Rotary (M3.3): intervals along rays out from a rotary axis, in the blank's
+   * unrolled frame (x along the axis, y round it, z = distance from the axis less the blank's
+   * radius), so "vertical" means square to the axis.
+   */
+  readonly kind: 'heightfield' | 'dexel' | 'rotary'
   /** Material extents before any cutting. */
   bounds(): Box3
   /** Remove what the cutter sweeps moving in a straight line from `a` to `b` (tip positions). */

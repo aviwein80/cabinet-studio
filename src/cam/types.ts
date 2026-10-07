@@ -196,10 +196,49 @@ export interface ReliefInfo {
   mesh?: { size: [number, number, number]; baseRemoved: number }
 }
 
+/** Part axis a rotary set-up turns about (M3.3). */
+export type RotaryAxis = 'X' | 'Y' | 'Z'
+
+/**
+ * A wrapped (developed) work plane (NEW-14, M3.3): the cylinder of `radius` round the part's
+ * rotary axis, from `start` to `end` along the axis (part coordinates) and from `a0` to `a1`
+ * degrees round it, unrolled flat. Along the axis lengths stay as they are; round it, 1 mm of the
+ * plane is 1 mm of arc at `radius`. The unrolled rectangle lies in the drawing with its corner
+ * (`start`, `a0`) at `at`: shapes drawn inside it are wrapped onto the cylinder.
+ */
+export interface WrappedPlane {
+  id: string
+  name: string
+  radius: number
+  start: number
+  end: number
+  a0: number
+  a1: number
+  at: P
+  /** How it was set: a radius (the whole blank, all the way round), extents, or fitted to a model's cylindrical face. */
+  from: 'radius' | 'extents' | 'face'
+  /** The face it was fitted to: model, face id (solids) and how far the face's points stray from the cylinder (mm). */
+  face?: { modelId: string; faceId?: number; fit: number }
+}
+
+/**
+ * A part turned on a rotary axis (M3.3): the axis (along part X, Y or Z, through `centre`), the
+ * blank held on it and the wrapped planes round it. Angles round the axis are measured from
+ * straight up (+Z; +X for an axis along Z), turning right-handed about the axis.
+ */
+export interface RotarySetup {
+  axis: RotaryAxis
+  /** A point on the axis (part coordinates; its coordinate along the axis is not used). */
+  centre: { x: number; y: number; z: number }
+  /** The blank: round (diameter `size`) or square (side `size`), from `start` to `end` along the axis. */
+  blank: { shape: 'round' | 'square'; size: number; start: number; end: number }
+  planes: WrappedPlane[]
+}
+
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   materialId: string | null
   length: number
   width: number
@@ -239,6 +278,8 @@ export interface CamPart {
   sketches?: Record<string, TurnSketch>
   /** Work volume was fitted to a model with this oversize (mm); kept so it can be refitted. */
   workVolume?: { modelId: string; oversize: { xy: number; top: number; bottom: number } }
+  /** Turned on a rotary axis (M3.3): the axis, the blank and the wrapped planes. Such a part is never nested on a sheet. */
+  rotary?: RotarySetup
   /** Keep ops on unchanged geometry ids when imports refresh. */
   updatedAt: string
 }
@@ -863,7 +904,37 @@ export interface ThreadOp extends OpBase {
   spring: boolean
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp | ThreadOp
+/**
+ * Rotary machining (3D-10, M3.3). The part turns on its rotary axis (`CamPart.rotary`) and the
+ * tool stands square to the axis, pointing at it. On a model (`modelId`): passes along the axis
+ * stepping round it ('along'), rings round the axis stepping along it ('around'), or one
+ * continuous spiral ('spiral'), roughing in levels when `stepdown` is set. 'wrap' (drive geometry
+ * through the axis): the picked shapes, drawn inside a wrapped plane's unrolled rectangle, cut
+ * `levels.depth` below the plane's surface, or below the model's surface found straight in
+ * towards the axis (`onModel`). Every toolpath is expressed on the wrapped plane `planeId`: drawing
+ * x and y on its unrolled rectangle, and z = distance from the axis minus the plane's radius.
+ */
+export interface RotaryOp extends OpBase {
+  kind: 'rotary'
+  planeId: string
+  strategy: 'along' | 'around' | 'spiral' | 'wrap'
+  /** The model machined (model strategies, and 'wrap' with `onModel`); empty = every model on the part. */
+  modelId: string
+  /** Gap between passes, mm: round the axis (measured on the blank's surface) for 'along'; along the axis for 'around' and 'spiral'. */
+  stepover: number
+  /** Roughing: radial step-down from the blank's surface, mm; 0 = one pass on the model (finishing). */
+  stepdown: number
+  /** Material left on the model, mm. */
+  stockToLeave: number
+  /** Chord tolerance, mm. */
+  tolerance: number
+  /** Passes in both directions (zig-zag), or all one way. */
+  zigzag: boolean
+  /** 'wrap': depth below the model's surface instead of the plane's. */
+  onModel?: boolean
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp | ThreadOp | RotaryOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

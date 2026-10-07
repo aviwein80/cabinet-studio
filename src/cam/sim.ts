@@ -28,6 +28,12 @@ export interface Cutter {
   cornerRadius?: number
   /** Lollipop: neck radius (narrower than the ball `r`). Thread mill: the neck above its tooth. */
   neck?: number
+  /**
+   * Saw blade on a rotary set-up (M3.3): blade radius and how it stands: in the plane through the
+   * rotary axis ('axial', grooves along the axis) or square to the axis ('ring', grooves round it).
+   * `r` is then half the kerf.
+   */
+  blade?: { R: number; plane: 'axial' | 'ring' }
 }
 
 /** A thread mill's tooth flanks: 30° from square to the axis (a 60° thread form). */
@@ -86,6 +92,8 @@ const DRILL_DWELL_S = 1.8
 /** The simulator's cutter for a toolpath's tool (or a drill of diameter d). */
 export function cutterOf(tp: Toolpath, d?: number): Cutter {
   const t = tp.tool
+  // a saw blade on a rotary set-up: its disc, standing along or square to the axis
+  if (tp.rotary?.blade) return { r: (t?.kerf ?? 4) / 2, shape: 'saw', angle: 90, blade: { ...tp.rotary.blade } }
   const shape: ToolShape = t?.shape ?? (tp.kind === 'drill' ? 'drill' : tp.kind === 'vcarve' ? 'v' : tp.kind === 'saw' ? 'saw' : 'flat')
   let dia = d ?? t?.diameter ?? 0
   if (tp.kind === 'saw') {

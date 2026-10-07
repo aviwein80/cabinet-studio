@@ -1,0 +1,26 @@
+{
+ "op": "Rotary passes along the axis",
+ "kind": "rotary",
+ "tool": 102,
+ "moves": {
+  "rapid": 240,
+  "feed": 119,
+  "arc": 0,
+  "drill": 0,
+  "poly": 119,
+  "points": 5049
+ },
+ "cutMm": 31248,
+ "box": [
+  54.502,
+  60,
+  -10.51,
+  300,
+  181.61,
+  4.525
+ ],
+ "warnings": [
+  "Roughing in 5 level(s) from the blank's surface (28.3 mm from the axis) in to 9.49 mm."
+ ],
+ "hash": "f741564d"
+}

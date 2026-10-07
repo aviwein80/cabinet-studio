@@ -1,0 +1,24 @@
+{
+ "op": "Rotary wrapped shapes",
+ "kind": "rotary",
+ "tool": 105,
+ "moves": {
+  "rapid": 18,
+  "feed": 8,
+  "arc": 0,
+  "drill": 0,
+  "poly": 8,
+  "points": 8
+ },
+ "cutMm": 1180,
+ "box": [
+  30,
+  79.817,
+  -2.5,
+  170,
+  217.262,
+  -2.5
+ ],
+ "warnings": [],
+ "hash": "fbf0e048"
+}

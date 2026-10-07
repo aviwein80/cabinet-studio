@@ -51,7 +51,7 @@ function hexRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-const KIND_LABEL: Record<CollisionKind, string> = { shank: 'shank', holder: 'holder', rapid: 'rapid', spoilboard: 'spoilboard', table: 'table' }
+const KIND_LABEL: Record<CollisionKind, string> = { shank: 'shank', holder: 'holder', rapid: 'rapid', spoilboard: 'spoilboard', table: 'table', axis: 'axis' }
 
 const STOP_TEXT: Record<StopReason, string> = { end: 'End of program.', 'tool-change': 'Stopped at a tool change.', mark: 'Stopped at the chosen move.' }
 

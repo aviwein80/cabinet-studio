@@ -750,6 +750,17 @@ export interface FeatureFlags {
    * to woodWOP).
    */
   camExtras: boolean
+  /**
+   * M3.3 screens: rotary set-ups (axis, blank, wrapped planes) and rotary machining, simulated on
+   * a rotary stock. Screens only: rotary work is never written to woodWOP (the N-200 has no rotary
+   * axis); see `rotaryPostOutput`.
+   */
+  camRotary: boolean
+  /**
+   * M3.3: write rotary programs through script posts, for a machine (not the N-200) whose machine
+   * model declares that rotary axis. Off. Also needs `scriptPostOutput` and the plugin's grant.
+   */
+  rotaryPostOutput: boolean
 }
 
 export interface Library {

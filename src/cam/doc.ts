@@ -23,8 +23,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * instead of roughing from above with a lollipop.
  * 7 (M3.2): thread milling, hatching and detail views, layer line types, stroke fonts on texts,
  * rapid surfaces. An older app refuses a v7 part instead of leaving them out without a word.
+ * 8 (M3.3): rotary set-ups (`rotary`: axis, blank, wrapped planes) and rotary operations. An older
+ * app refuses a v8 part instead of nesting a turned part on a sheet or dropping its operations.
  */
-export const CAM_FILE_VERSION = 7
+export const CAM_FILE_VERSION = 8
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -261,6 +263,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   5: (p) => ({ ...p, version: 6 }),
   // v6 -> v7: thread milling, annotations, line types, stroke fonts and rapid surfaces are new and optional.
   6: (p) => ({ ...p, version: 7 }),
+  // v7 -> v8: the rotary set-up and rotary operations are new and optional.
+  7: (p) => ({ ...p, version: 8 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */
@@ -350,6 +354,8 @@ export function driveSource(op: CamOp, part: CamPart): CamOp | null {
  * machining or its drive follows, and the surface whose rows and columns it follows.
  */
 export function modelsFor(op: CamOp, part: CamPart): string[] {
+  // rotary: its model, or every shown model when none is picked
+  if (op.kind === 'rotary') return op.strategy === 'wrap' && !op.onModel ? [] : (part.models ?? []).filter((m) => (op.modelId ? m.id === op.modelId : m.visible !== false)).map((m) => m.id)
   const own = [op, ...restSources(op, part)].flatMap((o) => (o.kind === 'finish3d' || o.kind === 'rough3d' ? [o.surface.modelId] : []))
   const surface = op.kind === 'finish3d' && op.strategy === 'curve' && op.drive?.mode === 'parameter' && op.drive.modelId ? [op.drive.modelId] : []
   const src = driveSource(op, part)
@@ -376,6 +382,12 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   if (op.kind === 'finish3d' || op.kind === 'rough3d') {
     const m = part.models?.find((x) => x.id === op.surface.modelId)
     deps.push(m ? { blob: m.blob, place: m.place } : null)
+  }
+  // rotary: the set-up (axis, blank, the plane used) and the models it machines
+  if (op.kind === 'rotary') {
+    const r = part.rotary
+    deps.push(r ? { axis: r.axis, centre: r.centre, blank: r.blank, plane: r.planes.find((p) => p.id === op.planeId) ?? null } : null)
+    deps.push({ models: modelsFor(op, part).map((id) => part.models?.find((m) => m.id === id)).map((m) => (m ? { blob: m.blob, place: m.place } : null)) })
   }
   // scallop start shapes (not in `geometry`, which holds the boundary)
   if (op.kind === 'finish3d' && op.startFrom?.length) deps.push({ starts: op.startFrom.map((id) => part.entities.find((e) => e.id === id) ?? id) })

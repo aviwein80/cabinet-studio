@@ -37,6 +37,7 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   manual: 'Hand-drawn toolpath',
   edge: 'Edge work (aggregate)',
   thread: 'Thread milling',
+  rotary: 'Rotary machining',
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -119,6 +120,13 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       // an M10 x 1.5 internal thread, 12 mm long, climb cut (bottom-up); PLACEHOLDER radial passes
       op = { ...base, kind, side: 'internal', diameter: 0, pitch: 1.5, hand: 'right', travel: 'up', threadDepth: 0, passes: 2, spring: false, levels: { ...DEFAULT_LEVELS, depth: 12 } }
       break
+    case 'rotary': {
+      // PLACEHOLDER step-over and step-down until the shop supplies its own; the first wrapped plane
+      const strategy = ((extra as { strategy?: string }).strategy ?? 'along') as 'along' | 'around' | 'spiral' | 'wrap'
+      const names = { along: 'Rotary passes along the axis', around: 'Rotary rings round the axis', spiral: 'Rotary spiral', wrap: 'Rotary wrapped shapes' }
+      op = { ...base, kind, name: names[strategy], planeId: '', strategy, modelId: '', stepover: 1, stepdown: 0, stockToLeave: 0, tolerance: 0.01, zigzag: true, levels: { ...DEFAULT_LEVELS, safeZ: 20, rapidZ: 5, depth: strategy === 'wrap' ? 3 : 0 } }
+      break
+    }
     case 'face':
       // PLACEHOLDER step-over (the pocket's 45 %) until the shop supplies its own
       op = { ...base, kind, pattern: 'zigzag', stepover: 0.45, angle: 0, direction: 'climb', overhang: 0, resetTop: true, levels: { ...DEFAULT_LEVELS, depth: 1 } }
@@ -232,6 +240,14 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     case 'face':
       // the widest flat cutter
       return routers(machine).filter(squareEnd).sort((a, b) => b.diameter - a.diameter || a.number - b.number)[0] ?? null
+    case 'rotary': {
+      // roughing: the widest flat end mill (not the cut-out tool); finishing and drawn shapes: the
+      // largest ball-nose, then the smallest flat end mill
+      const cut = cutoutTool(machine)
+      if (op.stepdown > 0) return routers(machine).filter((t) => squareEnd(t) && t.id !== cut?.id).sort((a, b) => b.diameter - a.diameter || a.number - b.number)[0] ?? null
+      const balls = routers(machine).filter((t) => t.shape === 'ball').sort((a, b) => b.diameter - a.diameter || a.number - b.number)
+      return balls[0] ?? routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
+    }
     case 'engrave':
       return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter)[0] ?? null
     case 'vcarve':

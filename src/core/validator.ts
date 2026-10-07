@@ -588,6 +588,27 @@ export type PostChoice = import('./types').MachineSetup['post']
 export const isN200 = (setup: Pick<import('./types').MachineSetup, 'id' | 'profile'>) => setup.id === 'main' || /n-?\s?200/i.test(`${setup.profile.model} ${setup.profile.name}`)
 
 /**
+ * M3.3: parts turned on a rotary axis in a job. They are never nested on a sheet or written to
+ * woodWOP: the N-200 (and any machine without a rotary axis in its model) refuses them, and the
+ * job's export is refused while one is in it. Only a script post for a machine model with that
+ * rotary axis may write one (Program dialog, `checkTextPost`).
+ */
+export function rotaryIssues(job: Pick<import('./types').Job, 'camParts'>, machine: MachineProfile): Issue[] {
+  const out: Issue[] = []
+  const caps = machineModelOf(machine).capabilities
+  for (const cp of job.camParts ?? []) {
+    if (!cp.rotary) continue
+    const n = cp.ops.filter((o) => o.enabled && o.kind === 'rotary').length
+    out.push({
+      severity: 'error',
+      code: 'CAM_ROTARY',
+      message: `Custom part ${cp.name} is turned on a rotary axis${n ? ` (${n} rotary operation(s))` : ''}. ${caps.rotary ? 'Sheet programs cannot hold rotary work' : `The machine model (${machine.model || machine.name}) has no rotary axis`}, so it is not nested and nothing of it is written to woodWOP. Simulate it on the Parts page; only a script post for a machine model with a rotary axis can write it (Program dialog). Take it out of this job to export the sheets.`,
+    })
+  }
+  return out
+}
+
+/**
  * M2.10b: may a text post (template or script) write programs of these toolpaths for this machine?
  * Every error blocks writing; previews are always allowed. On top of the export checker's own
  * results for the part on that machine (`issues`, all kept), a text post is refused:

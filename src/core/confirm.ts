@@ -53,6 +53,9 @@ export interface CutDefaults {
   undercutStepover: number
   /** Thread milling (M3.2): radial passes out to the full thread depth. */
   threadPasses: number
+  /** Rotary machining (M3.3): gap between passes, mm; radial step-down when roughing, mm. */
+  rotaryStepover: number
+  rotaryStepdown: number
 }
 export type CutDefaultKey = keyof CutDefaults
 
@@ -74,6 +77,8 @@ export const BUILTIN_CUT_DEFAULTS: CutDefaults = {
   undercutStepdown: 1,
   undercutStepover: 0.1,
   threadPasses: 2,
+  rotaryStepover: 1,
+  rotaryStepdown: 3,
 }
 
 export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
@@ -92,6 +97,8 @@ export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
   undercutStepdown: 'Undercut roughing step-down',
   undercutStepover: 'Undercut roughing step-over',
   threadPasses: 'Thread milling: radial passes',
+  rotaryStepover: 'Rotary step-over',
+  rotaryStepdown: 'Rotary roughing step-down',
 }
 
 export const CUT_DEFAULT_KEYS = Object.keys(BUILTIN_CUT_DEFAULTS) as CutDefaultKey[]
@@ -311,6 +318,8 @@ export const OP_FIELDS: OpField[] = [
   { key: 'undercutStepdown', applies: (o) => o.kind === 'rough3d' && o.pattern === 'undercut', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
   { key: 'undercutStepover', applies: (o) => o.kind === 'rough3d' && o.pattern === 'undercut', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'threadPasses', applies: (o) => o.kind === 'thread', get: (o) => (o as { passes: number }).passes, set: (o, v) => ({ ...o, passes: v }) as CamOp },
+  { key: 'rotaryStepover', applies: (o) => o.kind === 'rotary' && o.strategy !== 'wrap', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
+  { key: 'rotaryStepdown', applies: (o) => o.kind === 'rotary' && o.strategy !== 'wrap' && o.stepdown > 0, get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
 ]
 
 /**
@@ -376,6 +385,9 @@ export function newOpDefaults(kind: CamOp['kind'], m: MachineProfile, extra: Par
       return strategy === 'waterline' || strategy === 'helical' ? ({ stepover: d.finishStepover, stepdown: d.waterlineStepdown } as Partial<CamOp>) : strategy === 'projection' || strategy === 'pencil' ? {} : ({ stepover: d.finishStepover } as Partial<CamOp>)
     case 'thread':
       return { passes: d.threadPasses } as Partial<CamOp>
+    case 'rotary':
+      // roughing (asked for with a step-down) takes the shop's step-down too
+      return strategy === 'wrap' ? {} : ({ stepover: d.rotaryStepover, ...((extra as { stepdown?: number }).stepdown ? { stepdown: d.rotaryStepdown } : {}) } as Partial<CamOp>)
     case 'rough3d':
       return (extra as { pattern?: string }).pattern === 'undercut' ? ({ stepdown: d.undercutStepdown, stepover: d.undercutStepover } as Partial<CamOp>) : ({ stepdown: d.roughStepdown, stepover: d.roughStepover } as Partial<CamOp>)
     default:

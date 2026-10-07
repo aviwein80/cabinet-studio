@@ -9,7 +9,7 @@ import { bridgesOn, buildAllPrograms, flipSheetsOn, nestJob, nestSettingsOf, sha
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeKey, Job } from './types'
-import { validateJob, type Issue } from './validator'
+import { rotaryIssues, validateJob, type Issue } from './validator'
 
 export interface LabelRecord {
   partId: string
@@ -91,6 +91,7 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
   }
   const issues = validateJob(programs, nest, expanded.instances, lib, machine, settings)
   for (const w of expanded.warnings) issues.unshift({ severity: 'warning', code: 'CONSTRUCTION', message: w })
+  issues.push(...rotaryIssues(job, machine))
 
   const byUid = new Map(expanded.instances.map((i) => [i.uid, i]))
   const copies = new Map<string, string[]>()

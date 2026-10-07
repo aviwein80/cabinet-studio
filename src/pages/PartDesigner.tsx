@@ -709,7 +709,7 @@ function Designer({ initial, jobId, onSave }: { initial: CamPart; jobId?: string
             </TabsList>
             {feat.cam3d && (
               <TabsContent value="models" className="min-h-0 flex-1 overflow-auto">
-                <ModelsPanel part={part} units={units} sel={sel} onChange={change} onImport={() => setModelOpen(true)} onRelief={feat.camRelief ? () => setReliefOpen(true) : undefined} rotary={feat.camRotary} />
+                <ModelsPanel part={part} units={units} sel={sel} onChange={change} onImport={() => setModelOpen(true)} onRelief={feat.camRelief ? () => setReliefOpen(true) : undefined} rotary={feat.camRotary} positional={feat.camPositional} />
               </TabsContent>
             )}
             {feat.camMachining && (

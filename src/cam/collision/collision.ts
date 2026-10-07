@@ -133,7 +133,7 @@ const kindText: Record<CollisionKind, string> = {
  * in program order. When no shank, holder or rapid can reach below face 1 anywhere, nothing is
  * carved (only the depth limits are checked): `stock` is then left uncut.
  */
-export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: CollisionSetup, work?: Work): Collision[] {
+export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: CollisionSetup, work?: Work, marks?: StockMarks): Collision[] {
   const out: Collision[] = []
   const open = new Map<CollisionKind, Collision>()
   const limit = -(setup.thickness + Math.max(0, setup.spoilboardAllowance))
@@ -161,12 +161,16 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
     const o = setup.outlines[s.op]
     return !!o && z + Math.min(o.flute, holderFace(o)) < 0
   })
+  let mark = 0
+  let carved = 0
   for (let si = 0; si < segs.length; si++) {
     if ((si & 1023) === 0) {
       checkCancel(work?.isCancelled)
       work?.progress?.(si / segs.length, 'Collision check')
     }
     const s = segs[si]
+    // the stock as it is at the times asked for (only when it is carved at all)
+    if (marks && needStock) mark = takeMarks(marks, stock, s.t0, mark, carved)
     if (s.side) continue
     // depth limits, exactly: where the move first goes below the limit, and how far
     for (const [kind, lim] of setup.rotary
@@ -212,7 +216,11 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
         }
       }
     }
-    if (!rapid) stock.carve(s.a, s.b, s.cutter)
+    if (!rapid) {
+      const c0 = marks ? performance.now() : 0
+      stock.carve(s.a, s.b, s.cutter)
+      if (marks) carved += performance.now() - c0
+    }
   }
   for (const c of out) {
     const name = tl.ops[c.op]?.name ?? 'Operation'
@@ -221,6 +229,57 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
     c.message = `${name}, ${span}: ${kindText[c.kind]} at ${where} (${c.depth.toFixed(2)} mm).`
   }
   return out
+}
+
+/**
+ * Stock states the collision check keeps on its way (M3.4, owner request on M3.3): at each of
+ * `at` (program seconds, rising) a snapshot of the stock as it is then, so the simulator can go
+ * back there without playing the program from its start. Only stocks the check carves.
+ */
+export interface StockMarks {
+  /** Program times to keep a state at (rising). */
+  at?: number[]
+  /**
+   * Or: keep a state every `every` ms of carving (what replaying costs on screen), at most `max`
+   * of them: when there are more, every other one goes and the gap doubles, so they stay spread
+   * evenly over the carving work.
+   */
+  every?: number
+  max?: number
+  /** (internal, with `every`) when the last state was kept. */
+  last?: number
+  out: { t: number; snapshot: import('../stock/types').StockSnapshot }[]
+}
+
+/** Times splitting a program into `n` equal stretches (the end left out), for `StockMarks`. */
+export function markTimes(total: number, n: number): number[] {
+  return Array.from({ length: Math.max(0, n - 1) }, (_, k) => (total * (k + 1)) / n)
+}
+
+/**
+ * Snapshots for the marks reached at program time t0 (the start of the next move), from mark k on;
+ * `carved`: ms spent carving so far (for `every`).
+ */
+export function takeMarks(marks: StockMarks, stock: StockModel, t0: number, k: number, carved = 0): number {
+  if (marks.every) {
+    const now = carved
+    if (marks.last === undefined) marks.last = now
+    if (t0 > 0 && (marks.max ?? 8) > 0 && now - marks.last >= marks.every) {
+      marks.out.push({ t: t0, snapshot: stock.snapshot() })
+      marks.last = now
+      if (marks.out.length > (marks.max ?? 8)) {
+        marks.out = marks.out.filter((_, i) => i % 2 === 1)
+        marks.every *= 2
+      }
+    }
+    return k
+  }
+  const at = marks.at ?? []
+  while (k < at.length && t0 >= at[k] - 1e-9) {
+    marks.out.push({ t: t0, snapshot: stock.snapshot() })
+    k++
+  }
+  return k
 }
 
 /**

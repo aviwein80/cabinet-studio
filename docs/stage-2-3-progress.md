@@ -98,11 +98,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.3a Rotary core: wrapped planes (NEW-14), rotary machining (3D-10), rotary stock, checks, format v8 | **Done** (October 2026) | See below. Simulation only; the N-200 export refuses a turned part. |
 | M3.3b Rotary output through a script post for a machine model with a rotary axis | **Done** (October 2026) | See below. Rotary-post switch off. |
 | M3.3c Rotary screens, simulator, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.3 complete.** |
-| M3.4 - M3.7 | Not started | |
+| M3.4a Positional 3+2 core (5AX-01): tilted planes, kinematics, conversion, three-way stock, checks, format v9 | **Done** (October 2026) | See below. Simulation only; the N-200 export refuses a part with tilted operations. Also owner item 3 (`CAM_ROTARY` names each turned part). |
+| M3.4b 3+2 output through a script post for a machine model with 3+2 axes | **Done** (October 2026) | See below. 3+2-post switch off. |
+| M3.4c 3+2 screens, simulator, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.4 complete.** Also owner item 4 (simulator step-back: stock checkpoints from the background check). |
+| M3.5 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -166,6 +169,14 @@ files present; fixed in M2.8e, back to 17.)
     unless one kernel can cleanly replace both; (5) fix the plan view freezing on very large
     toolpaths without changing the toolpath data.
 
+21. With the M3.4 go-ahead, on the M3.3 report: (1) rotary step-over and step-down stay
+    placeholders with Configure badges; (2) there is no rotary machine in the shop: the sample
+    rotary post stays a labelled generic example and the rotary-post switch stays off (do not ask
+    for a rotary post or sample program again); (3) turned parts in an N-200 job keep blocking the
+    whole job with `CAM_ROTARY`, the message naming the turned part(s) and saying to remove them
+    from the job to export the rest; (4) going back in the simulator on large rotary parts is
+    acceptable for now: move the replay off the screen's thread if cheap, else note it here.
+
 ## Open questions for the owner
 
 1. **N-200 figures** (machine model): travel limits, table size, origin, spoilboard thickness,
@@ -193,6 +204,7 @@ files present; fixed in M2.8e, back to 17.)
     (see "M3.1g decisions needed").
 14. **M3.1g / M3.2**: see "M3.1g decisions needed" and "M3.2 decisions needed" below.
 15. **M3.3 (rotary)**: see "M3.3 decisions needed" below.
+16. **M3.3**: answered (decision 21). **M3.4 (3+2)**: nothing blocking; see "M3.4 decisions needed" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -2380,9 +2392,123 @@ No new dependencies. All new code is our own (frames, wrap maths, rotary stock, 
    exported while one is in it). If you would rather they were left out with a warning so the
    rest of the job still exports, say so.
 
+## M3.4 split
+
+Three green parts, each pushed to `main`: **M3.4a** the 3+2 core (tilted planes, kinematics,
+conversion both ways, the three-way stock, checks, part format 9, and owner item 3 on turned
+parts), **M3.4b** output through a script post for a machine model with 3+2 axes, **M3.4c** the
+screens (tilted planes, operation editor, drawing, simulator, Machine page, Plugins), owner item 4
+(simulator step-back), screenshots and docs.
+
+## M3.4 positional 3+2: what was built
+
+Commits `9519a5d` (M3.4a), `5610196` (M3.4b), M3.4c (screens, simulator, screenshots and docs;
+see `git log`). Part format 9 (a part's optional tilted planes and an operation's work plane;
+format 8 parts read unchanged).
+
+| Item | What | Where |
+|---|---|---|
+| 5AX-01 Tilted work planes | A plane through the part at any angle: an origin, a tilt (0 to 180°), the direction it tilts towards (0° = towards +X, -90° = towards the front), a turn on the plane and a size; its x stays level and its y runs up the slope. Made from angles typed in, a side of the part's block (front, right, back, left, top, underside) or a flat face of a solid (fitted to the face's points; how far they stray is kept and shown). Each plane has a rectangle on the drawing; shapes drawn inside it lie on the plane | `src/cam/positional/frame.ts`, `src/cam/positional/face.ts`, `src/pages/part/TiltedPlanesPanel.tsx` (3D tab), rectangles and labels in `src/pages/part/Canvas.tsx` |
+| Operations on a tilted plane | Drilling, pockets, profiles and engraving pick a work plane; the toolpath is made on the plane exactly as on a flat part (same code) and carried onto it, depths below the plane, the tool along its normal. Refused with the reason: router tools only (not the drill block, an aggregate, a saw, a lollipop or a thread mill), a drilling without a tool picked, through cuts, rest and adaptive pockets, faces other than the top, shapes outside the plane's rectangle; warned: a hole larger than the drill, a cut reaching below the part | `generateTilted` in `src/cam/toolpath.ts`, Work plane in `src/pages/part/OpsPanel.tsx` |
+| Own kinematics | Three layouts: a fork head (head-head: both axes turn the tool), a trunnion table (table-table: both turn the part about the table's centre) and a rotary table with a tilting head (table-head); any pair of A, B, C. Both solutions worked out in closed form; the one inside the travel with the least turn of the first axis is used (or the other one, per plane). Pivot length (pivot to spindle nose plus the tool's stick-out) unless the control keeps the tool tip on the point. Machine X, Y, Z from part points and back | `src/cam/positional/kinematics.ts`; machine model 3+2 axes in `src/core/machineModel.ts` and `src/pages/machine/MachineModelSection.tsx` |
+| Conversion | To machine axes: every move as a straight move (arcs within 0.001 mm, helical entries within 0.01 mm, drill cycles with their pecks spelled out), with the two locked angles per operation, and back again (replay). To vertical: each operation in its plane's own frame, arcs kept, for a control with its own tilted-plane cycle | `src/cam/positional/convert.ts` |
+| Three-way stock | A new stock model behind the `StockModel` interface: rays along X, Y and Z on one grid, each holding up to 12 pieces of material (6 for very large blocks). Cut exactly along each ray for flat, ball and bull-nose tools and the shank, for moves along the tool and sideways; moves that do both (ramps, helices) sampled at a quarter cell. The blank can be cut by planes (chamfers). Its top view and 3D mesh come from the same rays | `src/cam/stock/tridexel.ts` |
+| Timeline and checks | The operations in the part's frame with the tool direction on every move; between planes the tool backs off 10 mm clear of the block before the axes turn (that turn is not checked). Collision check: shank, holder, rapids through material, spoilboard and table, the side of the cutter in a tilted cut, shank or holder reaching below the part. Can replay the machine's own program instead of the part-frame path (the tests do) | `src/cam/positional/sim.ts` |
+| N-200 refuses | A part with tilted operations is left out of the cut list and nesting (warning) and the job export is refused (`CAM_POSITIONAL`, error, whatever the switches), naming the part and its tilted operations and saying to remove the part (or switch those operations off) to export the rest; no tilted operation reaches the MPR writer | `src/core/validator.ts`, `src/core/cutlist.ts`, `src/core/pipeline.ts` |
+| Output through a script post | Post input per operation: the two axis letters and locked angles, layout, tip control, where the part sits, pivot length, tool direction, the plane, the machine moves and the vertical (plane-frame) moves. Text-post checks: a script post (the template post refuses and writes only a comment), the "Write 3+2 programs through script posts" switch (off), a machine model with two rotary axes for 3+2 that can tilt the tool every way, angles and X, Y, Z inside the travel, no turned work in the same program. Sample `examples/plugins/positional-3plus2-post.js` (retract, turn both axes, G0/G1 in X Y Z against G54 at the part origin; not machine-validated), added from Settings → Plugins | `src/cam/post.ts`, `checkTextPost` in `src/core/validator.ts`, `src/cam/plugin/posts.ts`, `src/pages/settings/PluginsSection.tsx` |
+| Machine model 3+2 axes | Machine & tools → machine model → 3+2 axes: layout (none, fork head, trunnion table, table and head), the two letters, their travel, pivot length, table centre, where the part sits, tip control; problems listed (e.g. a layout that cannot tilt the tool every way). The invented placeholder figures carry a Configure badge; the N-200 shows "none" | `withPositional` in `src/core/machineModel.ts`, `src/core/confirm.ts`, `src/pages/machine/MachineModelSection.tsx` |
+| Simulator | 3+2 mode: the three-way stock, the tool drawn along each plane's normal, readout "tool tilted …°"; the collision check runs in the background and hands back the finished stock | `src/pages/part/SimulateDialog.tsx`, `sim.positionalCollide` in `src/cam/worker/tasks.ts` |
+| Owner item 4: going back in the simulator | Rotary and 3+2: the background check also hands back up to eight stock states (within 128 MB), spaced by carving time; going back restores the nearest earlier one and replays only from there | `takeMarks` in `src/cam/collision/collision.ts`, `src/cam/rotary/sim.ts`, `src/cam/worker/tasks.ts`, `src/pages/part/SimulateDialog.tsx` |
+| Owner item 3: turned parts in N-200 jobs | Still blocks the whole job (`CAM_ROTARY`); the message names each turned part and ends "Remove <part> from this job to export the rest of it." | `src/core/validator.ts` |
+| Switches | "Positional 3+2" (screens, on) and "Write 3+2 programs through script posts" (off) | `src/core/features.ts`, `src/pages/MachinePage.tsx` |
+
+### Acceptance
+
+The test block (`tests/positional-fixtures.ts`): 120 x 100 x 60 mm, its blank cut by a 45°
+chamfer along the right top edge, a 30° chamfer along the front top edge and a corner facet at
+the back left (54.7° tilted towards 135°, a compound angle, plane made from the facet as a face).
+Five holes (Ø8 x 12 on the 45° chamfer, Ø6 x 10 on the 30° chamfer, Ø8 x 15 on the corner facet,
+Ø8 x 20 on the upright back side) and three pockets (Ø16 x 5 on the 45° chamfer, 40 x 14 R4 x 6 on
+the 30° chamfer, 30 x 16 R5 x 4 on the back), T102 Ø8 and T103 Ø6, helical entries.
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Tilted-plane holes and pockets land within 0.01 mm after the axis conversion, checked in simulation | `tests/cam-positional.test.ts` | Converted to each test machine's two locked angles and X, Y, Z, read back through the kinematics (within 1e-13 mm) and simulated on the chamfered blank (three-way stock): **fork head C/B, no tip control, pivot 150 mm** (C0 B45 / C-90 B30 / C-45 B-54.7356 / C90 B90; 0.25 mm rays, 93,190 cut points, 10.9 s), **trunnion table A/C** (A45 C90 / A30 C180 / A-54.7356 C135 / A-90 C180; 0.5 mm rays, 23,292 points, 2.8 s), **rotary table C with tilting head B, tip control** (C0 B45 / C90 B30 / C45 B-54.7356 / C-90 B90; 0.5 mm rays, 23,292 points, 2.7 s). On every machine: hole walls and floors 0.0000 mm, pocket walls 0.0010 mm (the 0.001 mm chord tolerance on arcs), pocket floors 0.0000 mm from the design; no cut point on any undesigned surface; every feature cut; no collisions. The other solution (head turned the other way round) cuts the same. Goldens `positional-*` |
+| N-200 export refuses it | `tests/cam-positional.test.ts` | A job with the block and a plain panel, every output switch on: `CAM_POSITIONAL` error naming the part and its two tilted operations and saying to remove it to export the rest; the block left out of the cut list and nesting (the plain panel is still nested); no MPR holds a tilted operation; with its tilted operations switched off the block nests again. The machine program for the N-200 is refused ("Its machine model has no 3+2 (positional) axes.") |
+| Convert to vertical | `tests/cam-positional.test.ts`, `tests/cam-positional-post.test.ts` | The front pocket in its plane's own frame gives the same moves as the tilted toolpath, within 1e-9 mm, arcs kept as arcs; the post gets it with every operation |
+| Output only through a script post for a machine model with 3+2 axes | `tests/cam-positional-post.test.ts` | The test block through the sample post for each layout: 2,133 moves read back through the kinematics, worst 0.0014 mm (fork head C/B, pivot 150), 0.0011 mm (trunnion A/C), 0.0008 mm (table C, head B, tip control); 3 decimals written. The axes turn after a retract wherever the angles change. Refused, each with its reason: the N-200, a router without 3+2 axes (its post gets no tilted move), axes too short for an angle or for X, the template post (comment only), a layout that cannot tilt the tool every way, turned work in the same program, no grant, the 3+2 switch off |
+| Collisions are caught | `tests/cam-positional.test.ts` | A 45 mm hole on the back with T102 (30 mm flutes): "shank hits material above the flutes" (5.75 mm); a hole 5 mm above the underside on the back: "shank or holder reaches below the part's underside" (29 mm) |
+| Kinematics | `tests/cam-positional.test.ts` | Round trip part → machine → part for 3 layouts, 6 axis pairs, 6 tool directions and both solutions: worst 5.4e-12 mm |
+
+Also: `npm run sample` output unchanged (byte for byte); Stage 1 goldens and every earlier 3D
+golden unchanged; seven new goldens (`positional-*`: four tilted toolpaths, three machine
+programs).
+
+### Limits recorded
+
+- **Operations**: drilling, pockets, profiles and engraving on a tilted plane, from the top face
+  of the plane; no through cuts, rest or adaptive pockets, aggregates, saws or lollipop tools on
+  a tilted plane yet; 3D finishing on a tilted plane (and simultaneous 5-axis) are later
+  milestones.
+- **Turning between planes**: the tool backs off 10 mm clear of the block before the axes turn;
+  the turn itself is not collision-checked (the machine's own path while turning depends on its
+  control).
+- **Three-way stock**: rays every 0.5 mm or more in the simulator (0.25 to 0.5 mm in the tests);
+  exact along each ray, with ramps and helices sampled at a quarter cell; up to 12 pieces of
+  material per ray (6 for very large blocks; extra pieces are merged, which can only put
+  material back, and the tests check nothing is left off the designed surfaces).
+- **Kinematics**: the pivot length, table centre and part position of the placeholder 3+2 axes
+  are invented (Configure badges). No machine with 3+2 axes is in the shop; the sample post is a
+  generic example, not machine-validated, and the 3+2-post switch stays off.
+- **Simulator step-back (owner item 4)**: with the stock states from the background check, going
+  back on the turned leg replays at most about 2 s on the screen (it was about 12 s from the
+  start); that stretch still runs on the screen's own thread. Moving the replay itself to the
+  background would mean sending the stock back and forth on every scrub, so it is left as is.
+
+### Test-suite note (M3.4)
+
+This run's container is as slow as the M2.10 one. On the untouched baseline (`339f84e`) the
+known timing test "adaptive clearing per Z level" took 168 s in the full suite and 120 s on its
+own (limit 90 s), so it fails here by time alone, before and after M3.4 (169 s in the final
+suite); the limit was not changed. Every other test passes: 977 passed, 1 skipped, that 1
+timing failure. The 3+2 tests take 27 s on their own.
+
+## M3.4 screenshots
+
+In `docs/screenshots/stage-2-3/M3.4/` (a demo block, 200 x 150 x 80 mm): `01-tilted-planes` (3D tab →
+Tilted planes: four planes, two sides of the block and two typed in, 30° to the front and a
+compound 25° to the back right, with the tool direction and how far the block reaches below each;
+their dashed rectangles on the drawing), `02-work-plane-operation` (a pocket on the front side:
+Work plane, "Depth below the plane", no through cut), `03-simulated-top` (the finished block from
+the top with the backplot, readout "tool tilted 90.00°", collision check clear),
+`04-simulated-3d-tilted-tool` (3D, the tool tilted 30° drilling the leg holes),
+`05-simulated-3d-end` (the finished block in 3D), `06-machine-32-axes` (another machine's model
+with 3+2 axes: both in the head, C then B, travel, pivot, part origin, tip control, with the
+Configure badge), `07-feature-switches` (Positional 3+2, on), `08-program-32-post` (the block
+through the sample 3+2 post: retract, turn C-90 B30, then X Y Z; preview only, naming the
+script-post and 3+2-post switches that are off), `09-n200-refuses` (a job with the block:
+`CAM_POSITIONAL` naming the part and its five tilted operations, the part left out of the cut
+list and nesting), `10-output-switch-off` (the Machine page output switches, "Write 3+2 programs
+through script posts" off).
+
+## M3.4 licences
+
+No new dependencies. All new code is our own (plane frames, kinematics, conversion, three-way
+stock, checks).
+
+## M3.4 decisions needed
+
+None blocking. For the record, applied from earlier answers without asking again:
+
+1. **3+2 kinematics figures** (pivot length, table centre, where the part sits): placeholders
+   with Configure badges; there is no 3+2 machine in the shop (no rotary machine, decision 21),
+   so the sample 3+2 post stays a labelled generic example and its switch stays off.
+2. **Parts with tilted operations in N-200 jobs**: they block the whole job, like turned parts
+   (decision 21, item 3); the message names the part and says to remove it to export the rest.
+
 ## Next run
 
-- M3.4, when the owner says go.
+- M3.5, when the owner says go.
 
 ## Run log
 
@@ -2438,3 +2564,6 @@ No new dependencies. All new code is our own (frames, wrap maths, rotary stock, 
 - **Run 16 (M3.3a-c)**: rotary core, wrapped planes, rotary stock and checks, format 8
   (`d966d34`); rotary output through a script post (`f73544e`); rotary screens and simulator
   (`1d5a33e`); screenshots, docs. **M3.3 complete.** See `git log`.
+- **Run 17 (M3.4a-c)**: 3+2 core, tilted planes, kinematics, conversion, three-way stock and
+  checks, format 9, `CAM_ROTARY` naming (`9519a5d`); 3+2 output through a script post (`5610196`);
+  3+2 screens, simulator, step-back checkpoints, screenshots, docs. **M3.4 complete.** See `git log`.

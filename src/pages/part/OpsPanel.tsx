@@ -17,6 +17,7 @@ import { PENCIL_MIN_ANGLE } from '@/cam/3d/pencil'
 import { applyRules, recipesOf, ruleSetsOf } from '@/cam/rules'
 import { compareOpTool, toolSnapshot, updateOpTool } from '@/core/toolData'
 import { inBackground, OPS_3D, type Toolpath } from '@/cam/toolpath'
+import { TILTED_KINDS } from '@/cam/positional/frame'
 import type { AdaptiveSettings, CamOp, CamOpKind, CamPart, CurveDrive, FaceId, Rough3dOp, Surface3D } from '@/cam/types'
 import { NONE, NumField, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
@@ -382,7 +383,9 @@ function OpEditor({
 }) {
   const set = <K extends keyof CamOp>(k: K, v: CamOp[K]) => onChange({ ...op, [k]: v } as CamOp)
   const lv = (patch: Partial<CamOp['levels']>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
-  const allowed = machine.tools.filter((t) => (op.kind === 'saw' ? t.type === 'saw' : op.kind === 'drill' ? t.type.startsWith('drill') : op.kind === 'rotary' ? t.type === 'router' || t.type === 'saw' : t.type === 'router'))
+  // (on a tilted plane only tools in the main spindle: the drill block cannot tilt, M3.4)
+  const allowed = machine.tools.filter((t) => (op.kind === 'saw' ? t.type === 'saw' : op.kind === 'drill' ? (op.tiltedPlane ? t.type === 'router' && !t.aggregateId : t.type.startsWith('drill')) : op.kind === 'rotary' ? t.type === 'router' || t.type === 'saw' : t.type === 'router'))
+  const planes = part.tilted ?? []
   // values this operation uses that are not confirmed (its own, its tool's, the machine's)
   const unconf = opUnconfirmed(op, part, machine, tp?.tool ?? null)
   const toolItem = unconf.find((u) => u.target.kind === 'tool' && u.target.part !== 'feeds')
@@ -473,11 +476,21 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'drill' ? 'Match each hole diameter' : 'Pick automatically' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'drill' ? (op.tiltedPlane ? 'Pick a tool (main spindle)' : 'Match each hole diameter') : 'Pick automatically' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
             badge={toolItem && <ConfigureBadge item={toolItem} />}
           />
-          {op.kind !== 'rotary' && <SelectField
+          {(planes.length > 0 || op.tiltedPlane) && TILTED_KINDS.has(op.kind) && (
+            <SelectField
+              className="col-span-2"
+              label="Work plane"
+              value={op.tiltedPlane ?? NONE}
+              options={[{ value: NONE, label: 'The part as drawn (faces 1 to 6)' }, ...planes.map((p) => ({ value: p.id, label: `${p.name} (tilted ${Math.round(p.tilt * 100) / 100}°, 3+2)` })), ...(op.tiltedPlane && !planes.some((p) => p.id === op.tiltedPlane) ? [{ value: op.tiltedPlane, label: 'A plane that is gone' }] : [])]}
+              onChange={(v) => onChange({ ...op, tiltedPlane: v === NONE ? undefined : v, ...(v !== NONE ? { face: 1 as FaceId } : {}), ...(op.kind === 'drill' && (v === NONE) !== !op.tiltedPlane ? { toolId: null } : {}) } as CamOp)}
+              hint={op.tiltedPlane ? 'Shapes inside the plane\'s rectangle, cut along its normal; depths from the plane. Simulation and 3+2 script posts only: never the N-200.' : undefined}
+            />
+          )}
+          {op.kind !== 'rotary' && !op.tiltedPlane && <SelectField
             label="Face"
             value={String(op.face)}
             options={[1, 2, 3, 4, 5, 6].map((f) => ({ value: String(f), label: ['Top (1)', 'Front edge (2)', 'Right edge (3)', 'Back edge (4)', 'Left edge (5)', 'Underside (6)'][f - 1] }))}
@@ -509,10 +522,13 @@ function OpEditor({
 
       {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && op.kind !== 'thread' && op.kind !== 'rotary' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
-          <div className="col-span-2">
-            <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
-          </div>
-          {!op.levels.through && <NumField label="Depth" value={op.levels.depth} min={0} onChange={(v) => lv({ depth: v })} />}
+          {/* (no "through" on a tilted plane: the block's depth below it changes from place to place) */}
+          {!op.tiltedPlane && (
+            <div className="col-span-2">
+              <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
+            </div>
+          )}
+          {(!op.levels.through || op.tiltedPlane) && <NumField label={op.tiltedPlane ? 'Depth below the plane' : 'Depth'} value={op.levels.depth} min={0} onChange={(v) => lv({ depth: v, ...(op.tiltedPlane ? { through: false } : {}) })} />}
           <NumField label="Depth per pass" value={op.levels.passDepth} min={0} onChange={(v) => lv({ passDepth: v })} hint="0 = tool stepdown" />
           <NumField label="Number of cuts" suffix="" value={op.levels.cuts ?? 0} min={0} onChange={(v) => lv({ cuts: Math.round(v) || undefined })} hint="0 = from depth per pass" />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} />

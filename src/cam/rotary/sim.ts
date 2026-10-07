@@ -6,7 +6,7 @@
  */
 import type { Work } from '@/core/cancel'
 import type { MachineProfile } from '@/core/types'
-import { checkCollisions, type Collision, collisionSetup } from '../collision/collision'
+import { checkCollisions, type Collision, collisionSetup, type StockMarks } from '../collision/collision'
 import { buildTimeline, programOrder, type SimTimeline } from '../sim'
 import type { Move, Toolpath } from '../toolpath'
 import { simpleMoves } from '../moves'
@@ -57,12 +57,12 @@ export function rotaryCell(setup: RotarySetup): number {
  * flutes and holder (with the margin) against the material left, rapids through material, and the
  * tip reaching the axis.
  */
-export function rotaryCollisions(setup: RotarySetup, toolpaths: readonly Toolpath[], machine: MachineProfile, opt: { cell?: number; work?: Work } = {}): { found: Collision[]; tl: SimTimeline; stock: RotaryStock } {
+export function rotaryCollisions(setup: RotarySetup, toolpaths: readonly Toolpath[], machine: MachineProfile, opt: { cell?: number; work?: Work; marks?: StockMarks } = {}): { found: Collision[]; tl: SimTimeline; stock: RotaryStock } {
   const { tl, paths } = rotaryTimeline(toolpaths, setup)
   const stock = new RotaryStock(setup, opt.cell ?? Math.max(0.5, rotaryCell(setup)))
   const cs = collisionSetup(tl, paths, machine, stock.Rs)
   const u0 = setup.blank.start
   // positions as the machine's axes: along the axis, the rotary angle, the tip's distance from the axis
   const place = (at: { x: number; y: number; z: number }) => `${setup.axis}${(at.x + u0).toFixed(1)} ${ROTARY_LETTER[setup.axis]}${((at.y / stock.Rs) * (180 / Math.PI)).toFixed(1)}° at ${(at.z + stock.Rs).toFixed(1)} mm from the axis`
-  return { found: checkCollisions(tl, stock, { ...cs, rotary: true, place }, opt.work), tl, stock }
+  return { found: checkCollisions(tl, stock, { ...cs, rotary: true, place }, opt.work, opt.marks), tl, stock }
 }

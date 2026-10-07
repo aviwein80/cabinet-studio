@@ -433,7 +433,49 @@ export checker. Tool numbers are still placeholders.
     post**), with the new "Write rotary programs through script posts" switch on (off by default) as well as the
     script-post switch and the plugin's machine-output grant. The built-in template post never
     writes a rotary operation. Until then the Program dialog shows the program as a preview with
-    the reasons it is not written.
+    the reasons it is not written. A job with a turned part in it is refused as a whole; the
+    message names each turned part and says to remove it from the job to export the rest.
+- **Positional 3+2** (switch: Positional 3+2, on; screens and simulation only on the N-200):
+  - **Tilted planes** (part designer → 3D tab → Tilted planes (3+2)): a plane through the
+    part at any angle: **typed in** (tilt, the direction it tilts towards, a turn on the plane,
+    its origin and size), **a side of the part's block** (front, right, back, left, top,
+    underside) or **a flat face of a solid** (fitted to the face; how far the face strays from
+    a flat plane is shown). Each plane has a dashed orange rectangle on the drawing with its
+    name and angle; shapes drawn inside it lie on the plane (x and y from its thick corner).
+  - **Operations on a tilted plane**: drilling, pockets, profiles and engraving get a **Work
+    plane** choice; their depths are measured below the plane and the tool runs along the
+    plane's normal. Router tools only (no aggregates, saw or lollipop cutters); a hole
+    larger than the drill, a through cut or a shape outside the plane's rectangle is refused
+    or warned about with the reason.
+  - **Kinematics** (Machine & tools → machine model → 3+2 axes): a machine model can declare two
+    rotary axes for 3+2: a fork head (head-head), a trunnion table (table-table) or a rotary
+    table with a tilting head (table-head), which letters, their travel, the head's pivot
+    length, the table's centre, where the part sits and whether the control keeps the tool tip
+    on the point. The app works out the two locked angles for each plane (the solution with
+    the least turn of the first axis inside the travel, or the other one with **Use the
+    machine's other solution**) and the machine's X, Y, Z for every move. The figures of the
+    placeholder 3+2 axes carry Configure badges; the N-200's model has none.
+  - **Simulated with the tool tilted**: the stock is held as rays in three directions, so cuts
+    from any side show. The tool turns between operations after backing off clear of the block.
+    The collision check covers the shank, holder, rapids through material, the spoilboard and
+    table, the side of the cutter in a tilted cut and anything reaching below the part. The
+    tests replay the machine's own program (angles and X, Y, Z read back through the kinematics)
+    on that stock and check every cut point on a test block with holes and pockets on four
+    tilted planes against the drawing, for all three layouts (within 0.01 mm; measured
+    0.001 mm, the chord tolerance on arcs).
+  - **Going back in the simulator** (rotary and 3+2): the background check hands back up to
+    eight stock states along the program, so stepping back replays at most a short stretch on
+    the screen instead of the whole program from the start.
+  - **Output**: never to woodWOP. The N-200 cannot tilt its tool, so a part with tilted
+    operations is left out of the cut list and nesting, and the job export refuses it with a
+    clear message (`CAM_POSITIONAL`) naming the part and its tilted operations. Another machine
+    whose machine model declares 3+2 axes can write the program only through a **script post**
+    written for it (a sample, `examples/plugins/positional-3plus2-post.js`: Settings → Plugins
+    → **Add the sample 3+2 post**), with "Write 3+2 programs through script posts" on (off by
+    default), the script-post switch, the plugin's machine-output grant and every angle and
+    position inside the axes' travel. The built-in template post never writes a tilted
+    operation. The post also gets each operation in its plane's own frame, so a control with
+    its own tilted-plane cycle can be written for instead.
 - **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
   the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
   aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
@@ -721,7 +763,8 @@ src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpat
   solid/           solid models: OpenCascade reader loading, exact face types, STEP text metadata,
                    panel alignment, feature recognition, assemblies, face machining, wires
   model/           model data store (compressed, by SHA-256, outside the shop file), part files
-  stock/           stock model interface, the heightfield stock, playback, cut-free pieces
+  stock/           stock model interface, the heightfield, rotary and three-way (tri-dexel) stocks,
+                   playback, cut-free pieces
   collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)
 src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its real value goes
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
@@ -729,6 +772,9 @@ src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its 
                    thread milling, rapid surfaces
   rotary/          rotary (4-axis): axis frames and wrapped planes, rotary passes, the rotary stock,
                    gouge and collision checks, planes from a solid's cylindrical faces
+  positional/      positional 3+2: tilted plane frames, kinematics for three layouts, toolpaths
+                   to machine axes (and back) or the plane's own frame, the tilted-tool timeline
+                   and checks, planes from a solid's flat faces
   worker/          background compute worker (3D tasks) with progress and cancel
   plugin/          plugin sandbox (QuickJS), the typed API, grants, part-change checks, batch
                    steps, script posts, macro recorder

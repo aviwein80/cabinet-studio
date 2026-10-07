@@ -5,6 +5,8 @@
  */
 import type { StockSnapshot } from '../stock/types'
 import { rotaryCollisions } from '../rotary/sim'
+import { RotaryStock } from '../rotary/stock'
+import { positionalCollisions, positionalStock } from '../positional/sim'
 import { subWork, type Work } from '@/core/cancel'
 import type { Contour, P } from '../geom'
 import { buildMesh } from '../mesh/build'
@@ -20,7 +22,7 @@ import { polyline } from '../geom'
 import type { CamPart, ModelPlacement, ModelRef, Recipe, ReliefInfo, RotarySetup, UpAxis } from '../types'
 import { generateOp, type Move, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
-import { type Collision, partCollisions } from '../collision/collision'
+import { type Collision, partCollisions, type StockMarks } from '../collision/collision'
 import { readSolid, type SolidReadOptions } from '../solid/convert'
 import { decodeSolid, encodeSolid } from '../solid/encode'
 import { occt } from '../solid/occt'
@@ -109,7 +111,12 @@ export interface TaskMap {
   /** Collision check of toolpaths on a panel (operations numbered in program order). */
   'sim.collide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
   /** Collision check of a part's rotary toolpaths on its rotary stock (M3.3). */
-  'sim.rotaryCollide': { in: { setup: RotarySetup; toolpaths: Toolpath[]; machine: MachineProfile; cell: number }; out: { found: Collision[]; snapshot: StockSnapshot } }
+  'sim.rotaryCollide': { in: { setup: RotarySetup; toolpaths: Toolpath[]; machine: MachineProfile; cell: number }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out'] } }
+  /**
+   * Collision check of a part's 3+2 program on its tri-dexel stock (M3.4); `replay`: through this
+   * machine's kinematics. The stock at the end and at evenly spaced points comes back too.
+   */
+  'sim.positionalCollide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile; cell: number; replay?: MachineProfile }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out']; problems: string[] } }
 }
 
 export type SurfaceJob =
@@ -123,6 +130,11 @@ export type SurfaceJob =
   | { k: 'split'; mesh: Mesh; z: number; keep: 'above' | 'below' }
 
 export type SolidFacesJob = { k: 'mesh'; faces: number[] } | { k: 'untrim'; face: number; tol: number } | { k: 'edges'; faces?: number[]; minAngle: number } | { k: 'fillet'; a: number; b: number; r: number; tol: number }
+
+/** How many stock states to hand back: eight, within 128 MB of snapshots (one more is held while thinning). */
+function markCount(bytes: number): number {
+  return Math.max(0, Math.min(8, Math.floor((128 * 1024 * 1024) / Math.max(1, bytes)) - 1))
+}
 
 /** Several meshes as one (for extruding several curves). */
 function joinMeshes(ms: Mesh[]): Mesh {
@@ -183,9 +195,17 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
   },
   'sim.collide': ({ panel, toolpaths, machine }, work) => partCollisions(panel, toolpaths, machine, work).found,
   // (the stock at the end of the program comes back too: the simulator shows the end at once)
+  // (and the stock at evenly spaced points, so going back in the simulator replays at most a stretch)
   'sim.rotaryCollide': ({ setup, toolpaths, machine, cell }, work) => {
-    const r = rotaryCollisions(setup, toolpaths, machine, { work, cell })
-    return { found: r.found, snapshot: r.stock.snapshot() }
+    const marks: StockMarks = { every: 100, max: markCount(new RotaryStock(setup, cell).snapshot().data.byteLength), out: [] }
+    const r = rotaryCollisions(setup, toolpaths, machine, { work, cell, marks })
+    return { found: r.found, snapshot: r.stock.snapshot(), marks: marks.out }
+  },
+  'sim.positionalCollide': ({ panel, toolpaths, machine, cell, replay }, work) => {
+    const stock = positionalStock(panel, cell)
+    const marks: StockMarks = { every: 100, max: markCount(stock.snapshot().data.byteLength), out: [] }
+    const r = positionalCollisions(panel, toolpaths, machine, { work, stock, replay, marks })
+    return { found: r.found, snapshot: r.stock.snapshot(), marks: marks.out, problems: r.run.program?.problems ?? [] }
   },
   async 'relief.imageInfo'({ bytes, name }, work) {
     return summarise(await readHeightImage(bytes, name, work))

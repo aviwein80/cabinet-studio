@@ -31,6 +31,12 @@ import type { Job } from '@/core/types'
 import { PLACEHOLDER_POSITIONAL, rotaryAxisOf, withPositional, withRotaryAxis } from '@/core/machineModel'
 import { confirmKey, machineUnconfirmed, POSITIONAL_FACT_LABEL } from '@/core/confirm'
 import { DEFAULT_FEATURES } from '@/core/features'
+import { markTimes, type StockMarks } from '@/cam/collision/collision'
+import { positionalStock } from '@/cam/positional/sim'
+import { StockSimulation } from '@/cam/stock/simulation'
+import { rotaryCollisions, rotaryTimeline } from '@/cam/rotary/sim'
+import { RotaryStock } from '@/cam/rotary/stock'
+import { columnPart, rotaryOp } from './rotary-fixtures'
 
 const log = (s: string) => console.log(`  [3+2] ${s}`)
 const S2 = Math.SQRT1_2
@@ -517,4 +523,41 @@ describe('M3.4 the machine model\'s 3+2 axes', () => {
     expect(DEFAULT_FEATURES.positionalPostOutput).toBe(false)
     expect(DEFAULT_FEATURES.camPositional).toBe(true)
   })
+})
+
+describe('M3.4 the background check hands back stock states (owner request on M3.3: going back without replaying from the start)', () => {
+  it('3+2 and rotary: a state reached from a checkpoint is the state played from the start', () => {
+    const { part } = blockPart({ ops: 'pockets' })
+    const tps = generatePart(part, PLACEHOLDER_MACHINE)
+    const total = positionalTimeline(tps, BLOCK).tl.total
+    const marks: StockMarks = { at: markTimes(total, 4), out: [] }
+    const r = positionalCollisions(BLOCK, tps, PLACEHOLDER_MACHINE, { cell: 1, marks })
+    expect(marks.out.map((m) => m.t).every((t, i) => t >= marks.at![i] - 1e-9)).toBe(true)
+    expect(marks.out).toHaveLength(3)
+    const t = (marks.out[1].t + marks.out[2].t) / 2
+    const fresh = new StockSimulation(r.run.tl, positionalStock(BLOCK, 1))
+    fresh.syncTo(t)
+    const seeded = new StockSimulation(r.run.tl, positionalStock(BLOCK, 1))
+    for (const m of marks.out) seeded.seed(m.t, m.snapshot)
+    seeded.seed(r.run.tl.total, r.stock.snapshot())
+    seeded.syncTo(r.run.tl.total)
+    seeded.syncTo(t)
+    expect(seeded.stock.removedVolume()).toBeCloseTo(fresh.stock.removedVolume(), 6)
+    expect(Array.from(seeded.stock.snapshot().data)).toEqual(Array.from(fresh.stock.snapshot().data))
+    // rotary: the fluted column
+    const { part: col, flutes } = columnPart()
+    const op = rotaryOp('wrap', { toolId: 't105', geometry: flutes, levels: { safeZ: 20, rapidZ: 5, depth: 2.5, through: false, stockZ: 0, passDepth: 0 } })
+    const tp = generateOp(op, { part: { ...col, ops: [op] }, machine: PLACEHOLDER_MACHINE })
+    const { tl } = rotaryTimeline([tp], col.rotary!)
+    const rm: StockMarks = { at: markTimes(tl.total, 8), out: [] }
+    rotaryCollisions(col.rotary!, [tp], PLACEHOLDER_MACHINE, { cell: 1, marks: rm })
+    expect(rm.out).toHaveLength(7)
+    const t2 = rm.out[5].t + 0.5
+    const a = new StockSimulation(tl, new RotaryStock(col.rotary!, 1))
+    a.syncTo(t2)
+    const b = new StockSimulation(tl, new RotaryStock(col.rotary!, 1))
+    for (const m of rm.out) b.seed(m.t, m.snapshot)
+    b.syncTo(t2)
+    expect(Array.from(b.stock.snapshot().data)).toEqual(Array.from(a.stock.snapshot().data))
+  }, 120_000)
 })

@@ -19,7 +19,7 @@
 import { checkCancel, type Work } from '@/core/cancel'
 import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
 import type { MachineProfile } from '@/core/types'
-import { COLLISION_TOL, type Collision, type CollisionKind, DEFAULT_COLLISION_MARGIN } from '../collision/collision'
+import { COLLISION_TOL, type Collision, type CollisionKind, DEFAULT_COLLISION_MARGIN, type StockMarks, takeMarks } from '../collision/collision'
 import { buildTimeline, programOrder, type SimTimeline } from '../sim'
 import { TriDexelStock, tridexelCell, type ToolPiece, toolPieces } from '../stock/tridexel'
 import type { Move, Toolpath } from '../toolpath'
@@ -144,9 +144,13 @@ export function positionalTimeline(toolpaths: readonly Toolpath[], part: Block, 
   return { tl, paths, axes, ...(program ? { program } : {}) }
 }
 
-/** A tri-dexel stock of the part's block. */
+/** A tri-dexel stock of the part's block (fewer pieces per ray on big blocks, to keep memory down). */
 export function positionalStock(part: Block, cell?: number): TriDexelStock {
-  return new TriDexelStock(part.length, part.width, part.thickness, cell ?? Math.max(0.5, tridexelCell(part.length, part.width, part.thickness)))
+  const c = cell ?? Math.max(0.5, tridexelCell(part.length, part.width, part.thickness))
+  const nx = Math.ceil(part.length / c)
+  const ny = Math.ceil(part.width / c)
+  const nz = Math.ceil(part.thickness / c)
+  return new TriDexelStock(part.length, part.width, part.thickness, c, nx * ny + ny * nz + nx * nz > 5e5 ? 6 : 12)
 }
 
 /** The shank above the flutes, grown by the margin (to `top` where the stick-out is unknown). */
@@ -204,7 +208,7 @@ const KIND_TEXT: Record<CollisionKind, string> = {
  * e.g. a blank already cut to shape), carved as it goes. Returns the collisions in program order,
  * the timeline and the finished stock.
  */
-export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[], machine: MachineProfile, opts: { cell?: number; work?: Work; stock?: TriDexelStock; tol?: number; replay?: MachineProfile } = {}): { found: Collision[]; run: PositionalRun; stock: TriDexelStock } {
+export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[], machine: MachineProfile, opts: { cell?: number; work?: Work; stock?: TriDexelStock; tol?: number; replay?: MachineProfile; marks?: StockMarks } = {}): { found: Collision[]; run: PositionalRun; stock: TriDexelStock } {
   const run = positionalTimeline(toolpaths, part, { tol: opts.tol, replay: opts.replay })
   const { tl, paths } = run
   const stock = opts.stock ?? positionalStock(part, opts.cell)
@@ -236,12 +240,15 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
   const spacing = Math.max(stock.cell, 1)
   let lastOp = -1
   let travelled = 0
+  let mark = 0
+  let carved = 0
   for (let si = 0; si < segs.length; si++) {
     if ((si & 255) === 0) {
       checkCancel(opts.work?.isCancelled)
       opts.work?.progress?.(si / segs.length, 'Collision check (3+2)')
     }
     const s = segs[si]
+    if (opts.marks) mark = takeMarks(opts.marks, stock, s.t0, mark, carved)
     if (s.turn) continue
     const w: V3 = s.axis ? [s.axis.x, s.axis.y, s.axis.z] : [0, 0, 1]
     // the tip below the spoilboard limit or into the table, where it first goes below
@@ -295,7 +302,11 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
         if (r.depth > COLLISION_TOL) report(kind, KIND_TEXT[kind], s.op, s.move, t, p, r.depth)
       }
     }
-    if (!rapid) stock.carve(s.a, s.b, s.cutter, s.axis)
+    if (!rapid) {
+      const c0 = opts.marks ? performance.now() : 0
+      stock.carve(s.a, s.b, s.cutter, s.axis)
+      if (opts.marks) carved += performance.now() - c0
+    }
   }
   for (const c of out) {
     const name = tl.ops[c.op]?.name ?? 'Operation'

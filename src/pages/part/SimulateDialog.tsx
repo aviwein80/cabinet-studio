@@ -18,6 +18,7 @@ import { entityContours } from '@/cam/doc'
 import { type P, toPoints } from '@/cam/geom'
 import { advance, moveAt, moveEnd, simCell, StockSimulation, stepMove, type StopReason } from '@/cam/stock/simulation'
 import type { Collision, CollisionKind } from '@/cam/collision/collision'
+import type { StockSnapshot } from '@/cam/stock/types'
 import type { Toolpath } from '@/cam/toolpath'
 import { Cancelled } from '@/core/cancel'
 import { compute } from '@/cam/worker/client'
@@ -37,6 +38,8 @@ import { RotaryStock } from '@/cam/rotary/stock'
 import { rotaryCell, rotaryProgram } from '@/cam/rotary/sim'
 import { ROTARY_LETTER } from '@/cam/rotary/frame'
 import { RotaryView3D } from './RotaryView3D'
+import { needsPositional, positionalStock, positionalTimeline } from '@/cam/positional/sim'
+import { type TriDexelStock, tridexelCell } from '@/cam/stock/tridexel'
 
 const SPEEDS = [1, 4, 16, 64, 256]
 const RAPID_SPEEDS = [1, 4, 16, 64, 256, 1024]
@@ -79,24 +82,30 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   // M3.3: a turned part's rotary toolpaths play on its rotary stock (in the blank's unrolled frame)
   const rot = part.rotary && toolpaths.some((tp) => !!tp.rotary) ? part.rotary : null
   const flatLeft = rot ? toolpaths.filter((tp) => !tp.rotary && tp.moves.length).length : 0
-  const ordered = useMemo(() => (rot ? rotaryProgram(toolpaths, rot) : programOrder(toolpaths)), [toolpaths, rot])
-  const tl = useMemo(() => buildTimeline(ordered), [ordered])
+  // M3.4: toolpaths on tilted planes (3+2) play in the part's frame, the tool tilted onto each
+  // plane, on a tri-dexel stock (with the part's face-1 toolpaths)
+  const tilt = !rot && needsPositional(toolpaths)
+  const run32 = useMemo(() => (tilt ? positionalTimeline(toolpaths, { length: part.length, width: part.width, thickness: part.thickness }) : null), [tilt, toolpaths, part.length, part.width, part.thickness])
+  const ordered = useMemo(() => (rot ? rotaryProgram(toolpaths, rot) : run32 ? run32.paths : programOrder(toolpaths)), [toolpaths, rot, run32])
+  const tl = useMemo(() => run32?.tl ?? buildTimeline(ordered), [ordered, run32])
   // (a rotary stock is carved at positions along most moves: half-millimetre rays keep playback smooth)
-  const cell = rot ? Math.max(0.5, rotaryCell(rot)) : simCell(part.length, part.width)
+  const cell = rot ? Math.max(0.5, rotaryCell(rot)) : tilt ? Math.max(0.5, tridexelCell(part.length, part.width, part.thickness)) : simCell(part.length, part.width)
   // (a lollipop under an overhang, or a thread mill's groove, needs the dexel stock, which keeps
   // the material over them; a thread needs a piece per turn)
-  const dexel = !rot && needsDexel(ordered)
+  const dexel = !rot && !tilt && needsDexel(ordered)
   const layers = piecesNeeded(ordered)
   const sim = useMemo(
-    () => new StockSimulation(tl, rot ? new RotaryStock(rot, cell) : dexel ? new DexelStock(part.length, part.width, part.thickness, cell, layers) : stockFor({ length: part.length, width: part.width, thickness: part.thickness }, [], cell)),
-    [part.length, part.width, part.thickness, dexel, layers, cell, tl, rot],
+    () => new StockSimulation(tl, rot ? new RotaryStock(rot, cell) : tilt ? positionalStock(part, cell) : dexel ? new DexelStock(part.length, part.width, part.thickness, cell, layers) : stockFor({ length: part.length, width: part.width, thickness: part.thickness }, [], cell)),
+    // (`part` for its size only)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [part.length, part.width, part.thickness, dexel, layers, cell, tl, rot, tilt],
   )
-  const stock = sim.stock as HeightfieldStock | DexelStock | RotaryStock
+  const stock = sim.stock as HeightfieldStock | DexelStock | RotaryStock | TriDexelStock
   // the rotary stock's unrolled surface stands in for the panel in the top view
   const viewPart = rot ? { ...part, length: stock.hf.length, width: stock.hf.width, thickness: stock.hf.thickness } : part
-  // a rotary program opens at its start (carving it all here would hold the screen up); the end is
-  // shown once the background check hands back its stock
-  const [t, setT] = useState(rot ? 0 : tl.total)
+  // a rotary or 3+2 program opens at its start (carving it all here would hold the screen up); the
+  // end is shown once the background check hands back its stock
+  const [t, setT] = useState(rot || tilt ? 0 : tl.total)
   const tRef = useRef(t)
   useLayoutEffect(() => {
     tRef.current = t
@@ -108,24 +117,37 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
     if (!toolpaths.some((tp) => tp.moves.length)) return
     const abort = new AbortController()
     const onProgress = (fraction: number) => setCheck({ for: checkKey, found: null, fraction })
+    // the background replay's stock at the end of the program: shown at once; and at evenly spaced
+    // points, so going back replays at most a stretch of the program here (owner request, M3.3)
+    const seeded = (r: { snapshot: StockSnapshot; marks: { t: number; snapshot: StockSnapshot }[] }) => {
+      sim.seed(tl.total, r.snapshot)
+      for (const m of r.marks) sim.seed(m.t, m.snapshot)
+      // (still at the start, untouched: go to the end, as a flat part's simulation opens)
+      setT((x) => (x === 0 ? tl.total : x))
+    }
+    const panel = { length: part.length, width: part.width, thickness: part.thickness }
     const job = rot
       ? compute()
           .run('sim.rotaryCollide', { setup: rot, toolpaths: toolpaths.filter((tp) => !!tp.rotary), machine, cell }, { signal: abort.signal, onProgress })
           .then((r) => {
-            // the background replay's stock at the end of the program: shown at once
-            sim.seed(tl.total, r.snapshot)
-            // (still at the start, untouched: go to the end, as a flat part's simulation opens)
-            setT((x) => (x === 0 ? tl.total : x))
+            seeded(r)
             return r.found
           })
-      : compute().run('sim.collide', { panel: { length: part.length, width: part.width, thickness: part.thickness }, toolpaths, machine }, { signal: abort.signal, onProgress })
+      : tilt
+        ? compute()
+            .run('sim.positionalCollide', { panel, toolpaths, machine, cell }, { signal: abort.signal, onProgress })
+            .then((r) => {
+              seeded(r)
+              return r.found
+            })
+        : compute().run('sim.collide', { panel, toolpaths, machine }, { signal: abort.signal, onProgress })
     job
       .then((found) => setCheck({ for: checkKey, found, fraction: 1 }))
       .catch((e) => {
         if (!(e instanceof Cancelled) && !abort.signal.aborted) setCheck({ for: checkKey, found: null, fraction: 1, error: e instanceof Error ? e.message : String(e) })
       })
     return () => abort.abort()
-  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness, rot, cell, sim, tl])
+  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness, rot, tilt, cell, sim, tl])
   const check = checked?.for === checkKey ? checked : { found: null, fraction: 0, error: undefined }
   const outlines = useMemo(() => tl.ops.map((o) => {
     const tool = ordered[o.path]?.tool
@@ -318,7 +340,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
             onCarved={onCarved}
           />
         ) : (
-          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
+          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} axis={cur?.axis ?? (op ? tl.segs.find((x) => x.op === pos.op)?.axis : undefined)} />
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Button size="icon-sm" variant="ghost" aria-label="Previous operation" title="Previous operation" onClick={prevOp}>
@@ -387,6 +409,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
               <span>X {fmt(pos.p.x)}</span>
               <span>Y {fmt(pos.p.y)}</span>
               <span>Z {fmt(pos.p.z)}</span>
+              {tilt && cur?.axis && (Math.abs(cur.axis.x) > 1e-9 || Math.abs(cur.axis.y) > 1e-9) && <span className="text-orange-300">tool tilted {((Math.acos(Math.max(-1, Math.min(1, cur.axis.z))) * 180) / Math.PI).toFixed(2)}°</span>}
             </>
           )}
           <span className={cn(pos.kind === 'rapid' ? 'text-red-300' : 'text-amber-200')}>{pos.kind ? (pos.kind === 'rapid' ? 'rapid' : pos.kind === 'drill' ? 'drilling' : pos.kind === 'plunge' ? 'plunge / ramp' : pos.kind === 'lead' ? 'lead' : 'cutting') : 'home'}</span>
@@ -430,7 +453,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           {check.error ? (
             <p className="text-red-200">Could not check: {check.error}</p>
           ) : !check.found ? (
-            <p className="text-stone-400">{rot ? 'Checking shank, holder, rapids and the rotary axis' : 'Checking shank, holder, rapids and spoilboard'}… {Math.round(check.fraction * 100)}%</p>
+            <p className="text-stone-400">{rot ? 'Checking shank, holder, rapids and the rotary axis' : tilt ? 'Checking shank, holder, rapids, spoilboard and table along the tilted tool' : 'Checking shank, holder, rapids and spoilboard'}… {Math.round(check.fraction * 100)}%</p>
           ) : check.found.length ? (
             <ul className="space-y-1">
               {check.found.slice(0, 12).map((c, i) => (
@@ -439,7 +462,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                     <span>
                       <Badge className="mr-1 h-4 bg-red-500/30 px-1 text-[10px] text-red-100">{KIND_LABEL[c.kind]}</Badge>
-                      {rot ? c.message : <>{tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}</>}
+                      {rot || tilt ? c.message : <>{tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}</>}
                     </span>
                   </button>
                 </li>
@@ -460,6 +483,10 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           <p className="text-stone-500">
             Rotary: the top view shows the blank's surface unrolled ({fmt(stock.hf.length)} along {rot.axis} by {fmt(stock.hf.width)} round, darker = deeper towards the axis); in 3D the blank turns under the tool as it does on the machine. The tool stands square to the axis. Rays {fmt(stock.hf.cell)} apart.
             {flatLeft > 0 ? ` ${flatLeft} flat operation(s) of this part are not in the rotary simulation.` : ''}
+          </p>
+        ) : tilt ? (
+          <p className="text-stone-500">
+            3+2: each operation on a tilted plane plays with the tool along the plane's normal (its rotary angles locked); between planes the tool backs off clear of the block before it turns (that turn is not checked here). The stock is held as rays along X, Y and Z {fmt(cell)} apart, cut exactly along each ray; the top view shows its top, the 3D view its blocks.
           </p>
         ) : (
           <p className="text-stone-500">Edge (horizontal) drilling is drawn in the backplot but runs under the face, so it is not carved. Scrap and offcuts cut free are shown faded and drop out in the through-cut view; the part stays. The collision check keeps them in place (safer).</p>
@@ -721,7 +748,7 @@ function flatOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b:
   return { r: tp.edge.r, length: h && Number.isFinite(h.gauge) ? h.gauge : tp.edge.flute, dir: still ? 0 : along + (tp.edge.side === 'left' ? Math.PI / 2 : -Math.PI / 2), housing: h }
 }
 
-function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opacity, section, spoilboard, onCarved }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; flat: Flat | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number }) {
+function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opacity, section, spoilboard, onCarved, axis }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; flat: Flat | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number; axis?: { x: number; y: number; z: number } }) {
   const max = Math.max(part.length, part.width)
   return (
     <div className="h-[56vh] min-h-72 overflow-hidden rounded-md border border-white/10 bg-[#0e1013]">
@@ -735,7 +762,7 @@ function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opaci
             <boxGeometry args={[part.length + 40, part.width + 40, Math.max(1, spoilboard)]} />
             <meshStandardMaterial color="#3a3f47" />
           </mesh>
-          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : flat ? <FlatToolModel pos={pos} flat={flat} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} />}
+          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : flat ? <FlatToolModel pos={pos} flat={flat} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} axis={axis} />}
         </group>
         <OrbitControls makeDefault />
       </Canvas>
@@ -790,8 +817,8 @@ function BladeModel({ pos, blade, rapid }: { pos: { x: number; y: number; z: num
   )
 }
 
-/** Tool, shank and holder as revolved shapes, tip at `pos`. */
-function ToolModel({ pos, outline, r, rapid }: { pos: { x: number; y: number; z: number }; outline: Outline | null; r: number; rapid: boolean }) {
+/** Tool, shank and holder as revolved shapes, tip at `pos`, along `axis` (tip to spindle; absent = straight up). */
+function ToolModel({ pos, outline, r, rapid, axis }: { pos: { x: number; y: number; z: number }; outline: Outline | null; r: number; rapid: boolean; axis?: { x: number; y: number; z: number } }) {
   const parts = useMemo(() => {
     const o = outline ?? { r, flute: 30, shankR: r, gauge: Infinity, holder: [] }
     const top = Number.isFinite(o.gauge) ? o.gauge : o.flute + 30
@@ -804,20 +831,23 @@ function ToolModel({ pos, outline, r, rapid }: { pos: { x: number; y: number; z:
     return out
   }, [outline, r, rapid])
   useEffect(() => () => parts.forEach((p) => p.geo.dispose()), [parts])
-  // the lathe turns about its own Y axis: turn it up the part's Z
+  // the lathe turns about its own Y axis: turn it up the part's Z, then (3+2) onto the tool's axis
+  const tilt = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis ? new THREE.Vector3(axis.x, axis.y, axis.z).normalize() : new THREE.Vector3(0, 0, 1)), [axis])
   return (
-    <group position={[pos.x, pos.y, pos.z]} rotation={[Math.PI / 2, 0, 0]}>
-      {parts.map((p, i) => (
-        <mesh key={i} geometry={p.geo}>
-          <meshStandardMaterial color={p.color} transparent opacity={0.7} metalness={0.4} roughness={0.3} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
+    <group position={[pos.x, pos.y, pos.z]} quaternion={tilt}>
+      <group rotation={[Math.PI / 2, 0, 0]}>
+        {parts.map((p, i) => (
+          <mesh key={i} geometry={p.geo}>
+            <meshStandardMaterial color={p.color} transparent opacity={0.7} metalness={0.4} roughness={0.3} side={THREE.DoubleSide} />
+          </mesh>
+        ))}
+      </group>
     </group>
   )
 }
 
 function StockMesh(props: Pick<ViewProps, 'sim' | 't' | 'base' | 'onCarved'> & { opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number } }) {
-  return props.sim.stock.kind === 'dexel' ? <DexelStockMesh {...props} /> : <HeightfieldStockMesh {...props} />
+  return props.sim.stock.kind === 'dexel' || props.sim.stock.kind === 'tridexel' ? <DexelStockMesh {...props} /> : <HeightfieldStockMesh {...props} />
 }
 
 /**

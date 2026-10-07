@@ -1,5 +1,6 @@
 import { modelFootprint } from '@/cam/mesh/place'
 import { planeRect } from '@/cam/rotary/frame'
+import { tiltedRect } from '@/cam/positional/frame'
 import { formatLength } from '@/core/units'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { moveNode, nodesOf } from '@/cam/cad'
@@ -342,6 +343,16 @@ export function PartCanvas(props: CanvasProps) {
               </g>
             )
           })}
+          {(shown.tilted ?? []).map((p) => {
+            // a tilted work plane (M3.4): shapes drawn inside it lie on the plane; x and y from its corner
+            const r = tiltedRect(p)
+            return (
+              <g key={p.id} pointerEvents="none" data-testid="tilted-plane">
+                <rect x={r.x0} y={r.y0} width={r.x1 - r.x0} height={r.y1 - r.y0} fill="#fb923c" fillOpacity={0.05} stroke="#fb923c" strokeDasharray="5 4" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                <path d={`M${r.x0} ${r.y0}L${r.x0 + Math.min(20, (r.x1 - r.x0) / 4)} ${r.y0}M${r.x0} ${r.y0}L${r.x0} ${r.y0 + Math.min(20, (r.y1 - r.y0) / 4)}`} stroke="#fb923c" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+              </g>
+            )
+          })}
           <path d={`M0 0L${40 / view.s} 0`} stroke="#ef4444" strokeWidth={2} vectorEffect="non-scaling-stroke" />
           <path d={`M0 0L0 ${40 / view.s}`} stroke="#22c55e" strokeWidth={2} vectorEffect="non-scaling-stroke" />
 
@@ -468,6 +479,7 @@ export function PartCanvas(props: CanvasProps) {
         })}
         <NotesLayer part={shown} px={px} />
         <PlanesLayer part={shown} px={px} />
+        <TiltedLayer part={shown} px={px} />
         <DimsLayer part={shown} px={px} />
         {cursor &&
           cursor.guides.map((g, i) => {
@@ -485,6 +497,26 @@ export function PartCanvas(props: CanvasProps) {
         )}
       </svg>
     </div>
+  )
+}
+
+/** Labels of the tilted work planes (M3.4): name, tilt and the direction it faces. */
+function TiltedLayer({ part, px }: { part: CamPart; px: (p: P) => P }) {
+  const planes = part.tilted ?? []
+  if (!planes.length) return null
+  return (
+    <g pointerEvents="none" data-testid="tilted-labels">
+      {planes.map((p) => {
+        const r = tiltedRect(p)
+        const at = px({ x: r.x0, y: r.y1 })
+        const tilt = Math.round(p.tilt * 100) / 100
+        return (
+          <text key={p.id} x={at.x + 6} y={at.y + 15} fontSize={11} fill="#fdba74" stroke="#16181d" strokeWidth={3} paintOrder="stroke">
+            {p.name} · tilted {tilt}°{tilt > 0.01 && tilt < 179.99 ? ` towards ${Math.round(p.toward * 100) / 100}°` : ''} (3+2)
+          </text>
+        )
+      })}
+    </g>
   )
 }
 

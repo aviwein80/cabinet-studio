@@ -112,6 +112,15 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   column simulate with no gouges (independent check, within 0.005 mm). Output only through a
   script post for a machine model that declares that rotary axis (switch off); the N-200 export
   always refuses a turned part (`CAM_ROTARY`). Part format 8.
+  **M3.4 positional 3+2: done** (October 2026): tilted work planes at any angle (typed in, a side
+  of the part's block or a solid's flat face) with drilling, pockets, profiles and engraving on
+  them; our own kinematics for a fork head, a trunnion table and a rotary table with a tilting
+  head turn each plane into two locked angles and the machine's X, Y, Z (and back), or into the
+  plane's own frame. Simulated with the tool tilted on a new three-way stock, with the collision
+  check; holes and pockets on four tilted planes of a test block land within 0.001 mm after the
+  conversion on all three layouts. Output only through a script post for a machine model that
+  declares the 3+2 axes (switch off); the N-200 export always refuses a part with tilted
+  operations (`CAM_POSITIONAL`). Part format 9. Next: M3.5 when the owner says go.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

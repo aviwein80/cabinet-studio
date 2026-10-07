@@ -346,7 +346,23 @@ export interface SavedSheet {
 export type ToolType = 'router' | 'drill-vertical' | 'drill-horizontal' | 'saw'
 /** Cutting-edge shape, used by custom-part machining. Cabinet machining only reads `type`. */
 /** `lollipop`: a ball (the diameter) on a narrower neck (`shankDiameter`), for undercuts (M3.1). */
-export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile' | 'lollipop' | 'thread'
+/**
+ * 5-axis tool shapes (TOOL-07, M3.5): `barrel`, a cutter whose side is a large arc (`barrelRadius`)
+ * with a rounded tip (`cornerRadius`), widest at the diameter; `form`, any revolved outline typed
+ * in point by point (`form`), the cutting edge up to the flute length and the shaft above it.
+ */
+export type ToolShape = 'flat' | 'ball' | 'bull' | 'v' | 'drill' | 'saw' | 'profile' | 'lollipop' | 'thread' | 'barrel' | 'form'
+
+/**
+ * A point of a form tool's outline (TOOL-07): `h` above the tip, radius `r` there (mm). `arc`: the
+ * stretch from the point before to this one is an arc of that radius, bulging outwards (positive)
+ * or inwards (negative); absent = straight.
+ */
+export interface FormPoint {
+  h: number
+  r: number
+  arc?: number
+}
 
 export interface Tool {
   id: string
@@ -393,6 +409,13 @@ export interface Tool {
   holderId?: string
   /** Aggregate (angle head or rotating aggregate) this tool sits in, from `MachineProfile.aggregates` (TOOL-04). */
   aggregateId?: string
+  /** Barrel cutters (TOOL-07): radius of the arc that forms the side, mm (larger than half the diameter). */
+  barrelRadius?: number
+  /**
+   * Form tools (TOOL-07): the outline from the tip up (first point at height 0), heights never going
+   * down. Up to `fluteLength` it cuts; above it is the shaft (neck or shank) the collision checks use.
+   */
+  form?: FormPoint[]
 }
 
 /**
@@ -463,6 +486,10 @@ export interface MachineModel {
     aggregate: boolean
     rotary: boolean
     positional: boolean
+    /**
+     * Simultaneous 5-axis (M3.5): the two rotary axes described by `positional` also move while
+     * the tool cuts (the same kinematics; needs `positional`).
+     */
     simultaneous5: boolean
   }
   /**
@@ -801,6 +828,19 @@ export interface FeatureFlags {
    * model declares two rotary axes for 3+2. Off. Also needs `scriptPostOutput` and the plugin's grant.
    */
   positionalPostOutput: boolean
+  /**
+   * M3.5 screens: 5-axis operations (tool-axis control, strategies, head flip), barrel and form
+   * tools, the 5-axis engine status, simulation with the tool axis on every move. The toolpaths come
+   * from a 5-axis engine: none is licensed (the built-in preview engine is for simulation only).
+   * Screens only: 5-axis work is never written to woodWOP; see `multiAxisPostOutput`.
+   */
+  camMultiAxis: boolean
+  /**
+   * M3.5: write simultaneous 5-axis programs through script posts, for a machine (not the N-200)
+   * whose machine model declares simultaneous 5-axis on its two rotary axes, from toolpaths made by
+   * a licensed engine. Off. Also needs `scriptPostOutput` and the plugin's grant.
+   */
+  multiAxisPostOutput: boolean
 }
 
 export interface Library {

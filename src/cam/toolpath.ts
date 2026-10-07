@@ -71,7 +71,12 @@ import { aggregateOf, anglesOutOfReach, effectiveGauge, machineModelOf, toolOutl
 import { placeMesh } from './mesh/place'
 import { mergeMeshes, placedReliefOutline, reliefSurround } from './relief/relief'
 import { type Mesh, meshBounds } from './mesh/types'
-import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, RotaryOp, RotarySetup, SawOp, SweepOp, ThreadOp, TiltedPlane, VCarveOp, WrappedPlane } from './types'
+import type { CamOp, CamPart, ChamferOp, CurveOp, EdgeOp, ManualOp, MultiAxisOp, ToolpathEdits, DrillOp, Entity, FaceId, FaceOp, Finish3dOp, PocketOp, ProfileOp, Rough3dOp, RotaryOp, RotarySetup, SawOp, SweepOp, ThreadOp, TiltedPlane, VCarveOp, WrappedPlane } from './types'
+import { type MultiAxisEngine, STUB_ENGINE } from './multiaxis/engine'
+import { PREVIEW_ENGINE } from './multiaxis/fake'
+import { multiAxisRequest } from './multiaxis/request'
+import { axisStats, engineMoveProblems, withDirection } from './multiaxis/result'
+import { checkAxisGouge, meshGroups } from './multiaxis/check'
 import { blankRadius, inPlane, setupProblems } from './rotary/frame'
 import { RotaryDrop } from './rotary/drop'
 import { modelPaths, type RotaryPaths, wrapPaths, type WrapShape } from './rotary/paths'
@@ -80,15 +85,26 @@ import { onRapidSurface } from './more25d/rapidSurface'
 import { inTilted, planeFrame, planeToPart, TILTED_KINDS, tiltedProblems, tiltedRect } from './positional/frame'
 
 export type FeedKind = 'cut' | 'plunge' | 'lead'
+/**
+ * Tool direction at the end of a move (simultaneous 5-axis, M3.5): a unit vector from the tool tip
+ * towards the spindle, part coordinates. Between the ends of a move the direction turns evenly.
+ */
+export type ToolAxis = readonly [number, number, number]
+/**
+ * The toolpath IR. `a` (rapid and feed moves) and `axes` (3D chains, three numbers per point) carry
+ * the tool direction, only in a simultaneous 5-axis toolpath (`Toolpath.multiAxis`), where every
+ * move has it and there are no arcs or drill cycles. Elsewhere the tool stands straight up (or along
+ * the tilted plane's normal, `Toolpath.tilt`).
+ */
 export type Move =
-  | { t: 'rapid'; x: number; y: number; z: number }
+  | { t: 'rapid'; x: number; y: number; z: number; a?: ToolAxis }
   /** `k`: adaptive feed, this move runs at k times the operation's feed (absent = 1). */
-  | { t: 'feed'; x: number; y: number; z: number; f: FeedKind; k?: number }
+  | { t: 'feed'; x: number; y: number; z: number; f: FeedKind; k?: number; a?: ToolAxis }
   /** `k`: feed factor as on feed moves (toolpath edits slow arcs in corners). */
   | { t: 'arc'; x: number; y: number; z: number; cx: number; cy: number; ccw: boolean; f: FeedKind; k?: number }
   | { t: 'drill'; x: number; y: number; z: number; r: number; peck: number; dwell: number }
   /** 3D chain: straight feed moves through each (x, y, z) in `pts` in turn, from the current position. */
-  | { t: 'poly'; pts: Float64Array; f: FeedKind }
+  | { t: 'poly'; pts: Float64Array; f: FeedKind; axes?: Float64Array }
 
 /** A move that is not a 3D chain. */
 export type SimpleMove = Exclude<Move, { t: 'poly' }>
@@ -165,6 +181,13 @@ export interface Toolpath {
    */
   tilt?: { plane: TiltedPlane }
   /**
+   * Simultaneous 5-axis (M3.5): every move carries its tool direction (`Move.a` / `axes`, part frame).
+   * Made by the engine named here (`src/cam/multiaxis/engine.ts`). Never written to woodWOP; only a
+   * script post for a machine model with simultaneous 5-axis may write it, and only when a licensed
+   * engine made it (never the built-in preview).
+   */
+  multiAxis?: MultiAxisInfo
+  /**
    * Edge work with an aggregate (5AX-04): the moves are the tool tip, at the tool axis height; the
    * tool lies flat, square to the path, on the `side` of travel where the material is.
    */
@@ -178,9 +201,33 @@ export interface Toolpath {
   }
 }
 
+/** What a 5-axis toolpath says about itself (M3.5). */
+export interface MultiAxisInfo {
+  /** Engine id ('' = the shop's licensed engine slot, 'preview' = the built-in preview) and name. */
+  engine: string
+  engineName: string
+  /** Made by a licensed engine (its toolpath may be written through a script post, all else permitting). */
+  licensed: boolean
+  /** Made by the built-in preview engine: simulation only. */
+  preview: boolean
+  strategy: MultiAxisOp['strategy']
+  /** Which axis solution the machine should use (NEW-26). */
+  headFlip: MultiAxisOp['headFlip']
+  /** Largest tilt of the tool from vertical, and largest turn of its axis per mm along cutting moves, degrees. */
+  maxTilt: number
+  maxTurn: number
+  /** Our independent gouge check against the model (null = no model, or switched off). */
+  gouge: { method: 'exact' | 'none'; depth: number; at: [number, number, number] | null; points: number } | null
+}
+
 export interface GenContext {
   part: CamPart
   machine: MachineProfile
+  /**
+   * The shop's licensed 5-axis engine (M3.5). Absent = none installed: 5-axis operations that ask
+   * for it get the stub's "not licensed" answer. (Tests put a stand-in here.)
+   */
+  engine?: MultiAxisEngine
   /** 3D model meshes by blob hash (as stored, before placement). Needed by 3D operations only. */
   meshes?: ReadonlyMap<string, Mesh>
   /** Progress and cancel for long 3D operations. */
@@ -2029,6 +2076,8 @@ export const isAdaptive = (op: CamOp) => (op.kind === 'pocket' && op.pattern ===
  */
 export function inBackground(op: CamOp, part: CamPart): boolean {
   if (OPS_3D.has(op.kind) || isAdaptive(op) || (op.kind === 'curve' && op.mode === 'between')) return true
+  // 5-axis: whatever the engine takes
+  if (op.kind === 'multiaxis') return true
   // rotary on a model (drop-cutter round the axis); shapes cut below the plane are quick
   if (op.kind === 'rotary') return op.strategy !== 'wrap' || !!op.onModel
   return op.kind === 'pocket' && !!op.rest && restSources(op, part).some(isAdaptive)
@@ -2365,6 +2414,8 @@ function genRough3d(op: Rough3dOp, ctx: GenContext, tp: Toolpath, b: Builder) {
 export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
   // rotary: no facing re-sets its stock, no toolpath edits or rapid surfaces (it lifts to its own clearance radius)
   if (op.kind === 'rotary') return generateAt(op, ctx)
+  // simultaneous 5-axis: from the 5-axis engine, in the part's own frame
+  if (op.kind === 'multiaxis') return generateMultiAxis(op, ctx)
   // a tilted work plane (3+2): its own frame, depths from the plane
   if (op.tiltedPlane) return generateTilted(op, ctx)
   const tp = generateShifted(op, ctx)
@@ -2372,6 +2423,63 @@ export function generateOp(op: CamOp, ctx: GenContext): Toolpath {
   const out = op.rapidSurface && op.kind !== 'code' ? withRapidSurface(edited, op) : edited
   onTiltedRect(op, ctx.part, out)
   return out
+}
+
+/** 5-axis toolpaths (M3.5) are never written to woodWOP: the N-200 has three axes. */
+export const MULTIAXIS_NO_MPR = 'it is simultaneous 5-axis work, which needs a machine with two rotary axes that move while cutting; woodWOP programs for the N-200 cannot hold it'
+
+/** Gouges deeper than this (mm) are reported by the independent check (the shop's gouge tolerance). */
+export const GOUGE_TOL = 0.005
+
+/**
+ * A simultaneous 5-axis operation (5AX-02, 5AX-03, M3.5). The engine it names makes the moves: the
+ * shop's licensed engine (`ctx.engine`; none = the stub, "not licensed") or the built-in preview
+ * (simulation only). Then ours: the moves are checked, cut reversed or both ways if asked (NEW-26),
+ * the tool axis measured and the independent gouge check run. Nothing of it reaches woodWOP.
+ */
+function generateMultiAxis(op: MultiAxisOp, ctx: GenContext): Toolpath {
+  const part = ctx.part
+  const tool = resolveTool(op, ctx.machine)
+  const feeds = feedsFor(op, tool, part.materialId, ctx.machine)
+  const engine = op.engine === 'preview' ? PREVIEW_ENGINE : !op.engine ? (ctx.engine ?? STUB_ENGINE) : STUB_ENGINE
+  const info: MultiAxisInfo = { engine: engine.info.id, engineName: engine.info.name, licensed: engine.info.licensed, preview: !!engine.info.preview, strategy: op.strategy, headFlip: op.headFlip, maxTilt: 0, maxTurn: 0, gouge: null }
+  const tp: Toolpath = { opId: op.id, kind: op.kind, name: op.name, tool, feeds, moves: [], intents: [], warnings: [], stats: { cut: 0, rapid: 0, minutes: 0 }, noOutput: MULTIAXIS_NO_MPR, multiAxis: info }
+  const stop = (w: string) => {
+    tp.warnings.push(w)
+    return tp
+  }
+  if (op.engine && op.engine !== 'preview') tp.warnings.push(`The 5-axis engine "${op.engine}" is not installed: the shop's engine is used.`)
+  if (op.face !== 1) return stop('A 5-axis operation works in the part\'s own frame: set it to face 1.')
+  if (op.tiltedPlane) tp.warnings.push('A 5-axis operation sets its own tool axis: its tilted work plane is not used.')
+  if (op.edits) tp.warnings.push('Toolpath edits are not used on a 5-axis operation.')
+  if (op.rapidSurface) tp.warnings.push('A rapid surface is not used on a 5-axis operation.')
+  if (!tool) return stop('No tool: pick one for this 5-axis operation.')
+  if (tool.type !== 'router') return stop(`T${tool.number} sits in the ${tool.type === 'saw' ? 'saw unit' : 'drill block'}, which cannot tilt: pick a tool in the main spindle.`)
+  if (tool.aggregateId) return stop(`T${tool.number} sits in an aggregate: pick a tool in the main spindle.`)
+  if (tool.shape === 'lollipop' || tool.shape === 'thread') return stop(`T${tool.number} (${tool.shape === 'lollipop' ? 'lollipop' : 'thread mill'}) is not used for 5-axis work.`)
+  const made = multiAxisRequest(op, part, ctx.machine, tool, ctx.meshes)
+  if ('error' in made) return stop(made.error)
+  const res = engine.generate(made.req, ctx.work)
+  if (res.status !== 'ok') return stop(res.message)
+  const problems = engineMoveProblems(res.moves)
+  if (problems.length) return stop(`${engine.info.name} returned a toolpath that cannot be used: ${problems.join('; ')}.`)
+  tp.warnings.push(...res.warnings)
+  tp.moves = withDirection(res.moves, op.direction)
+  tp.stats = stats(tp.moves, feeds.feed)
+  const st = axisStats(tp.moves)
+  info.maxTilt = st.maxTilt
+  info.maxTurn = st.maxTurn
+  if (st.maxTilt > op.axis.maxTilt + 0.01) tp.warnings.push(`The tool tilts up to ${st.maxTilt.toFixed(1)}° from vertical, more than the ${op.axis.maxTilt}° asked for.`)
+  if (op.maxTurn > 0 && st.maxTurn > op.maxTurn * 1.01 + 1e-6) tp.warnings.push(`The tool axis turns up to ${st.maxTurn.toFixed(2)}° per mm, more than the ${op.maxTurn}° per mm asked for.`)
+  if (info.preview) tp.warnings.push('Made by the built-in preview engine: for the simulator only, never written to any machine.')
+  // our own gouge check against the model, whatever the engine says
+  if (op.gougeCheck && made.req.surface) {
+    const g = checkAxisGouge(meshGroups(made.req.surface.mesh, op.check), tool, tp.moves, { stock: op.stockToLeave, step: Math.max(0.05, Math.min(0.5, tool.diameter / 12)), maxPoints: 400_000 })
+    info.gouge = g
+    if (g.method === 'none') tp.warnings.push(`Gouge check: T${tool.number} (${tool.shape ?? 'flat'}) is not checked against the model here (exact for ball-nose tools only); check it in the simulator.`)
+    else if (g.depth > GOUGE_TOL && g.at) tp.warnings.push(`Gouge check: the tool cuts ${g.depth.toFixed(3)} mm into the model (plus the stock to leave) at X${g.at[0].toFixed(1)} Y${g.at[1].toFixed(1)} Z${g.at[2].toFixed(1)}.`)
+  }
+  return tp
 }
 
 /** Tilted-plane toolpaths (M3.4) are never written to woodWOP: the N-200 cannot tilt its tool. */
@@ -2603,9 +2711,9 @@ export function generatePart(part: CamPart, machine: MachineProfile, meshes?: Re
               feeds: feedsFor(op, tool, part.materialId, machine),
               moves: [],
               intents: [],
-              warnings: [op.kind === 'curve' ? 'Not calculated for export (it is never written; it is calculated in the part designer).' : op.kind === 'rotary' ? 'not calculated yet: rotary passes on a model are calculated in the background' : 'Not calculated for export (adaptive clearing is calculated in the part designer).'],
+              warnings: [op.kind === 'curve' ? 'Not calculated for export (it is never written; it is calculated in the part designer).' : op.kind === 'rotary' ? 'not calculated yet: rotary passes on a model are calculated in the background' : op.kind === 'multiaxis' ? 'Not calculated for export (5-axis work is never written to woodWOP; it is calculated in the part designer).' : 'Not calculated for export (adaptive clearing is calculated in the part designer).'],
               stats: { cut: 0, rapid: 0, minutes: 0 },
-              ...(op.kind === 'curve' ? { noOutput: CURVE_NO_OUTPUT } : {}),
+              ...(op.kind === 'curve' ? { noOutput: CURVE_NO_OUTPUT } : op.kind === 'multiaxis' ? { noOutput: MULTIAXIS_NO_MPR } : {}),
             }
           : generateOp(op, { part, machine, meshes, done }))
       done.set(op.id, tp)

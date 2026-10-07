@@ -9,11 +9,12 @@ import { feedsFor } from '@/cam/ops'
 import type { CamOp, CamPart, ToolSnapshot } from '@/cam/types'
 import { confirmKey, type ToolPart } from './confirm'
 import { effectiveGauge, effectiveHolder } from './machineModel'
-import type { MachineProfile, Tool, ToolShape, ToolType } from './types'
+import type { FormPoint, MachineProfile, Tool, ToolShape, ToolType } from './types'
+import { formProblems } from '@/cam/tools/form'
 import { formatLength, parseLength } from './units'
 import type { UnitSystem } from './types'
 
-export type ToolFieldKind = 'num' | 'len' | 'text' | 'type' | 'shape' | 'bool' | 'holder' | 'aggregate'
+export type ToolFieldKind = 'num' | 'len' | 'text' | 'type' | 'shape' | 'bool' | 'holder' | 'aggregate' | 'form'
 
 export interface ToolField {
   key: keyof Tool & string
@@ -29,7 +30,7 @@ export interface ToolField {
 }
 
 export const TOOL_TYPES: ToolType[] = ['router', 'drill-vertical', 'drill-horizontal', 'saw']
-export const TOOL_SHAPES: ToolShape[] = ['flat', 'ball', 'bull', 'v', 'drill', 'saw', 'profile', 'lollipop', 'thread']
+export const TOOL_SHAPES: ToolShape[] = ['flat', 'ball', 'bull', 'v', 'drill', 'saw', 'profile', 'lollipop', 'thread', 'barrel', 'form']
 
 export const TOOL_FIELDS: ToolField[] = [
   { key: 'number', label: 'Tool no.', kind: 'num', part: 'data', positive: true, grid: true, width: 70 },
@@ -40,6 +41,8 @@ export const TOOL_FIELDS: ToolField[] = [
   { key: 'shape', label: 'Shape', kind: 'shape', grid: true, width: 80 },
   { key: 'angle', label: 'V angle °', kind: 'num', positive: true, grid: true, width: 70 },
   { key: 'cornerRadius', label: 'Corner R', kind: 'len', grid: true, width: 70 },
+  { key: 'barrelRadius', label: 'Barrel side R', kind: 'len', part: 'data', positive: true },
+  { key: 'form', label: 'Form outline (h r [arc]; ...)', kind: 'form', part: 'data' },
   { key: 'flutes', label: 'Flutes', kind: 'num', part: 'feeds', positive: true, width: 60 },
   { key: 'rpm', label: 'rpm', kind: 'num', part: 'feeds', positive: true, grid: true, width: 70 },
   { key: 'feed', label: 'Feed mm/min', kind: 'num', part: 'feeds', positive: true, grid: true, width: 80 },
@@ -76,7 +79,25 @@ export function cellText(t: Tool, f: ToolField, units: UnitSystem, m?: Pick<Mach
   if (f.kind === 'bool') return v ? 'yes' : 'no'
   if (f.kind === 'holder') return m?.holders?.find((h) => h.id === v)?.name ?? String(v)
   if (f.kind === 'aggregate') return m?.aggregates?.find((a) => a.id === v)?.name ?? String(v)
+  if (f.kind === 'form') return formText(v as FormPoint[])
   return String(v)
+}
+
+/** A form outline as text, mm: "h r [arc]; ..." (TOOL-07). */
+export function formText(pts: readonly FormPoint[]): string {
+  return pts.map((p) => [p.h, p.r, ...(p.arc ? [p.arc] : [])].map(fmt).join(' ')).join('; ')
+}
+
+/** Read a form outline typed as "h r [arc]; ..." (mm). */
+export function parseFormText(s: string): { value: FormPoint[] } | { error: string } {
+  const pts: FormPoint[] = []
+  for (const part of s.split(';').map((x) => x.trim()).filter(Boolean)) {
+    const n = part.split(/[\s,]+/).map((x) => Number(x))
+    if ((n.length !== 2 && n.length !== 3) || !n.every(Number.isFinite)) return { error: `Form outline: “${part}” is not "height radius" or "height radius arc".` }
+    pts.push(n.length === 3 && n[2] !== 0 ? { h: n[0], r: n[1], arc: n[2] } : { h: n[0], r: n[1] })
+  }
+  const bad = formProblems(pts)
+  return bad.length ? { error: `Form outline: ${bad[0]}` } : { value: pts }
 }
 
 /**
@@ -118,6 +139,8 @@ export function parseCell(text: string, f: ToolField, units: UnitSystem, m?: Pic
       const a = m?.aggregates?.find((x) => x.id === s || x.name.toLowerCase() === s.toLowerCase())
       return a ? { value: a.id } : { error: `No aggregate “${s}” in the list.` }
     }
+    case 'form':
+      return parseFormText(s)
     default:
       return { value: s }
   }
@@ -219,7 +242,7 @@ export function toolRows(m: MachineProfile): Record<string, string | number | bo
     const row: Record<string, string | number | boolean> = {}
     for (const f of TOOL_FIELDS) {
       const v = t[f.key]
-      row[f.key] = v === undefined || v === null ? '' : f.kind === 'holder' ? (m.holders?.find((h) => h.id === v)?.name ?? String(v)) : f.kind === 'aggregate' ? (m.aggregates?.find((a) => a.id === v)?.name ?? String(v)) : (v as string | number | boolean)
+      row[f.key] = v === undefined || v === null ? '' : f.kind === 'holder' ? (m.holders?.find((h) => h.id === v)?.name ?? String(v)) : f.kind === 'aggregate' ? (m.aggregates?.find((a) => a.id === v)?.name ?? String(v)) : f.kind === 'form' ? formText(v as FormPoint[]) : (v as string | number | boolean)
     }
     return row
   })
@@ -330,6 +353,8 @@ export function toolSnapshot(tool: Tool, m: MachineProfile, materialId: string |
   if (tool.shape) s.shape = tool.shape
   if (tool.angle !== undefined) s.angle = tool.angle
   if (tool.cornerRadius !== undefined) s.cornerRadius = tool.cornerRadius
+  if (tool.barrelRadius !== undefined) s.barrelRadius = tool.barrelRadius
+  if (tool.form) s.form = tool.form.map((p) => ({ ...p }))
   if (tool.fluteLength !== undefined) s.fluteLength = tool.fluteLength
   if (tool.shankDiameter !== undefined) s.shankDiameter = tool.shankDiameter
   if (Number.isFinite(g.gauge)) s.gauge = g.gauge
@@ -345,6 +370,8 @@ export const SNAPSHOT_LABEL: Record<keyof ToolSnapshot, string> = {
   shape: 'Shape',
   angle: 'V angle',
   cornerRadius: 'Corner radius',
+  barrelRadius: 'Barrel side radius',
+  form: 'Form outline',
   fluteLength: 'Flute length',
   shankDiameter: 'Shank Ø',
   gauge: 'Stick-out',

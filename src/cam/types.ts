@@ -271,7 +271,7 @@ export interface TiltedPlane {
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
   materialId: string | null
   length: number
   width: number
@@ -475,6 +475,10 @@ export interface ToolSnapshot {
   shape?: string
   angle?: number
   cornerRadius?: number
+  /** Barrel cutters (TOOL-07): the side's arc radius. */
+  barrelRadius?: number
+  /** Form tools (TOOL-07): the outline. */
+  form?: import('@/core/types').FormPoint[]
   fluteLength?: number
   shankDiameter?: number
   /** Stick-out used (the tool's, or the assumed one). */
@@ -975,7 +979,87 @@ export interface RotaryOp extends OpBase {
   onModel?: boolean
 }
 
-export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp | ThreadOp | RotaryOp
+/**
+ * How the tool axis is set along a simultaneous 5-axis toolpath (5AX-02, M3.5). Directions are from
+ * the tool tip towards the spindle, part coordinates. Our own names:
+ * - 'vertical': straight up (3-axis on a 5-axis machine);
+ * - 'fixed': one direction throughout, `tilt` degrees from vertical leaning towards plan direction
+ *   `toward` (degrees from +X);
+ * - 'surface-normal': along the surface's normal where the tool touches it; 'curve-normal': square to
+ *   the drive curve, as near upright as it can be; both then leaned `lead` degrees forwards (the top
+ *   of the tool along the direction of travel) and `tilt` degrees to the left of travel;
+ * - 'through-point' / 'away-from-point': the axis passes through `point` (the tool leans towards it),
+ *   or points away from it; 'through-line' / 'away-from-line': the same with the line through `point`
+ *   along `dir`;
+ * - 'guide': the axis passes through the matching point of a guide curve (`guide`, by share of length).
+ * `maxTilt` limits every direction to that many degrees from vertical.
+ */
+export interface ToolAxisControl {
+  mode: 'vertical' | 'fixed' | 'surface-normal' | 'curve-normal' | 'through-point' | 'away-from-point' | 'through-line' | 'away-from-line' | 'guide'
+  lead: number
+  tilt: number
+  /** 'fixed': plan direction the tool leans towards, degrees from +X. */
+  toward: number
+  point: { x: number; y: number; z: number }
+  dir: { x: number; y: number; z: number }
+  /** 'guide': the guide curve (an entity id). */
+  guide?: string
+  /** Largest angle from vertical, degrees. */
+  maxTilt: number
+}
+
+/**
+ * A simultaneous 5-axis operation (5AX-02, 5AX-03, M3.5): the tool tilts while it cuts, the tool axis
+ * set by `axis`. The toolpath comes from a 5-axis engine behind our `MultiAxisEngine` interface
+ * (`src/cam/multiaxis/engine.ts`); none is licensed, so in the shop it returns "not licensed". The
+ * built-in preview engine (`engine` 'preview') makes simple toolpaths for the simulator only; they are
+ * never written. Never written to woodWOP (the N-200 has 3 axes); only a script post for a machine
+ * model with simultaneous 5-axis may write a licensed engine's toolpath.
+ *
+ * Strategies (our names): 'curve' cuts along 3D curves or solid edges (`geometry`), the tip
+ * `levels.depth` below them along the tool; 'swarf' cuts with the side of the tool along walls given
+ * by a bottom curve (`geometry`) and a top curve (`top`), the tool along the line between them;
+ * 'surface' finishes a model's surface within a boundary (`geometry`, closed shapes on face 1; none =
+ * the model's footprint); 'rough' clears material from a model in multi-axis levels.
+ */
+export interface MultiAxisOp extends OpBase {
+  kind: 'multiaxis'
+  /** '' = the shop's licensed 5-axis engine (none: "not licensed"); 'preview' = the built-in preview engine (simulation only). */
+  engine: string
+  strategy: 'curve' | 'swarf' | 'surface' | 'rough'
+  /** The model cut ('surface', 'rough') and checked for gouges (every strategy; '' = none). */
+  modelId: string
+  /** Facet groups to cut ('surface'); empty or absent = all. */
+  groups?: number[]
+  /** Facet groups the tool must not cut into (gouge checks); empty or absent = every facet of the model. */
+  check?: number[]
+  /** 'swarf': the top curve(s), one per bottom curve in `geometry`, in the same order. */
+  top?: string[]
+  /** 'swarf': the side of the wall the tool runs on, seen along the direction of travel. */
+  side?: 'left' | 'right'
+  axis: ToolAxisControl
+  /** Distance between passes, mm ('surface', 'rough'). */
+  stepover: number
+  /** Height between levels, mm ('rough'). */
+  stepdown: number
+  /** Material left on the model, mm. */
+  stockToLeave: number
+  /** Largest gap between the moves and the true path, mm. */
+  tolerance: number
+  /** Cut each path as drawn, reversed, or there and back (NEW-26). */
+  direction: 'forward' | 'reversed' | 'both'
+  /**
+   * Which of the machine's two axis solutions to use (NEW-26): the usual one (least turn of the first
+   * axis), the other one (the head turned 180° round), or whichever stays inside the travel (auto).
+   */
+  headFlip: 'auto' | 'usual' | 'other'
+  /** Axis smoothing: the tool axis turns at most `maxTurn` degrees per mm of travel (0 = no limit). */
+  maxTurn: number
+  /** Gouge check against the model (and `check` groups) while the toolpath is made. */
+  gougeCheck: boolean
+}
+
+export type CamOp = ProfileOp | PocketOp | DrillOp | EngraveOp | VCarveOp | SawOp | SweepOp | CodeOp | Finish3dOp | Rough3dOp | FaceOp | ChamferOp | CurveOp | ManualOp | EdgeOp | ThreadOp | RotaryOp | MultiAxisOp
 export type CamOpKind = CamOp['kind']
 
 // ---------------------------------------------------------------------------------------------

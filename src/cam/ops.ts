@@ -5,7 +5,7 @@
 import { nanoid } from 'nanoid'
 import { cutoutTool, findDrill, squareEnd } from '@/core/machining'
 import type { MachineProfile, Tool } from '@/core/types'
-import type { AdaptiveSettings, CamOp, CamOpKind, Leads, Levels, OpTemplate, SawSettings, Tags } from './types'
+import type { AdaptiveSettings, CamOp, CamOpKind, Leads, Levels, OpTemplate, SawSettings, Tags, ToolAxisControl } from './types'
 
 export const DEFAULT_LEVELS: Levels = { safeZ: 20, rapidZ: 3, depth: 6, through: false, stockZ: 0, passDepth: 0 }
 export const DEFAULT_LEADS: Leads = { in: 'arc', out: 'arc', length: 2, radius: 1.5, rampAngle: 5, overlap: 2, feedPct: 50 }
@@ -38,6 +38,18 @@ export const OP_LABEL: Record<CamOpKind, string> = {
   edge: 'Edge work (aggregate)',
   thread: 'Thread milling',
   rotary: 'Rotary machining',
+  multiaxis: '5-axis machining',
+}
+
+/**
+ * PLACEHOLDER tool-axis settings for a new 5-axis operation (5AX-02): along the surface normal, no
+ * lead or tilt, at most 60° from vertical; a point and a line 100 mm above the part's corner.
+ */
+export const DEFAULT_TOOL_AXIS: ToolAxisControl = { mode: 'surface-normal', lead: 0, tilt: 0, toward: 0, point: { x: 0, y: 0, z: 100 }, dir: { x: 1, y: 0, z: 0 }, maxTilt: 60 }
+
+/** A new 5-axis operation's tool axis: square to the curve along curves, towards the top curve for swarf, on the surface normal otherwise. */
+export function defaultToolAxis(strategy: 'curve' | 'swarf' | 'surface' | 'rough', maxTilt = DEFAULT_TOOL_AXIS.maxTilt): ToolAxisControl {
+  return { ...DEFAULT_TOOL_AXIS, point: { ...DEFAULT_TOOL_AXIS.point }, dir: { ...DEFAULT_TOOL_AXIS.dir }, maxTilt, mode: strategy === 'curve' ? 'curve-normal' : strategy === 'swarf' ? 'guide' : 'surface-normal' }
 }
 
 export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Partial<CamOp> = {}): CamOp {
@@ -125,6 +137,14 @@ export function defaultOp(kind: CamOpKind, geometry: string[] = [], extra: Parti
       const strategy = ((extra as { strategy?: string }).strategy ?? 'along') as 'along' | 'around' | 'spiral' | 'wrap'
       const names = { along: 'Rotary passes along the axis', around: 'Rotary rings round the axis', spiral: 'Rotary spiral', wrap: 'Rotary wrapped shapes' }
       op = { ...base, kind, name: names[strategy], planeId: '', strategy, modelId: '', stepover: 1, stepdown: 0, stockToLeave: 0, tolerance: 0.01, zigzag: true, levels: { ...DEFAULT_LEVELS, safeZ: 20, rapidZ: 5, depth: strategy === 'wrap' ? 3 : 0 } }
+      break
+    }
+    case 'multiaxis': {
+      // the shop's licensed engine (none: "not licensed") until another is picked; PLACEHOLDER
+      // step-over, step-down, axis smoothing and tilt limit until the shop supplies its own
+      const strategy = ((extra as { strategy?: string }).strategy ?? 'surface') as 'curve' | 'swarf' | 'surface' | 'rough'
+      const names = { curve: '5-axis along curves', swarf: '5-axis swarf (side of the tool)', surface: '5-axis surface finishing', rough: '5-axis roughing' }
+      op = { ...base, kind, name: names[strategy], engine: '', strategy, modelId: '', axis: defaultToolAxis(strategy), side: 'left', stepover: 0.6, stepdown: 2, stockToLeave: 0, tolerance: 0.01, direction: 'forward', headFlip: 'auto', maxTurn: 0, gougeCheck: true, levels: { ...DEFAULT_LEVELS, depth: strategy === 'curve' ? 1 : 0 } }
       break
     }
     case 'face':
@@ -250,6 +270,15 @@ export function resolveTool(op: CamOp, machine: MachineProfile, hint?: { width?:
     }
     case 'engrave':
       return routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter)[0] ?? null
+    case 'multiaxis': {
+      // swarf: the flat end mill with the longest flutes (not the cut-out tool); along curves: the
+      // smallest ball-nose, then the smallest flat end mill; surfaces: the largest ball-nose
+      const cut = cutoutTool(machine)
+      const balls = routers(machine).filter((t) => t.shape === 'ball')
+      if (op.strategy === 'swarf') return routers(machine).filter((t) => squareEnd(t) && t.id !== cut?.id).sort((a, b) => (b.fluteLength ?? b.maxDepth) - (a.fluteLength ?? a.maxDepth) || a.number - b.number)[0] ?? null
+      if (op.strategy === 'curve') return balls.sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? routers(machine).filter(squareEnd).sort((a, b) => a.diameter - b.diameter || a.number - b.number)[0] ?? null
+      return balls.sort((a, b) => b.diameter - a.diameter || a.number - b.number)[0] ?? null
+    }
     case 'vcarve':
       return routers(machine).find((t) => t.shape === 'v') ?? null
     case 'saw':

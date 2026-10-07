@@ -3,6 +3,7 @@
  * every value for the N-200 is a PLACEHOLDER, and the export checker says so on every export.
  */
 import type { Aggregate, MachineModel, MachineProfile, PositionalKinematics, Tool, ToolHolder } from './types'
+import { cuttingOutline } from '@/cam/tools/form'
 
 /**
  * PLACEHOLDER model of the HOMAG CENTATEQ N-200. Table = one 5 x 12 ft sheet; travel, tool change
@@ -164,10 +165,12 @@ export function cutterOutline(tool: Tool, holder: ToolHolder | null): CutterOutl
   const r = tool.diameter / 2
   const flute = tool.fluteLength ?? tool.maxDepth
   const gauge = tool.gaugeLength ?? Infinity
+  // barrel and form tools (TOOL-07): the shaft above the flutes is the widest of its outline there and the shank
+  const form = tool.shape === 'barrel' || tool.shape === 'form' ? cuttingOutline(tool) : null
   return {
     r,
     flute,
-    shankR: (tool.shankDiameter ?? tool.diameter) / 2,
+    shankR: form ? form.shaftR : (tool.shankDiameter ?? tool.diameter) / 2,
     gauge,
     holder: holder && Number.isFinite(gauge) ? holder.profile.map((p) => ({ z: p.z + gauge, r: p.r })) : [],
   }

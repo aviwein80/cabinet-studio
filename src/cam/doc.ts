@@ -27,8 +27,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * app refuses a v8 part instead of nesting a turned part on a sheet or dropping its operations.
  * 9 (M3.4): tilted work planes (`tilted`) and operations on them (`tiltedPlane`). An older app
  * refuses a v9 part instead of cutting a tilted plane's shapes straight down on face 1.
+ * 10 (M3.5): simultaneous 5-axis operations (`multiaxis`) and barrel / form tools on operations'
+ * tool data. An older app refuses a v10 part instead of dropping its 5-axis operations.
  */
-export const CAM_FILE_VERSION = 9
+export const CAM_FILE_VERSION = 10
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -269,6 +271,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   7: (p) => ({ ...p, version: 8 }),
   // v8 -> v9: tilted work planes and operations on them are new and optional.
   8: (p) => ({ ...p, version: 9 }),
+  // v9 -> v10: 5-axis operations are new and optional.
+  9: (p) => ({ ...p, version: 10 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */
@@ -360,6 +364,7 @@ export function driveSource(op: CamOp, part: CamPart): CamOp | null {
 export function modelsFor(op: CamOp, part: CamPart): string[] {
   // rotary: its model, or every shown model when none is picked
   if (op.kind === 'rotary') return op.strategy === 'wrap' && !op.onModel ? [] : (part.models ?? []).filter((m) => (op.modelId ? m.id === op.modelId : m.visible !== false)).map((m) => m.id)
+  if (op.kind === 'multiaxis') return op.modelId ? [op.modelId] : []
   const own = [op, ...restSources(op, part)].flatMap((o) => (o.kind === 'finish3d' || o.kind === 'rough3d' ? [o.surface.modelId] : []))
   const surface = op.kind === 'finish3d' && op.strategy === 'curve' && op.drive?.mode === 'parameter' && op.drive.modelId ? [op.drive.modelId] : []
   const src = driveSource(op, part)
@@ -395,6 +400,12 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   }
   // a tilted work plane (3+2): where it is and how it is turned
   if (op.tiltedPlane) deps.push({ tilted: part.tilted?.find((p) => p.id === op.tiltedPlane) ?? null })
+  // 5-axis: the model (by hash and placement), the top curves (swarf) and the guide curve
+  if (op.kind === 'multiaxis') {
+    const m = op.modelId ? part.models?.find((x) => x.id === op.modelId) : undefined
+    deps.push(m ? { blob: m.blob, place: m.place } : null)
+    deps.push({ top: (op.top ?? []).map((id) => part.entities.find((e) => e.id === id) ?? id), guide: op.axis.guide ? (part.entities.find((e) => e.id === op.axis.guide) ?? op.axis.guide) : null })
+  }
   // scallop start shapes (not in `geometry`, which holds the boundary)
   if (op.kind === 'finish3d' && op.startFrom?.length) deps.push({ starts: op.startFrom.map((id) => part.entities.find((e) => e.id === id) ?? id) })
   // curve-driven: the drive shapes, and the surface whose rows and columns it follows

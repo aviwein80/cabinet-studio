@@ -8,6 +8,7 @@
  * backplotted but not carved.
  */
 import type { ToolShape } from '@/core/types'
+import { cuttingOutline, outlineLowest, outlineMax, type OutlinePt } from './tools/form'
 import { RAPID_RATE, simpleMoves } from './moves'
 import type { Toolpath } from './toolpath'
 
@@ -36,6 +37,11 @@ export interface Cutter {
   blade?: { R: number; plane: 'axial' | 'ring' }
   /** Cutting length from the tip along the tool (tilted-tool stock, M3.4); absent = no limit. */
   flute?: number
+  /**
+   * Barrel and form tools (TOOL-07, M3.5): the cutting outline from the tip up (height, radius),
+   * straight pieces; `r` is its largest radius.
+   */
+  profile?: OutlinePt[]
 }
 
 /** A thread mill's tooth flanks: 30° from square to the axis (a 60° thread form). */
@@ -110,12 +116,19 @@ export function cutterOf(tp: Toolpath, d?: number): Cutter {
     dia = w && w.k === 'saw' ? w.width : (t?.kerf ?? 4)
   }
   if (!dia) dia = tp.kind === 'vcarve' ? 20 : 6
+  // barrel and form tools: their outline (a bad one is drawn as a flat end mill of the diameter)
+  if ((shape === 'barrel' || shape === 'form') && t) {
+    const o = cuttingOutline(t)
+    if (o && o.outline.length > 1) return { r: Math.max(1e-6, outlineMax(o.outline)), shape, angle: 90, profile: o.outline }
+    return { r: dia / 2, shape: 'flat', angle: 90 }
+  }
   return { r: dia / 2, shape, angle: t?.angle ?? 90, ...(shape === 'bull' ? { cornerRadius: t?.cornerRadius ?? 0 } : {}), ...(shape === 'lollipop' || shape === 'thread' ? { neck: Math.min(dia, t?.shankDiameter ?? dia) / 2 } : {}) }
 }
 
 /** Cutter bottom height at horizontal distance `d` from the tool axis, tool tip at `z`. */
 export function cutterZ(c: Cutter, z: number, d: number): number {
   if (d > c.r + 1e-9) return Infinity
+  if (c.profile) return z + outlineLowest(c.profile, Math.min(d, c.r))
   // (a lollipop's lowest point at d is its ball's)
   if (c.shape === 'ball' || c.shape === 'lollipop') return z + c.r - Math.sqrt(Math.max(0, c.r * c.r - d * d))
   if (c.shape === 'v') return z + d / Math.tan(((c.angle || 90) * Math.PI) / 360)

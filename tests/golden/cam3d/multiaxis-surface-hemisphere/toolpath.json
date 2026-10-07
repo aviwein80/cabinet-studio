@@ -1,0 +1,26 @@
+{
+ "op": "5-axis surface finishing",
+ "kind": "multiaxis",
+ "tool": 105,
+ "moves": {
+  "rapid": 3,
+  "feed": 2,
+  "arc": 0,
+  "drill": 0,
+  "poly": 1,
+  "points": 4130
+ },
+ "cutMm": 3737,
+ "box": [
+  0.002,
+  0.003,
+  -20,
+  80,
+  80,
+  0
+ ],
+ "warnings": [
+  "The tool axis was held to 35° from vertical at 3086 point(s)."
+ ],
+ "hash": "702e027b"
+}

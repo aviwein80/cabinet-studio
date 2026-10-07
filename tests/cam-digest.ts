@@ -39,7 +39,7 @@ export function digest(tp: Toolpath) {
 /**
  * Stable summary of a 3D toolpath for goldens under tests/golden/cam3d: move and point counts,
  * cut length, 3D extents, warnings, and a hash of every move rounded to 0.001 mm (so any change
- * to any point changes the golden).
+ * to any point changes the golden), and of every tool direction of a 5-axis toolpath.
  */
 export function digest3d(tp: Toolpath) {
   const count = { rapid: 0, feed: 0, arc: 0, drill: 0, poly: 0, points: 0 }
@@ -57,12 +57,21 @@ export function digest3d(tp: Toolpath) {
       hi[k] = Math.max(hi[k], v)
     }
   }
+  // 5-axis toolpaths (M3.5): each tool direction too, rounded to 1e-6 (other toolpaths have none, so
+  // their hashes are as before)
+  const axis = (a: readonly number[]) => mix(`a${a.map((v) => Math.round(v * 1e6) / 1e6).join(',')};`)
   for (const m of tp.moves) {
     count[m.t]++
     if (m.t === 'poly') {
       count.points += m.pts.length / 3
-      for (let i = 0; i < m.pts.length; i += 3) visit('p', m.pts[i], m.pts[i + 1], m.pts[i + 2])
-    } else visit(m.t[0], m.x, m.y, m.z)
+      for (let i = 0; i < m.pts.length; i += 3) {
+        visit('p', m.pts[i], m.pts[i + 1], m.pts[i + 2])
+        if (m.axes) axis([m.axes[i], m.axes[i + 1], m.axes[i + 2]])
+      }
+    } else {
+      visit(m.t[0], m.x, m.y, m.z)
+      if ((m.t === 'rapid' || m.t === 'feed') && m.a) axis(m.a)
+    }
   }
   return {
     op: tp.name,

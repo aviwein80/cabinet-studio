@@ -21,6 +21,7 @@ import type { Box3, Mesh } from '../mesh/types'
 import { createHeightfield, type Cutter, type Heightfield, type V3 } from '../sim'
 import { columnsMesh } from './dexel'
 import type { StockModel, StockSnapshot } from './types'
+import { clipOutline, sweptOutline } from '../tools/form'
 
 /** Intervals a ray can hold; more are merged (the smallest gap filled: shows material, never hides it). */
 export const TRIDEXEL_MAX = 12
@@ -37,6 +38,15 @@ export type ToolPiece = { k: 'frustum'; h0: number; h1: number; r0: number; r1: 
 export function toolPieces(c: Cutter, H: number): ToolPiece[] {
   const R = c.r
   if (!(H > 0) || !(R > 0)) return []
+  // barrel and form tools (TOOL-07): a frustum per straight piece of the outline, the last radius carried up
+  if (c.profile && c.profile.length > 1) {
+    const o = clipOutline(c.profile, H)
+    const out: ToolPiece[] = []
+    for (let i = 1; i < o.length; i++) if (o[i].h > o[i - 1].h + 1e-12) out.push({ k: 'frustum', h0: o[i - 1].h, h1: o[i].h, r0: o[i - 1].r, r1: o[i].r })
+    const top = o[o.length - 1]
+    if (H > top.h + 1e-12) out.push({ k: 'frustum', h0: top.h, h1: H, r0: top.r, r1: top.r })
+    return out
+  }
   switch (c.shape) {
     case 'ball':
     case 'lollipop': {
@@ -444,8 +454,10 @@ export class TriDexelStock implements StockModel {
     const ml = [m[0] - ma * w[0], m[1] - ma * w[1], m[2] - ma * w[2]]
     const lat = Math.hypot(ml[0], ml[1], ml[2])
     if (lat <= 1e-7) {
-      // along the tool (or standing): the tool at its lower end, lengthened by the move
-      this.stamp(ma < 0 ? B : A, w, lengthened(ps, Math.abs(ma)))
+      // along the tool (or standing): the tool at its lower end, lengthened by the move (an outline
+      // tool keeps its widest radius over the move, then its part above that)
+      const H = cutter.flute && cutter.flute > 0 ? cutter.flute : this.diag + 1
+      this.stamp(ma < 0 ? B : A, w, cutter.profile ? toolPieces({ ...cutter, profile: sweptOutline(cutter.profile, Math.abs(ma)) }, H + Math.abs(ma)) : lengthened(ps, Math.abs(ma)))
       this.last = null
       return
     }
@@ -867,7 +879,7 @@ function clipToBox(P: readonly number[], w: readonly number[], ps: readonly Tool
 }
 
 const sameV = (a: readonly number[], b: readonly number[]) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
-const sameCutter = (a: Cutter, b: Cutter) => a === b || (a.r === b.r && a.shape === b.shape && a.angle === b.angle && a.cornerRadius === b.cornerRadius && a.flute === b.flute)
+const sameCutter = (a: Cutter, b: Cutter) => a === b || (a.r === b.r && a.shape === b.shape && a.angle === b.angle && a.cornerRadius === b.cornerRadius && a.flute === b.flute && a.profile === b.profile)
 
 /** Squared distance from (px, py) to the segment from 0 to (dx, dy). */
 function segDist2(px: number, py: number, dx: number, dy: number): number {

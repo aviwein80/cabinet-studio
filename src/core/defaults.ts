@@ -201,6 +201,8 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
     { id: 't108', number: 108, type: 'router', name: 'Lollipop 12 mm on a 4 mm neck (placeholder)', diameter: 12, maxDepth: 40, shape: 'lollipop', centreCutting: true, shankDiameter: 4, fluteLength: 12, gaugeLength: 60, holderId: 'h-placeholder' },
     // M3.2: a single-profile thread mill (60° tooth, Ø to the tooth's tip; flutes = the tooth; neck = shank Ø)
     { id: 't109', number: 109, type: 'router', name: 'Thread mill 6 mm single-profile (placeholder)', diameter: 6, maxDepth: 18, shape: 'thread', centreCutting: false, shankDiameter: 4, fluteLength: 1.5, gaugeLength: 40, holderId: 'h-placeholder' },
+    // M3.5: a barrel cutter for 5-axis work (TOOL-07): widest Ø12 at 19 mm up, side arc R40, tip R2
+    { id: 't110', number: 110, type: 'router', name: 'Barrel 12 mm, side R40, tip R2 (placeholder)', diameter: 12, maxDepth: 30, shape: 'barrel', barrelRadius: 40, cornerRadius: 2, centreCutting: true, shankDiameter: 10, fluteLength: 30, gaugeLength: 60, holderId: 'h-placeholder' },
   ],
   holders: [PLACEHOLDER_HOLDER],
   defaultHolderId: PLACEHOLDER_HOLDER.id,

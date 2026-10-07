@@ -7,7 +7,7 @@
  * Confirming a value never changes what is written to the machine by itself: output switches,
  * units fitted (saw, aggregate) and every export check stay as they are.
  */
-import { feedsFor } from '@/cam/ops'
+import { defaultToolAxis, feedsFor } from '@/cam/ops'
 import type { CamOp, CamPart } from '@/cam/types'
 import { aggregateOf, effectiveGauge, effectiveHolder, machineModelOf, PLACEHOLDER_N200_MODEL } from './machineModel'
 import type { MachineProfile, Tool } from './types'
@@ -56,6 +56,14 @@ export interface CutDefaults {
   /** Rotary machining (M3.3): gap between passes, mm; radial step-down when roughing, mm. */
   rotaryStepover: number
   rotaryStepdown: number
+  /**
+   * 5-axis machining (M3.5): gap between passes, mm; height between roughing levels, mm; largest tilt
+   * of the tool from vertical, degrees; axis smoothing, largest turn of the tool axis per mm (0 = off).
+   */
+  multiAxisStepover: number
+  multiAxisStepdown: number
+  multiAxisMaxTilt: number
+  multiAxisMaxTurn: number
 }
 export type CutDefaultKey = keyof CutDefaults
 
@@ -79,6 +87,10 @@ export const BUILTIN_CUT_DEFAULTS: CutDefaults = {
   threadPasses: 2,
   rotaryStepover: 1,
   rotaryStepdown: 3,
+  multiAxisStepover: 0.6,
+  multiAxisStepdown: 2,
+  multiAxisMaxTilt: 60,
+  multiAxisMaxTurn: 0,
 }
 
 export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
@@ -99,6 +111,10 @@ export const CUT_DEFAULT_LABEL: Record<CutDefaultKey, string> = {
   threadPasses: 'Thread milling: radial passes',
   rotaryStepover: 'Rotary step-over',
   rotaryStepdown: 'Rotary roughing step-down',
+  multiAxisStepover: '5-axis step-over',
+  multiAxisStepdown: '5-axis roughing step-down',
+  multiAxisMaxTilt: '5-axis largest tool tilt',
+  multiAxisMaxTurn: '5-axis axis smoothing',
 }
 
 export const CUT_DEFAULT_KEYS = Object.keys(BUILTIN_CUT_DEFAULTS) as CutDefaultKey[]
@@ -156,7 +172,7 @@ export const keyOf = (t: ConfigTarget): string => {
 export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) => !!m.confirmed?.includes(key)
 
 /** Tools whose lengths matter to collision checks: 3D shapes, and every router in a holder (M2.7). */
-const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || t.shape === 'lollipop' || !!effectiveHolder(m, t))
+const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || t.shape === 'lollipop' || t.shape === 'barrel' || t.shape === 'form' || !!effectiveHolder(m, t))
 const fmt = (n: number) => String(Math.round(n * 1000) / 1000)
 
 /** M3.4: the 3+2 kinematics of a machine model (another machine's, never the N-200's) while invented. */
@@ -198,6 +214,8 @@ function defaultValue(d: CutDefaults, k: CutDefaultKey): string {
   }
   if (k === 'pocketStepover' || k === 'faceStepover' || k === 'roughStepover' || k === 'adaptiveWidth' || k === 'undercutStepover') return `${Math.round((v as number) * 100)} % of the tool`
   if (k === 'threadPasses') return `${v as number}`
+  if (k === 'multiAxisMaxTilt') return `${fmt(v as number)}° from vertical`
+  if (k === 'multiAxisMaxTurn') return (v as number) > 0 ? `${fmt(v as number)}° per mm` : 'off'
   return `${fmt(v as number)} mm`
 }
 
@@ -211,7 +229,9 @@ export function toolUnconfirmed(m: MachineProfile, t: Tool): Unconfirmed[] {
   // M3.1g (owner): lollipop sizes are not known. Its ball, neck, flute and stick-out stay badged until
   // each is confirmed, even once the rest of the tool table is real.
   const lolly = t.shape === 'lollipop'
-  add('data', lolly ? 'number, ball Ø and depth' : 'number, diameter and depth', `${lolly ? 'ball ' : ''}Ø${fmt(t.diameter)}, ${fmt(t.maxDepth)} deep`, m.placeholder || lolly)
+  // M3.5 (TOOL-07): a barrel's side arc and tip, a form tool's outline, are part of its data
+  const shapeData = t.shape === 'barrel' ? `, side R${fmt(t.barrelRadius ?? 0)}, tip R${fmt(t.cornerRadius ?? 0)}` : t.shape === 'form' ? `, outline of ${t.form?.length ?? 0} points` : ''
+  add('data', lolly ? 'number, ball Ø and depth' : t.shape === 'barrel' ? 'number, Ø, side and tip radii, depth' : t.shape === 'form' ? 'number, Ø, outline and depth' : 'number, diameter and depth', `${lolly ? 'ball ' : ''}Ø${fmt(t.diameter)}${shapeData}, ${fmt(t.maxDepth)} deep`, m.placeholder || lolly)
   if (t.type === 'saw') add('blade', 'blade diameter', t.bladeDiameter ? `Ø${fmt(t.bladeDiameter)} mm` : 'Ø200 mm (assumed)', m.placeholder || !t.bladeDiameter)
   if (hasLengths(m, t)) {
     // no stick-out given: the shortest possible (the flute length) is assumed, so checks err safe
@@ -337,6 +357,10 @@ export const OP_FIELDS: OpField[] = [
   { key: 'threadPasses', applies: (o) => o.kind === 'thread', get: (o) => (o as { passes: number }).passes, set: (o, v) => ({ ...o, passes: v }) as CamOp },
   { key: 'rotaryStepover', applies: (o) => o.kind === 'rotary' && o.strategy !== 'wrap', get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
   { key: 'rotaryStepdown', applies: (o) => o.kind === 'rotary' && o.strategy !== 'wrap' && o.stepdown > 0, get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
+  { key: 'multiAxisStepover', applies: (o) => o.kind === 'multiaxis' && (o.strategy === 'surface' || o.strategy === 'rough'), get: (o) => (o as { stepover: number }).stepover, set: (o, v) => ({ ...o, stepover: v }) as CamOp },
+  { key: 'multiAxisStepdown', applies: (o) => o.kind === 'multiaxis' && o.strategy === 'rough', get: (o) => (o as { stepdown: number }).stepdown, set: (o, v) => ({ ...o, stepdown: v }) as CamOp },
+  { key: 'multiAxisMaxTilt', applies: (o) => o.kind === 'multiaxis' && o.axis.mode !== 'vertical', get: (o) => (o as { axis: { maxTilt: number } }).axis.maxTilt, set: (o, v) => ({ ...o, axis: { ...(o as { axis: object }).axis, maxTilt: v } }) as CamOp },
+  { key: 'multiAxisMaxTurn', applies: (o) => o.kind === 'multiaxis' && o.strategy !== 'swarf', get: (o) => (o as { maxTurn: number }).maxTurn, set: (o, v) => ({ ...o, maxTurn: v }) as CamOp },
 ]
 
 /**
@@ -405,6 +429,8 @@ export function newOpDefaults(kind: CamOp['kind'], m: MachineProfile, extra: Par
     case 'rotary':
       // roughing (asked for with a step-down) takes the shop's step-down too
       return strategy === 'wrap' ? {} : ({ stepover: d.rotaryStepover, ...((extra as { stepdown?: number }).stepdown ? { stepdown: d.rotaryStepdown } : {}) } as Partial<CamOp>)
+    case 'multiaxis':
+      return { stepover: d.multiAxisStepover, stepdown: d.multiAxisStepdown, maxTurn: d.multiAxisMaxTurn, axis: defaultToolAxis((strategy ?? 'surface') as 'curve' | 'swarf' | 'surface' | 'rough', d.multiAxisMaxTilt) } as Partial<CamOp>
     case 'rough3d':
       return (extra as { pattern?: string }).pattern === 'undercut' ? ({ stepdown: d.undercutStepdown, stepover: d.undercutStepover } as Partial<CamOp>) : ({ stepdown: d.roughStepdown, stepover: d.roughStepover } as Partial<CamOp>)
     default:

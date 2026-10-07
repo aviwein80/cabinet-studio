@@ -1,0 +1,24 @@
+{
+ "op": "5-axis swarf (side of the tool)",
+ "kind": "multiaxis",
+ "tool": 102,
+ "moves": {
+  "rapid": 3,
+  "feed": 2,
+  "arc": 0,
+  "drill": 0,
+  "poly": 1,
+  "points": 100
+ },
+ "cutMm": 106,
+ "box": [
+  10,
+  16.241,
+  -28.632,
+  110,
+  17.267,
+  -25.813
+ ],
+ "warnings": [],
+ "hash": "42950fb6"
+}

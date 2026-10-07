@@ -1,0 +1,26 @@
+{
+ "op": "5-axis along curves",
+ "kind": "multiaxis",
+ "tool": 106,
+ "moves": {
+  "rapid": 3,
+  "feed": 2,
+  "arc": 0,
+  "drill": 0,
+  "poly": 1,
+  "points": 144
+ },
+ "cutMm": 98,
+ "box": [
+  25.371,
+  25.371,
+  -7.11,
+  56.853,
+  54.629,
+  -5.093
+ ],
+ "warnings": [
+  "Gouge check: the tool cuts 0.509 mm into the model (plus the stock to leave) at X48.7 Y51.7 Z-7.1."
+ ],
+ "hash": "5b6c3bae"
+}

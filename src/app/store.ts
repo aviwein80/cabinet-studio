@@ -135,13 +135,13 @@ export const useStore = create<State>((set, get) => {
     configure: null,
     openConfigure(t) {
       const r = get().route
-      if (t.kind === 'op') {
+      if (t.kind === 'op' || t.kind === 'fixture') {
         if (!(r.page === 'part' && r.partId === t.partId)) set({ route: { page: 'part', partId: t.partId, ...(t.jobId ? { jobId: t.jobId } : {}) } })
       } else if (t.kind === 'material') {
         if (!(r.page === 'library' && r.tab === 'materials')) set({ route: { page: 'library', tab: 'materials' } })
       } else if (r.page !== 'machine') set({ route: { page: 'machine' } })
       // badges on other pages are about the main machine
-      if (t.kind !== 'op' && t.kind !== 'material' && r.page !== 'machine') set({ machineEdit: null })
+      if (t.kind !== 'op' && t.kind !== 'fixture' && t.kind !== 'material' && r.page !== 'machine') set({ machineEdit: null })
       set({ configure: t })
     },
     clearConfigure: () => set({ configure: null }),

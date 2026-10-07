@@ -268,10 +268,57 @@ export interface TiltedPlane {
   flip?: boolean
 }
 
+/** What a fixture is for (M3.6, FIX-01): only the name and where it goes by default differ. */
+export type FixtureKind = 'clamp' | 'pod' | 'rail'
+
+/**
+ * A slice of an imported model (M3.6): the convex outline of everything the model has between two
+ * heights (x, y pairs, its own frame), so the slice holds the whole model there.
+ */
+export interface FixtureSlab {
+  z0: number
+  z1: number
+  hull: number[]
+}
+
+/**
+ * A fixture's shape in its own frame (M3.6): x, y from its reference point, z up from its base.
+ * Block and round: the reference point is the middle of the base. Outline: closed loops drawn on
+ * the part (x, y pairs, from the reference point), stood up `height`. Model: an imported solid or
+ * mesh as slices (its base at 0, centred on its reference point).
+ */
+export type FixtureShape =
+  | { k: 'block'; length: number; width: number; height: number }
+  | { k: 'round'; diameter: number; height: number }
+  | { k: 'outline'; loops: number[][]; height: number }
+  | { k: 'model'; slabs: FixtureSlab[]; file: string; triangles: number; size: [number, number, number] }
+
+/**
+ * A clamp, pod or rail on a part (M3.6, FIX-01). Its shape stands on its base at `at.z` (part z:
+ * 0 = face 1, -thickness = the underside, where a clamp stands on the table), its reference point
+ * at `at.x`, `at.y` on the drawing, turned `rot` degrees about the vertical.
+ */
+export interface Fixture {
+  id: string
+  name: string
+  kind: FixtureKind
+  shape: FixtureShape
+  at: { x: number; y: number; z: number }
+  rot: number
+  /** Placed by "Place automatically" (that moves it again when it runs again). */
+  auto?: boolean
+  /** Sizes from an invented example until entered or confirmed: shown with a Configure badge. */
+  placeholder?: boolean
+  /** Left out of the checks (kept on the part). */
+  off?: boolean
+  /** Library entry it came from (`MachineProfile.fixtureTypes`). */
+  typeId?: string
+}
+
 export interface CamPart {
   id: string
   name: string
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
   materialId: string | null
   length: number
   width: number
@@ -315,6 +362,11 @@ export interface CamPart {
   rotary?: RotarySetup
   /** Tilted work planes (M3.4, positional 3+2 machining). A part with operations on one is never nested on a sheet. */
   tilted?: TiltedPlane[]
+  /**
+   * Clamps, pods and rails holding the part (M3.6, FIX-01). Never machined or written to a
+   * machine; the collision checks keep the tool, shank, holder and machine clear of them.
+   */
+  fixtures?: Fixture[]
   /** Keep ops on unchanged geometry ids when imports refresh. */
   updatedAt: string
 }

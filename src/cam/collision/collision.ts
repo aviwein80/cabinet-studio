@@ -26,8 +26,10 @@ import { simCell } from '../stock/simulation'
 import type { Toolpath } from '../toolpath'
 import type { CamPart } from '../types'
 import type { StockModel } from '../stock/types'
+import { type FixturePiece, fixturePieces } from '../fixtures/fixture'
+import { fixtureHits, fixturesBox, fixtureText, toolBody } from './fixtureCheck'
 
-export type CollisionKind = 'shank' | 'holder' | 'rapid' | 'spoilboard' | 'table' | 'axis'
+export type CollisionKind = 'shank' | 'holder' | 'rapid' | 'spoilboard' | 'table' | 'axis' | 'fixture'
 
 export interface Collision {
   kind: CollisionKind
@@ -42,6 +44,8 @@ export interface Collision {
   /** Worst intrusion (mm): material inside the envelope, or depth past the limit. */
   depth: number
   message: string
+  /** A fixture hit (M3.6): which fixture of the part. */
+  fixture?: number
 }
 
 export interface CollisionSetup {
@@ -62,6 +66,10 @@ export interface CollisionSetup {
   rotary?: boolean
   /** How a position is written in messages (default X, Y, Z of the part frame). */
   place?: (at: V3) => string
+  /** The part's clamps, pods and rails as convex pieces (M3.6): the tool keeps the margin from them. */
+  fixtures?: FixturePiece[]
+  /** How far up the tool is checked against fixtures where its stick-out is unknown (mm above the tip). */
+  top?: number
 }
 
 /** Material reaching into the envelope less than this (mm) is not reported (cell quantisation). */
@@ -74,8 +82,10 @@ export const DEFAULT_COLLISION_MARGIN = 2
  * and its holders, the spoilboard limit, the machine model's spoilboard, the margin setting.
  * `toolpaths` are the ones given to `buildTimeline`.
  */
-export function collisionSetup(tl: SimTimeline, toolpaths: Toolpath[], machine: MachineProfile, thickness: number): CollisionSetup {
+export function collisionSetup(tl: SimTimeline, toolpaths: Toolpath[], machine: MachineProfile, thickness: number, part?: Pick<CamPart, 'length' | 'width' | 'fixtures'>): CollisionSetup {
+  const fixtures = fixturePieces(part?.fixtures)
   return {
+    ...(fixtures.length ? { fixtures, top: Math.hypot(part!.length, part!.width, thickness) + 50 } : {}),
     outlines: tl.ops.map((o) => {
       const tool = toolpaths[o.path]?.tool
       return tool ? toolOutline(machine, tool) : null
@@ -126,6 +136,7 @@ const kindText: Record<CollisionKind, string> = {
   spoilboard: 'cuts deeper into the spoilboard than allowed',
   table: 'goes through the spoilboard into the table',
   axis: 'tool tip reaches the rotary axis',
+  fixture: 'hits a fixture',
 }
 
 /**
@@ -135,22 +146,34 @@ const kindText: Record<CollisionKind, string> = {
  */
 export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: CollisionSetup, work?: Work, marks?: StockMarks): Collision[] {
   const out: Collision[] = []
-  const open = new Map<CollisionKind, Collision>()
+  const open = new Map<string, Collision>()
   const limit = -(setup.thickness + Math.max(0, setup.spoilboardAllowance))
   const table = -(setup.thickness + Math.max(0, setup.spoilboardThickness))
   const M = Math.max(0, setup.margin)
-  const report = (kind: CollisionKind, op: number, move: number, t: number, at: V3, depth: number) => {
-    const c = open.get(kind)
+  const report = (kind: CollisionKind, op: number, move: number, t: number, at: V3, depth: number, text = '', fixture?: number) => {
+    const key = text ? `${kind}:${text}` : kind
+    const c = open.get(key)
     if (c && c.op === op && move <= c.move + c.moves) {
       c.moves = move - c.move + 1
       if (depth > c.depth) c.depth = depth
       return
     }
-    const n: Collision = { kind, op, move, moves: 1, t, at, depth, message: '' }
-    open.set(kind, n)
+    const n: Collision = { kind, op, move, moves: 1, t, at, depth, message: text, ...(fixture !== undefined ? { fixture } : {}) }
+    open.set(key, n)
     out.push(n)
   }
   const segs = tl.segs
+  // M3.6: clamps, pods and rails, and the tool's pieces per operation
+  const fixtures = setup.fixtures ?? []
+  const region = fixturesBox(fixtures)
+  const top = setup.top ?? setup.thickness + 200
+  const bodies = new Map<string, ReturnType<typeof toolBody>>()
+  const bodyOf = (s: (typeof segs)[number]) => {
+    const key = `${s.op}:${s.cutter.r}:${s.cutter.shape}`
+    let b = bodies.get(key)
+    if (!b) bodies.set(key, (b = toolBody(s.cutter, setup.outlines[s.op] ?? null, top)))
+    return b
+  }
   // the stock is only needed where a shank, holder or rapid can reach material at all
   const holderFace = (o: CutterOutline) => (o.holder.length ? o.holder[0].z - M : Infinity)
   const needStock = segs.some((s) => {
@@ -172,6 +195,12 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
     // the stock as it is at the times asked for (only when it is carved at all)
     if (marks && needStock) mark = takeMarks(marks, stock, s.t0, mark, carved)
     if (s.side) continue
+    // fixtures: the whole tool along the move, cutter included (a fixture is never cut)
+    if (region)
+      for (const h of fixtureHits(fixtures, region, bodyOf(s), [s.a.x, s.a.y, s.a.z], [s.b.x, s.b.y, s.b.z], [0, 0, 1], M)) {
+        const at = { x: s.a.x + (s.b.x - s.a.x) * h.k, y: s.a.y + (s.b.y - s.a.y) * h.k, z: s.a.z + (s.b.z - s.a.z) * h.k }
+        report('fixture', s.op, s.move, s.t0 + (s.t1 - s.t0) * h.k, at, h.depth, fixtureText(h), h.fixture)
+      }
     // depth limits, exactly: where the move first goes below the limit, and how far
     for (const [kind, lim] of setup.rotary
       ? ([['axis', -setup.thickness]] as const)
@@ -226,7 +255,7 @@ export function checkCollisions(tl: SimTimeline, stock: StockModel, setup: Colli
     const name = tl.ops[c.op]?.name ?? 'Operation'
     const where = setup.place ? setup.place(c.at) : `X${c.at.x.toFixed(1)} Y${c.at.y.toFixed(1)} Z${c.at.z.toFixed(1)}`
     const span = c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`
-    c.message = `${name}, ${span}: ${kindText[c.kind]} at ${where} (${c.depth.toFixed(2)} mm).`
+    c.message = `${name}, ${span}: ${c.message || kindText[c.kind]} at ${where} (${c.depth.toFixed(2)} mm).`
   }
   return out
 }
@@ -286,12 +315,12 @@ export function takeMarks(marks: StockMarks, stock: StockModel, t0: number, k: n
  * Collision check of a part's toolpaths, run in program order on a stock of the part's size
  * (cells of 0.5 mm, coarser only for very large parts). Used by the export checker.
  */
-export function partCollisions(part: Pick<CamPart, 'length' | 'width' | 'thickness'>, toolpaths: Toolpath[], machine: MachineProfile, work?: Work): { found: Collision[]; tl: SimTimeline } {
+export function partCollisions(part: Pick<CamPart, 'length' | 'width' | 'thickness' | 'fixtures'>, toolpaths: Toolpath[], machine: MachineProfile, work?: Work): { found: Collision[]; tl: SimTimeline } {
   // (toolpaths on tilted planes and 5-axis ones are checked along their own tool direction: `positionalCollisions`)
   const paths = programOrder(toolpaths.filter((tp) => !tp.tilt && !tp.multiAxis))
   const tl = buildTimeline(paths)
   const cell = Math.max(0.5, simCell(part.length, part.width))
   // (a lollipop under an overhang needs the dexel stock: the lip stays in it)
   const stock = stockFor(part, paths, cell)
-  return { found: checkCollisions(tl, stock, collisionSetup(tl, paths, machine, part.thickness), work), tl }
+  return { found: checkCollisions(tl, stock, collisionSetup(tl, paths, machine, part.thickness, part), work), tl }
 }

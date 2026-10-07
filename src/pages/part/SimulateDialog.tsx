@@ -58,7 +58,7 @@ function hexRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-const KIND_LABEL: Record<CollisionKind, string> = { shank: 'shank', holder: 'holder', rapid: 'rapid', spoilboard: 'spoilboard', table: 'table', axis: 'axis' }
+const KIND_LABEL: Record<CollisionKind, string> = { shank: 'shank', holder: 'holder', rapid: 'rapid', spoilboard: 'spoilboard', table: 'table', axis: 'axis', fixture: 'fixture' }
 
 const STOP_TEXT: Record<StopReason, string> = { end: 'End of program.', 'tool-change': 'Stopped at a tool change.', mark: 'Stopped at the chosen move.' }
 
@@ -112,7 +112,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   }, [t])
   // collision check: the whole program replayed in the background
   const [checked, setCheck] = useState<{ for: unknown; found: Collision[] | null; fraction: number; error?: string } | null>(null)
-  const checkKey = useMemo(() => ({ toolpaths, machine }), [toolpaths, machine])
+  const checkKey = useMemo(() => ({ toolpaths, machine, fixtures: part.fixtures }), [toolpaths, machine, part.fixtures])
   useEffect(() => {
     if (!toolpaths.some((tp) => tp.moves.length)) return
     const abort = new AbortController()
@@ -125,7 +125,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
       // (still at the start, untouched: go to the end, as a flat part's simulation opens)
       setT((x) => (x === 0 ? tl.total : x))
     }
-    const panel = { length: part.length, width: part.width, thickness: part.thickness }
+    const panel = { length: part.length, width: part.width, thickness: part.thickness, ...(part.fixtures?.length ? { fixtures: part.fixtures } : {}) }
     const job = rot
       ? compute()
           .run('sim.rotaryCollide', { setup: rot, toolpaths: toolpaths.filter((tp) => !!tp.rotary), machine, cell }, { signal: abort.signal, onProgress })
@@ -147,7 +147,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
         if (!(e instanceof Cancelled) && !abort.signal.aborted) setCheck({ for: checkKey, found: null, fraction: 1, error: e instanceof Error ? e.message : String(e) })
       })
     return () => abort.abort()
-  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness, rot, tilt, cell, sim, tl])
+  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness, part.fixtures, rot, tilt, cell, sim, tl])
   const check = checked?.for === checkKey ? checked : { found: null, fraction: 0, error: undefined }
   const outlines = useMemo(() => tl.ops.map((o) => {
     const tool = ordered[o.path]?.tool
@@ -462,7 +462,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                     <span>
                       <Badge className="mr-1 h-4 bg-red-500/30 px-1 text-[10px] text-red-100">{KIND_LABEL[c.kind]}</Badge>
-                      {rot || tilt ? c.message : <>{tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}</>}
+                      {rot || tilt || c.kind === 'fixture' ? c.message : <>{tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}</>}
                     </span>
                   </button>
                 </li>

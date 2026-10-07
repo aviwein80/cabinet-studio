@@ -19,7 +19,7 @@ import { type HeightImageSummary, readHeightImage, summarise } from '../relief/i
 import { checkReliefMesh, type HeightMapOptions, heightMapMesh, type HeightMapResult, type MeshReliefCheck, meshReliefInfo, type ReliefSize, sizeRelief, stripBase } from '../relief/relief'
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
-import type { CamPart, ModelPlacement, ModelRef, Recipe, ReliefInfo, RotarySetup, UpAxis } from '../types'
+import type { CamPart, Fixture, ModelPlacement, ModelRef, Recipe, ReliefInfo, RotarySetup, UpAxis } from '../types'
 import { generateOp, type Move, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
 import { type Collision, partCollisions, type StockMarks } from '../collision/collision'
@@ -109,14 +109,14 @@ export interface TaskMap {
   /** A mesh relief made to its size and depth (base taken off if asked). */
   'relief.fromMesh': { in: { mesh: Mesh; removeBase: boolean; size: ReliefSize }; out: { mesh: Mesh; info: ReliefInfo } }
   /** Collision check of toolpaths on a panel (operations numbered in program order). */
-  'sim.collide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
+  'sim.collide': { in: { panel: { length: number; width: number; thickness: number; fixtures?: Fixture[] }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
   /** Collision check of a part's rotary toolpaths on its rotary stock (M3.3). */
   'sim.rotaryCollide': { in: { setup: RotarySetup; toolpaths: Toolpath[]; machine: MachineProfile; cell: number }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out'] } }
   /**
    * Collision check of a part's 3+2 (M3.4) or 5-axis (M3.5) program on its tri-dexel stock; `replay`:
    * through this machine's kinematics. The stock at the end and at evenly spaced points comes back too.
    */
-  'sim.positionalCollide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile; cell: number; replay?: MachineProfile }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out']; problems: string[] } }
+  'sim.positionalCollide': { in: { panel: { length: number; width: number; thickness: number; fixtures?: Fixture[] }; toolpaths: Toolpath[]; machine: MachineProfile; cell: number; replay?: MachineProfile }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out']; problems: string[] } }
 }
 
 export type SurfaceJob =

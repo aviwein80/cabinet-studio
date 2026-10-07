@@ -30,6 +30,8 @@ import { positionalAxes } from './kinematics'
 import { angleDeg, slerp } from '../multiaxis/axis'
 import { type MachineProgram5, replaySimultaneous, simultaneousProgram } from '../multiaxis/kinematics5'
 import { simpleMoves } from '../moves'
+import { fixturePieces } from '../fixtures/fixture'
+import { fixtureHits, fixturesBox, fixtureText, toolBody } from '../collision/fixtureCheck'
 
 /** Is this toolpath on a tilted work plane, or a 5-axis one (M3.5)? */
 export const isTiltedPath = (tp: Pick<Toolpath, 'tilt' | 'multiAxis'>) => !!tp.tilt || !!tp.multiAxis
@@ -291,6 +293,7 @@ const KIND_TEXT: Record<CollisionKind, string> = {
   spoilboard: 'cuts deeper into the spoilboard than allowed',
   table: 'goes through the spoilboard into the table',
   axis: 'tool tip reaches the rotary axis',
+  fixture: 'hits a fixture',
 }
 
 /**
@@ -298,7 +301,7 @@ const KIND_TEXT: Record<CollisionKind, string> = {
  * e.g. a blank already cut to shape), carved as it goes. Returns the collisions in program order,
  * the timeline and the finished stock.
  */
-export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[], machine: MachineProfile, opts: { cell?: number; work?: Work; stock?: TriDexelStock; tol?: number; replay?: MachineProfile; marks?: StockMarks } = {}): { found: Collision[]; run: PositionalRun; stock: TriDexelStock } {
+export function positionalCollisions(part: Block & Pick<CamPart, 'fixtures'>, toolpaths: readonly Toolpath[], machine: MachineProfile, opts: { cell?: number; work?: Work; stock?: TriDexelStock; tol?: number; replay?: MachineProfile; marks?: StockMarks } = {}): { found: Collision[]; run: PositionalRun; stock: TriDexelStock } {
   const run = positionalTimeline(toolpaths, part, { tol: opts.tol, replay: opts.replay })
   const { tl, paths } = run
   const stock = opts.stock ?? positionalStock(part, opts.cell)
@@ -313,7 +316,7 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
   })
   const out: Collision[] = []
   const open = new Map<string, Collision>()
-  const report = (kind: CollisionKind, text: string, op: number, move: number, t: number, at: { x: number; y: number; z: number }, depth: number) => {
+  const report = (kind: CollisionKind, text: string, op: number, move: number, t: number, at: { x: number; y: number; z: number }, depth: number, fixture?: number) => {
     const key = `${kind}:${text}`
     const c = open.get(key)
     if (c && c.op === op && move <= c.move + c.moves) {
@@ -321,11 +324,26 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
       if (depth > c.depth) c.depth = depth
       return
     }
-    const n: Collision = { kind, op, move, moves: 1, t, at, depth, message: text }
+    const n: Collision = { kind, op, move, moves: 1, t, at, depth, message: text, ...(fixture !== undefined ? { fixture } : {}) }
     open.set(key, n)
     out.push(n)
   }
   const segs = tl.segs
+  // M3.6: the part's clamps, pods and rails, against the whole tool along its own direction
+  const fixtures = fixturePieces(part.fixtures)
+  const region = fixturesBox(fixtures)
+  const bodies = new Map<number, ReturnType<typeof toolBody>>()
+  const bodyOf = (s: (typeof segs)[number]) => {
+    let b = bodies.get(s.op)
+    if (!b) bodies.set(s.op, (b = toolBody(s.cutter, outlines[s.op], top)))
+    return b
+  }
+  const checkFixtures = (s: (typeof segs)[number], w0: V3, w1?: V3) => {
+    for (const h of fixtureHits(fixtures, region, bodyOf(s), [s.a.x, s.a.y, s.a.z], [s.b.x, s.b.y, s.b.z], w0, M, { w1 })) {
+      const at = { x: s.a.x + (s.b.x - s.a.x) * h.k, y: s.a.y + (s.b.y - s.a.y) * h.k, z: s.a.z + (s.b.z - s.a.z) * h.k }
+      report('fixture', fixtureText(h), s.op, s.move, s.t0 + (s.t1 - s.t0) * h.k, at, h.depth, h.fixture)
+    }
+  }
   // shank, holder and rapid checks every `spacing` mm along each operation
   const spacing = Math.max(stock.cell, 1)
   /**
@@ -364,9 +382,11 @@ export function positionalCollisions(part: Block, toolpaths: readonly Toolpath[]
     if (opts.marks) mark = takeMarks(opts.marks, stock, s.t0, mark, carved)
     if (s.turn) {
       checkTurn(s)
+      if (region) checkFixtures(s, s.turnFrom ? [s.turnFrom.x, s.turnFrom.y, s.turnFrom.z] : [0, 0, 1], s.axis ? [s.axis.x, s.axis.y, s.axis.z] : [0, 0, 1])
       continue
     }
     const w: V3 = s.axis ? [s.axis.x, s.axis.y, s.axis.z] : [0, 0, 1]
+    if (region) checkFixtures(s, w)
     // the tip below the spoilboard limit or into the table, where it first goes below
     for (const [kind, lim] of [
       ['table', table],

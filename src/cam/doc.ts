@@ -29,8 +29,10 @@ import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
  * refuses a v9 part instead of cutting a tilted plane's shapes straight down on face 1.
  * 10 (M3.5): simultaneous 5-axis operations (`multiaxis`) and barrel / form tools on operations'
  * tool data. An older app refuses a v10 part instead of dropping its 5-axis operations.
+ * 11 (M3.6): clamps, pods and rails on the part (`fixtures`). An older app refuses a v11 part
+ * instead of checking its toolpaths without the fixtures they must keep clear of.
  */
-export const CAM_FILE_VERSION = 10
+export const CAM_FILE_VERSION = 11
 
 export const DEFAULT_LAYERS: Layer[] = [
   { id: 'outline', name: 'Outline', color: '#e2e8f0', visible: true, locked: false },
@@ -273,6 +275,8 @@ const MIGRATIONS: Record<number, (p: Record<string, unknown>) => Record<string, 
   8: (p) => ({ ...p, version: 9 }),
   // v9 -> v10: 5-axis operations are new and optional.
   9: (p) => ({ ...p, version: 10 }),
+  // v10 -> v11: fixtures (clamps, pods, rails) are new and optional.
+  10: (p) => ({ ...p, version: 11 }),
 }
 
 /** Bring a part stored by any earlier version up to `CAM_FILE_VERSION`. */

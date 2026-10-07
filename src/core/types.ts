@@ -9,7 +9,7 @@
  *   ("face-up") face on top. Operation depths are measured down from that face.
  */
 
-import type { CamPart, DoorStyle, HardwarePattern, LayerRuleSet, Recipe } from '../cam/types'
+import type { CamPart, DoorStyle, FixtureKind, FixtureShape, HardwarePattern, LayerRuleSet, Recipe } from '../cam/types'
 import type { AiSettings } from './hardware/aiProviders'
 
 export type Vec3 = [number, number, number]
@@ -458,6 +458,17 @@ export interface Aggregate {
   notes?: string
 }
 
+/** A clamp, pod or rail in the shop's library (M3.6, FIX-01). */
+export interface FixtureType {
+  id: string
+  name: string
+  kind: FixtureKind
+  shape: FixtureShape
+  /** Invented sizes until the shop measures its own: shown with a Configure badge. */
+  placeholder?: boolean
+  notes?: string
+}
+
 export type MachineAxisId = 'X' | 'Y' | 'Z' | 'A' | 'B' | 'C'
 export type MachineHeadKind = 'spindle' | 'drill-block' | 'saw' | 'aggregate'
 
@@ -562,6 +573,11 @@ export interface MachineProfile {
   defaultHolderId?: string
   /** Angle heads and aggregates (TOOL-04). */
   aggregates?: Aggregate[]
+  /**
+   * The shop's clamps, pods and rails (M3.6, FIX-01), placed on parts from here. Absent = the
+   * built-in invented examples (`PLACEHOLDER_FIXTURE_TYPES`).
+   */
+  fixtureTypes?: FixtureType[]
   /** Machine model (axes, table, heads, capabilities); absent = the placeholder N-200 model (`machineModelOf`). */
   physical?: MachineModel
   /**

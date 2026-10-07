@@ -311,7 +311,7 @@ function collisionsOf(part: NonNullable<PartInstance['cam']>, paths: Toolpath[],
       if (m.t === 'poly') for (let i = 0; i < m.pts.length; i++) sum = (sum * 31 + m.pts[i] * 1000) % 1e15
       else sum = (sum * 31 + m.x * 1000 + m.y * 7 + m.z * 13) % 1e15
     }
-  const key = `${part.length}x${part.width}x${part.thickness}:${paths.map((p) => `${p.opId}:${p.tool?.id}:${p.moves.length}`).join('|')}:${sum}`
+  const key = `${part.length}x${part.width}x${part.thickness}:${paths.map((p) => `${p.opId}:${p.tool?.id}:${p.moves.length}`).join('|')}:${sum}:${JSON.stringify(part.fixtures ?? [])}`
   const hit = collisionCache.get(part)
   if (hit && hit.machine === machine && hit.key === key) return hit.found
   const found = partCollisions(part, paths, machine).found.map((c) => c.message)

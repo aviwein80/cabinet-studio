@@ -10,6 +10,8 @@
 import { defaultToolAxis, feedsFor } from '@/cam/ops'
 import type { CamOp, CamPart } from '@/cam/types'
 import { aggregateOf, effectiveGauge, effectiveHolder, machineModelOf, PLACEHOLDER_N200_MODEL } from './machineModel'
+import { fixtureTypesOf, PLACEHOLDER_FIXTURE_TYPES } from '@/cam/fixtures/fixture'
+import type { Fixture, FixtureShape } from '@/cam/types'
 import type { MachineProfile, Tool } from './types'
 
 /** Machine-model facts tracked one by one. */
@@ -135,6 +137,8 @@ export type ConfigTarget =
   | { kind: 'op'; partId: string; jobId?: string; opId: string; key: CutDefaultKey | 'blade' }
   | { kind: 'material'; materialId: string; part: 'price' | 'density' }
   | { kind: 'nest'; key: NestValueKey }
+  | { kind: 'fixtureType'; typeId: string }
+  | { kind: 'fixture'; partId: string; jobId?: string; fixtureId: string }
 
 /** Nesting values (M2.8) that are placeholders until the shop confirms them. */
 export type NestValueKey = 'sharedSmall' | 'bridgeWidth' | 'bridgeMaxLength' | 'bridgeMaxArea' | 'flipAxis' | 'flipReference'
@@ -144,7 +148,7 @@ export interface Unconfirmed {
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures'
   target: ConfigTarget
 }
 
@@ -166,6 +170,10 @@ export const keyOf = (t: ConfigTarget): string => {
       return `material:${t.materialId}:${t.part}`
     case 'nest':
       return `nest:${t.key}`
+    case 'fixtureType':
+      return `fixtureType:${t.typeId}`
+    case 'fixture':
+      return `fixture:${t.partId}:${t.fixtureId}`
   }
 }
 
@@ -286,6 +294,11 @@ export function machineUnconfirmed(m: MachineProfile): Unconfirmed[] {
     const target: ConfigTarget = { kind: 'model', fact: 'positional' }
     if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: POSITIONAL_FACT_LABEL, value: factValue(m, 'positional'), group: 'Machine model', target })
   }
+  // M3.6: the shop's clamps, pods and rails while their sizes are invented
+  for (const f of fixtureTypesOf(m)) {
+    const target: ConfigTarget = { kind: 'fixtureType', typeId: f.id }
+    if (f.placeholder && !isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: `Fixture ${f.name}`, value: shapeText(f.shape), group: 'Fixtures', target })
+  }
   const d = cutDefaultsOf(m)
   for (const k of CUT_DEFAULT_KEYS) {
     const target: ConfigTarget = { kind: 'default', key: k }
@@ -308,6 +321,11 @@ export function confirmKey(m: MachineProfile, key: string) {
   if (key.startsWith('aggregate:')) {
     const a = m.aggregates?.find((x) => `aggregate:${x.id}` === key)
     if (a) a.placeholder = false
+  }
+  if (key.startsWith('fixtureType:')) {
+    m.fixtureTypes = structuredClone(m.fixtureTypes ?? PLACEHOLDER_FIXTURE_TYPES)
+    const f = m.fixtureTypes.find((x) => `fixtureType:${x.id}` === key)
+    if (f) f.placeholder = false
   }
   if (key === 'model:positional' && m.physical?.positional) {
     m.physical = structuredClone(m.physical)
@@ -482,6 +500,35 @@ export function usedUnconfirmed(m: MachineProfile, toolIds: Iterable<string>, pa
     if (h) put(h)
   }
   for (const p of parts) for (const op of p.ops) if (op.enabled) opUnconfirmed(op, p, m, toolOf(op, p)).forEach(put)
+  for (const p of parts) fixtureUnconfirmed(p).forEach(put)
   for (const u of machineUnconfirmed(m)) if (u.group === 'Machine model') put(u)
   return [...out.values()]
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fixtures (M3.6)
+// ---------------------------------------------------------------------------------------------
+
+/** A fixture's shape in words (sizes in mm). */
+export function shapeText(s: FixtureShape): string {
+  switch (s.k) {
+    case 'block':
+      return `block ${fmt(s.length)} x ${fmt(s.width)} x ${fmt(s.height)} mm`
+    case 'round':
+      return `round Ø${fmt(s.diameter)} x ${fmt(s.height)} mm`
+    case 'outline':
+      return `drawn outline, ${fmt(s.height)} mm high`
+    case 'model':
+      return `model ${s.file}, ${fmt(s.size[0])} x ${fmt(s.size[1])} x ${fmt(s.size[2])} mm`
+  }
+}
+
+/** A part's fixtures whose sizes are still an invented example (not switched off). */
+export function fixtureUnconfirmed(part: Pick<CamPart, 'id' | 'fixtures'>, jobId?: string): Unconfirmed[] {
+  return (part.fixtures ?? [])
+    .filter((f: Fixture) => f.placeholder && !f.off)
+    .map((f) => {
+      const target: ConfigTarget = { kind: 'fixture', partId: part.id, jobId, fixtureId: f.id }
+      return { key: keyOf(target), label: `${f.name}: size`, value: shapeText(f.shape), group: 'Fixtures' as const, target }
+    })
 }

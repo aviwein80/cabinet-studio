@@ -463,14 +463,15 @@ describe('M3.5 placeholder 5-axis values carry Configure badges', () => {
 
 describe('M3.5 part format 10 and the stale flag', () => {
   it('format 10 holds 5-axis operations; a format 9 part reads unchanged; a newer one is refused', () => {
-    expect(CAM_FILE_VERSION).toBe(10)
+    // (M3.6 moved the format on to 11; 5-axis operations read and migrate the same)
+    expect(CAM_FILE_VERSION).toBeGreaterThanOrEqual(10)
     const { part, op } = hemiPart([curve3('lat', latitude(10, 12))], { geometry: ['lat'], top: [], axis: ax({ mode: 'through-point', point: { x: 40, y: 40, z: 120 } }) }, 'curve')
     const back = parsePart(serializePart(part))
     expect(back.ops[0]).toEqual(op)
-    expect(back.version).toBe(10)
+    expect(back.version).toBe(CAM_FILE_VERSION)
     const v9 = { ...part, version: 9, ops: [] }
-    expect(migratePart(v9)).toEqual({ ...v9, version: 10 })
-    expect(() => parsePart(JSON.stringify({ format: 'cabinet-studio-part', version: 11, part }))).toThrow(/newer than this app/)
+    expect(migratePart(v9)).toEqual({ ...v9, version: CAM_FILE_VERSION })
+    expect(() => parsePart(JSON.stringify({ format: 'cabinet-studio-part', version: CAM_FILE_VERSION + 1, part }))).toThrow(/newer than this app/)
   })
 
   it('the model, the top and guide curves and the settings reach the input hash', () => {

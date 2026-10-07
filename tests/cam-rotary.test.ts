@@ -21,6 +21,9 @@ import { PLACEHOLDER_MACHINE } from '@/core/defaults'
 import { runJob } from '@/core/pipeline'
 import type { Job } from '@/core/types'
 import { expectGolden3d } from './finish3d-setup'
+import { readFixture } from './solid-fixtures'
+import { solidCylinders } from '@/cam/rotary/face'
+import { DEFAULT_PLACEMENT } from '@/cam/mesh/place'
 import { data as appData } from './helpers'
 import { COLUMN, columnPart, LEG, legPart, meshRadii, revolved, rotaryOp } from './rotary-fixtures'
 
@@ -513,5 +516,30 @@ describe('M3.3 part format 8', () => {
     const tps = generatePart(withOp, PLACEHOLDER_MACHINE)
     expect(tps[0].rotary?.plane.id).toBe('p1')
     expect(rotaryTimeline(tps, part.rotary!).tl.segs.length).toBeGreaterThan(0)
+  })
+})
+
+describe('M3.3 wrapped plane from a solid\'s cylindrical face', () => {
+  it('lists the cylinders of a STEP part where its placement puts them; a plane fitted to a Ø5 hole wall', async () => {
+    const solid = await readFixture('cabinet-side.step')
+    const cyls = solidCylinders(solid, { place: DEFAULT_PLACEMENT })
+    // a Ø5 hole 13 mm deep (the fixture's truth); the file stands the side on its edge
+    const hole = cyls.find((c) => Math.abs(c.cyl.r - 2.5) < 1e-6)!
+    expect(hole).toBeDefined()
+    expect(hole.concave).toBe(true)
+    // the rotary axis put on the hole's axis, then a plane fitted to its wall: 13 mm long, all the way round
+    const base: RotarySetup = { axis: 'X', centre: { x: 0, y: 0, z: 0 }, blank: { shape: 'round', size: 10, start: -1000, end: 1000 }, planes: [] }
+    const moved0 = axisFromCylinder(base, hole.cyl)
+    if (!('setup' in moved0)) throw new Error(moved0.error)
+    const s = moved0.setup
+    const r = planeFromCylinder(s, hole.cyl, hole.points, { id: 'h', name: 'Hole wall', at: { x: 0, y: 0 }, modelId: 'side', faceId: hole.faceId })
+    if (!('plane' in r)) throw new Error(r.error)
+    expect(r.plane.radius).toBeCloseTo(2.5, 6)
+    expect(r.plane.end - r.plane.start).toBeCloseTo(13, 3)
+    expect([r.plane.a0, r.plane.a1]).toEqual([0, 360])
+    expect(r.plane.face).toEqual({ modelId: 'side', faceId: hole.faceId, fit: hole.cyl.fit })
+    // moved by the placement: 100 mm along X moves the cylinder with it
+    const moved = solidCylinders(solid, { place: { ...DEFAULT_PLACEMENT, at: [100, 0, 0] } }).find((c) => c.faceId === hole.faceId)!
+    expect(moved.cyl.p[0] - hole.cyl.p[0]).toBeCloseTo(100, 6)
   })
 })

@@ -1,4 +1,6 @@
 import { modelFootprint } from '@/cam/mesh/place'
+import { planeRect } from '@/cam/rotary/frame'
+import { formatLength } from '@/core/units'
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { moveNode, nodesOf } from '@/cam/cad'
 import { entityContours, layerOf } from '@/cam/doc'
@@ -326,6 +328,20 @@ export function PartCanvas(props: CanvasProps) {
               const f = modelFootprint(m)
               return <rect key={m.id} x={f.x} y={f.y} width={f.dx} height={f.dy} fill="#c084fc" fillOpacity={0.08} stroke="#c084fc" strokeDasharray="2 3" strokeWidth={1} vectorEffect="non-scaling-stroke" />
             })}
+          {(shown.rotary?.planes ?? []).map((p) => {
+            // a wrapped plane unrolled (M3.3): shapes drawn inside it wrap onto the cylinder
+            const r = planeRect(p)
+            const ticks: number[] = []
+            for (let a = Math.ceil(p.a0 / 90) * 90; a <= p.a1 + 1e-9; a += 90) ticks.push(r.y0 + (((a - p.a0) * Math.PI) / 180) * p.radius)
+            return (
+              <g key={p.id} pointerEvents="none" data-testid="wrapped-plane">
+                <rect x={r.x0} y={r.y0} width={r.x1 - r.x0} height={r.y1 - r.y0} fill="#2dd4bf" fillOpacity={0.05} stroke="#2dd4bf" strokeDasharray="5 4" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                {ticks.map((y, i) => (
+                  <path key={i} d={`M${r.x0} ${y}L${r.x1} ${y}`} stroke="#2dd4bf" strokeOpacity={0.35} strokeDasharray="1 4" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                ))}
+              </g>
+            )
+          })}
           <path d={`M0 0L${40 / view.s} 0`} stroke="#ef4444" strokeWidth={2} vectorEffect="non-scaling-stroke" />
           <path d={`M0 0L0 ${40 / view.s}`} stroke="#22c55e" strokeWidth={2} vectorEffect="non-scaling-stroke" />
 
@@ -451,6 +467,7 @@ export function PartCanvas(props: CanvasProps) {
           return <circle key={i} cx={q.x} cy={q.y} r={3} fill="#fbbf24" />
         })}
         <NotesLayer part={shown} px={px} />
+        <PlanesLayer part={shown} px={px} />
         <DimsLayer part={shown} px={px} />
         {cursor &&
           cursor.guides.map((g, i) => {
@@ -468,6 +485,38 @@ export function PartCanvas(props: CanvasProps) {
         )}
       </svg>
     </div>
+  )
+}
+
+/** Labels of the wrapped planes (M3.3): name, radius and the angle every 90° round. */
+function PlanesLayer({ part, px }: { part: CamPart; px: (p: P) => P }) {
+  const units = useStore((s) => s.data?.settings.units ?? 'mm')
+  const planes = part.rotary?.planes ?? []
+  if (!planes.length) return null
+  return (
+    <g pointerEvents="none" data-testid="plane-labels">
+      {planes.map((p) => {
+        const r = planeRect(p)
+        const at = px({ x: r.x0, y: r.y1 })
+        const ticks: { y: number; a: number }[] = []
+        for (let a = Math.ceil(p.a0 / 90) * 90; a <= p.a1 + 1e-9; a += 90) ticks.push({ y: r.y0 + (((a - p.a0) * Math.PI) / 180) * p.radius, a })
+        return (
+          <g key={p.id}>
+            <text x={at.x + 6} y={at.y + 15} fontSize={11} fill="#5eead4" stroke="#16181d" strokeWidth={3} paintOrder="stroke">
+              {p.name} · unrolled at R {formatLength(p.radius, units)} · {part.rotary!.axis} {formatLength(p.start, units)} to {formatLength(p.end, units)}
+            </text>
+            {ticks.map((t) => {
+              const q = px({ x: r.x0, y: t.y })
+              return (
+                <text key={t.a} x={q.x - 4} y={q.y + 4} textAnchor="end" fontSize={10} fill="#5eead4" stroke="#16181d" strokeWidth={3} paintOrder="stroke">
+                  {t.a}°
+                </text>
+              )
+            })}
+          </g>
+        )
+      })}
+    </g>
   )
 }
 

@@ -1,3 +1,4 @@
+import { isN200 } from '@/core/validator'
 import { FileDown, FileUp, GitCompareArrows, Plus, RotateCcw, TriangleAlert } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useState } from 'react'
@@ -304,7 +305,7 @@ export function MachinePage() {
                 <NumField label="Header FM" suffix="" value={m.header.FM} min={0} max={99} onChange={(v) => updateMachine((x) => (x.header.FM = v))} />
               </div>
             </Section>
-            <MachineModelSection machine={m} updateMachine={updateMachine} />
+            <MachineModelSection machine={m} updateMachine={updateMachine} rotaryAllowed={!!other && !isN200(other)} />
             {!other && <CutDefaultsSection machine={m} />}
             {cadTools && <HoldersSection machine={m} updateMachine={updateMachine} />}
             {cadTools && <AggregatesSection machine={m} updateMachine={updateMachine} />}

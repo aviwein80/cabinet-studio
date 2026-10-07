@@ -5,7 +5,12 @@ import { backend } from '@/app/backend'
 import { runPluginPost } from '@/app/plugins'
 import { useStore } from '@/app/store'
 import { checkPostText, planPartPost } from '@/cam/plugin/posts'
-import { machineSetups, MAIN_MACHINE } from '@/core/machines'
+import { dataFor, machineSetups, MAIN_MACHINE } from '@/core/machines'
+import { modelsFor } from '@/cam/doc'
+import { inBackground, pathKey } from '@/cam/toolpath'
+import { compute } from '@/cam/worker/client'
+import type { Mesh } from '@/cam/mesh/types'
+import { loadModelMesh } from './modelData'
 import { writePartPrograms } from '@/cam/mpr'
 import { readMpr, type MprMacro } from '@/cam/mprRead'
 import type { Toolpath } from '@/cam/toolpath'
@@ -149,13 +154,36 @@ function MacroRow({ n, m }: { n: number; m: MprMacro }) {
  */
 function TextPostPreview({ part, machineId }: { part: CamPart; machineId: string }) {
   const data = useStore((st) => st.data)!
+  // M3.3: rotary operations on a model, calculated in the background with this machine's tools
+  const [bg, setBg] = useState<{ key: unknown; paths: Map<string, Toolpath>; note?: string } | null>(null)
+  const bgKey = useMemo(() => ({ part, machineId, data }), [part, machineId, data])
+  useEffect(() => {
+    const machine = dataFor(data, machineId).machine
+    const ops = part.ops.filter((o) => o.enabled && o.kind === 'rotary' && inBackground(o, part))
+    if (!ops.length) return
+    const abort = new AbortController()
+    void (async () => {
+      try {
+        const meshes: Record<string, Mesh> = {}
+        const ids = new Set(ops.flatMap((o) => modelsFor(o, part)))
+        for (const m of part.models ?? []) if (ids.has(m.id)) meshes[m.blob] = await loadModelMesh(m.blob)
+        const tps = await compute().run('cam.generate', { part, machine, opIds: ops.map((o) => o.id), meshes }, { signal: abort.signal })
+        setBg({ key: bgKey, paths: new Map(ops.map((o, i) => [pathKey(o, part, machine), tps[i]])) })
+      } catch (e) {
+        if (!abort.signal.aborted) setBg({ key: bgKey, paths: new Map(), note: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+    return () => abort.abort()
+  }, [bgKey, data, machineId, part])
+  const needsBg = part.ops.some((o) => o.enabled && o.kind === 'rotary' && inBackground(o, part))
+  const paths3d = bg?.key === bgKey ? bg.paths : undefined
   const plan = useMemo(() => {
     try {
-      return { ok: true as const, plan: planPartPost(data, machineId, part) }
+      return { ok: true as const, plan: planPartPost(data, machineId, part, { paths3d }) }
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
     }
-  }, [data, machineId, part])
+  }, [data, machineId, part, paths3d])
   const [out, setOut] = useState<{ key: unknown; ext?: string; text?: string; error?: string } | null>(null)
   useEffect(() => {
     if (!plan.ok) return
@@ -176,6 +204,7 @@ function TextPostPreview({ part, machineId }: { part: CamPart; machineId: string
     }
   }, [plan, data])
   if (!plan.ok) return <p className="text-xs text-red-300">{plan.error}</p>
+  if (needsBg && !paths3d) return <p className="text-xs text-stone-400">Calculating the rotary toolpaths with this machine's tools…</p>
   const p = plan.plan
   const shown: { ext?: string; text?: string; error?: string } | null = p.templateText ?? (out?.key === plan ? out : null)
   const missing = p.post.kind === 'script' && !(data.plugins ?? []).some((x) => x.id === (p.post as { plugin: string }).plugin && x.enabled)

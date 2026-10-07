@@ -612,6 +612,59 @@ export class RotaryStock implements StockModel {
     return { positions, indices }
   }
 
+  /**
+   * Display mesh (the simulator's 3D view): the outer surface of the material, smooth across the
+   * cells (each corner at the mean of the cells round it), closed by flat ends; in the local frame
+   * (X along the axis, θ = 0 up, θ = 90° along -Y). Two facets per cell and quick to make; it does
+   * not show pieces under an overhang (the exact, closed mesh is `toMesh`). `i1`: only the columns
+   * before it (a section across the axis).
+   */
+  outerMesh(i1 = this.nu): Mesh {
+    const n = Math.max(1, Math.min(this.nu, i1))
+    const nt = this.nt
+    const cols = n + 1
+    const positions = new Float32Array((cols * nt + 2) * 3)
+    for (let c = 0; c < cols; c++) {
+      const u = Math.min(this.length, c * this.cell)
+      for (let j = 0; j < nt; j++) {
+        let sum = 0
+        let k = 0
+        for (const i of [c - 1, c])
+          if (i >= 0 && i < n)
+            for (const jj of [j - 1, j]) {
+              sum += this.outer(i, jj)
+              k++
+            }
+        const rho = k ? sum / k : 0
+        const phi = j * this.dphi
+        const o = (c * nt + j) * 3
+        positions[o] = u
+        positions[o + 1] = -rho * Math.sin(phi)
+        positions[o + 2] = rho * Math.cos(phi)
+      }
+    }
+    const a0 = cols * nt
+    positions[a0 * 3] = 0
+    positions[a0 * 3 + 3] = Math.min(this.length, n * this.cell)
+    const indices = new Uint32Array((n * nt * 2 + 2 * nt) * 3)
+    let q = 0
+    for (let c = 0; c < n; c++)
+      for (let j = 0; j < nt; j++) {
+        const A = c * nt + j
+        const B = (c + 1) * nt + j
+        const C = (c + 1) * nt + ((j + 1) % nt)
+        const D = c * nt + ((j + 1) % nt)
+        indices.set([A, D, C, A, C, B], q)
+        q += 6
+      }
+    for (let j = 0; j < nt; j++) {
+      indices.set([a0, j, (j + 1) % nt], q)
+      indices.set([a0 + 1, n * nt + ((j + 1) % nt), n * nt + j], q + 3)
+      q += 6
+    }
+    return { positions, indices }
+  }
+
   reset() {
     const b = this.setup.blank
     for (let j = 0; j < this.nt; j++) {

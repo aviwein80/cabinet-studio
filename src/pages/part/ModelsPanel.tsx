@@ -23,6 +23,7 @@ import { SolidFacesPanel } from './SolidFacesPanel'
 import { SolidFeatures } from './SolidFeatures'
 import { SurfacesPanel } from './SurfacesPanel'
 import { DevelopPanel } from './DevelopPanel'
+import { RotaryPanel } from './RotaryPanel'
 
 const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
   sections: { id: 'model-sections', name: 'Model sections', color: '#34d399', visible: true, locked: false },
@@ -33,7 +34,7 @@ const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
 const withLayer = (part: CamPart, l: Layer): Layer[] => (part.layers.some((x) => x.id === l.id) ? part.layers : [...part.layers, { ...l }])
 
 /** 3D models on the part: placement, work volume, sections, outline, edges, simplify, clean-up. */
-export function ModelsPanel({ part, units, sel = [], onChange, onImport, onRelief }: { part: CamPart; units: UnitSystem; sel?: string[]; onChange: (p: CamPart) => void; onImport: () => void; onRelief?: () => void }) {
+export function ModelsPanel({ part, units, sel = [], onChange, onImport, onRelief, rotary }: { part: CamPart; units: UnitSystem; sel?: string[]; onChange: (p: CamPart) => void; onImport: () => void; onRelief?: () => void; rotary?: boolean }) {
   const models = part.models ?? []
   return (
     <div className="flex flex-col gap-3 p-3 text-xs">
@@ -47,6 +48,7 @@ export function ModelsPanel({ part, units, sel = [], onChange, onImport, onRelie
           </Button>
         )}
       </div>
+      {rotary && <RotaryPanel part={part} units={units} onChange={onChange} />}
       <SurfacesPanel part={part} sel={sel} units={units} onChange={onChange} />
       <DevelopPanel part={part} sel={sel} units={units} onChange={onChange} />
       {!models.length && <p className="text-stone-400">No 3D models yet. Import an STL, OBJ or 3MF file: a relief, a carved panel or a shaped part.</p>}

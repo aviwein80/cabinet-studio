@@ -169,19 +169,24 @@ export function defaultSetup(part: { length: number; width: number; thickness: n
 
 /**
  * Smallest range of angles (degrees, a0 < a1, a1 - a0 <= 360) holding all the given angles
- * (radians): the circle less its largest empty gap. Within `full` of all the way round: 0..360.
+ * (radians): the circle less its largest empty gap. All the way round (0..360) when that gap is
+ * within `full` degrees, or no wider than three of the points' usual gaps (a faceted circle).
  */
 export function angleSpan(thetas: number[], full = 2): { a0: number; a1: number } {
   if (!thetas.length) return { a0: 0, a1: 360 }
-  const a = thetas.map((t) => (((t / DEG) % 360) + 360) % 360).sort((p, q) => p - q)
+  const a = [...new Set(thetas.map((t) => Math.round(((((t / DEG) % 360) + 360) % 360) * 1e9) / 1e9))].sort((p, q) => p - q)
   let gap = a[0] + 360 - a[a.length - 1]
   let after = a[a.length - 1]
-  for (let i = 1; i < a.length; i++)
+  const gaps = [gap]
+  for (let i = 1; i < a.length; i++) {
+    gaps.push(a[i] - a[i - 1])
     if (a[i] - a[i - 1] > gap) {
       gap = a[i] - a[i - 1]
       after = a[i - 1]
     }
-  if (gap <= full) return { a0: 0, a1: 360 }
+  }
+  const usual = gaps.sort((p, q) => p - q)[Math.floor(gaps.length / 2)]
+  if (gap <= full || (a.length >= 8 && gap <= 3 * usual)) return { a0: 0, a1: 360 }
   const a0 = after + gap
   const span = 360 - gap
   const start = a0 >= 360 ? a0 - 360 : a0

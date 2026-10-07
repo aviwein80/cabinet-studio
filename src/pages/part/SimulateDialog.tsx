@@ -33,6 +33,10 @@ import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineM
 import { formatLength } from '@/core/units'
 import type { MachineProfile, UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
+import { RotaryStock } from '@/cam/rotary/stock'
+import { rotaryCell, rotaryProgram } from '@/cam/rotary/sim'
+import { ROTARY_LETTER } from '@/cam/rotary/frame'
+import { RotaryView3D } from './RotaryView3D'
 
 const SPEEDS = [1, 4, 16, 64, 256]
 const RAPID_SPEEDS = [1, 4, 16, 64, 256, 1024]
@@ -72,42 +76,61 @@ export function SimulateDialog({ open, onOpenChange, part, toolpaths, machine, u
 }
 
 function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; units: UnitSystem; color?: string }) {
-  const ordered = useMemo(() => programOrder(toolpaths), [toolpaths])
+  // M3.3: a turned part's rotary toolpaths play on its rotary stock (in the blank's unrolled frame)
+  const rot = part.rotary && toolpaths.some((tp) => !!tp.rotary) ? part.rotary : null
+  const flatLeft = rot ? toolpaths.filter((tp) => !tp.rotary && tp.moves.length).length : 0
+  const ordered = useMemo(() => (rot ? rotaryProgram(toolpaths, rot) : programOrder(toolpaths)), [toolpaths, rot])
   const tl = useMemo(() => buildTimeline(ordered), [ordered])
-  const cell = simCell(part.length, part.width)
+  // (a rotary stock is carved at positions along most moves: half-millimetre rays keep playback smooth)
+  const cell = rot ? Math.max(0.5, rotaryCell(rot)) : simCell(part.length, part.width)
   // (a lollipop under an overhang, or a thread mill's groove, needs the dexel stock, which keeps
   // the material over them; a thread needs a piece per turn)
-  const dexel = needsDexel(ordered)
+  const dexel = !rot && needsDexel(ordered)
   const layers = piecesNeeded(ordered)
   const sim = useMemo(
-    () => new StockSimulation(tl, dexel ? new DexelStock(part.length, part.width, part.thickness, cell, layers) : stockFor({ length: part.length, width: part.width, thickness: part.thickness }, [], cell)),
-    [part.length, part.width, part.thickness, dexel, layers, cell, tl],
+    () => new StockSimulation(tl, rot ? new RotaryStock(rot, cell) : dexel ? new DexelStock(part.length, part.width, part.thickness, cell, layers) : stockFor({ length: part.length, width: part.width, thickness: part.thickness }, [], cell)),
+    [part.length, part.width, part.thickness, dexel, layers, cell, tl, rot],
   )
-  const stock = sim.stock as HeightfieldStock | DexelStock
+  const stock = sim.stock as HeightfieldStock | DexelStock | RotaryStock
+  // the rotary stock's unrolled surface stands in for the panel in the top view
+  const viewPart = rot ? { ...part, length: stock.hf.length, width: stock.hf.width, thickness: stock.hf.thickness } : part
+  // a rotary program opens at its start (carving it all here would hold the screen up); the end is
+  // shown once the background check hands back its stock
+  const [t, setT] = useState(rot ? 0 : tl.total)
+  const tRef = useRef(t)
+  useLayoutEffect(() => {
+    tRef.current = t
+  }, [t])
   // collision check: the whole program replayed in the background
   const [checked, setCheck] = useState<{ for: unknown; found: Collision[] | null; fraction: number; error?: string } | null>(null)
   const checkKey = useMemo(() => ({ toolpaths, machine }), [toolpaths, machine])
   useEffect(() => {
     if (!toolpaths.some((tp) => tp.moves.length)) return
     const abort = new AbortController()
-    compute()
-      .run('sim.collide', { panel: { length: part.length, width: part.width, thickness: part.thickness }, toolpaths, machine }, { signal: abort.signal, onProgress: (fraction) => setCheck({ for: checkKey, found: null, fraction }) })
+    const onProgress = (fraction: number) => setCheck({ for: checkKey, found: null, fraction })
+    const job = rot
+      ? compute()
+          .run('sim.rotaryCollide', { setup: rot, toolpaths: toolpaths.filter((tp) => !!tp.rotary), machine, cell }, { signal: abort.signal, onProgress })
+          .then((r) => {
+            // the background replay's stock at the end of the program: shown at once
+            sim.seed(tl.total, r.snapshot)
+            // (still at the start, untouched: go to the end, as a flat part's simulation opens)
+            setT((x) => (x === 0 ? tl.total : x))
+            return r.found
+          })
+      : compute().run('sim.collide', { panel: { length: part.length, width: part.width, thickness: part.thickness }, toolpaths, machine }, { signal: abort.signal, onProgress })
+    job
       .then((found) => setCheck({ for: checkKey, found, fraction: 1 }))
       .catch((e) => {
         if (!(e instanceof Cancelled) && !abort.signal.aborted) setCheck({ for: checkKey, found: null, fraction: 1, error: e instanceof Error ? e.message : String(e) })
       })
     return () => abort.abort()
-  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness])
+  }, [checkKey, toolpaths, machine, part.length, part.width, part.thickness, rot, cell, sim, tl])
   const check = checked?.for === checkKey ? checked : { found: null, fraction: 0, error: undefined }
   const outlines = useMemo(() => tl.ops.map((o) => {
     const tool = ordered[o.path]?.tool
     return tool ? toolOutline(machine, tool) : null
   }), [tl, ordered, machine])
-  const [t, setT] = useState(tl.total)
-  const tRef = useRef(t)
-  useLayoutEffect(() => {
-    tRef.current = t
-  }, [t])
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(16)
   const [rapidSpeed, setRapidSpeed] = useState(64)
@@ -126,9 +149,10 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const fmt = (n: number) => formatLength(n, units)
   // the part's outline tells the part from scrap and offcuts
   const outline = useMemo<P[][] | undefined>(() => {
+    if (rot) return undefined
     const e = part.entities.find((x) => x.id === part.outlineId)
     return e ? entityContours(e).filter((c) => c.closed).map((c) => toPoints(c, 0.05)) : undefined
-  }, [part.entities, part.outlineId])
+  }, [part.entities, part.outlineId, rot])
   const [pieces, setPieces] = useState<{ scrap: number; offcut: number } | null>(null)
   const spoil = machineModelOf(machine).spoilboard.thickness
   // placeholder values behind this simulation (tools, blade, holders, machine model, the operations' own)
@@ -211,8 +235,9 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const saveStl = async () => {
     sim.syncTo(t)
     const { hf } = stock
-    const step = stock.kind === 'dexel' ? 1 : Math.max(1, Math.ceil(Math.sqrt((hf.nx * hf.ny) / STL_MAX_CELLS)))
-    const data = writeStl(stock.kind === 'dexel' ? stock.toMesh() : stockMesh(hf, { step, exact: true }), `${part.name} stock`)
+    const step = stock.kind !== 'heightfield' ? 1 : Math.max(1, Math.ceil(Math.sqrt((hf.nx * hf.ny) / STL_MAX_CELLS)))
+    // (a rotary stock is written where it sits in the part)
+    const data = writeStl(stock.kind === 'heightfield' ? stockMesh(hf, { step, exact: true }) : stock.toMesh(), `${part.name} stock`)
     const where = await backend.saveFile({ name: `${part.name.replace(/[^\w-]+/g, '-') || 'part'}-stock.stl`, data }, [{ name: 'STL model', extensions: ['stl'] }])
     if (where) toast.success(`Stock saved${step > 1 ? ` (every ${step} cells, ${fmt(step * hf.cell)} grid; nothing shown that was cut)` : ''}.`)
   }
@@ -249,7 +274,13 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
               <label className="flex items-center gap-1.5">
                 <Switch checked={section.on} onCheckedChange={(on) => setSection((s) => ({ ...s, on }))} size="sm" /> Section
               </label>
-              {section.on && (
+              {section.on && rot && (
+                <>
+                  <Slider className="w-28" min={0.02} max={1} step={0.005} value={[section.at]} onValueChange={([at]) => setSection((s) => ({ ...s, at }))} aria-label="Section position" />
+                  <span className="font-mono text-stone-400 tabular-nums">{rot.axis} {fmt(rot.blank.start + section.at * (rot.blank.end - rot.blank.start))}</span>
+                </>
+              )}
+              {section.on && !rot && (
                 <>
                   <Select value={section.axis} onValueChange={(axis) => setSection((s) => ({ ...s, axis: axis as 'x' | 'y' }))}>
                     <SelectTrigger size="sm" className="h-6 w-28 text-xs" aria-label="Section across">
@@ -268,7 +299,24 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           )}
         </div>
         {view === 'top' ? (
-          <TopView sim={sim} t={t} part={part} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} outline={outline} onPieces={setPieces} />
+          <TopView sim={sim} t={t} part={viewPart} base={base} through={through} showPaths={showPaths} showRapids={showRapids} pos={pos.p} seg={pos.seg} r={cutter.r} rapid={pos.kind === 'rapid'} playing={playing} onCarved={onCarved} outline={outline} onPieces={setPieces} wrap={rot ? stock.hf.width : undefined} />
+        ) : rot ? (
+          <RotaryView3D
+            sim={sim}
+            t={t}
+            base={base}
+            pos={pos.p}
+            rapid={pos.kind === 'rapid'}
+            outline={pos.op >= 0 ? outlines[pos.op] : null}
+            r={cutter.r}
+            blade={(() => {
+              const tp = op ? ordered[op.path] : undefined
+              return tp?.rotary?.blade ? { ...tp.rotary.blade, kerf: tp.tool?.kerf ?? 4 } : null
+            })()}
+            opacity={opacity}
+            sectionAt={section.on ? section.at : null}
+            onCarved={onCarved}
+          />
         ) : (
           <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} />
         )}
@@ -324,9 +372,23 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           {stopped && <span className="text-amber-200">{STOP_TEXT[stopped]}</span>}
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-1 rounded-md bg-black/30 px-3 py-1.5 font-mono text-xs text-stone-300 tabular-nums">
-          <span>X {fmt(pos.p.x)}</span>
-          <span>Y {fmt(pos.p.y)}</span>
-          <span>Z {fmt(pos.p.z)}</span>
+          {rot ? (
+            <>
+              <span>
+                {rot.axis} {fmt(pos.p.x + rot.blank.start)}
+              </span>
+              <span>
+                {ROTARY_LETTER[rot.axis]} {((pos.p.y / (stock as RotaryStock).Rs) * (180 / Math.PI)).toFixed(2)}°
+              </span>
+              <span>{fmt(pos.p.z + (stock as RotaryStock).Rs)} from the axis</span>
+            </>
+          ) : (
+            <>
+              <span>X {fmt(pos.p.x)}</span>
+              <span>Y {fmt(pos.p.y)}</span>
+              <span>Z {fmt(pos.p.z)}</span>
+            </>
+          )}
           <span className={cn(pos.kind === 'rapid' ? 'text-red-300' : 'text-amber-200')}>{pos.kind ? (pos.kind === 'rapid' ? 'rapid' : pos.kind === 'drill' ? 'drilling' : pos.kind === 'plunge' ? 'plunge / ramp' : pos.kind === 'lead' ? 'lead' : 'cutting') : 'home'}</span>
           {where && <span>move {(where.move + 1).toLocaleString('en')}</span>}
           <span className="truncate font-sans text-stone-400">{op ? `${op.name} · ${op.tool}` : ''}</span>
@@ -352,7 +414,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           <Stat label="Rapids" value={`${(tl.rapidLength / 1000).toFixed(1)} m`} />
           <Stat label="Removed" value={units === 'in' ? `${(summary.removed / 16387.064).toFixed(1)} in³` : `${(summary.removed / 1000).toFixed(1)} cm³`} />
           <Stat label="Deepest" value={fmt(summary.deepest)} />
-          <Stat label="Face cut" value={`${summary.cutPct.toFixed(1)}%`} />
+          <Stat label={rot ? 'Surface cut' : 'Face cut'} value={`${summary.cutPct.toFixed(1)}%`} />
           <Stat label="Cells" value={fmt(cell)} />
           {pieces && (pieces.scrap > 0 || pieces.offcut > 0) && <Stat label="Cut free" value={[pieces.scrap ? `${pieces.scrap} scrap` : '', pieces.offcut ? `${pieces.offcut} offcut${pieces.offcut > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ')} />}
         </section>
@@ -368,7 +430,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           {check.error ? (
             <p className="text-red-200">Could not check: {check.error}</p>
           ) : !check.found ? (
-            <p className="text-stone-400">Checking shank, holder, rapids and spoilboard… {Math.round(check.fraction * 100)}%</p>
+            <p className="text-stone-400">{rot ? 'Checking shank, holder, rapids and the rotary axis' : 'Checking shank, holder, rapids and spoilboard'}… {Math.round(check.fraction * 100)}%</p>
           ) : check.found.length ? (
             <ul className="space-y-1">
               {check.found.slice(0, 12).map((c, i) => (
@@ -377,7 +439,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                     <span>
                       <Badge className="mr-1 h-4 bg-red-500/30 px-1 text-[10px] text-red-100">{KIND_LABEL[c.kind]}</Badge>
-                      {tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}
+                      {rot ? c.message : <>{tl.ops[c.op]?.name}, {c.moves > 1 ? `moves ${c.move + 1}-${c.move + c.moves}` : `move ${c.move + 1}`}: X {fmt(c.at.x)} Y {fmt(c.at.y)} Z {fmt(c.at.z)}, {fmt(c.depth)} {c.kind === 'spoilboard' || c.kind === 'table' ? 'too deep' : 'into the material'}</>}
                     </span>
                   </button>
                 </li>
@@ -386,7 +448,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
             </ul>
           ) : (
             <p className="flex items-center gap-1.5 text-stone-400">
-              <Badge className="h-4 bg-emerald-500/20 px-1 text-[10px] text-emerald-200">clear</Badge> No collisions of shank, holder or rapids with the material; nothing below the spoilboard limit.
+              <Badge className="h-4 bg-emerald-500/20 px-1 text-[10px] text-emerald-200">clear</Badge> {rot ? 'No collisions of shank, holder or rapids with the material; the tool tip never reaches the rotary axis.' : 'No collisions of shank, holder or rapids with the material; nothing below the spoilboard limit.'}
             </p>
           )}
           <p className="mt-1 text-stone-500">Margin round shank and holder: {fmt(machine.collisionMargin ?? 2)} (Machine &amp; tools).</p>
@@ -394,7 +456,14 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
         <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={saveStl}>
           <Download /> Save stock as STL
         </Button>
-        <p className="text-stone-500">Edge (horizontal) drilling is drawn in the backplot but runs under the face, so it is not carved. Scrap and offcuts cut free are shown faded and drop out in the through-cut view; the part stays. The collision check keeps them in place (safer).</p>
+        {rot ? (
+          <p className="text-stone-500">
+            Rotary: the top view shows the blank's surface unrolled ({fmt(stock.hf.length)} along {rot.axis} by {fmt(stock.hf.width)} round, darker = deeper towards the axis); in 3D the blank turns under the tool as it does on the machine. The tool stands square to the axis. Rays {fmt(stock.hf.cell)} apart.
+            {flatLeft > 0 ? ` ${flatLeft} flat operation(s) of this part are not in the rotary simulation.` : ''}
+          </p>
+        ) : (
+          <p className="text-stone-500">Edge (horizontal) drilling is drawn in the backplot but runs under the face, so it is not carved. Scrap and offcuts cut free are shown faded and drop out in the through-cut view; the part stays. The collision check keeps them in place (safer).</p>
+        )}
       </aside>
     </div>
   )
@@ -441,7 +510,31 @@ interface ViewProps {
 }
 
 /** Backplot drawn on a canvas: the program faintly, what has run brightly (added to as it plays). */
-function drawBackplot(ctx: CanvasRenderingContext2D, tl: SimTimeline, from: number, to: number, t: number, o: { paths: boolean; rapids: boolean; faint: boolean; px: number }) {
+function drawBackplot(ctx: CanvasRenderingContext2D, tl: SimTimeline, from: number, to: number, t: number, o: { paths: boolean; rapids: boolean; faint: boolean; px: number; wrap?: number }) {
+  // a rotary stock's unrolled surface: y comes round every `wrap`; a line over the seam is drawn in two
+  const W = o.wrap
+  const line = (ax: number, ay: number, bx: number, by: number) => {
+    if (!W) {
+      ctx.moveTo(ax, ay)
+      ctx.lineTo(bx, by)
+      return
+    }
+    const s = Math.floor(ay / W) * W
+    const ya = ay - s
+    const yb = by - s
+    if (yb >= 0 && yb <= W) {
+      ctx.moveTo(ax, ya)
+      ctx.lineTo(bx, yb)
+      return
+    }
+    const edge = yb > W ? W : 0
+    const k = (edge - ya) / (yb - ya)
+    const xm = ax + (bx - ax) * k
+    ctx.moveTo(ax, ya)
+    ctx.lineTo(xm, edge)
+    ctx.moveTo(xm, W - edge)
+    ctx.lineTo(bx, yb - (edge === W ? W : -W))
+  }
   const strokes: [string, string, number[]][] = o.faint
     ? [
         ['cut', '#fbbf2433', []],
@@ -464,8 +557,7 @@ function drawBackplot(ctx: CanvasRenderingContext2D, tl: SimTimeline, from: numb
         bx = s.a.x + (s.b.x - s.a.x) * k
         by = s.a.y + (s.b.y - s.a.y) * k
       }
-      ctx.moveTo(s.a.x, s.a.y)
-      ctx.lineTo(bx, by)
+      line(s.a.x, s.a.y, bx, by)
     }
     ctx.strokeStyle = color
     ctx.lineWidth = (o.faint ? 1 : 1.2) * o.px
@@ -486,10 +578,10 @@ function drawBackplot(ctx: CanvasRenderingContext2D, tl: SimTimeline, from: numb
   }
 }
 
-function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg, r, rapid, playing, onCarved, outline, onPieces }: ViewProps & { through: boolean; showPaths: boolean; showRapids: boolean; seg: number; playing: boolean; outline?: P[][]; onPieces: (p: { scrap: number; offcut: number }) => void }) {
+function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg, r, rapid, playing, onCarved, outline, onPieces, wrap }: ViewProps & { through: boolean; showPaths: boolean; showRapids: boolean; seg: number; playing: boolean; outline?: P[][]; onPieces: (p: { scrap: number; offcut: number }) => void; wrap?: number }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const plot = useRef<HTMLCanvasElement>(null)
-  const stock = sim.stock as HeightfieldStock | DexelStock
+  const stock = sim.stock as HeightfieldStock | DexelStock | RotaryStock
   const { hf } = stock
   const { tl } = sim
   const L = part.length
@@ -497,7 +589,8 @@ function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg,
   const m = Math.max(15, Math.max(...tl.ops.map((o) => o.cutter.r)) + 12)
   const VW = L + 2 * m
   const VH = W + 2 * m
-  const Y = (y: number) => W - y
+  // (a rotary stock's surface is unrolled: angles past a turn come round again)
+  const Y = (y: number) => W - (wrap ? ((y % wrap) + wrap) % wrap : y)
   // stock picture: shaded once in full, then only where the stock changed
   const img = useRef<{ data: ImageData; hf: unknown } | null>(null)
   const [loose, setLoose] = useState<Uint8Array | undefined>(undefined)
@@ -529,7 +622,8 @@ function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg,
 
   // pieces cut free: worked out when paused (a flood fill of the whole stock)
   useEffect(() => {
-    if (playing) return
+    // (a turned part has no scrap or offcuts falling away)
+    if (playing || wrap) return
     const id = setTimeout(() => {
       sim.syncTo(t)
       const p = cutFreePieces(hf, outline)
@@ -537,7 +631,7 @@ function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg,
       onPieces({ scrap: p.pieces.filter((x) => x.kind === 'scrap').length, offcut: p.pieces.filter((x) => x.kind === 'offcut').length })
     }, 120)
     return () => clearTimeout(id)
-  }, [playing, sim, hf, t, outline, onPieces])
+  }, [playing, sim, hf, t, outline, onPieces, wrap])
 
   // backplot: the whole program faintly, then what has run on top
   const drawn = useRef<{ upTo: number; key: string } | null>(null)
@@ -553,15 +647,15 @@ function TopView({ sim, t, part, base, through, showPaths, showRapids, pos, seg,
       c.width = Math.ceil(VW * px)
       c.height = Math.ceil(VH * px)
       setup()
-      drawBackplot(ctx, tl, 0, tl.segs.length, t, { paths: showPaths, rapids: showRapids, faint: true, px: 1 / px })
-      drawBackplot(ctx, tl, 0, upTo, t, { paths: showPaths, rapids: showRapids, faint: false, px: 1 / px })
+      drawBackplot(ctx, tl, 0, tl.segs.length, t, { paths: showPaths, rapids: showRapids, faint: true, px: 1 / px, wrap })
+      drawBackplot(ctx, tl, 0, upTo, t, { paths: showPaths, rapids: showRapids, faint: false, px: 1 / px, wrap })
     } else {
       setup()
       // the segment in progress last time is drawn again in full or up to now
-      drawBackplot(ctx, tl, Math.max(0, drawn.current.upTo - 1), upTo, t, { paths: showPaths, rapids: showRapids, faint: false, px: 1 / px })
+      drawBackplot(ctx, tl, Math.max(0, drawn.current.upTo - 1), upTo, t, { paths: showPaths, rapids: showRapids, faint: false, px: 1 / px, wrap })
     }
     drawn.current = { upTo, key }
-  }, [tl, seg, t, showPaths, showRapids, VW, VH, W, m])
+  }, [tl, seg, t, showPaths, showRapids, VW, VH, W, m, wrap])
 
   return (
     <div className="flex justify-center rounded-md border border-white/10 bg-[#0e1013] p-2">

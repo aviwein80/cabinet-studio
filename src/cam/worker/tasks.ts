@@ -3,6 +3,8 @@
  * tests and the batch runner can call them directly. Inputs and outputs are structured-clone
  * friendly (typed arrays, plain objects).
  */
+import type { StockSnapshot } from '../stock/types'
+import { rotaryCollisions } from '../rotary/sim'
 import { subWork, type Work } from '@/core/cancel'
 import type { Contour, P } from '../geom'
 import { buildMesh } from '../mesh/build'
@@ -15,7 +17,7 @@ import { type HeightImageSummary, readHeightImage, summarise } from '../relief/i
 import { checkReliefMesh, type HeightMapOptions, heightMapMesh, type HeightMapResult, type MeshReliefCheck, meshReliefInfo, type ReliefSize, sizeRelief, stripBase } from '../relief/relief'
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
-import type { CamPart, ModelPlacement, ModelRef, Recipe, ReliefInfo, UpAxis } from '../types'
+import type { CamPart, ModelPlacement, ModelRef, Recipe, ReliefInfo, RotarySetup, UpAxis } from '../types'
 import { generateOp, type Move, type Toolpath } from '../toolpath'
 import type { MachineProfile } from '@/core/types'
 import { type Collision, partCollisions } from '../collision/collision'
@@ -106,6 +108,8 @@ export interface TaskMap {
   'relief.fromMesh': { in: { mesh: Mesh; removeBase: boolean; size: ReliefSize }; out: { mesh: Mesh; info: ReliefInfo } }
   /** Collision check of toolpaths on a panel (operations numbered in program order). */
   'sim.collide': { in: { panel: { length: number; width: number; thickness: number }; toolpaths: Toolpath[]; machine: MachineProfile }; out: Collision[] }
+  /** Collision check of a part's rotary toolpaths on its rotary stock (M3.3). */
+  'sim.rotaryCollide': { in: { setup: RotarySetup; toolpaths: Toolpath[]; machine: MachineProfile; cell: number }; out: { found: Collision[]; snapshot: StockSnapshot } }
 }
 
 export type SurfaceJob =
@@ -178,6 +182,11 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     return ops.map((op, i) => generateOp(op, { part, machine, meshes: map, work: { isCancelled: work.isCancelled, progress: (f, n) => work.progress?.((i + f) / ops.length, n) } }))
   },
   'sim.collide': ({ panel, toolpaths, machine }, work) => partCollisions(panel, toolpaths, machine, work).found,
+  // (the stock at the end of the program comes back too: the simulator shows the end at once)
+  'sim.rotaryCollide': ({ setup, toolpaths, machine, cell }, work) => {
+    const r = rotaryCollisions(setup, toolpaths, machine, { work, cell })
+    return { found: r.found, snapshot: r.stock.snapshot() }
+  },
   async 'relief.imageInfo'({ bytes, name }, work) {
     return summarise(await readHeightImage(bytes, name, work))
   },

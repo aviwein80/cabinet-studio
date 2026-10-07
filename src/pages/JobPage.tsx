@@ -695,7 +695,17 @@ function OutputTab({ job, data, out, setJob }: { job: Job; data: AppData; out: J
   }
 
   if (out.programs.length === 0)
-    return <EmptyState icon={<FileCode2 className="size-5" />} title="No programs yet">Add cabinets to the job, then come back to export MPR files and labels.</EmptyState>
+    return (
+      <>
+        <EmptyState icon={<FileCode2 className="size-5" />} title="No programs yet">Add cabinets to the job, then come back to export MPR files and labels.</EmptyState>
+        {out.issues.length > 0 && (
+          <div className="mt-4 rounded-xl border bg-background p-4">
+            <h3 className="mb-3 text-sm font-semibold">Why nothing is written</h3>
+            <IssueList issues={out.issues} empty="No issues found." jobId={job.id} />
+          </div>
+        )}
+      </>
+    )
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_420px]">

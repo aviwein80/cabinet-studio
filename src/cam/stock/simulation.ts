@@ -68,6 +68,16 @@ export class StockSimulation {
     this.at = t
   }
 
+  /**
+   * A stock state worked out elsewhere (e.g. the collision check in the background worker, which
+   * plays the whole program): kept like a saved state, so going to time `t` is immediate.
+   */
+  seed(t: number, s: StockSnapshot) {
+    this.snaps = this.snaps.filter((x) => Math.abs(x.t - t) >= 1e-9)
+    this.snaps.push({ t, s })
+    this.snaps.sort((a, b) => a.t - b.t)
+  }
+
   private save(t: number) {
     if (this.snaps.some((x) => Math.abs(x.t - t) < 1e-9)) return
     const s = this.stock.snapshot()

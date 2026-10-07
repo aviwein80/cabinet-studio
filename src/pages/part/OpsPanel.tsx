@@ -9,6 +9,7 @@ import { toolOrderOf } from '@/core/admin'
 import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool, resolveTool } from '@/cam/ops'
 import { ManualFields, EditsGroup } from './EditsPanel'
 import { RapidSurfaceGroup } from './RapidSurfaceGroup'
+import { RotaryFields } from './RotaryFields'
 import { useOpCfg } from './opConfigure'
 import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
 import { confirmOp, type CutDefaultKey, newOpDefaults, opUnconfirmed } from '@/core/confirm'
@@ -83,6 +84,7 @@ export function OpsPanel({
   const more25d = useStore((s) => featuresOf(s.data?.settings).camMore25d)
   const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
   const extras = useStore((s) => featuresOf(s.data?.settings).camExtras)
+  const rotaryOn = useStore((s) => featuresOf(s.data?.settings).camRotary) && !!part.rotary
   const runRules = (setId: string) => {
     if (!lib) return
     const set = ruleSetsOf(lib).find((x) => x.id === setId)
@@ -115,6 +117,8 @@ export function OpsPanel({
     if (kind === 'face') geometry = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
     // the shop's default cutting values (placeholders until confirmed)
     let op = defaultOp(kind, kind === 'code' ? [] : geometry, { ...newOpDefaults(kind, machine, extra), ...extra } as Partial<CamOp>)
+    // rotary: the first wrapped plane; on a model the shapes picked are not used, drawn shapes are
+    if (op.kind === 'rotary') op = { ...op, planeId: op.planeId || (part.rotary?.planes[0]?.id ?? ''), geometry: op.strategy === 'wrap' ? geometry : [] }
     if (op.kind === 'finish3d' || op.kind === 'rough3d') {
       // boundary: the selected closed shapes (none = the whole model); projection: every selected
       // shape is projected. First model on the part.
@@ -186,6 +190,17 @@ export function OpsPanel({
                     <DropdownMenuItem onSelect={() => add('finish3d', { strategy: 'curve' } as Partial<CamOp>)}>{OP_LABEL.finish3d} (curve-driven)</DropdownMenuItem>
                   </>
                 )}
+              </>
+            )}
+            {rotaryOn && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[11px] text-muted-foreground">Rotary (simulation and rotary script posts)</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => add('rotary', { strategy: 'along', stepdown: 3 } as Partial<CamOp>)}>Rotary roughing along the axis</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('rotary', { strategy: 'along' } as Partial<CamOp>)}>Rotary finishing along the axis</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('rotary', { strategy: 'around' } as Partial<CamOp>)}>Rotary rings round the axis</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('rotary', { strategy: 'spiral' } as Partial<CamOp>)}>Rotary spiral</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('rotary', { strategy: 'wrap' } as Partial<CamOp>)}>Rotary wrapped shapes (selected)</DropdownMenuItem>
               </>
             )}
             {rulesOn && lib && (
@@ -263,6 +278,10 @@ export function OpsPanel({
                             ? `edge ${formatLength(op.reach, units)} in, ${formatLength(op.height, units)} down`
                           : op.kind === 'thread'
                             ? `${op.side} thread, pitch ${op.pitch}, ${formatLength(op.levels.depth, units)} long`
+                          : op.kind === 'rotary'
+                            ? op.strategy === 'wrap'
+                              ? `rotary, ${formatLength(op.levels.depth, units)} into the cylinder`
+                              : `rotary ${{ along: 'along the axis', around: 'rings', spiral: 'spiral', wrap: '' }[op.strategy]}, every ${formatLength(op.stepover, units)}${op.stepdown > 0 ? `, levels ${formatLength(op.stepdown, units)}` : ''}`
                           : op.kind === 'curve'
                             ? { between: 'between two curves', follow3d: 'along 3D curves', zwave: `wave ${formatLength(op.wave.min, units)} to ${formatLength(op.wave.max, units)}` }[op.mode]
                         : op.levels.through
@@ -363,7 +382,7 @@ function OpEditor({
 }) {
   const set = <K extends keyof CamOp>(k: K, v: CamOp[K]) => onChange({ ...op, [k]: v } as CamOp)
   const lv = (patch: Partial<CamOp['levels']>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
-  const allowed = machine.tools.filter((t) => (op.kind === 'saw' ? t.type === 'saw' : op.kind === 'drill' ? t.type.startsWith('drill') : t.type === 'router'))
+  const allowed = machine.tools.filter((t) => (op.kind === 'saw' ? t.type === 'saw' : op.kind === 'drill' ? t.type.startsWith('drill') : op.kind === 'rotary' ? t.type === 'router' || t.type === 'saw' : t.type === 'router'))
   // values this operation uses that are not confirmed (its own, its tool's, the machine's)
   const unconf = opUnconfirmed(op, part, machine, tp?.tool ?? null)
   const toolItem = unconf.find((u) => u.target.kind === 'tool' && u.target.part !== 'feeds')
@@ -458,12 +477,12 @@ function OpEditor({
             onChange={(v) => set('toolId', v === NONE ? null : v)}
             badge={toolItem && <ConfigureBadge item={toolItem} />}
           />
-          <SelectField
+          {op.kind !== 'rotary' && <SelectField
             label="Face"
             value={String(op.face)}
             options={[1, 2, 3, 4, 5, 6].map((f) => ({ value: String(f), label: ['Top (1)', 'Front edge (2)', 'Right edge (3)', 'Back edge (4)', 'Left edge (5)', 'Underside (6)'][f - 1] }))}
             onChange={(v) => set('face', Number(v) as FaceId)}
-          />
+          />}
         </Group>
       )}
 
@@ -488,7 +507,7 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && op.kind !== 'thread' && !OPS_3D.has(op.kind) && (
+      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && op.kind !== 'thread' && op.kind !== 'rotary' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           <div className="col-span-2">
             <SwitchField label="Cut through" checked={op.levels.through} onChange={(v) => lv({ through: v })} hint={op.levels.through ? `Panel thickness plus ${machine.throughDepth} mm into the spoilboard` : undefined} />
@@ -503,9 +522,9 @@ function OpEditor({
       )}
 
       <StrategyFields op={op} part={part} onChange={onChange} sel={sel} tool={tp?.tool ?? resolveTool(op, machine)} onPart={onPart} />
-      {op.kind !== 'code' && <RapidSurfaceGroup op={op} part={part} onChange={onChange} />}
+      {op.kind !== 'code' && op.kind !== 'rotary' && <RapidSurfaceGroup op={op} part={part} onChange={onChange} />}
       {op.kind === 'manual' && <ManualFields op={op} onChange={onChange} pathPick={pathPick ?? null} setPathPick={setPathPick} sel={sel} part={part} />}
-      {op.kind !== 'code' && op.kind !== 'drill' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
+      {op.kind !== 'code' && op.kind !== 'drill' && op.kind !== 'rotary' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
 
       {op.kind === 'profile' && (
         <>
@@ -703,6 +722,8 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null, onPart }: {
   const machine = useStore((s) => s.data!.machine)
   const c = useOpCfg(op, part, onChange)
   switch (op.kind) {
+    case 'rotary':
+      return <RotaryFields op={op} part={part} onChange={onChange} />
     case 'finish3d': {
       const waterline = op.strategy === 'waterline'
       const strategy = (

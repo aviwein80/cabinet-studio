@@ -1,12 +1,12 @@
 import { TriangleAlert } from 'lucide-react'
-import { NumField, Section, SwitchField } from '@/components/fields'
-import { machineModelOf, PLACEHOLDER_N200_MODEL } from '@/core/machineModel'
+import { NumField, Section, SelectField, SwitchField } from '@/components/fields'
+import { machineModelOf, PLACEHOLDER_N200_MODEL, rotaryAxisOf, type RotaryLetter, withRotaryAxis } from '@/core/machineModel'
 import type { MachineModel, MachineProfile } from '@/core/types'
 import { ValueBadges } from '@/components/Configure'
 import { confirmKey, machineUnconfirmed, type ModelFact } from '@/core/confirm'
 
 /** Machine model: table, travel, tool change and which units are fitted. Shared by sim, checks and posts. */
-export function MachineModelSection({ machine, updateMachine }: { machine: MachineProfile; updateMachine: (fn: (m: MachineProfile) => void) => void }) {
+export function MachineModelSection({ machine, updateMachine, rotaryAllowed = false }: { machine: MachineProfile; updateMachine: (fn: (m: MachineProfile) => void) => void; rotaryAllowed?: boolean }) {
   const mm = machineModelOf(machine)
   // editing a figure records it as confirmed (a real value was entered)
   const upd = (fn: (p: MachineModel) => void, fact?: ModelFact) =>
@@ -44,6 +44,30 @@ export function MachineModelSection({ machine, updateMachine }: { machine: Machi
         hint="Off (until confirmed): saw grooves, on cabinets and custom parts, are blocked by the export checker. Use router pockets."
       />
       <SwitchField label="Aggregate head fitted" checked={mm.capabilities.aggregate} onChange={(v) => upd((p) => (p.capabilities.aggregate = v), 'aggregate')} cfg={cfg('aggregate')} badge={badge('aggregate')} hint="Off: edge work with an aggregate is simulated only and the export checker refuses it." />
+      {rotaryAllowed ? (
+        <div className="grid grid-cols-3 gap-2" data-cfg="model:rotary">
+          <SelectField
+            label="Rotary axis"
+            value={rotaryAxisOf(mm)?.id ?? 'none'}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'A', label: 'A (about X)' },
+              { value: 'B', label: 'B (about Y)' },
+              { value: 'C', label: 'C (about Z)' },
+            ]}
+            onChange={(v) => upd((p) => Object.assign(p, withRotaryAxis(p, v === 'none' ? null : (v as RotaryLetter))))}
+          />
+          {rotaryAxisOf(mm) && (
+            <>
+              <NumField label="Turns from" suffix="°" value={rotaryAxisOf(mm)!.min} onChange={(v) => upd((p) => Object.assign(p, withRotaryAxis(p, rotaryAxisOf(p)!.id as RotaryLetter, { min: v, max: rotaryAxisOf(p)!.max })))} />
+              <NumField label="Turns to" suffix="°" value={rotaryAxisOf(mm)!.max} onChange={(v) => upd((p) => Object.assign(p, withRotaryAxis(p, rotaryAxisOf(p)!.id as RotaryLetter, { min: rotaryAxisOf(p)!.min, max: v })))} />
+            </>
+          )}
+          <p className="col-span-3 text-[11px] text-muted-foreground">For a machine with a rotary axis: rotary programs for it are written only through a script post written for it, with the rotary-post switch on. The N-200 has none.</p>
+        </div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">Rotary axis: none (the N-200 is a 3-axis router). Rotary work is simulated only; it goes to another machine with a rotary axis through a script post.</p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <NumField label="Table length (X)" value={mm.table.length} min={1} onChange={(v) => upd((p) => (p.table.length = v), 'table')} cfg={cfg('table')} badge={badge('table')} />
         <NumField label="Table width (Y)" value={mm.table.width} min={1} onChange={(v) => upd((p) => (p.table.width = v), 'table')} />

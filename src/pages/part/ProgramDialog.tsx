@@ -154,12 +154,12 @@ function MacroRow({ n, m }: { n: number; m: MprMacro }) {
  */
 function TextPostPreview({ part, machineId }: { part: CamPart; machineId: string }) {
   const data = useStore((st) => st.data)!
-  // M3.3: rotary operations on a model, calculated in the background with this machine's tools
+  // M3.3: rotary operations on a model (M3.5: and 5-axis operations), calculated in the background with this machine's tools
   const [bg, setBg] = useState<{ key: unknown; paths: Map<string, Toolpath>; note?: string } | null>(null)
   const bgKey = useMemo(() => ({ part, machineId, data }), [part, machineId, data])
   useEffect(() => {
     const machine = dataFor(data, machineId).machine
-    const ops = part.ops.filter((o) => o.enabled && o.kind === 'rotary' && inBackground(o, part))
+    const ops = part.ops.filter((o) => o.enabled && (o.kind === 'rotary' || o.kind === 'multiaxis') && inBackground(o, part))
     if (!ops.length) return
     const abort = new AbortController()
     void (async () => {
@@ -175,7 +175,7 @@ function TextPostPreview({ part, machineId }: { part: CamPart; machineId: string
     })()
     return () => abort.abort()
   }, [bgKey, data, machineId, part])
-  const needsBg = part.ops.some((o) => o.enabled && o.kind === 'rotary' && inBackground(o, part))
+  const needsBg = part.ops.some((o) => o.enabled && (o.kind === 'rotary' || o.kind === 'multiaxis') && inBackground(o, part))
   const paths3d = bg?.key === bgKey ? bg.paths : undefined
   const plan = useMemo(() => {
     try {
@@ -204,7 +204,7 @@ function TextPostPreview({ part, machineId }: { part: CamPart; machineId: string
     }
   }, [plan, data])
   if (!plan.ok) return <p className="text-xs text-red-300">{plan.error}</p>
-  if (needsBg && !paths3d) return <p className="text-xs text-stone-400">Calculating the rotary toolpaths with this machine's tools…</p>
+  if (needsBg && !paths3d) return <p className="text-xs text-stone-400">Calculating the rotary and 5-axis toolpaths with this machine's tools…</p>
   const p = plan.plan
   const shown: { ext?: string; text?: string; error?: string } | null = p.templateText ?? (out?.key === plan ? out : null)
   const missing = p.post.kind === 'script' && !(data.plugins ?? []).some((x) => x.id === (p.post as { plugin: string }).plugin && x.enabled)

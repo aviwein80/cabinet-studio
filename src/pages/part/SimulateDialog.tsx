@@ -340,7 +340,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
             onCarved={onCarved}
           />
         ) : (
-          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} axis={cur?.axis ?? (op ? tl.segs.find((x) => x.op === pos.op)?.axis : undefined)} />
+          <View3D sim={sim} t={t} part={part} base={base} pos={pos.p} rapid={pos.kind === 'rapid'} outline={pos.op >= 0 ? outlines[pos.op] : null} blade={op ? bladeOf(ordered[op.path], cur) : null} flat={op ? flatOf(ordered[op.path], cur) : null} r={cutter.r} opacity={opacity} section={section} spoilboard={spoil} onCarved={onCarved} axis={cur?.axis ?? (op ? tl.segs.find((x) => x.op === pos.op)?.axis : undefined)} profile={cutter.profile} />
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Button size="icon-sm" variant="ghost" aria-label="Previous operation" title="Previous operation" onClick={prevOp}>
@@ -486,7 +486,9 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           </p>
         ) : tilt ? (
           <p className="text-stone-500">
-            3+2: each operation on a tilted plane plays with the tool along the plane's normal (its rotary angles locked); between planes the tool backs off clear of the block before it turns (that turn is not checked here). The stock is held as rays along X, Y and Z {fmt(cell)} apart, cut exactly along each ray; the top view shows its top, the 3D view its blocks.
+            {toolpaths.some((tp) => tp.multiAxis) ? '5-axis: every move plays with its own tool direction (moves split so the tool turns at most 1° each); ' : '3+2: each operation on a tilted plane plays with the tool along the plane\'s normal (its rotary angles locked); '}
+            where the tool direction changes between operations it backs off clear of the block, rises above it, turns while moving over and comes down, and that turn is checked too. The stock is held as rays along X, Y and Z {fmt(cell)} apart, cut exactly along each ray; the top view shows its top, the 3D view its blocks.
+            {toolpaths.some((tp) => tp.multiAxis?.preview) ? ' Made by the built-in preview engine: for the simulator only.' : ''}
           </p>
         ) : (
           <p className="text-stone-500">Edge (horizontal) drilling is drawn in the backplot but runs under the face, so it is not carved. Scrap and offcuts cut free are shown faded and drop out in the through-cut view; the part stays. The collision check keeps them in place (safer).</p>
@@ -748,7 +750,7 @@ function flatOf(tp: Toolpath | undefined, seg: { a: { x: number; y: number }; b:
   return { r: tp.edge.r, length: h && Number.isFinite(h.gauge) ? h.gauge : tp.edge.flute, dir: still ? 0 : along + (tp.edge.side === 'left' ? Math.PI / 2 : -Math.PI / 2), housing: h }
 }
 
-function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opacity, section, spoilboard, onCarved, axis }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; flat: Flat | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number; axis?: { x: number; y: number; z: number } }) {
+function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opacity, section, spoilboard, onCarved, axis, profile }: Omit<ViewProps, 'r'> & { outline: Outline | null; blade: Blade | null; flat: Flat | null; r: number; opacity: number; section: { on: boolean; axis: 'x' | 'y'; at: number }; spoilboard: number; axis?: { x: number; y: number; z: number }; profile?: { h: number; r: number }[] }) {
   const max = Math.max(part.length, part.width)
   return (
     <div className="h-[56vh] min-h-72 overflow-hidden rounded-md border border-white/10 bg-[#0e1013]">
@@ -762,7 +764,7 @@ function View3D({ sim, t, part, base, pos, rapid, outline, blade, flat, r, opaci
             <boxGeometry args={[part.length + 40, part.width + 40, Math.max(1, spoilboard)]} />
             <meshStandardMaterial color="#3a3f47" />
           </mesh>
-          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : flat ? <FlatToolModel pos={pos} flat={flat} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} axis={axis} />}
+          {blade ? <BladeModel pos={pos} blade={blade} rapid={rapid} /> : flat ? <FlatToolModel pos={pos} flat={flat} rapid={rapid} /> : <ToolModel pos={pos} outline={outline} r={r} rapid={rapid} axis={axis} profile={profile} />}
         </group>
         <OrbitControls makeDefault />
       </Canvas>
@@ -818,18 +820,20 @@ function BladeModel({ pos, blade, rapid }: { pos: { x: number; y: number; z: num
 }
 
 /** Tool, shank and holder as revolved shapes, tip at `pos`, along `axis` (tip to spindle; absent = straight up). */
-function ToolModel({ pos, outline, r, rapid, axis }: { pos: { x: number; y: number; z: number }; outline: Outline | null; r: number; rapid: boolean; axis?: { x: number; y: number; z: number } }) {
+function ToolModel({ pos, outline, r, rapid, axis, profile }: { pos: { x: number; y: number; z: number }; outline: Outline | null; r: number; rapid: boolean; axis?: { x: number; y: number; z: number }; profile?: { h: number; r: number }[] }) {
   const parts = useMemo(() => {
     const o = outline ?? { r, flute: 30, shankR: r, gauge: Infinity, holder: [] }
     const top = Number.isFinite(o.gauge) ? o.gauge : o.flute + 30
     const lathe = (pts: [number, number][]) => new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), 32)
+    // (barrel and form tools, TOOL-07: their own cutting outline)
+    const cutting: [number, number][] = profile && profile.length > 1 ? [[0, profile[0].h], ...profile.map((p) => [p.r, p.h] as [number, number]), [0, profile[profile.length - 1].h]] : [[0, 0], [o.r, 0], [o.r, o.flute], [0, o.flute]]
     const out = [
-      { geo: lathe([[0, 0], [o.r, 0], [o.r, o.flute], [0, o.flute]]), color: rapid ? '#f87171' : '#e7e5e4' },
+      { geo: lathe(cutting), color: rapid ? '#f87171' : '#e7e5e4' },
       { geo: lathe([[0, o.flute], [o.shankR, o.flute], [o.shankR, top], [0, top]]), color: '#a8a29e' },
     ]
     if (o.holder.length) out.push({ geo: lathe([[0, o.holder[0].z], ...o.holder.map((p) => [p.r, p.z] as [number, number]), [0, o.holder[o.holder.length - 1].z]]), color: '#64748b' })
     return out
-  }, [outline, r, rapid])
+  }, [outline, r, rapid, profile])
   useEffect(() => () => parts.forEach((p) => p.geo.dispose()), [parts])
   // the lathe turns about its own Y axis: turn it up the part's Z, then (3+2) onto the tool's axis
   const tilt = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis ? new THREE.Vector3(axis.x, axis.y, axis.z).normalize() : new THREE.Vector3(0, 0, 1)), [axis])

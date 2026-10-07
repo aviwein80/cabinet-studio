@@ -4,7 +4,8 @@
  *
  * For a ball-nose it is exact at every checked position, at any tilt: the ball's centre sits one
  * radius up the tool from the tip, and the ball cuts into the model (plus the stock to leave) by
- * exactly how much nearer than radius + stock that centre is to the nearest facet. Positions are
+ * exactly how much nearer than radius + stock that centre is to the nearest facet (less the depth
+ * the operation means to cut into the model, along curves). Positions are
  * taken along every feed move at most `step` apart, the tool direction turned evenly between the
  * ends of each move. Other tool shapes are not checked here (the simulator's stock shows them).
  *
@@ -45,10 +46,14 @@ export function meshGroups(mesh: Mesh, groups: readonly number[] | undefined): M
   return { positions: mesh.positions, indices: Uint32Array.from(ix) }
 }
 
-export function checkAxisGouge(mesh: Mesh, tool: { shape?: string; diameter: number }, moves: readonly Move[], opt: { stock?: number; step?: number; maxPoints?: number } = {}): AxisGougeReport {
+/**
+ * `stock`: material to leave on the model; `depth`: how far the operation means to cut into the
+ * model (a groove along a curve on its surface), so only deeper counts as a gouge.
+ */
+export function checkAxisGouge(mesh: Mesh, tool: { shape?: string; diameter: number }, moves: readonly Move[], opt: { stock?: number; depth?: number; step?: number; maxPoints?: number } = {}): AxisGougeReport {
   if (tool.shape !== 'ball') return { method: 'none', depth: 0, at: null, points: 0 }
   const R = tool.diameter / 2
-  const s = Math.max(0, opt.stock ?? 0)
+  const s = Math.max(0, opt.stock ?? 0) - Math.max(0, opt.depth ?? 0)
   const step = Math.max(0.01, opt.step ?? 0.25)
   const dist = distanceTo(mesh)
   const nodes = axisNodes(moves)

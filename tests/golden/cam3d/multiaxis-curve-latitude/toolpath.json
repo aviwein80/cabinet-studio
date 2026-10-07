@@ -20,7 +20,7 @@
   -5.093
  ],
  "warnings": [
-  "Gouge check: the tool cuts 0.509 mm into the model (plus the stock to leave) at X48.7 Y51.7 Z-7.1."
+  "Gouge check: the tool cuts 0.009 mm into the model (plus the stock to leave, beyond the 0.5 mm depth asked for) at X48.7 Y51.7 Z-7.1."
  ],
  "hash": "5b6c3bae"
 }

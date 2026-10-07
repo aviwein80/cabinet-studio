@@ -476,6 +476,52 @@ export checker. Tool numbers are still placeholders.
     position inside the axes' travel. The built-in template post never writes a tilted
     operation. The post also gets each operation in its plane's own frame, so a control with
     its own tilted-plane cycle can be written for instead.
+- **Simultaneous 5-axis** (switch: Simultaneous 5-axis, on; screens and simulation only on the
+  N-200): operations whose tool tilts while it cuts.
+  - **The 5-axis engine**: the toolpaths come from a 5-axis engine behind our own interface
+    (`MultiAxisEngine`). The intended real engine is a licensed commercial one; **none is
+    licensed or installed** (an owner decision; nothing is bought, downloaded or signed up for
+    without a written OK), so the shop's engine answers "**5-axis engine not licensed**" and
+    nothing is calculated. Machine & tools shows the engine's status under the switch.
+  - **Built-in preview engine** (pick it on the operation): simple methods of our own so a 5-axis
+    set-up can be simulated: along 3D curves or solid edges, swarf (the side of a flat end mill
+    along a leaning wall between a bottom and a top curve) and ball-nose surface finishing (the
+    ball sits where 3-axis finishing puts it, the tool turned about the ball's centre). It plans
+    no collision avoidance for the shaft and holder and does no roughing; its toolpaths are
+    **never written** to any machine.
+  - **Operations** (part designer → Add operation → 5-axis): along curves, swarf, surface
+    finishing and multi-axis roughing (licensed engine only). **Tool axis**: along the surface
+    normal or square to the curve (with lead along the cut and tilt to the left), a fixed tilt,
+    through or away from a point or a line, towards a guide curve, or straight up; a largest
+    tilt and axis smoothing. Cut **as made, reversed or there and back**; **head flip**: the
+    usual axis solution, the other one (head turned 180°) or whichever stays inside the travel.
+    Step-over, step-down, largest tilt and axis smoothing are placeholders with Configure badges.
+  - **Barrel and form tools** (Machine & tools → tool → Cutting shape): a barrel (widest at its
+    diameter, a side arc and a rounded tip) or any outline typed in as heights and radii (arcs
+    allowed), with a drawing of the outline; the simulator, the stocks and the collision checks
+    use the outline. A placeholder barrel T110 is in the placeholder tool table.
+  - **Our checks on any engine's toolpath**: straight moves with a tool direction on every move;
+    our own gouge check against the model (exact for a ball-nose at any tilt; a groove meant to go
+    into the model counts only past its depth).
+  - **Simulated with the tool tilted on every move** on the three-way stock, with the collision
+    check; replayed through a machine's kinematics. Where the tool direction changes between
+    operations (3+2 or 5-axis) the tool backs off, rises clear above the block, turns while moving
+    over and comes down, and that turn is checked too.
+  - **Kinematics** (Machine & tools → machine model → 3+2 axes → "The rotary axes also move while
+    it cuts"): our own conversion to the machine's X, Y, Z and both rotary angles for every move,
+    following one axis solution (angles never wrapped, the free axis held when the tool points
+    along it, a rotary axis that would swing round within a cutting move refused), and moves
+    split until the machine's even axis motion keeps the tip within 0.01 mm of each move.
+  - **Output**: never to woodWOP. The N-200 has three axes, so a part with 5-axis operations is
+    left out of the cut list and nesting, and the job export refuses it with a clear message
+    (`CAM_MULTIAXIS`) naming the part and its 5-axis operations. Another machine whose model
+    declares simultaneous 5-axis can write a **licensed engine's** toolpath (never the preview's)
+    only through a **script post** written for it (a sample,
+    `examples/plugins/simultaneous-5axis-post.js`: Settings → Plugins → **Add the sample 5-axis
+    post**; both rotary axes on every move, inverse-time feeds where they turn; not
+    machine-validated), with "Write 5-axis programs through script posts" on (off by default),
+    the script-post switch, the plugin's machine-output grant, our gouge check passing and every
+    angle and position inside the travel.
 - **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
   the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
   aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
@@ -775,6 +821,9 @@ src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its 
   positional/      positional 3+2: tilted plane frames, kinematics for three layouts, toolpaths
                    to machine axes (and back) or the plane's own frame, the tilted-tool timeline
                    and checks, planes from a solid's flat faces
+  multiaxis/       simultaneous 5-axis: the engine interface and the "not licensed" stub, the
+                   built-in preview engine, tool-axis rules, our checks on an engine's toolpath
+                   (reversed / both ways, gouge check), the simultaneous conversion with head flip
   worker/          background compute worker (3D tasks) with progress and cancel
   plugin/          plugin sandbox (QuickJS), the typed API, grants, part-change checks, batch
                    steps, script posts, macro recorder
@@ -783,6 +832,7 @@ src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its 
 src/core/machineModel.ts   machine model (placeholder N-200), tool and holder outline, default holder
 src/core/toolData.ts       tool fields, grid editing, spreadsheet export/import, tool data in operations
   tools/holder.ts  holder outline from a model (revolved envelope)
+  tools/form.ts    barrel and form tool outlines (TOOL-07)
   turnSketch.ts    turn-by-turn sketch on the constraint solver (solver.ts)
   dims.ts, print.ts  associative dimensions, print to scale (PDF)
   annotate.ts      hatching, detail views, line types (notes, printed to scale)

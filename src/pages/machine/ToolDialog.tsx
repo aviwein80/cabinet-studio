@@ -7,6 +7,59 @@ import { ValueBadges } from '@/components/Configure'
 import { aggregateItem, holderItem as holderUnconfirmed, toolUnconfirmed, type ToolPart } from '@/core/confirm'
 import { effectiveGauge, effectiveHolder, usesHolder } from '@/core/machineModel'
 import { HolderPreview } from './HoldersSection'
+import { formText, parseFormText } from '@/core/toolData'
+import { cuttingOutline, outlinePoints, toolForm, toolFormProblems } from '@/cam/tools/form'
+import { useState } from 'react'
+import type { FormPoint } from '@/core/types'
+
+/** A form tool's outline typed as "height radius [arc]; ..." (mm, from the tip up). */
+function FormOutlineField({ tool, onChange }: { tool: Tool; onChange: (form: FormPoint[]) => void }) {
+  const [text, setText] = useState(formText(tool.form ?? []))
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <TextField
+      label="Outline (height radius [arc radius]; ... from the tip up, mm)"
+      value={text}
+      onChange={(v) => {
+        setText(v)
+        const r = parseFormText(v)
+        if ('error' in r) setError(r.error)
+        else {
+          setError(null)
+          onChange(r.value)
+        }
+      }}
+      hint={error ?? 'Up to the flute length it cuts; above it is the neck or shank the collision checks use. An arc radius bulges outwards (negative: inwards).'}
+    />
+  )
+}
+
+/** The barrel or form tool's outline drawn to scale, the flute length marked. */
+function OutlinePreview({ tool }: { tool: Tool }) {
+  const problems = toolFormProblems(tool)
+  const f = toolForm(tool)
+  if (problems.length || !f) return <p className="text-[11px] text-red-600">{problems[0] ?? 'The outline is not complete.'}</p>
+  const pts = outlinePoints(f)
+  const cut = cuttingOutline(tool)
+  const H = Math.max(...pts.map((p) => p.h), tool.fluteLength ?? tool.maxDepth, 1)
+  const R = Math.max(...pts.map((p) => p.r), (tool.shankDiameter ?? 0) / 2, 1)
+  const s = 120 / Math.max(H, 2 * R)
+  const W = 2 * R * s + 20
+  const path = [...pts.map((p) => [R * s + 10 + p.r * s, 130 - p.h * s]), ...[...pts].reverse().map((p) => [R * s + 10 - p.r * s, 130 - p.h * s])].map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')
+  const fy = 130 - (tool.fluteLength ?? tool.maxDepth) * s
+  return (
+    <div className="flex items-center gap-3 rounded-md border p-2 text-[11px] text-muted-foreground">
+      <svg width={W} height={140} className="shrink-0 rounded bg-stone-900">
+        <path d={path + ' Z'} fill="#e7e5e4" fillOpacity={0.85} stroke="#a8a29e" strokeWidth={0.8} />
+        <line x1={4} x2={W - 4} y1={fy} y2={fy} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={0.8} />
+      </svg>
+      <div className="min-w-0">
+        <div className="font-medium text-foreground">{tool.shape === 'barrel' ? 'Barrel cutter' : 'Form tool'} outline</div>
+        <div>Widest Ø{(2 * Math.max(...(cut?.outline ?? pts).map((p) => p.r))).toFixed(2)} mm in its flutes; dashed: flute length. The simulator, the stocks and the collision checks use this outline.</div>
+      </div>
+    </div>
+  )
+}
 
 const SHAPES: { value: ToolShape; label: string }[] = [
   { value: 'flat', label: 'Flat end' },
@@ -18,6 +71,8 @@ const SHAPES: { value: ToolShape; label: string }[] = [
   { value: 'profile', label: 'Profile cutter' },
   { value: 'lollipop', label: 'Lollipop (ball on a narrower neck)' },
   { value: 'thread', label: 'Thread mill (single 60° tooth on a neck)' },
+  { value: 'barrel', label: 'Barrel (side arc and rounded tip, 5-axis)' },
+  { value: 'form', label: 'Form tool (outline typed in, 5-axis)' },
 ]
 
 /** Cutting shape and the lengths collision checks need: shank, flutes, stick-out and holder. */
@@ -68,7 +123,11 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
             <SelectField label="Cutting shape" value={tool.shape ?? 'flat'} options={SHAPES} onChange={(v) => update((t) => (t.shape = v))} />
             {tool.shape === 'bull' && <NumField label="Corner radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
             {tool.shape === 'v' && <NumField label="Included angle" suffix="°" value={opt(tool.angle)} min={0} max={180} onChange={set('angle')} />}
+            {tool.shape === 'barrel' && <NumField label="Tip radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
+            {tool.shape === 'barrel' && <NumField label="Side arc radius" value={opt(tool.barrelRadius)} min={0} step={5} onChange={(v) => update((t) => (v > 0 ? (t.barrelRadius = v) : delete t.barrelRadius), v > 0 ? `tool:${tool.id}:data` : undefined)} hint="Larger than half the diameter" />}
           </div>
+          {tool.shape === 'form' && <FormOutlineField tool={tool} onChange={(form) => update((t) => (t.form = form), `tool:${tool.id}:data`)} />}
+          {(tool.shape === 'barrel' || tool.shape === 'form') && <OutlinePreview tool={tool} />}
           {tool.type === 'saw' && (
             <div className="grid grid-cols-2 gap-2">
               <NumField label="Kerf" value={opt(tool.kerf)} min={0} step={0.1} onChange={set('kerf')} hint="Width of the cut; 0 = 4 mm" />

@@ -120,7 +120,18 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   check; holes and pockets on four tilted planes of a test block land within 0.001 mm after the
   conversion on all three layouts. Output only through a script post for a machine model that
   declares the 3+2 axes (switch off); the N-200 export always refuses a part with tilted
-  operations (`CAM_POSITIONAL`). Part format 9. Next: M3.5 when the owner says go.
+  operations (`CAM_POSITIONAL`). Part format 9.
+  **M3.5 simultaneous 5-axis interface: done** (October 2026): the `MultiAxisEngine` interface
+  (model or curves, tool with holder, strategy settings, machine kinematics in; our toolpath IR
+  with a tool direction on every move out), the shop's engine as a stub that answers "5-axis
+  engine not licensed", and a built-in preview engine (simulation only, never written) that the
+  tests also use as a stand-in for a licensed engine. Tool-axis control, strategies along curves,
+  swarf, surface finishing (roughing for a licensed engine), barrel and form tools, cutting
+  reversed or both ways, the head flip; our own gouge check, simultaneous kinematics and kinematic
+  replay; the axis turn between operations is now checked (M3.4 limit closed). Output only through
+  a script post for a machine model with simultaneous 5-axis, from a licensed engine (switch off);
+  the N-200 export always refuses (`CAM_MULTIAXIS`). **No engine licence bought, nothing
+  downloaded.** Part format 10. Next: M3.6 when the owner says go.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

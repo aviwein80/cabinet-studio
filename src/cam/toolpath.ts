@@ -2473,10 +2473,12 @@ function generateMultiAxis(op: MultiAxisOp, ctx: GenContext): Toolpath {
   if (info.preview) tp.warnings.push('Made by the built-in preview engine: for the simulator only, never written to any machine.')
   // our own gouge check against the model, whatever the engine says
   if (op.gougeCheck && made.req.surface) {
-    const g = checkAxisGouge(meshGroups(made.req.surface.mesh, op.check), tool, tp.moves, { stock: op.stockToLeave, step: Math.max(0.05, Math.min(0.5, tool.diameter / 12)), maxPoints: 400_000 })
+    // (along curves and swarf the tip goes the operation's depth into the model on purpose)
+    const depth = op.strategy === 'curve' || op.strategy === 'swarf' ? Math.max(0, op.levels.depth) : 0
+    const g = checkAxisGouge(meshGroups(made.req.surface.mesh, op.check), tool, tp.moves, { stock: op.stockToLeave, depth, step: Math.max(0.05, Math.min(0.5, tool.diameter / 12)), maxPoints: 400_000 })
     info.gouge = g
     if (g.method === 'none') tp.warnings.push(`Gouge check: T${tool.number} (${tool.shape ?? 'flat'}) is not checked against the model here (exact for ball-nose tools only); check it in the simulator.`)
-    else if (g.depth > GOUGE_TOL && g.at) tp.warnings.push(`Gouge check: the tool cuts ${g.depth.toFixed(3)} mm into the model (plus the stock to leave) at X${g.at[0].toFixed(1)} Y${g.at[1].toFixed(1)} Z${g.at[2].toFixed(1)}.`)
+    else if (g.depth > GOUGE_TOL && g.at) tp.warnings.push(`Gouge check: the tool cuts ${g.depth.toFixed(3)} mm into the model (plus the stock to leave${depth ? `, beyond the ${depth} mm depth asked for` : ''}) at X${g.at[0].toFixed(1)} Y${g.at[1].toFixed(1)} Z${g.at[2].toFixed(1)}.`)
   }
   return tp
 }

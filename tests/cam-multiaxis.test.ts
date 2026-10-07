@@ -291,6 +291,18 @@ describe('M3.5 strategies through the test engine (5AX-02, 5AX-03)', () => {
     expect(g.depth).toBeGreaterThan(0.29)
     expect(g.depth).toBeLessThan(0.31)
     expect(checkAxisGouge(mesh, { shape: 'flat', diameter: 6 }, moves).method).toBe('none')
+    // a cut meant to go 0.3 mm into the model (a groove along a curve) is not a gouge; 0.2 of it is
+    expect(checkAxisGouge(mesh, { shape: 'ball', diameter: 6 }, moves, { step: 0.05, depth: 0.3 }).depth).toBeLessThan(0.01)
+    expect(checkAxisGouge(mesh, { shape: 'ball', diameter: 6 }, moves, { step: 0.05, depth: 0.1 }).depth).toBeCloseTo(0.2, 2)
+  })
+
+  it('a groove cut along a curve on the model, as deep as asked, passes the gouge check', () => {
+    const { part, op } = hemiPart([curve3('lat', latitude(15))], { geometry: ['lat'], toolId: 't106', maxTurn: 0, axis: ax({ mode: 'surface-normal', maxTilt: 90 }), levels: { safeZ: 20, rapidZ: 3, depth: 1.5, through: false, stockZ: 0, passDepth: 0 } }, 'curve')
+    const tp = gen5(part, op)
+    expect(tp.multiAxis!.gouge!.method).toBe('exact')
+    // (the normal comes from the model's facets: within a few hundredths)
+    expect(tp.multiAxis!.gouge!.depth).toBeLessThan(0.05)
+    expect(tp.warnings.join(' ')).not.toMatch(/Gouge check: the tool cuts/)
   })
 })
 

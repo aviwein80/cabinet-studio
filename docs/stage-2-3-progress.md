@@ -101,11 +101,14 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.4a Positional 3+2 core (5AX-01): tilted planes, kinematics, conversion, three-way stock, checks, format v9 | **Done** (October 2026) | See below. Simulation only; the N-200 export refuses a part with tilted operations. Also owner item 3 (`CAM_ROTARY` names each turned part). |
 | M3.4b 3+2 output through a script post for a machine model with 3+2 axes | **Done** (October 2026) | See below. 3+2-post switch off. |
 | M3.4c 3+2 screens, simulator, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.4 complete.** Also owner item 4 (simulator step-back: stock checkpoints from the background check). |
-| M3.5 - M3.7 | Not started | |
+| M3.5a 5-axis core: `MultiAxisEngine` interface, "not licensed" stub, preview / test engine, tool axes in the IR, barrel and form tools, format 10 | **Done** (October 2026) | See below. No engine licence bought, nothing downloaded. |
+| M3.5b Simultaneous kinematics with head flip, 5-axis simulation, axis-turn check, N-200 refusal, script post | **Done** (October 2026) | See below. 5-axis-post switch off; never the N-200. Closes the M3.4 limit on the axis turn between planes. |
+| M3.5c 5-axis screens, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.5 complete.** |
+| M3.6 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -177,6 +180,14 @@ files present; fixed in M2.8e, back to 17.)
     from the job to export the rest; (4) going back in the simulator on large rotary parts is
     acceptable for now: move the replay off the screen's thread if cheap, else note it here.
 
+22. With the M3.5 go-ahead, on the M3.4 report: (1) the application of the M3.3 answers to 3+2 is
+    approved: badged placeholder kinematics, a generic labelled sample post, its switch off,
+    tilted parts blocking the whole N-200 job with the part named; (2) the deferred M3.4 items
+    (3D finishing, through cuts, rest and adaptive on tilted planes; the axis turn between planes
+    not collision-checked; the remaining ~2 s step-back on the screen's thread) may stay deferred,
+    listed here, and are closed where M3.5 builds the same machinery; (3) there is no 3+2 or
+    5-axis machine in the shop: do not ask for a real post or sample program.
+
 ## Open questions for the owner
 
 1. **N-200 figures** (machine model): travel limits, table size, origin, spoilboard thickness,
@@ -205,6 +216,8 @@ files present; fixed in M2.8e, back to 17.)
 14. **M3.1g / M3.2**: see "M3.1g decisions needed" and "M3.2 decisions needed" below.
 15. **M3.3 (rotary)**: see "M3.3 decisions needed" below.
 16. **M3.3**: answered (decision 21). **M3.4 (3+2)**: nothing blocking; see "M3.4 decisions needed" below.
+17. **M3.4**: answered (decision 22). **M3.5 (5-axis interface)**: one decision for the record, a
+    5-axis engine licence (see "M3.5 decisions needed"); nothing blocking.
 
 ## M2.1 3D foundation: what was built
 
@@ -2452,7 +2465,8 @@ programs).
   milestones.
 - **Turning between planes**: the tool backs off 10 mm clear of the block before the axes turn;
   the turn itself is not collision-checked (the machine's own path while turning depends on its
-  control).
+  control). **Closed in M3.5b**: the turn is now modelled (back off, rise clear above the block,
+  turn while moving over, come down) and every part of it is checked.
 - **Three-way stock**: rays every 0.5 mm or more in the simulator (0.25 to 0.5 mm in the tests);
   exact along each ray, with ramps and helices sampled at a quarter cell; up to 12 pieces of
   material per ray (6 for very large blocks; extra pieces are merged, which can only put
@@ -2506,9 +2520,142 @@ None blocking. For the record, applied from earlier answers without asking again
 2. **Parts with tilted operations in N-200 jobs**: they block the whole job, like turned parts
    (decision 21, item 3); the message names the part and says to remove it to export the rest.
 
+## M3.5 split
+
+Three green parts, each pushed to `main`: **M3.5a** the 5-axis core (the `MultiAxisEngine`
+interface, the "not licensed" stub, the preview / test engine, tool axes in the toolpath IR, our
+checks on what an engine returns, barrel and form tools, part format 10), **M3.5b** our own
+simultaneous kinematics (head flip, poles, axes never wrapped), the simulation with the tool tilted
+on every move, the check of the axis turn between operations, the N-200 refusal and output through
+a script post for a machine model with simultaneous 5-axis, **M3.5c** the screens, screenshots and
+docs.
+
+## M3.5 simultaneous 5-axis interface: what was built
+
+Commits `4e80843` (M3.5a), `836c846` (M3.5b), M3.5c (screens, screenshots and docs; see `git log`). Part format 10 (5-axis operations;
+format 9 parts read unchanged).
+
+**The intended real engine is a licensed commercial SDK (ModuleWorks is the usual choice). Nothing
+was bought, downloaded or signed up for.** The shop's engine slot holds the stub, which answers
+"5-axis engine not licensed".
+
+| Item | What | Where |
+|---|---|---|
+| `MultiAxisEngine` interface | An engine gets plain data (it can run in the compute worker or another process): the model placed in the part, or the drive / top / guide curves; the boundary; the tool with its cutting outline, shaft and holder; the strategy's settings; the machine's two rotary axes, layout and travel; the head-flip choice as a hint. It returns our toolpath IR with a tool direction on every move, and warnings, or "not licensed" / "unsupported" / "failed" with the reason | `src/cam/multiaxis/engine.ts` |
+| Stub ("not licensed") | The shop's engine until a licensed one is installed: every request answers "5-axis engine not licensed: …" and nothing is calculated | `STUB_ENGINE` in `engine.ts` |
+| Preview / test engine | Our own simple methods: along 3D curves or solid edges (tip a depth below the curve along the tool), swarf (bottom and top curves walked together, the side of the tool on the wall), ball-nose surface finishing (our 3-axis parallel finishing finds where the ball sits, then the tool turns about the ball's centre, so the ball cuts exactly what the 3-axis passes cut). No roughing. In the app it is "Built-in preview (for the simulator only)"; its toolpaths are never written. The tests declare the same code licensed to stand in for a licensed engine | `src/cam/multiaxis/fake.ts` |
+| Tool-axis control (5AX-02) | Straight up, fixed tilt, along the surface normal or square to the curve (with lead along the cut and tilt to the left), through or away from a point or a line, towards a guide curve; largest tilt; axis smoothing (degrees per mm). Strategies (5AX-03): along curves, swarf, surface finishing, multi-axis roughing (licensed engine only) | `src/cam/multiaxis/axis.ts`, `MultiAxisOp` in `src/cam/types.ts` |
+| Toolpath IR with tool axes | Rapid and feed moves carry `a`, 3D chains `axes` (unit, tip to spindle, part frame); a 5-axis toolpath has them on every move and no arcs or drill cycles (`Toolpath.multiAxis` says which engine made it, licensed or preview, largest tilt and turn, our gouge check) | `src/cam/toolpath.ts`, `src/cam/moves.ts` |
+| Our side of any engine result | The moves are checked (straight moves only, unit directions, numbers); cut as made, reversed, or there and back (NEW-26); the axis measured; our independent gouge check (exact for a ball-nose at any tilt) | `src/cam/multiaxis/result.ts`, `src/cam/multiaxis/check.ts` |
+| Barrel and form tools (TOOL-07) | Barrel: widest at the diameter, side arc (barrel radius), rounded tip. Form: any outline typed in point by point (heights, radii, arcs), cutting up to the flute length, the shaft above it for the collision checks. Used by the simulator, the stocks (swept correctly when the tool moves along itself) and the collision checks. Placeholder barrel T110 with Configure badges | `src/cam/tools/form.ts`, `src/core/types.ts`, `src/pages/machine/ToolDialog.tsx` |
+| Simultaneous kinematics and head flip (NEW-26) | Both closed-form solutions per point; one branch followed (each point nearest the last; angles never wrapped); head flip usual / other / whichever fits the travel; at a pole the free axis is held; a rotary axis swinging round within a cutting move (out of travel, or through a pole) is refused; moves split until the machine's even axis motion keeps the tip within 0.01 mm of each straight move; machine X, Y, Z and both angles per move; the kinematic replay back into the part | `src/cam/multiaxis/kinematics5.ts` |
+| Simulation | The tilted-tool (three-way) stock with the tool direction on every move (moves split to turn at most 1°), the collision checks along the tilted tool; replayed through a machine's kinematics when one is given | `src/cam/positional/sim.ts`, `SimulateDialog.tsx` |
+| Axis turn between operations (closes an M3.4 limit) | Where the tool direction changes between operations the tool backs off along itself clear of the block, rises straight up clear above it, turns the axes while moving over, comes down and goes in along the new direction (the way the sample posts retract before they turn); every part of it is checked: the whole tool, shank and holder against the material left and against the table round the part | `src/cam/positional/sim.ts` |
+| N-200 refuses | A part with 5-axis operations is left out of the cut list and nesting (warning) and the job export is refused (`CAM_MULTIAXIS`, error, whatever the switches), naming the part and its 5-axis operations and saying to remove it (or switch them off) to export the rest | `src/core/validator.ts`, `src/core/cutlist.ts`, `src/core/pipeline.ts` |
+| Output through a script post | Post input per operation: both axis letters, layout, tip control, where the part sits, pivot length, the branch, and every move with X, Y, Z, both angles, the tool direction and (feed moves) the tip's travel for inverse-time feeds. Text-post checks: a script post (the template post writes only a comment), the "Write 5-axis programs through script posts" switch (off), a licensed engine's toolpath (never the preview), our gouge check passing, a machine model with simultaneous 5-axis, every angle and position inside the travel, no turned work in the same program. Sample `examples/plugins/simultaneous-5axis-post.js` (G-code with both rotary words, G93 inverse-time feeds where a rotary axis turns while cutting; not machine-validated), added from Settings → Plugins | `src/cam/post.ts`, `checkTextPost` in `src/core/validator.ts`, `src/cam/plugin/posts.ts` |
+| Machine model | Machine & tools → machine model → 3+2 axes → "The rotary axes also move while it cuts (simultaneous 5-axis)", for machines other than the N-200 | `withSimultaneous` in `src/core/machineModel.ts`, `src/pages/machine/MachineModelSection.tsx` |
+| Switches | "Simultaneous 5-axis" (screens, on) and "Write 5-axis programs through script posts" (off) | `src/core/features.ts`, `src/pages/MachinePage.tsx` |
+
+### Acceptance
+
+Spec (M3.5): a `MultiAxisEngine` interface, a stub engine that returns a clear "not licensed"
+result, and tests with a fake engine; no licence bought and no SDK added without the owner's
+written OK. Measured in `tests/cam-multiaxis.test.ts`, `tests/cam-multiaxis-sim.test.ts` and
+`tests/cam-multiaxis-post.test.ts`:
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| The interface | `cam-multiaxis.test.ts` | The request is plain data (structured-clone round trip); a licensed engine plugs into the shop's slot (`GenContext.engine`) and every move it returns carries a unit tool direction; an engine returning moves without directions, non-unit directions or arcs is refused with the reason, nothing kept |
+| The stub: "not licensed" | `cam-multiaxis.test.ts`, `cam-multiaxis-post.test.ts` | With no licensed engine every 5-axis operation answers "5-axis engine not licensed: …", no moves; an unknown engine name falls back to the shop's engine with a note; in the Program dialog a not-calculated 5-axis operation blocks writing (`POST_NOT_READY` with that text) |
+| Tests with a fake engine (5AX-02, 5AX-03) | `cam-multiaxis.test.ts` | Tool-axis rules exact (through / away from a point or line within 1e-9; fixed tilt, lead and tilt, square to a curve, guide curve to 1e-9°; tilt limit; smoothing ≤ 2°/mm after a 60° step). Along a 3D curve on the hemisphere (T106 Ø3, 0.5 mm deep): 144 points, the tip 0.5 mm below the curve within 7.1e-15 mm, the tool within 1.4° of the sphere's normal (the faceted model's normals; smoothing off). On a flat leaning face the tool stands on its normal within 1e-4°. Swarf on a wall leaning 20° (T102 Ø8): 100 points, the axis in the wall within 5.6e-17, the side of the tool on the wall within 1.8e-15 mm. Ball-nose surface finishing with the tool on the normal (≤ 35°): 4130 points, 3923 tilted over 1°, largest 35.00°; ball centres equal the 3-axis passes' within 7.3e-15 mm; our independent gouge check 0.0005 mm over 9902 positions. Goldens `multiaxis-curve-latitude`, `multiaxis-swarf-wall`, `multiaxis-surface-hemisphere` (the 3D digest now also hashes tool directions; earlier goldens have none and are unchanged) |
+| Independent gouge check | `cam-multiaxis.test.ts`, `cam-multiaxis-post.test.ts` | A ball 0.3 mm into the dome at 30° tilt is found at 0.30 mm; a groove meant to go 0.3 mm into the model is not a gouge, 0.1 mm meant finds 0.2; an engine whose toolpath digs 0.2 mm deeper is refused for output (`POST_MULTIAXIS_GOUGE`) |
+| Barrel and form tools (TOOL-07) | `cam-multiaxis.test.ts` | Barrel T110 outline on its tip ball and side arc within 1e-9 mm, widest Ø12 at its widest point; the simulator's underside within the 0.002 mm chord; plunged along its axis into the three-way stock the hole matches the outline within 0.01 mm (widest radius carried up); form-tool outline arcs within 0.002 mm; outline typed as text round-trips; Configure badges on T110 |
+| Head flip and cutting reversed / both ways (NEW-26) | `cam-multiaxis.test.ts`, `cam-multiaxis-sim.test.ts` | Reversed: the same points backwards, way in and way out swapped; both ways: twice the cutting; the other solution: first axis 180° apart, second axis the other sign, the same tip within 1e-9 mm; auto takes the other one when the usual one leaves the travel (noted) |
+| Simultaneous kinematics | `cam-multiaxis-sim.test.ts` | Every machine move turns back into the tip within 1e-9 mm and direction within 1e-7° (3 layouts, both solutions); axes never wrapped (two turns of the tool keep counting, refused on a C axis of ±300°: "would swing … within one cutting move"); the free axis held at a pole (C held at 90° through upright stretches); a cone at 45° tilt, 12 points, fork head C/B without tip control (pivot 150 mm + stick-out): 195 machine moves, played back within 0.0047 mm of the straight moves |
+| Simulation | `cam-multiaxis-sim.test.ts` | Swarf wall leaning 20° (T102 Ø8, 0.25 mm rays): 18 wall points within 0.000 mm of the design, no collisions; hemisphere finished with the ball tilted up to 35° (0.5 mm rays): deepest below the model 0.0140 mm (the sampling of the faceted model), 2442 sampled columns cut; a 5-axis program replayed through a fork head without tip control plays every cutting point within 0.01 mm |
+| Axis turn between operations (M3.4 limit closed) | `cam-multiaxis-sim.test.ts`, `cam-positional.test.ts` | The M3.4 test block with the placeholder holder: clear (all M3.4 acceptance tests unchanged); with a holder 200 mm across the turn is caught: 3 collisions while the axes turn, the first "Holes Ø8 (Back side), move 1: tool or holder reaches below the part's underside while the rotary axes turn" |
+| N-200 refuses | `cam-multiaxis-post.test.ts` | A job with the 5-axis part and a plain panel, every output switch on: `CAM_MULTIAXIS` naming the part and its operation; the part left out of the cut list and nesting (the plain panel is still nested); with its 5-axis operation off it nests again |
+| Output only through a script post for a machine model with simultaneous 5-axis | `cam-multiaxis-post.test.ts` | The sample post on three layouts, every move read back through the kinematics: head-head C/B (pivot 150 mm) 2696 moves, tip within 0.0024 mm; table-table A/C (pivot 150 mm) 2259 moves, 0.0014 mm; table-head C/B with tip control 1755 moves, 0.0010 mm; tool direction within 0.0005° (3 decimals written); 63 inverse-time (G93) switches each. Refused, each with its reason: the N-200, the switches, no grant, the preview engine's toolpath, no licensed engine, a gouge, a machine with 3+2 axes that do not move while cutting (its post gets no 5-axis move), axes too short, the template post (comment only) |
+
+Also: `npm run sample` output unchanged (byte for byte); Stage 1 goldens and every earlier 3D
+golden unchanged; three new goldens (`multiaxis-*`). Two of them were regenerated within this run
+after fixes made before the M3.5c commit, each explained: `multiaxis-curve-latitude` (only its
+warning text: a groove cut as deep as asked no longer counts as a gouge, so "0.509 mm into the
+model" became "0.009 mm … beyond the 0.5 mm depth asked for"; moves unchanged) and
+`multiaxis-surface-hemisphere` (the preview engine now treats normals within 0.2° of upright as
+upright, so on the flat round the dome the tool stands exactly upright instead of turning its
+first axis round for nothing; the box corner moved from 0.002 to 0).
+
+### Limits recorded
+
+- **No real 5-axis engine.** The preview engine is ours and deliberately simple: no collision
+  avoidance for the shaft and holder (our collision check reports them), no axis optimisation
+  beyond the tilt limit and smoothing, no roughing, swarf exact only where the wall is flat
+  across each line from bottom to top. Its toolpaths are never written.
+- **Gouge check**: exact for a ball-nose at any tilt; other tool shapes are not checked against
+  the model by us (the simulator's stock shows them; the export checker warns).
+- **Simulation**: 5-axis moves are split so the tool turns at most 1° per piece, each piece cut
+  with its middle direction; the three-way stock is exact along its rays (cells 0.5 mm or more in
+  the simulator). A move where only the tool direction changes (the tip standing still) is not
+  carved. Jumping far ahead on a big 5-axis part replays on the screen's thread (as in M3.4) and
+  can hold the screen.
+- **Kinematics**: our own, on the machine model; the machine's real behaviour (tip control,
+  which way an axis takes round, inverse-time rules) depends on its control. The turn between
+  operations is modelled as back off, rise, turn while moving over, come down.
+- **Output**: the sample 5-axis post is a generic example for a G-code router with two rotary
+  axes, not for any machine in the shop; nothing is machine-validated; its switch stays off.
+
+### Deferred items still open (from M3.4, owner decision 22)
+
+- 3D finishing, through cuts, rest machining and adaptive clearing on tilted planes.
+- Going back in the simulator: the remaining stretch (about 2 s on the turned leg) still replays
+  on the screen's thread.
+- (Closed in M3.5b: the axis turn between planes is now collision-checked.)
+
+## M3.5 screenshots
+
+In `docs/screenshots/stage-2-3/M3.5/` (a demo dome cap, 160 x 160 x 50 mm, with Z-level roughing,
+a 5-axis surface finishing and a 5-axis groove round the dome made by the preview engine, and one
+operation asking for the licensed engine): `01-add-5axis-operation` (Add operation → 5-axis:
+along curves, swarf, surface finishing, roughing), `02-engine-not-licensed` (the operation on the
+shop's engine: "5-axis engine not licensed …"), `03-surface-finishing-settings` (engine, strategy,
+model, step-over with its Configure badge), `04-tool-axis-head-flip` (tool axis along the surface
+normal with lead and tilt, largest tilt, axis smoothing, cut as made / reversed / there and back,
+head flip, gouge check), `05-simulated-3d-tilted-tool` (the finished dome in 3D, readout "tool
+tilted 33.73°", collision check clear), `06-simulated-top` (top view with the backplot),
+`07-barrel-tool` (the placeholder barrel T110: tip and side arc radii, its outline drawn, Configure
+badges), `08-machine-simultaneous-5axis` (an example machine's model: 3+2 axes C then B and "The
+rotary axes also move while it cuts"), `09-feature-switches-engine` (the Simultaneous 5-axis switch
+and the engine status: not licensed; the preview for the simulator only), `10a-plugins-sample-post`
+(Settings → Plugins with the sample 5-axis post, machine output not granted),
+`10-program-5axis-post` (the dome through the sample 5-axis post: both rotary axes on every line,
+G93 where they turn; preview only, naming every reason it is not written: switches off, no grant,
+made by the preview engine, the licensed-engine operation not calculated), `11-n200-refuses` (the
+job with the dome: `CAM_MULTIAXIS` naming the part and its three 5-axis operations; the part left
+out of the cut list and nesting).
+
+## M3.5 licences
+
+No new dependencies. All new code is our own (engine interface, stub, preview engine, tool-axis
+rules, barrel and form outlines, simultaneous kinematics, checks). The screenshots were taken with
+Playwright (Apache-2.0) installed outside the project, not added to it.
+
+## M3.5 decisions needed
+
+1. **A 5-axis engine licence (for the record; nothing to do now).** Simultaneous 5-axis toolpaths
+   for real cutting need a licensed engine (ModuleWorks is the usual choice). Cost: a commercial
+   licence (price on request from the vendor, usually a yearly fee plus integration work);
+   benefit: real 5-axis strategies with full gouge and collision avoidance and axis optimisation.
+   With no 5-axis or 3+2 machine in the shop (decision 22), my recommendation is **do not buy**;
+   revisit only if such a machine is coming. Until then: the shop's engine answers "not
+   licensed", the preview engine is for the simulator only, and 5-axis output stays off (and never
+   reaches the N-200). Nothing was bought, downloaded or signed up for.
+2. **Placeholder 5-axis cutting values** (step-over, step-down, largest tilt, axis smoothing) and
+   the barrel T110: Configure badges, like every other placeholder (no answer needed now).
+
 ## Next run
 
-- M3.5, when the owner says go.
+- M3.6, when the owner says go.
 
 ## Run log
 
@@ -2567,3 +2714,7 @@ None blocking. For the record, applied from earlier answers without asking again
 - **Run 17 (M3.4a-c)**: 3+2 core, tilted planes, kinematics, conversion, three-way stock and
   checks, format 9, `CAM_ROTARY` naming (`9519a5d`); 3+2 output through a script post (`5610196`);
   3+2 screens, simulator, step-back checkpoints, screenshots, docs. **M3.4 complete.** See `git log`.
+- **Run 18 (M3.5a-c)**: 5-axis engine interface, stub, preview engine, tool axes in the IR, barrel
+  and form tools, format 10 (`4e80843`); simultaneous kinematics with head flip, 5-axis
+  simulation, axis-turn check, N-200 refusal, script post (`836c846`); 5-axis screens,
+  screenshots, docs. **M3.5 complete.** See `git log`.

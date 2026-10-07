@@ -30,7 +30,7 @@ import { meshBounds } from '../mesh/types'
 import type { Move } from '../toolpath'
 import type { Finish3dOp } from '../types'
 import { add, axisAt, clampTilt, curveLengths, curveAt, len, mul, resample, smoothAxes, sub, tangents, unit, type V3, Z, cross, dot } from './axis'
-import type { MultiAxisEngine, MultiAxisEngineInfo, MultiAxisRequest, MultiAxisResult } from './engine'
+import { type MultiAxisEngine, type MultiAxisEngineInfo, type MultiAxisRequest, type MultiAxisResult, PREVIEW_NAME } from './engine'
 import { simpleMoves } from '../moves'
 
 /** One cutting chain: tip points and tool directions. */
@@ -45,7 +45,7 @@ const ALL_MODES: MultiAxisEngineInfo['axisModes'] = ['vertical', 'fixed', 'surfa
 export function fakeEngine(opts: { id?: string; name?: string; licensed?: boolean; preview?: boolean } = {}): MultiAxisEngine {
   const info: MultiAxisEngineInfo = {
     id: opts.id ?? 'preview',
-    name: opts.name ?? 'Built-in preview (simulation only)',
+    name: opts.name ?? PREVIEW_NAME,
     vendor: 'Cabinet Studio',
     licensed: !!opts.licensed,
     ...(opts.preview === false ? {} : { preview: !opts.licensed }),
@@ -100,7 +100,11 @@ function normalAt(dist: ((x: number, y: number, z: number) => number) | null, q:
     b[k] -= h
     g[k] = (dist(a[0], a[1], a[2]) - dist(b[0], b[1], b[2])) / (2 * h)
   }
-  return len(g) > 0.5 ? unit(g) : null
+  if (len(g) <= 0.5) return null
+  // (within 0.2° of upright counts as upright: what is left is the facets' rounding, and a machine
+  // would otherwise turn its first axis round for nothing near the pole)
+  const n = unit(g)
+  return n[2] > Math.cos((0.2 * Math.PI) / 180) ? [0, 0, 1] : n
 }
 
 /** Counts kept while the paths are made, turned into one warning each at the end. */

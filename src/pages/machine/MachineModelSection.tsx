@@ -1,6 +1,6 @@
 import { TriangleAlert } from 'lucide-react'
 import { NumField, Section, SelectField, SwitchField } from '@/components/fields'
-import { machineModelOf, PLACEHOLDER_N200_MODEL, PLACEHOLDER_POSITIONAL, rotaryAxisOf, type RotaryLetter, withPositional, withRotaryAxis } from '@/core/machineModel'
+import { machineModelOf, PLACEHOLDER_N200_MODEL, PLACEHOLDER_POSITIONAL, rotaryAxisOf, type RotaryLetter, withPositional, withRotaryAxis, withSimultaneous } from '@/core/machineModel'
 import { kinematicsProblems } from '@/cam/positional/kinematics'
 import type { MachineModel, MachineProfile, PositionalKinematics } from '@/core/types'
 import { ValueBadges } from '@/components/Configure'
@@ -162,6 +162,12 @@ function PositionalAxes({ mm, upd, badge }: { mm: MachineModel; upd: (fn: (p: Ma
             <NumField label="Part origin at Z" value={k.partAt.z} onChange={(v) => set({ partAt: { ...k.partAt, z: v } })} />
           </div>
           {k.layout !== 'table-table' && <SwitchField label="The controller keeps the tool tip on the point (tip control)" checked={k.tcp} onChange={(v) => set({ tcp: v })} hint="Off: X, Y and Z are worked out for the head's pivot and the tool's stick-out." />}
+          <SwitchField
+            label="The rotary axes also move while it cuts (simultaneous 5-axis)"
+            checked={mm.capabilities.simultaneous5}
+            onChange={(v) => upd((p) => void Object.assign(p, withSimultaneous(p, v)))}
+            hint="On: 5-axis operations from a licensed engine can be written for this machine through a script post written for it (with the 5-axis post switch on). Both axis solutions are worked out; the head flip picks one."
+          />
           {problems.length > 0 && (
             <ul className="list-disc rounded-md border border-red-300 bg-red-50 py-1.5 pr-2 pl-5 text-[11px] text-red-900">
               {problems.map((m, i) => (

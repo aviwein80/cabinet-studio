@@ -18,6 +18,7 @@ import SAMPLE_PLUGIN from '../../../examples/plugins/sample-shop-tools.js?raw'
 import SAMPLE_POST from '../../../examples/plugins/iso-router-post.js?raw'
 import SAMPLE_ROTARY_POST from '../../../examples/plugins/rotary-4axis-post.js?raw'
 import SAMPLE_32_POST from '../../../examples/plugins/positional-3plus2-post.js?raw'
+import SAMPLE_5AX_POST from '../../../examples/plugins/simultaneous-5axis-post.js?raw'
 
 const now = () => new Date().toISOString()
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
@@ -129,6 +130,9 @@ export function PluginsSection() {
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void install(SAMPLE_32_POST, 'sample')} disabled={plugins.some((p) => p.id === 'positional-3plus2-post')}>
             <Plug className="size-3.5" /> Add the sample 3+2 post
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void install(SAMPLE_5AX_POST, 'sample')} disabled={plugins.some((p) => p.id === 'simultaneous-5axis-post')}>
+            <Plug className="size-3.5" /> Add the sample 5-axis post
           </Button>
           <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => void saveReference()}>
             <FileDown className="size-3.5" /> Plugin API reference (.d.ts)

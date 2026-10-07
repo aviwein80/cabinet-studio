@@ -10,6 +10,7 @@ import { DEFAULT_ADAPTIVE, DEFAULT_SAW, defaultOp, OP_LABEL, orderByTool, resolv
 import { ManualFields, EditsGroup } from './EditsPanel'
 import { RapidSurfaceGroup } from './RapidSurfaceGroup'
 import { RotaryFields } from './RotaryFields'
+import { MultiAxisFields } from './MultiAxisFields'
 import { useOpCfg } from './opConfigure'
 import { ConfigureBadge, UnconfirmedList } from '@/components/Configure'
 import { confirmOp, type CutDefaultKey, newOpDefaults, opUnconfirmed } from '@/core/confirm'
@@ -86,6 +87,7 @@ export function OpsPanel({
   const finishMore = useStore((s) => featuresOf(s.data?.settings).cam3dFinishMore)
   const extras = useStore((s) => featuresOf(s.data?.settings).camExtras)
   const rotaryOn = useStore((s) => featuresOf(s.data?.settings).camRotary) && !!part.rotary
+  const multiOn = useStore((s) => featuresOf(s.data?.settings).camMultiAxis)
   const runRules = (setId: string) => {
     if (!lib) return
     const set = ruleSetsOf(lib).find((x) => x.id === setId)
@@ -120,6 +122,11 @@ export function OpsPanel({
     let op = defaultOp(kind, kind === 'code' ? [] : geometry, { ...newOpDefaults(kind, machine, extra), ...extra } as Partial<CamOp>)
     // rotary: the first wrapped plane; on a model the shapes picked are not used, drawn shapes are
     if (op.kind === 'rotary') op = { ...op, planeId: op.planeId || (part.rotary?.planes[0]?.id ?? ''), geometry: op.strategy === 'wrap' ? geometry : [] }
+    // 5-axis: the selection is the curves (along curves, swarf bottoms) or the boundary; the first model
+    if (op.kind === 'multiaxis') {
+      const closed = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
+      op = { ...op, geometry: op.strategy === 'curve' || op.strategy === 'swarf' ? sel : closed, modelId: op.modelId || (part.models?.[0]?.id ?? '') }
+    }
     if (op.kind === 'finish3d' || op.kind === 'rough3d') {
       // boundary: the selected closed shapes (none = the whole model); projection: every selected
       // shape is projected. First model on the part.
@@ -204,6 +211,16 @@ export function OpsPanel({
                 <DropdownMenuItem onSelect={() => add('rotary', { strategy: 'wrap' } as Partial<CamOp>)}>Rotary wrapped shapes (selected)</DropdownMenuItem>
               </>
             )}
+            {multiOn && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[11px] text-muted-foreground">5-axis (engine; simulation and 5-axis script posts)</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => add('multiaxis', { strategy: 'curve' } as Partial<CamOp>)}>5-axis along curves (selected)</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => add('multiaxis', { strategy: 'swarf' } as Partial<CamOp>)}>5-axis swarf (selected bottom curves)</DropdownMenuItem>
+                {!!part.models?.length && <DropdownMenuItem onSelect={() => add('multiaxis', { strategy: 'surface' } as Partial<CamOp>)}>5-axis surface finishing</DropdownMenuItem>}
+                {!!part.models?.length && <DropdownMenuItem onSelect={() => add('multiaxis', { strategy: 'rough' } as Partial<CamOp>)}>5-axis roughing</DropdownMenuItem>}
+              </>
+            )}
             {rulesOn && lib && (
               <>
                 <DropdownMenuSeparator />
@@ -279,6 +296,8 @@ export function OpsPanel({
                             ? `edge ${formatLength(op.reach, units)} in, ${formatLength(op.height, units)} down`
                           : op.kind === 'thread'
                             ? `${op.side} thread, pitch ${op.pitch}, ${formatLength(op.levels.depth, units)} long`
+                          : op.kind === 'multiaxis'
+                            ? `5-axis ${{ curve: 'along curves', swarf: 'swarf', surface: 'surface', rough: 'roughing' }[op.strategy]} · ${op.engine === 'preview' ? 'preview engine' : 'licensed engine'}`
                           : op.kind === 'rotary'
                             ? op.strategy === 'wrap'
                               ? `rotary, ${formatLength(op.levels.depth, units)} into the cylinder`
@@ -490,7 +509,7 @@ function OpEditor({
               hint={op.tiltedPlane ? 'Shapes inside the plane\'s rectangle, cut along its normal; depths from the plane. Simulation and 3+2 script posts only: never the N-200.' : undefined}
             />
           )}
-          {op.kind !== 'rotary' && !op.tiltedPlane && <SelectField
+          {op.kind !== 'rotary' && op.kind !== 'multiaxis' && !op.tiltedPlane && <SelectField
             label="Face"
             value={String(op.face)}
             options={[1, 2, 3, 4, 5, 6].map((f) => ({ value: String(f), label: ['Top (1)', 'Front edge (2)', 'Right edge (3)', 'Back edge (4)', 'Left edge (5)', 'Underside (6)'][f - 1] }))}
@@ -520,7 +539,7 @@ function OpEditor({
         </Group>
       )}
 
-      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && op.kind !== 'thread' && op.kind !== 'rotary' && !OPS_3D.has(op.kind) && (
+      {op.kind !== 'code' && op.kind !== 'chamfer' && op.kind !== 'curve' && op.kind !== 'manual' && op.kind !== 'edge' && op.kind !== 'thread' && op.kind !== 'rotary' && op.kind !== 'multiaxis' && !OPS_3D.has(op.kind) && (
         <Group title="Depths">
           {/* (no "through" on a tilted plane: the block's depth below it changes from place to place) */}
           {!op.tiltedPlane && (
@@ -538,9 +557,9 @@ function OpEditor({
       )}
 
       <StrategyFields op={op} part={part} onChange={onChange} sel={sel} tool={tp?.tool ?? resolveTool(op, machine)} onPart={onPart} />
-      {op.kind !== 'code' && op.kind !== 'rotary' && <RapidSurfaceGroup op={op} part={part} onChange={onChange} />}
+      {op.kind !== 'code' && op.kind !== 'rotary' && op.kind !== 'multiaxis' && <RapidSurfaceGroup op={op} part={part} onChange={onChange} />}
       {op.kind === 'manual' && <ManualFields op={op} onChange={onChange} pathPick={pathPick ?? null} setPathPick={setPathPick} sel={sel} part={part} />}
-      {op.kind !== 'code' && op.kind !== 'drill' && op.kind !== 'rotary' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
+      {op.kind !== 'code' && op.kind !== 'drill' && op.kind !== 'rotary' && op.kind !== 'multiaxis' && <EditsGroup op={op} part={part} machine={machine} tp={tp} sel={sel} onChange={onChange} />}
 
       {op.kind === 'profile' && (
         <>
@@ -740,6 +759,8 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null, onPart }: {
   switch (op.kind) {
     case 'rotary':
       return <RotaryFields op={op} part={part} onChange={onChange} />
+    case 'multiaxis':
+      return <MultiAxisFields op={op} part={part} sel={sel} onChange={onChange} />
     case 'finish3d': {
       const waterline = op.strategy === 'waterline'
       const strategy = (

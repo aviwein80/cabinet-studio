@@ -12,8 +12,8 @@
  },
  "cutMm": 3737,
  "box": [
-  0.002,
-  0.003,
+  0,
+  0,
   -20,
   80,
   80,
@@ -22,5 +22,5 @@
  "warnings": [
   "The tool axis was held to 35° from vertical at 3086 point(s)."
  ],
- "hash": "702e027b"
+ "hash": "d5db62e2"
 }

@@ -1,0 +1,27 @@
+1
+00:00:03,400 --> 00:00:07,634
+A new kitchen for the Hartmans. Every kitchen starts as a job: click New job.
+
+2
+00:00:07,634 --> 00:00:20,518
+Job number, job name and the customer.
+
+3
+00:00:20,518 --> 00:00:31,543
+Write the plan in the notes: sink centred, drawers both sides, pantries at the end.
+
+4
+00:00:31,543 --> 00:00:35,401
+Before adding cabinets, set up the room. Open the Room tab.
+
+5
+00:00:35,401 --> 00:00:40,103
+The tape says the sink wall is 171" (14′ 3″). Type it as the room width.
+
+6
+00:00:40,103 --> 00:00:48,339
+The room is 144" deep, and the ceiling is 96" (8 ft).
+
+7
+00:00:48,339 --> 00:00:52,281
+The room is empty for now. Next: base cabinets from the library presets.

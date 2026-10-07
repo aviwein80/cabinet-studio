@@ -1,0 +1,55 @@
+1
+00:00:03,401 --> 00:00:07,656
+Cabinets come from the library. Click Add cabinet to see the presets.
+
+2
+00:00:07,656 --> 00:00:11,080
+This shop saved US-size presets: bases 34-1/2" high and 24" deep.
+
+3
+00:00:11,080 --> 00:00:14,336
+Start at the left end with an 18" 3-drawer base.
+
+4
+00:00:14,336 --> 00:00:19,660
+Next, a 24" 2-door base...
+
+5
+00:00:19,660 --> 00:00:25,222
+...the 36" sink base for the middle...
+
+6
+00:00:25,222 --> 00:00:35,796
+...then the same again in reverse, so the run is symmetric.
+
+7
+00:00:35,796 --> 00:00:38,792
+Five bases, numbered B1 to B5 in the order they were added.
+
+8
+00:00:38,792 --> 00:00:42,366
+Now place them. Open the Room tab.
+
+9
+00:00:42,366 --> 00:00:46,732
+Arrange along the back wall sets them out from the left corner, in list order.
+
+10
+00:00:46,732 --> 00:00:55,680
+Side by side against the wall, with the sink in the middle.
+
+11
+00:00:55,680 --> 00:00:59,544
+Plan view, looking down: the back wall is at the top, fronts are the thick edges.
+
+12
+00:00:59,544 --> 00:01:06,335
+Drag a cabinet and it moves freely...
+
+13
+00:01:06,335 --> 00:01:13,844
+...bring it back and Snap butts it against its neighbour and the wall (hold Alt to switch it off).
+
+14
+00:01:13,844 --> 00:01:17,042
+B5 is back in line. Next: the wall cabinets above.

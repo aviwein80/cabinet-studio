@@ -1,0 +1,27 @@
+1
+00:00:03,400 --> 00:00:07,278
+The right end of the wall gets two tall pantries. Add cabinet...
+
+2
+00:00:07,278 --> 00:00:13,246
+...the 24" x 84" pantry preset: 24" deep, four shelves behind two doors.
+
+3
+00:00:13,246 --> 00:00:25,514
+Add a second one beside it. They become T1 and T2.
+
+4
+00:00:25,514 --> 00:00:44,116
+Arrange along the back wall: the pantries go after B5, at the right end of the run.
+
+5
+00:00:44,116 --> 00:00:55,323
+Elevation: the pantry tops line up with the uppers, all at 84".
+
+6
+00:00:55,323 --> 00:00:59,162
+But the run adds up to 168", and the wall is 171": a 3" gap is left at the right.
+
+7
+00:00:59,162 --> 00:01:02,564
+This app has no filler strips, so next we’ll size the cabinets to fit the wall exactly.

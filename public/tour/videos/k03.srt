@@ -1,0 +1,43 @@
+1
+00:00:03,400 --> 00:00:10,313
+Now the uppers. The wall presets are 30" tall and 12" deep.
+
+2
+00:00:10,313 --> 00:00:13,366
+Match the bases below: an 18" wall cabinet first...
+
+3
+00:00:13,366 --> 00:00:19,009
+...then 24"...
+
+4
+00:00:19,009 --> 00:00:24,733
+...36" over the sink...
+
+5
+00:00:24,733 --> 00:00:35,777
+...and 24" and 18" to mirror the left side.
+
+6
+00:00:35,777 --> 00:00:41,706
+W1 to W5 join the list. Back to the Room tab.
+
+7
+00:00:41,706 --> 00:00:56,898
+Arrange along the back wall again: uppers hang 54" off the floor, left to right.
+
+8
+00:00:56,898 --> 00:01:01,269
+Elevation shows the back wall face-on, with every size and height.
+
+9
+00:01:01,269 --> 00:01:06,472
+Each upper sits right over the base of the same width: 18, 24, 36, 24, 18.
+
+10
+00:01:06,472 --> 00:01:11,869
+Click W3: 30" tall, 54" off the floor, so its top is at 84".
+
+11
+00:01:11,869 --> 00:01:15,385
+Bases and uppers done. Next: a pair of tall pantries in the space on the right.

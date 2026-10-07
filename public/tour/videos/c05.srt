@@ -1,0 +1,31 @@
+1
+00:00:03,401 --> 00:00:07,946
+Wall cabinets use the same editor. Open W1.
+
+2
+00:00:07,946 --> 00:00:25,231
+Make it 30" wide, 30" high and 12" deep.
+
+3
+00:00:25,231 --> 00:00:34,894
+Wall cabinets have a full top and bottom and adjustable shelves.
+
+4
+00:00:34,894 --> 00:00:59,190
+W2 goes over the sink: 36" wide.
+
+5
+00:00:59,190 --> 00:01:15,612
+For a pantry, add any cabinet and change its Type to Tall.
+
+6
+00:01:15,612 --> 00:01:39,805
+Pantry: 24" wide, 84" high, 23-1/4" deep, with four shelves.
+
+7
+00:01:39,805 --> 00:01:50,309
+Open it again and the 3D view fits the whole 84" pantry.
+
+8
+00:01:50,309 --> 00:01:56,566
+Done. The job now has four bases, two wall cabinets and a tall pantry.

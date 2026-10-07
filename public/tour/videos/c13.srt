@@ -1,0 +1,39 @@
+1
+00:00:03,400 --> 00:00:07,944
+Here is the 30" base cabinet. Every size is shown in inches, with fractions.
+
+2
+00:00:07,944 --> 00:00:12,927
+Units switch at the bottom left: Millimetres or Inches. The whole app follows.
+
+3
+00:00:12,927 --> 00:00:19,348
+Same cabinet in millimetres: 30" wide is 762 mm. Only the display changes.
+
+4
+00:00:19,348 --> 00:00:24,897
+Back to inches. Type whole inches, decimals or fractions like 23-1/4.
+
+5
+00:00:24,897 --> 00:00:28,934
+Settings holds the options for this computer and the shop.
+
+6
+00:00:28,934 --> 00:00:34,798
+Spec-sheet reader: pick what drafts drilling patterns from a maker’s PDF. No key means the offline reader.
+
+7
+00:00:34,798 --> 00:00:39,844
+Shop data storage: jobs, materials, tools and settings are kept in one JSON file.
+
+8
+00:00:39,844 --> 00:00:45,832
+Admin tools: a password locks the shop defaults on a shared PC, and screens can be hidden.
+
+9
+00:00:45,832 --> 00:00:51,373
+Plugins add commands, batch steps and post-processors, each locked in its own sandbox.
+
+10
+00:00:51,373 --> 00:00:58,184
+About lists the open-source parts the app uses, with their licences.

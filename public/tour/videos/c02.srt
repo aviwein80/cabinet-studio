@@ -1,0 +1,47 @@
+1
+00:00:03,401 --> 00:00:07,453
+Every kitchen starts as a job. Click New job.
+
+2
+00:00:07,453 --> 00:00:20,643
+Give it a job number, a name and the customer.
+
+3
+00:00:20,643 --> 00:00:26,585
+The job opens on its Cabinets tab. Notes travel with the job.
+
+4
+00:00:26,585 --> 00:00:29,822
+This shop works in inches, so switch the units in the sidebar.
+
+5
+00:00:29,822 --> 00:00:36,383
+Click Add cabinet and pick a cabinet from the library: first the sink base.
+
+6
+00:00:36,383 --> 00:00:42,208
+Add a 3-drawer base for the drawer stack.
+
+7
+00:00:42,208 --> 00:00:47,806
+Add a 2-door base...
+
+8
+00:00:47,806 --> 00:00:53,405
+...and a 1-door base for the end of the run.
+
+9
+00:00:53,405 --> 00:00:59,122
+Now the uppers: add a 2-door wall cabinet.
+
+10
+00:00:59,122 --> 00:01:02,651
+Duplicate copies a cabinet with all its settings. Make a second wall cabinet.
+
+11
+00:01:02,651 --> 00:01:06,861
+Each cabinet gets a number (B1, B2, W1...) used on the cut list and labels.
+
+12
+00:01:06,861 --> 00:01:09,465
+Sizes show in inches now. Next, open a cabinet to set its size and details.

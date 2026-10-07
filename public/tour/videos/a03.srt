@@ -1,0 +1,43 @@
+1
+00:00:05,640 --> 00:00:13,772
+Now let’s machine the sign. Operations live on the Machining tab, on the right.
+
+2
+00:00:13,772 --> 00:00:18,876
+First the cut-out. With nothing selected, Profile takes the part outline.
+
+3
+00:00:18,876 --> 00:00:21,953
+The tool is picked automatically: T101, the 12 mm cut-out cutter. The blue line is its path.
+
+4
+00:00:21,953 --> 00:00:25,758
+Amber notes list placeholder values still to confirm, like feeds and speeds. Configure opens each one.
+
+5
+00:00:25,758 --> 00:00:28,748
+Happy with it? Accept toolpath.
+
+6
+00:00:28,748 --> 00:00:37,446
+Next the recess. Select the panel rectangle, then Add operation, Pocket.
+
+7
+00:00:37,446 --> 00:00:46,377
+The pocket clears everything inside, ring by ring. Set the depth to 1/8".
+
+8
+00:00:46,377 --> 00:00:54,448
+Last the hanging holes. With nothing selected, Drill takes all the holes.
+
+9
+00:00:54,448 --> 00:00:58,350
+The check speaks up: the holes are 5/16" and there is no drill that size in the tool table.
+
+10
+00:00:58,350 --> 00:01:08,761
+Pick the 8 mm dowel drill instead, and switch on Cut through.
+
+11
+00:01:08,761 --> 00:01:14,287
+Three operations. The program drills first, then mills in list order. Next: simulate.

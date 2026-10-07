@@ -1,0 +1,39 @@
+1
+00:00:03,401 --> 00:00:11,805
+Saved parts wait on the Custom parts page. Open the Goldberg sign again.
+
+2
+00:00:11,805 --> 00:00:15,498
+Edit tools work on what you select. Click the hanging hole to select it...
+
+3
+00:00:15,498 --> 00:00:25,979
+...then Mirror. Type the mirror line: the centre of the sign, 12,0 to 12,10.
+
+4
+00:00:25,979 --> 00:00:29,314
+Now there is a matching hole on the right, exactly the same distance in.
+
+5
+00:00:29,314 --> 00:00:34,966
+Offset draws a copy a set distance away. 1/2" here, for a border inside the panel.
+
+6
+00:00:34,966 --> 00:00:41,410
+Pick the rectangle, then click the side to offset to: inside.
+
+7
+00:00:41,410 --> 00:00:52,501
+Fillet rounds corners. 1/2" radius, All corners on, then pick near a corner.
+
+8
+00:00:52,501 --> 00:01:04,314
+Measure checks a distance: from hole to hole is 21".
+
+9
+00:01:04,314 --> 00:01:19,570
+A linear dimension stays on the drawing: two points, then where the line goes.
+
+10
+00:01:19,570 --> 00:01:27,169
+Move, copy, rotate, array, trim and the rest work the same way: select, pick the tool, follow the prompt.

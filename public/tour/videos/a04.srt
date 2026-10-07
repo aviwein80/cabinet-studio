@@ -1,0 +1,39 @@
+1
+00:00:03,401 --> 00:00:07,315
+Machine & tools holds the tool table: every cutter and drill on the N-200, by number.
+
+2
+00:00:07,315 --> 00:00:11,207
+For now it is placeholder data. The amber box lists every value still to configure.
+
+3
+00:00:11,207 --> 00:00:15,882
+The tool table: number, type, diameter, max depth and more for each tool.
+
+4
+00:00:15,882 --> 00:00:19,499
+The Goldberg job needs a 6 mm drill for the Blum slide holes. Switch to millimetres to type it exactly.
+
+5
+00:00:19,499 --> 00:00:23,639
+Add tool puts a new row at the bottom. Double-click a cell to change it.
+
+6
+00:00:23,639 --> 00:00:36,999
+Type: drill-vertical. A description. Diameter 6 mm, max depth 30 mm.
+
+7
+00:00:36,999 --> 00:00:43,211
+Save. Drills are matched by exact diameter, so the 6 mm holes will now find this drill.
+
+8
+00:00:43,211 --> 00:00:52,915
+Back on the Goldberg job’s Output tab: 0 errors now.
+
+9
+00:00:52,915 --> 00:00:58,983
+Tick the simulate box, and the MPR programs can be exported.
+
+10
+00:00:58,983 --> 00:01:03,118
+The tools are still placeholders, though: load the real N-200 table and simulate before cutting.

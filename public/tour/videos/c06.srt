@@ -1,0 +1,47 @@
+1
+00:00:03,400 --> 00:00:07,616
+The Room tab lays out every cabinet in the kitchen.
+
+2
+00:00:07,616 --> 00:00:14,055
+Set the room: 144" wide, 120" deep, 96" walls.
+
+3
+00:00:14,055 --> 00:00:18,564
+Arrange along the back wall lines the cabinets up for you.
+
+4
+00:00:18,564 --> 00:00:32,888
+Scroll to zoom and drag to orbit around the 3D room.
+
+5
+00:00:32,888 --> 00:00:36,926
+Plan view: looking down, back wall at the top, fronts marked with a thick line.
+
+6
+00:00:36,926 --> 00:00:44,307
+The 36" wall cabinet belongs over the sink. Drag W1 out of the way...
+
+7
+00:00:44,307 --> 00:00:51,725
+...drag W2 into the corner over the sink...
+
+8
+00:00:51,725 --> 00:00:59,937
+...and W1 back beside it. Snap butts the cabinets together and lines them up.
+
+9
+00:00:59,937 --> 00:01:04,052
+Elevation: the back wall face-on, with the sizes and heights off the floor.
+
+10
+00:01:04,052 --> 00:01:12,381
+Click a cabinet to change it right here. Make B2 a 4-drawer base.
+
+11
+00:01:12,381 --> 00:01:20,597
+Edit opens the full cabinet editor; Done brings you back to the room.
+
+12
+00:01:20,597 --> 00:01:35,797
+Back in 3D, the finished layout: bases, uppers over the sink, and the pantry.

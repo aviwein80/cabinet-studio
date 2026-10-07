@@ -1,0 +1,47 @@
+1
+00:00:03,400 --> 00:00:07,985
+Nesting packs every part onto sheets. Each sheet becomes one CNC program.
+
+2
+00:00:07,985 --> 00:00:11,471
+The header shows the program name, material, sheet size (144 x 60 in), trim and spacing.
+
+3
+00:00:11,471 --> 00:00:16,598
+The list on the left: every sheet, its material, part count and how full it is.
+
+4
+00:00:16,598 --> 00:00:23,589
+Click any part to see what it is: cabinet, cut size, edges, cut order and label spot.
+
+5
+00:00:23,589 --> 00:00:28,301
+Machining shows the holes on each part. Turn it off for a clean view of the layout.
+
+6
+00:00:28,301 --> 00:00:31,773
+Area and cost: parts, kept offcuts and scrap per sheet and for the whole job.
+
+7
+00:00:31,773 --> 00:00:35,213
+No price is invented: a material shows a Configure badge until you enter its price.
+
+8
+00:00:35,213 --> 00:00:39,287
+Sheet checks list problems found on this sheet, the same ones the export check uses.
+
+9
+00:00:39,287 --> 00:00:45,473
+Edit layout lets you move parts by hand. Open Sheet 3, the MDF doors.
+
+10
+00:00:45,473 --> 00:00:49,657
+Drag a part. It snaps beside its neighbours, in line with edges, or to the trim.
+
+11
+00:00:49,657 --> 00:00:56,053
+Turn rotates the selected part. The live check watches for overlaps and grain.
+
+12
+00:00:56,053 --> 00:01:00,729
+Save layout keeps it with the job. Programs, labels and checks use the saved layout.

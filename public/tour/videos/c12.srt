@@ -1,0 +1,31 @@
+1
+00:00:03,400 --> 00:00:07,100
+Got a lot of cabinets to add? Bring them in from a spreadsheet instead of one by one.
+
+2
+00:00:07,100 --> 00:00:11,812
+This is the sample templates file that comes with the app. Sizes in it are millimetres.
+
+3
+00:00:11,812 --> 00:00:18,499
+Import CSV / XLSX: choose the file and say what it holds.
+
+4
+00:00:18,499 --> 00:00:24,947
+A preview shows every row first. Matching names are updated, new ones added, nothing deleted.
+
+5
+00:00:24,947 --> 00:00:32,712
+Import, and the four new templates are ready for any job.
+
+6
+00:00:32,712 --> 00:00:41,197
+Export bundle saves the whole library in one file: materials, edgebands, hardware, templates.
+
+7
+00:00:41,197 --> 00:00:43,000
+Use it as a backup, or to set up the same library on the shop computer.
+
+8
+00:00:43,000 --> 00:00:50,137
+Import bundle merges a saved library back in, matched by code and name.

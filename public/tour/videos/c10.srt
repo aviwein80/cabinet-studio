@@ -1,0 +1,47 @@
+1
+00:00:03,401 --> 00:00:07,438
+The Output tab holds every file the job makes, plus the export check.
+
+2
+00:00:07,438 --> 00:00:11,135
+First, a reminder: these programs are not machine-proven. Simulate every one in woodWOP.
+
+3
+00:00:11,135 --> 00:00:15,862
+MPR programs stay greyed out while the check finds errors. Labels and lists still export.
+
+4
+00:00:15,862 --> 00:00:17,778
+Validation lists every problem: red errors block export, amber warnings need a look.
+
+5
+00:00:17,778 --> 00:00:21,799
+Here: the drawer slide holes need a 6 mm drill that the placeholder tool table lacks.
+
+6
+00:00:21,799 --> 00:00:26,173
+Warnings: placeholder tools, small parts that vacuum may not hold, holes to drill by hand.
+
+7
+00:00:26,173 --> 00:00:31,758
+Configure badges mark placeholder values still to be set up. Click one...
+
+8
+00:00:31,758 --> 00:00:36,120
+...and it jumps straight to that value on the Machine page, ready to fill in.
+
+9
+00:00:36,120 --> 00:00:45,822
+Back on the job, the Programs list has one woodWOP MPR file per sheet.
+
+10
+00:00:45,822 --> 00:00:55,082
+Open shows the program as generated, the same text woodWOP will read.
+
+11
+00:00:55,082 --> 00:01:04,056
+Check reads the program back: toolpaths, moves, and whether it stays on the table.
+
+12
+00:01:04,056 --> 00:01:09,834
+Nothing goes to the N-200 until the real tool table is in and you tick this box.

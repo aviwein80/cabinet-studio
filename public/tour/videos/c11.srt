@@ -1,0 +1,51 @@
+1
+00:00:03,400 --> 00:00:07,297
+This sink base came out well. Let’s keep it in the Library for the next kitchen.
+
+2
+00:00:07,297 --> 00:00:25,203
+Save as template copies the whole cabinet: sizes, materials, construction and hardware.
+
+3
+00:00:25,203 --> 00:00:32,721
+The Library is shared by every job: templates, sheet materials, edgebands and hardware.
+
+4
+00:00:32,721 --> 00:00:36,751
+Edit a template in the same cabinet editor. Existing jobs keep their own copy.
+
+5
+00:00:36,751 --> 00:00:48,848
+Set it to the shop standard: 34-1/2" high and 23-1/4" deep.
+
+6
+00:00:48,848 --> 00:00:53,155
+Materials: code, thickness and sheet size drive the parts and the nesting.
+
+7
+00:00:53,155 --> 00:01:05,899
+Add a price so costs show up. Until then a Configure badge marks it as not set.
+
+8
+00:01:05,899 --> 00:01:10,620
+Edgebands: the tapes your edgebander runs, by code.
+
+9
+00:01:10,620 --> 00:01:17,884
+Hardware: Salice hinges and plates, Blum TANDEM slides, dowels and screws.
+
+10
+00:01:17,884 --> 00:01:25,399
+Each item keeps the numbers the drilling uses, like the hinge cup size and depth.
+
+11
+00:01:25,399 --> 00:01:32,462
+Drilling patterns: the hole layouts, checked against the Salice and Blum sheets.
+
+12
+00:01:32,462 --> 00:01:40,436
+Each one shows where the numbers came from, with a link to the maker’s sheet.
+
+13
+00:01:40,436 --> 00:01:46,155
+Machining rules turn layer names in imported drawings into drill, pocket and cut steps.

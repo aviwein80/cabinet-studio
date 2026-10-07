@@ -1,0 +1,55 @@
+1
+00:00:03,401 --> 00:00:16,657
+Now B2, the 3-drawer base. Click its pencil.
+
+2
+00:00:16,657 --> 00:00:24,689
+Match the sink base: 34-1/2" high and 23-1/4" deep.
+
+3
+00:00:24,689 --> 00:00:29,920
+Drawers: how many, and the slide. The drawer boxes are built to suit.
+
+4
+00:00:29,920 --> 00:00:34,432
+Slides are Blum TANDEM, 15, 18 or 21 in. Auto picks the length from the cabinet depth.
+
+5
+00:00:34,432 --> 00:00:48,525
+Explode the model to see the drawer boxes and the slide holes bored in the sides.
+
+6
+00:00:48,525 --> 00:00:56,333
+The editor flags things to check, like drawer sides thicker than TANDEM allows.
+
+7
+00:00:56,333 --> 00:01:16,849
+Next, B3, the 2-door base: 30" wide, same height and depth.
+
+8
+00:01:16,849 --> 00:01:22,643
+Doors and hinges: none, one or a pair, the gap, and the hinge cup boring.
+
+9
+00:01:22,643 --> 00:01:27,037
+Hinges are Salice Silentia+ 110°: 35 mm cups with 3 mm plates, bored automatically.
+
+10
+00:01:27,037 --> 00:01:33,227
+The black dots in 3D are the hinge cups, plates and shelf-pin holes.
+
+11
+00:01:33,227 --> 00:01:40,663
+Edgebanding: click any edge of any part in the list to change its band.
+
+12
+00:01:40,663 --> 00:01:51,372
+Add hole puts an extra hole on any part, typed in by position, size and depth.
+
+13
+00:01:51,372 --> 00:02:11,580
+Last base, B4: one door, 15" wide.
+
+14
+00:02:11,580 --> 00:02:23,511
+With one door you choose the hinge side. Make this one hinge on the right.

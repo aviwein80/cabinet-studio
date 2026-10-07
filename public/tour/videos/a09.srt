@@ -1,0 +1,35 @@
+1
+00:00:05,605 --> 00:00:27,918
+Last, a taste of 3D: a carved medallion. Start a new part, 12" by 7" MDF.
+
+2
+00:00:27,918 --> 00:00:34,996
+Relief brings in a carving made elsewhere: an STL, OBJ or 3MF, or a greyscale height-map picture.
+
+3
+00:00:34,996 --> 00:00:39,630
+Here, a height-map picture: white is the top, black is the full depth.
+
+4
+00:00:39,630 --> 00:00:47,462
+A picture has no depth of its own, so type the size and depth: 10" long, 3/8" deep.
+
+5
+00:00:47,462 --> 00:00:57,194
+Centred on the part, with Z-level roughing and parallel finishing added in one go.
+
+6
+00:00:57,194 --> 00:01:04,273
+The two 3D operations are on the Machining tab. The panel round the relief is never cut.
+
+7
+00:01:04,273 --> 00:01:34,466
+Simulate works out the carving. With this many moves it takes a few seconds.
+
+8
+00:01:34,466 --> 00:01:39,370
+There is the G, carved into the oval. Cutting values are placeholders: check the Configure badges.
+
+9
+00:01:39,370 --> 00:01:48,694
+Roughing goes to woodWOP only with the 3D output switches on (Machine page). This finishing is never written to woodWOP.

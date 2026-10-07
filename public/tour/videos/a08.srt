@@ -1,0 +1,35 @@
+1
+00:00:05,583 --> 00:00:08,946
+Got a drawing from CAD or a customer? Import drawing reads DXF, PDF and Illustrator files.
+
+2
+00:00:08,946 --> 00:00:16,418
+This one is a spice-rack side, drawn in millimetres, with one layer for each kind of work.
+
+3
+00:00:16,418 --> 00:00:21,705
+Shop layer names turn each layer into an operation: DRILL_12 drills 12 mm deep, POCKET_6 pockets 6 mm deep.
+
+4
+00:00:21,705 --> 00:00:26,661
+INSIDE and OUTLINE are cut through. A layer with no rule, like NOTES, is listed so nothing gets missed.
+
+5
+00:00:26,661 --> 00:00:35,758
+Pick the material, then Create part.
+
+6
+00:00:35,758 --> 00:00:41,949
+The part arrives with its four operations, ready to check. Drilling runs first.
+
+7
+00:00:41,949 --> 00:00:45,390
+Happy with them? Accept all.
+
+8
+00:00:45,390 --> 00:00:49,897
+The Layers tab keeps every layer from the drawing.
+
+9
+00:00:49,897 --> 00:01:27,972
+And the same Simulate check, here in 3D: dado, shelf-pin holes and handle cut-out.

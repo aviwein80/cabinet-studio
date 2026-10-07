@@ -1,0 +1,43 @@
+1
+00:00:03,400 --> 00:00:08,225
+Click the pencil on B1, the sink base, to open the cabinet editor.
+
+2
+00:00:08,225 --> 00:00:11,031
+Settings on the left; a live 3D model and every part of the cabinet on the right.
+
+3
+00:00:11,031 --> 00:00:29,297
+Rename it, then type the size. Inches can be typed as fractions.
+
+4
+00:00:29,297 --> 00:00:39,468
+The 3D model updates right away. Drag in the 3D view to orbit around it.
+
+5
+00:00:39,468 --> 00:00:51,537
+Explode pulls the parts apart so you can see how the box goes together.
+
+6
+00:00:51,537 --> 00:00:56,495
+Fronts hides the doors, so you can look inside the cabinet.
+
+7
+00:00:56,495 --> 00:01:02,289
+Materials: pick the board for the carcass, the back and the doors.
+
+8
+00:01:02,289 --> 00:01:16,566
+Construction: toe kick height and setback, top rails, bottom joint, joinery.
+
+9
+00:01:16,566 --> 00:01:20,106
+Back panel: grooved in, rabbeted, or applied to the back.
+
+10
+00:01:20,106 --> 00:01:25,662
+The parts list: every panel with its cut size, material, edgebanding and machining.
+
+11
+00:01:25,662 --> 00:01:30,823
+Click Done to go back to the job. The card shows the new size.

@@ -1,0 +1,35 @@
+1
+00:00:05,524 --> 00:00:09,260
+Doors builds a whole door from a style: no drawing needed.
+
+2
+00:00:09,260 --> 00:00:18,288
+Pick a style: slab, shaker, arched top or cathedral. The preview follows.
+
+3
+00:00:18,288 --> 00:00:28,729
+Give it a name and size: an 18" by 30" shaker door.
+
+4
+00:00:28,729 --> 00:00:34,060
+Hinges on the left, and a pull with 128 mm centres.
+
+5
+00:00:34,060 --> 00:00:42,854
+Change the stile and rail widths and the panel field updates.
+
+6
+00:00:42,854 --> 00:00:47,320
+Hinge cups follow the Salice 110° pattern and are drilled after the door is turned over.
+
+7
+00:00:47,320 --> 00:00:51,892
+Add door: it becomes a custom part, rebuilt from these settings.
+
+8
+00:00:51,892 --> 00:01:02,735
+Open it: the machining is already there. Panel field, hinge cups, pull holes, cut-out.
+
+9
+00:01:02,735 --> 00:01:42,708
+Simulate and check it in 3D, the same as any part.

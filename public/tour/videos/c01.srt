@@ -1,0 +1,27 @@
+1
+00:00:03,401 --> 00:00:07,748
+This is Cabinet Studio. Everything lives in the dark sidebar on the left.
+
+2
+00:00:07,748 --> 00:00:10,151
+Jobs: one job per order, holding all the cabinets for that kitchen.
+
+3
+00:00:10,151 --> 00:00:13,522
+Custom parts: the AlphaCam-style side, for drawing and machining your own shapes.
+
+4
+00:00:13,522 --> 00:00:25,657
+Library: cabinet templates, sheet materials, edgebands and hardware.
+
+5
+00:00:25,657 --> 00:00:32,698
+Machine & tools: the N-200 machine setup and the router tool table.
+
+6
+00:00:32,698 --> 00:00:38,237
+Settings: shop data storage, plugins and the About box.
+
+7
+00:00:38,237 --> 00:00:41,982
+The yellow box marks placeholder values that still need to be set up.

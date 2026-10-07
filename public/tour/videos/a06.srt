@@ -1,0 +1,35 @@
+1
+00:00:05,579 --> 00:00:09,121
+The sign is drawn, machined and simulated. What does the machine get?
+
+2
+00:00:09,121 --> 00:00:18,576
+Program shows the woodWOP macros this part makes: two drillings, a pocket, a contour.
+
+3
+00:00:18,576 --> 00:00:23,561
+Each one opens in woodWOP as an editable macro, not a long list of points.
+
+4
+00:00:23,561 --> 00:00:31,212
+Custom-part output is off by default, so for now this preview is for checking only.
+
+5
+00:00:31,212 --> 00:00:38,904
+Now put the sign in the Goldberg job. Open the job’s Custom parts tab.
+
+6
+00:00:38,904 --> 00:00:43,702
+Add from the part library: one click on the Goldberg sign.
+
+7
+00:00:43,702 --> 00:00:52,719
+It now nests with the cabinet parts. Here it lands on an MDF sheet of its own.
+
+8
+00:00:52,719 --> 00:01:01,626
+Output: the check notes that only its cut-out would be cut while custom-part output is off.
+
+9
+00:01:01,626 --> 00:01:04,828
+Switch it on under Machine & tools when you are ready, and simulate in woodWOP first.

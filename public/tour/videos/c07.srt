@@ -1,0 +1,19 @@
+1
+00:00:03,400 --> 00:00:07,657
+The Cut list tab lists every panel the job needs, grouped by material.
+
+2
+00:00:07,657 --> 00:00:10,720
+Cut sizes already allow for edgeband thickness. Finished sizes are next to them.
+
+3
+00:00:10,720 --> 00:00:19,419
+Each row shows which cabinets use the part, the quantity, edges and grain.
+
+4
+00:00:19,419 --> 00:00:28,374
+Cut list CSV saves the list for the saw or a spreadsheet.
+
+5
+00:00:28,374 --> 00:00:39,154
+BOM CSV is the bill of materials: sheets, edgeband length and hardware to order.

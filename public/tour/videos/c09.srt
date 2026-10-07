@@ -1,0 +1,31 @@
+1
+00:00:03,400 --> 00:00:14,241
+Every part gets a label. On the Nesting tab, Labels shows where each one goes on the sheet.
+
+2
+00:00:14,241 --> 00:00:17,578
+Label spots are picked per part: the largest clear area, away from holes and edges.
+
+3
+00:00:17,578 --> 00:00:21,471
+The label files are made on the Output tab.
+
+4
+00:00:21,471 --> 00:00:26,906
+Labels PDF: one 100 x 70 mm label per part, with a sheet header label first.
+
+5
+00:00:26,906 --> 00:00:35,521
+Each label: part ID barcode, cabinet and part name, size, edge diagram, sheet and cut order.
+
+6
+00:00:35,521 --> 00:00:41,221
+Sheet maps PDF: one page per sheet showing every part, its label spot and the machine origin.
+
+7
+00:00:41,221 --> 00:00:46,532
+Stick the labels where the map shows, and every part is identified as it comes off the table.
+
+8
+00:00:46,532 --> 00:00:49,957
+Labels ZPL sends the same labels straight to a Zebra label printer.

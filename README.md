@@ -97,7 +97,9 @@ A second side of the program draws and machines parts that are not cabinet boxes
 panels, brackets, signs. It shares the job, materials, tool table, nesting, labels, units switch
 and MPR writer with the cabinet side. Every feature has its own switch under **Machine & tools →
 Custom-part features**. MPR output for custom parts is **off by default** and goes through the same
-export checker. Tool numbers are still placeholders.
+export checker. Tool numbers are still placeholders. Left out on purpose (reasons in
+[ROADMAP.md](ROADMAP.md), "Out of scope"): polishing, waterjet and laser cycles; importing from an
+ERP or other cabinet software; robot programs; lathe, wire, stone and laser modules.
 
 - **Part designer** (Parts page): lines, arcs, rectangles, slots, splines and text. Edit with
   move, copy, mirror, array, offset, fillet (including T-bone relief), trim, extend, and unite,

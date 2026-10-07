@@ -22,7 +22,7 @@ Next for the reader: machine edge grooves and edge profiles (needs the aggregate
 underside milling in the turned-over program, and a per-shop "likely features" list so the
 reader recognises the shop's own hardware codes.
 
-## Custom-part Stage 2 and 3 (Stage 2 complete; Stage 3 in progress)
+## Custom-part Stage 2 and 3 (both complete)
 
 Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-progress.md`.
 
@@ -152,7 +152,12 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   **M3.6e (owner decision on M3.6, October 2026):** the export checker replays each custom part
   where it is nested on its sheet: a machine-part hit (spindle motor, head plate, drill block...)
   is a warning while the machine's parts are invented and blocks the export once they are
-  confirmed. Next: M3.7 (recording the out-of-scope items).
+  confirmed.
+  **M3.7 out of scope: recorded** (October 2026): polishing, waterjet and laser cycles; shop ERP
+  and other cabinet software import; robot output; lathe, wire, stone and laser modules. Skipped,
+  nothing built; the reasons are in "Out of scope" below. **Stage 3 complete.** What is still
+  deferred and the shop facts needed before any real machine output: "Stage 3 exit" in
+  `docs/stage-2-3-progress.md`.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.
@@ -189,6 +194,18 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   woodWOP's saw-groove XA/XE mean (cut length at the surface or at full depth), whether a
   rotating aggregate will be fitted (and a sample program for it), and the shop's facing
   step-over and corner slow-down values.
+
+## Out of scope for the custom-part module (M3.7, October 2026)
+
+Recorded as skipped in the Stage 2-3 plan (`docs/stage-2-3-spec.md`, section 4.1). Nothing is
+built for them. Each would come back only with the change in the last column.
+
+| ID | What | Why it is skipped | What would change that |
+|---|---|---|---|
+| 2D-19 | Polishing, waterjet and laser cutting cycles | Not a router shop need. The shop's CNC is the N-200 router; these cycles need a polishing head, a waterjet or a laser source. | A machine of that kind in the shop. Its programs would go through a machine model and a script post, as rotary work does, never to the N-200. |
+| AM-14 | Importing from a shop ERP or from other cabinet software | Cabinet Studio is the shop's cabinet software (it replaces the program used before), and no shop ERP is known. Reading another program's own job files would mean working out a private format, which the clean-room rules do not allow. Open formats already come in: DXF, STEP / IGES / BREP, STL / OBJ / 3MF, CSV part lists (batch runs), G-code and our own MPR. | An ERP or other program in the shop with a documented export (CSV, XML): then a reader for that format. |
+| ROB-01 | Programs for robots | No robot is known in the shop. Robot programs need the robot's own kinematics and its maker's controller language. | A robot cell, with its maker's documented program format, through a machine model and a script post. |
+| LAT-01 | Lathe, wire-cutting, stone and laser modules | Different machines and different software from a wood router. Turned work on a router with a rotary axis is already covered (M3.3: designed and simulated; the N-200 always refuses it). | A machine of that kind in the shop. |
 
 ## Phase 0: prove the output on the real machine (paused)
 

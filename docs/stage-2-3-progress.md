@@ -109,7 +109,7 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.6c Machine view, compare screens, fixtures panel, screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.6 complete.** |
 | M3.6d Pocket and facing toolpaths open over their first cut (owner decision 24.4) | **Done** (October 2026) | See below. Goldens explained; woodWOP output byte-identical. |
 | M3.6e Machine-part hits on the export: a warning while the machine's parts are invented, blocking once confirmed (owner decision 24.3) | **Done** (October 2026) | See below. Nothing new is written; no check weakened. |
-| M3.7 | Not started | |
+| M3.7 Out of scope recorded (2D-19, AM-14, ROB-01, LAT-01) | **Done** (October 2026) | Listed in `ROADMAP.md` ("Out of scope") with the reasons; nothing built. **Stage 3 complete.** |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
@@ -242,6 +242,8 @@ files present; fixed in M2.8e, back to 17.)
 16. **M3.3**: answered (decision 21). **M3.4 (3+2)**: nothing blocking; see "M3.4 decisions needed" below.
 17. **M3.4**: answered (decision 22). **M3.5 (5-axis interface)**: one decision for the record, a
     5-axis engine licence (see "M3.5 decisions needed"); nothing blocking.
+18. **M3.5**: answered (decision 23). **M3.6**: answered (decision 24). Stage 3 is complete; what
+    the shop still has to supply before any real machine output is listed in "Stage 3 exit" below.
 
 ## M2.1 3D foundation: what was built
 
@@ -2929,9 +2931,124 @@ spindle motor and head plate into the clamp, the new line on what a hit does on 
 until measured and confirmed). M3.6d has no new screen (the simulator's backplot simply no longer
 draws a rapid from the part's corner; no before-and-after was captured).
 
+## M3.7 out of scope: what was recorded
+
+Nothing built (spec 4.1 and 4.2: "Listed in ROADMAP.md as skipped, with the reason"). `ROADMAP.md`
+has a new section, "Out of scope for the custom-part module (M3.7)", with a row per item: what it
+is, why it is skipped, and what would change that. README's custom-part introduction names them
+and points there.
+
+| ID | What | Why skipped (in short) |
+|---|---|---|
+| 2D-19 | Polishing, waterjet, laser cycles | Not a router shop need; the shop's CNC is the N-200 router |
+| AM-14 | Shop ERP and other cabinet software import | Cabinet Studio is the cabinet software; no shop ERP is known; other programs' own job files are private formats (clean-room rules); open formats already import |
+| ROB-01 | Robot output | No robot is known in the shop; would need the robot's kinematics and its maker's language |
+| LAT-01 | Lathe, wire, stone, laser modules | Different machines; turned work on a router is M3.3 (simulation only) |
+
+Acceptance (spec M3.7): listed in `ROADMAP.md` as skipped, with the reason. Tests unchanged at
+1054 (1053 + 1 skipped). M3.7 builds no machinery, so none of the deferred items is closed
+(decision 24.5). Screenshots of this run's M3.6d/e work are in `docs/screenshots/stage-2-3/M3.7/`
+(see "M3.6d and M3.6e screenshots"); M3.7 itself has no screen.
+
+## Stage 3 exit
+
+**Done: all 23 Stage 3 features** (19 built, 4 recorded as out of scope), with every acceptance
+test in the spec met (see each milestone above):
+
+| Milestone | Spec IDs | Output to the N-200 |
+|---|---|---|
+| M3.1 more 3-axis finishing (radial and spiral, scallop, flat-area, helical, undercut with lollipop tools, curve-driven; M3.1g follow-ups) | 3D-05, 3D-07, 3D-08, 3D-09 | Simulation only; flat-area on level flats behind the 3D flat-layer switch (off) |
+| M3.2 small extras (thread milling, fold / flatten / wrap, hatching, detail views, line types, print to scale, stroke fonts, rapid surfaces) | NEW-08, NEW-07, NEW-21, NEW-24, 2D-18 | Threads simulation only; rapid surfaces not in woodWOP output |
+| M3.3 rotary (wrapped planes, rotary machining, rotary stock) | 3D-10, NEW-14 | Never: the N-200 refuses a turned part (`CAM_ROTARY`); script post for a rotary machine, switch off |
+| M3.4 positional 3+2 | 5AX-01 | Never: refused (`CAM_POSITIONAL`); script post, switch off |
+| M3.5 5-axis interface (interface, "not licensed" stub, preview engine, tool axes in the IR, barrel and form tools, head flip) | 5AX-02, 5AX-03, TOOL-07, NEW-26 | Never: refused (`CAM_MULTIAXIS`); no engine licence (decision 23) |
+| M3.6 machine simulation, part compare, fixtures; M3.6d pocket and facing opening move; M3.6e machine-part hits on the export | SIM-06, SIM-04, FIX-01 | Nothing new written; fixture hits by the tool block the export; machine-part hits warn (invented parts) or block (confirmed) |
+| M3.7 out of scope | 2D-19, AM-14, ROB-01, LAT-01 | Nothing built |
+
+Every machine-output switch is still **off** by default; nothing is machine-proven; the README
+warning (open every MPR in woodWOP and simulate before cutting) applies to everything.
+
+**Deferred (still listed, decisions 22-24):**
+
+1. 3D finishing, through cuts, rest machining and adaptive clearing on tilted (3+2) planes.
+2. Going back in the simulator: the last stretch (about 2 s on the turned leg) still replays on
+   the screen's thread.
+3. Jumping far ahead on a big 3+2 or 5-axis part replays on the screen's thread and can hold it.
+4. New this run, small: between depth levels a pocket or facing still dips to the rapid height
+   over the area just cut before rising to the next level (M3.6d limit); the Simulate → Machine
+   view shows the part unturned at the X and Y typed there, while the export check uses the
+   nested place and turn (M3.6e limit).
+5. A licensed 5-axis engine: not bought (decision 23); revisit only if a 5-axis machine comes.
+
+Each milestone's "Limits recorded" lists the smaller known limits (they are not missing features).
+
+**Shop facts still needed before any real machine output** (each value is a badged placeholder
+or a switch that stays off until then):
+
+*The N-200 (Machine & tools → machine model)*
+
+1. Table size, X / Y / Z travel, tool-change position, machine safe height, spoilboard thickness,
+   the spoilboard allowance and through depth.
+2. Where the sheet's origin and stop corner are, and the `VIEW` orientation (ROADMAP Phase 0).
+3. Which units are fitted: saw unit, rotating or angle aggregate, horizontal drill unit (all
+   treated as absent). If a saw unit: the T140 blade diameter (200 mm placeholder) and what
+   woodWOP's saw-groove XA / XE mean. If an aggregate: its offsets, housing and allowed angles, and
+   a small program saved from woodWOP that uses it.
+4. The head and gantry sizes for the machine simulation: spindle motor, head plate, vertical drill
+   block, gantry beam and legs, Y carriage (invented; until confirmed a machine-part hit only
+   warns). Also the drill block's offset from the spindle (not in the machine model yet).
+5. Whether drills are called by diameter or by tool number.
+6. The folder the N-200 reads its programs from (empty), and whether programs go by
+   productionManager, network or USB.
+
+*Tools (Machine & tools → tool table)*
+
+7. The real tool table: numbers, diameters, cutting lengths, spindle layout (export from the
+   shop's tool manager and import the CSV).
+8. Stick-outs and holders of every router and the shop's usual holder (invented stick-outs on
+   T101-T104, placeholder collet chuck).
+9. The 3D tools the shop has: ball-nose, bull-nose, tapered; shank diameters and flute lengths.
+   Lollipop (T108), thread mill (T109) and barrel (T110) are placeholders; without real ones that
+   work stays simulation only.
+
+*Cutting values (Machine & tools → default cutting values)*
+
+10. Feeds, speeds, step-downs and step-overs for the shop's materials: 2D defaults, 3D roughing
+    and finishing, relief work, facing step-over, corner slow-down, edge work, Z-waves, the
+    between-curves step-over, thread milling, rotary and 5-axis values.
+11. Hold-down limits for small parts with shared lines; bridge width, longest bridge and part size.
+
+*Proof in woodWOP (before any output switch goes on)*
+
+12. Three to five MPRs the shop already runs, to diff against ours (header fields, `KM` and `T_`
+    conventions, `EM` modes, `ZA` sign, the `<105` approach and ramp, pocket versus groove
+    macros), then a test sheet cut in cheap board and measured (ROADMAP Phase 0).
+13. One full circle from our MPR simulated in woodWOP (the half-circle arc question, decision 18).
+14. One 3D roughing / waterline / flat-area program loaded in woodWOP, and how many points a
+    contour may hold (the app warns over 2,000).
+15. A small true 3D program saved from woodWOP on the shop PC (needed for parallel and other 3D
+    finishing, relief finishing, thread or helical moves; decision 2).
+16. One sheet each of shared-line, bridged and flip-side programs simulated in woodWOP (end for
+    end, 5 mm strip, as decided).
+
+*Shop data*
+
+17. Real sheet sizes and grain rules for each board stocked.
+18. The shop's clamps, pods and rails if any are used (none is a valid set-up on the vacuum table).
+19. A sample relief file from the relief software (units, base), to confirm the importer's
+    defaults; the packaged app opening one STEP file offline on the Windows PC and the Mac.
+
+*Cabinet side (ROADMAP "Open questions for Avi", for the cabinet programs)*
+
+20. Construction standards (System 32 start and pitch, back groove, bottom joint, connectors,
+    toe kick, hinge and plate positions), edgebander pre-mill and band thicknesses, and the label
+    printer and stock.
+
 ## Next run
 
-- M3.7 (record the out-of-scope items in ROADMAP.md; nothing built), when the owner says go.
+- Stage 3 is complete and nothing is left in the spec. What comes next is the owner's call: the
+  shop facts in "Stage 3 exit" (they unlock real output one switch at a time), Phase 0 in
+  `ROADMAP.md` (proving the output on the N-200), or any deferred item above.
 
 ## Run log
 
@@ -3001,4 +3118,6 @@ draws a rapid from the part's corner; no before-and-after was captured).
 - **Run 20 (M3.6d)**: pocket and facing toolpaths open over their first cut (owner decision 24.4),
   goldens explained, woodWOP output byte-identical (`3e45bad`).
 - **Run 20 (M3.6e)**: machine-part hits on the export, warning while invented, blocking once
-  confirmed (owner decision 24.3); screenshots. See `git log`.
+  confirmed (owner decision 24.3); screenshots (`36ac6d2`).
+- **Run 20 (M3.7)**: out-of-scope items recorded in ROADMAP.md; Stage 3 exit summary. **M3.7
+  complete; Stage 3 complete.** See `git log`.

@@ -20,6 +20,7 @@
   0
  ],
  "warnings": [
+  "T109's neck passes 0.19 mm from the thread's crests, inside the collision check's 2 mm safety margin: the collision check reports it as a shank collision. Check the real neck size (the tool data is a placeholder).",
   "1 internal thread(s) have no core hole cut before them: pre-drill or bore it first (the thread operation's \"Add core holes\").",
   "Bottom-up: the tool goes straight down the middle of the core hole to the thread's bottom first, so the core hole must be at least as deep as the thread."
  ],

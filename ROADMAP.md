@@ -99,6 +99,11 @@ Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-pro
   LGPL-2.1, separate 23 MB file loaded on first use, offline; occt-import-js stays the reader);
   the plan view draws very large toolpaths (a 472,100-point roughing draws in well under a second
   instead of stopping the screen).
+  **M3.2 small extras: done** (October 2026): thread milling (pitch and depth exact in the
+  toolpath; simulation only, never written to woodWOP); fold, flatten and wrap (wrap keeps arc
+  length within 0.01 mm); hatching, detail views and layer line types, printed to scale; a
+  stroke-font editor for engraving; rapid moves over a cylinder or dome (simulation, checks and
+  text posts; woodWOP output unchanged). Part format 7.
 - Decisions (October 2026):
   - 3D output to woodWOP starts with flat-layer operations (Z-level roughing, waterline) as
     normal contour macros. True 3D paths stay off until a sample program comes from the shop PC.

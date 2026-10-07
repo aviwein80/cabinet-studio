@@ -367,6 +367,41 @@ export checker. Tool numbers are still placeholders.
     Discard); export every tool field to a spreadsheet (.xlsx or CSV) and import it back with each
     change shown first; **Tool data in operations** lists every operation whose tool has changed
     since its toolpath was accepted (diameter 8 → 10, …) and updates it on request.
+- **Small extras** (switch: Small extras, on):
+  - **Thread milling** (Machining → Add operation → More 2.5D → Thread milling, on picked
+    circles): internal or external threads, metric pitch, right or left hand, top-down or
+    bottom-up, radial passes out to the full depth (ISO basic depth by default) and a spring pass.
+    The helix is written as half-turn arcs that each drop exactly their share of the pitch, so
+    pitch and length are exact in the toolpath. It checks the tool (a thread mill; it fits the
+    core hole; its tooth reaches the depth past its neck) and asks for a core hole cut first
+    (**Add core holes** makes the circles and a pocket). Simulated in the stock with the 60°
+    tooth. **Simulation only**: no woodWOP form is confirmed for helical moves, so the checker
+    always refuses it (`CAM_NO_OUTPUT`). The thread mill T109 is a placeholder with Configure
+    badges; thread mills are never picked on their own for pockets, engraving or facing.
+  - **Fold, flatten, wrap** (3D tab): **wrap** picked shapes (text too) along a curve: distance
+    along the curve and distance out from it are kept, so lengths along the baseline stay exact
+    (within 0.01 mm); **flatten** a surface model into a flat pattern (every facet keeps its edge
+    lengths; a surface that is not developable is reported with how far off it is); **fold** a
+    flat pattern along drawn fold lines by an angle into a surface model (folding then flattening
+    gives the pattern back).
+  - **Hatching, detail views, line types** (Dimension tools → **Hatch**, **Detail view**; Layers →
+    line type): a hatch fills the picked closed shapes (holes stay empty) at an angle and
+    spacing, optionally crossed, and follows the shapes when they change; a detail view shows a
+    circle of the drawing magnified elsewhere, marked and labelled; each layer can be solid,
+    dashed, hidden, centre or dotted. All of them print to scale: hatch spacing and part lengths
+    divide by the print scale, a detail is its own factor larger again, and dashes keep their
+    paper length at any scale. Notes only: never machined.
+  - **Stroke fonts** (Library → Fonts): make single-stroke engraving fonts: draw each letter's
+    strokes on a grid, set its advance, start from a copy of the built-in font, import and export
+    them. The text tool and a text's properties pick the font. A text keeps a copy of the
+    letters it uses, so changing a font never changes parts already drawn; letters a font lacks
+    use the built-in ones.
+  - **Rapid surfaces** (any operation → Moves between cuts): moves between cuts follow a cylinder
+    or a dome over the panel instead of the flat safe height (a suggested arch, from the
+    clearance height at the edges to the safe height in the middle, marked until checked).
+    Never below the clearance height. The cutting moves are unchanged; the simulation, the
+    collision check and text (G-code) programs use it. woodWOP programs move between cuts at the
+    machine's own safety height, so MPR output is not affected.
 - **Values still to confirm**: every value that is a placeholder or a built-in default (tools,
   the saw blade, tool lengths, feeds, holders, the machine-model figures, whether a saw unit or an
   aggregate is fitted, and the default cutting values) shows a **Configure** badge where it is
@@ -658,7 +693,8 @@ src/cam/           custom-part kernel: arcs, offsets, booleans, DXF/PDF, toolpat
   collision/       shank, holder, rapid and spoilboard checks (simulation, and against 3D models)
 src/core/confirm.ts  unconfirmed values: what is still a placeholder, where its real value goes
   more25d/         saw cuts (run-out, joining, keep-off), curve cuts (between curves, 3D curves,
-                   Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse)
+                   Z-waves), hand-drawn toolpaths and toolpath edits (anchors, corners, reverse),
+                   thread milling, rapid surfaces
   worker/          background compute worker (3D tasks) with progress and cancel
   plugin/          plugin sandbox (QuickJS), the typed API, grants, part-change checks, batch
                    steps, script posts, macro recorder
@@ -669,6 +705,9 @@ src/core/toolData.ts       tool fields, grid editing, spreadsheet export/import,
   tools/holder.ts  holder outline from a model (revolved envelope)
   turnSketch.ts    turn-by-turn sketch on the constraint solver (solver.ts)
   dims.ts, print.ts  associative dimensions, print to scale (PDF)
+  annotate.ts      hatching, detail views, line types (notes, printed to scale)
+  develop.ts       wrap along a curve, flatten a surface, fold a flat pattern
+  font.ts          the built-in stroke font and stroke fonts made in the library
   query.ts         geometry queries and auto-queries (the layer rules run on it)
   holeFill.ts, panelling.ts, trace.ts   fill with holes, split into panels, image trace
 src/app/           zustand store, storage backend (Electron bridge or browser fallback)

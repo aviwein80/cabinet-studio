@@ -166,6 +166,8 @@ describe('M3.2 thread milling: simulated, checked, refused when it cannot work',
     // M16 x 2: 1.08 mm deep, more than the tooth stands proud of the neck (1 mm)
     expect(threadPart({ pitch: 2 }, 8).tp.warnings.join(' ')).toMatch(/neck would rub/)
     expect(threadPart().tp.warnings.join(' ')).toMatch(/no core hole cut before them/)
+    // the neck within the collision margin of the crests: said up front (the check itself is unchanged)
+    expect(threadPart().tp.warnings.join(' ')).toMatch(/neck passes 0\.19 mm from the thread's crests, inside the collision check's 2 mm safety margin/)
     // with a pocket on a core-hole circle first, no such warning
     const core = makeEntity({ t: 'circle', c: C, r: (10 - 2 * isoDepth('internal', 1.5)) / 2 }, 'holes')
     const { tp } = threadPartWith(core)

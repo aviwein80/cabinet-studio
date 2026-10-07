@@ -138,7 +138,7 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
     })
     if (!r) return
     onChange(await addSurfaceModel(part, r.mesh, `${model.name}: face ${r.faceId} rows and columns`, `Face ${r.faceId} rows and columns`))
-    toast.success(`Face ${r.faceId} (${r.surface}): ${r.rows} rows × ${r.cols} columns added as a surface model`, { description: `Within ${r.chord.toFixed(3)} mm of the true surface. In curve-driven finishing choose "A surface's rows or columns" and this surface.${r.warnings.length ? ' ' + r.warnings.join(' ') : ''}` })
+    toast.success(`Face ${r.faceId} (${r.surface}): ${r.rows} rows × ${r.cols} columns added as a surface model`, { description: `Within ${r.chord < 0.001 ? '0.001' : r.chord.toFixed(3)} mm of the true surface. In curve-driven finishing choose "A surface's rows or columns" and this surface.${r.warnings.length ? ' ' + r.warnings.join(' ') : ''}` })
   }
   /** The solid as a plain mesh model (for mesh tools such as simplify); the solid is hidden. */
   const toMesh = async () => {

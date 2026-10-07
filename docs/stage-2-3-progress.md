@@ -94,12 +94,12 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.1e Curve-driven finishing (3D-09) | **Done** (October 2026) | See below. Simulation only. |
 | M3.1f Screenshots, README, ROADMAP | **Done** (October 2026) | See below. **M3.1 complete.** |
 | M3.1g Owner follow-ups: flat-area flat layers, lollipop badges, undercut roughing, solid face rows and columns, plan view | **Done** (October 2026) | See below. Output switches all off; undercut roughing simulation only. |
-| M3.2 Small extras (NEW-08, NEW-07, NEW-21, NEW-24, 2D-18) | In progress | See below. |
+| M3.2 Small extras (NEW-08, NEW-07, NEW-21, NEW-24, 2D-18) | **Done** (October 2026) | See below. Thread milling simulation only; rapid surfaces not in woodWOP output; every output switch still off. |
 | M3.3 - M3.7 | Not started | |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -2202,6 +2202,94 @@ lines along them stop where they leave the face.
    areas to MPR", load one flat-area program in woodWOP (as for roughing and waterline, open
    question 5).
 
+## M3.1g screenshots
+
+In `docs/screenshots/stage-2-3/M3.1g/`: `01-flat-areas-output-switch-off` (the flat-layer switch,
+off, now naming flat areas), `02-undercut-roughing` (the undercut roughing editor: lollipop
+Configure badges, the reach warning), `03-undercut-roughing-simulated` (simulated after Z-level
+roughing; the collision check flags the Z-level rough's placeholder flute length, as it should),
+`04-solid-face-rows-and-columns` (the dome face of the STEP fixture: 168 rows × 246 columns from the
+B-rep kernel; the new surface lies on the solid's face, hence the mottled look),
+`05-plan-view-large-toolpath` (the 472,100-point roughing drawn simplified, with the note).
+
+## M3.2 small extras: what was built
+
+Pushed to `main` in two green parts: `d68e3d3` (thread milling, fold/flatten/wrap, annotation and
+print) and `9d40204` (stroke fonts, rapid surfaces), then screenshots and docs. Part format 7
+(thread operations; annotations, layer line types, fonts kept with texts and rapid surfaces are
+optional fields).
+
+| Item | What | Where |
+|---|---|---|
+| NEW-08 Thread milling | New operation on picked circles: internal/external, diameter (default: the circle), pitch, hand, top-down or bottom-up, length, thread depth (ISO 68-1 basic depth: 5/8 H inside, 17/24 H outside, H = 0.866 P), radial passes (placeholder 2, Configure badge) and a spring pass. Half-turn helical arcs, each dropping exactly its share of the pitch; climb or conventional follows from hand and direction (spindle clockwise). Checks: a thread mill; fits the core hole; the tooth reaches the depth past the neck; a core hole cut by an earlier operation (warning otherwise; **Add core holes** makes them). Edge feed (`k`) on the arcs. Placeholder T109 (Ø6 single-profile, neck Ø4) with badges. Simulated in the dexel stock with the 60° tooth (as many pieces per column as the turns need). `noOutput`: never written | `src/cam/more25d/thread.ts`, `genThread` in `src/cam/toolpath.ts`, `carveThread` in `src/cam/stock/dexel.ts`, `ThreadFields` in `src/pages/part/OpsPanel.tsx` |
+| NEW-07 Fold, flatten, wrap | Wrap: shapes mapped by arc length along a curve (x along, y out from it, square to it), refitted with lines and arcs within 0.005 mm; past an open curve's end they carry on straight (warning). Flatten: facets unrolled across shared edges, each keeping its edge lengths; developability from each inner corner's angle defect (and the gap it leaves); overlap when the pattern runs over itself. Fold: each fold line splits the piece it runs across; pieces turn about the folds on their way from the fixed piece, the nearest first; corners joined where the pattern joins them | `src/cam/develop.ts`, `src/pages/part/DevelopPanel.tsx` (3D tab) |
+| NEW-21 Annotation and print | Hatch (associative: by shape id; holes even-odd; angle, spacing in part mm, crossed), detail view (circle, magnification, placed view, letters A, B, ...), per-layer line types (solid, dashed, hidden, centre, dotted; dashes in paper mm in prints, pixels on screen). Printed to scale with the drawing; dashes laid out on the paper before clipping so they run on across sheets | `src/cam/annotate.ts`, `src/cam/print.ts`, Hatch / Detail view tools, Annotations list, layer line type, print switch |
+| NEW-24 Stroke font editor | Library → Fonts: glyph strokes on a grid (snap 0.25/0.5/1 or off), per-glyph advance, gap, cap height; new, copy of the built-in, import/export JSON (checked on reading). Text keeps the glyphs it uses (`embedFont`); missing letters use the built-in glyph scaled to the font's grid; DXF writes such text as strokes | `src/cam/font.ts`, `src/pages/library/FontsTab.tsx`, text tool and text properties |
+| 2D-18 Rapid surfaces | Per operation: cylinder along X or Y, or a sphere. After the toolpath is made (and edited), rapids to the safe height end on the surface and rapids across follow it in steps that keep each straight move within 0.1 mm of it; never below the operation's clearance height (held there, warning); beside the surface the flat safe height stays (warning). Suggested arch from the panel size marked "Suggested: check it" until checked or edited | `src/cam/more25d/rapidSurface.ts`, `withRapidSurface` in `src/cam/toolpath.ts`, `src/pages/part/RapidSurfaceGroup.tsx` |
+
+### Acceptance
+
+| Criterion | Proof | Measured |
+|---|---|---|
+| Thread pitch and depth exact in the toolpath | `tests/cam-thread.test.ts` | M10 × 1.5 internal, bottom-up, 12 mm, 2 passes: 32 helix arcs, Z drop per turn 1.5 mm (worst error 1.1e-15 mm), the thread's end exactly at its length; last pass puts the tooth tip on Ø10.000000 (major), the first on half the depth; external threads put it on the minor diameter. Simulated (dexel, 0.05 mm cells): 7 grooves up a column halfway up the flank, mean spacing 1.5000 mm; material just inside Ø10 cut, just outside untouched. Golden `thread-m10-internal` |
+| Wrap keeps arc length within 0.01 mm | `tests/cam-develop.test.ts` | A 140 mm baseline wrapped onto an arc (r 100), a circle (r 60), a polyline with corners: length error 0 / 2.8e-14 / 0 mm; onto a sine wave fitted with lines and arcs: 0.0015 mm. Every checked point on the curve within 0.01 mm, at the same distance along it. A 10 × 6 box 20 mm along a r 100 arc stays between r 94 and 100 and between 20 and 30 mm along; its top edge comes out 9.40 mm (10 × 94/100) |
+| Flatten / fold | `tests/cam-develop.test.ts` | Cylinder segment (r 80, 120°, 24 facets) and cone frustum (r 60 → 30, 32 facets): angle defect 0, edges kept within 1.5e-13 mm, flat area = surface area; cone corners 100 / 50 mm from the flattened apex within 0.01 mm. Whole cylinder cut open, no overlap. Dome: 1.46° defect, 0.24 mm gap, "not developable" warning. Box net (100 × 100 base, 50 mm sides) folded 90° on four lines: side corners meet within 4e-15 mm, sides vertical; flattened back: area 30,000.000 mm², perimeter 800.0000 mm |
+| Prints measure to scale | `tests/cam-annotate.test.ts` (segments read back from the PDF) | At 1:5 on A3: 400 mm edge = 80.00 mm on paper, check bar 100.00 mm; hatch at 10 mm spacing = lines 2.000 mm apart, 20.00 mm long across the 100 mm pocket; a 4× detail of a hatch chord (34.64 mm) = 27.71 mm on paper (34.64 × 4 / 5); dashed layer: 4.000 mm dashes at 1:5 and at 1:2. Hatch lines exactly the spacing apart at 45°, ends on the boundary, none in a hole, follows its shapes, gone (listed as broken) when they are deleted |
+| Stroke fonts | `tests/cam-font.test.ts` | The built-in font as a stroke font draws identical strokes and widths; a 10-unit font at 20 mm: 2 mm per unit, advances 7 + 5 units = 14 / 24 mm; fallback glyphs identical to the built-in; edit steps; JSON round trip and refusals; a part's text unchanged after the library font is edited, and after saving and reading back |
+| Rapid surfaces | `tests/cam-rapid-surface.test.ts` | 600 × 300 panel, five pockets, suggested cylinder: every raised rapid on the surface (or the clearance height), every straight rapid within 0.1 mm of it, none below the clearance height; cutting moves and woodWOP intents identical to the flat version; a low surface held at the clearance height and the flat safe height kept beside it, with warnings; saved and read back |
+
+Also: `npm run sample` output unchanged (byte for byte); Stage 1 goldens unchanged; the one golden
+changed in this run, `thread-m10-internal`, is new, then gained one warning line (the neck within
+the collision margin, below), moves unchanged.
+
+### Limits recorded
+
+- **Thread milling** is simulation only. The collision check keeps its safety margin (2 mm
+  default) round a thread mill's neck as round any shank, so with the placeholder T109 (neck 0.19
+  mm from the crests of an M10 × 1.5) it reports a shank collision on every internal thread; the
+  operation says so up front. The check is not relaxed (decision needed below). Metric (ISO)
+  profiles only; no tapered threads; one start.
+- **Wrap** maps points, then refits: straight lines of a shape become curves along a curved
+  baseline (as they should), fitted within 0.005 mm. Text is wrapped as strokes (its letters, not
+  a text object).
+- **Flatten** lays facets out from one facet across shared edges: a closed surface is cut where
+  the two ways round meet (not where you choose). A surface that is not developable gets an
+  approximate pattern with the warning; no stretch is spread out.
+- **Fold** lines must cross the piece they fold (a line along the outline is left out, with a
+  note); a piece cut into separate parts by one straight line is not handled (U-shaped pieces).
+  Sides that touch only once folded are not joined.
+- **Detail views** draw their magnified lines solid (layer line types are not carried into them).
+  Hatching and details are on face 1 only. The Hatch and Detail view tools are in the Dimension
+  group (CAD and tool additions switch).
+- **Rapid surfaces** change nothing in woodWOP programs (the machine moves between macros at its own
+  safety height). A suggested surface is worked out from the panel size, not from clamps or the
+  machine: it is marked until checked.
+
+## M3.2 screenshots
+
+In `docs/screenshots/stage-2-3/M3.2/`: `01-thread-milling` (editor, Configure items, the bottom-up
+note), `02-thread-simulated` (core holes then the thread; the collision check's neck report),
+`03-fold-flatten-wrap` (text wrapped along an arc; the Fold, flatten, wrap panel),
+`04-folded-box` (a box net folded into a surface model, 3D view), `05-hatch-detail-linetypes`
+(hatch with a hole left empty, detail A at 2.5:1, a centre-line layer, the Annotations list),
+`06-print-to-scale` (the same at 1:4), `07-stroke-font-editor` (Library → Fonts, editing R),
+`08-rapid-surface` (the suggested cylinder, marked to check), `09-rapid-surface-simulated` (a rapid
+at Z 12.5 over the arch).
+
+## M3.2 decisions needed
+
+1. **Thread mill necks in the collision check**: the check keeps its 2 mm margin round a thread
+   mill's neck (as round every shank), so real thread milling will always show a shank collision,
+   because a neck passes the crests by design with well under 2 mm. Options: keep it (conservative;
+   threads stay simulation-only anyway), or check the neck inside the hole at its true size with a
+   small margin you choose. Not changed without your word.
+2. **Thread mills**: the real tools, when the shop has them (diameter, tooth, neck, reach). T109
+   stays a badged placeholder.
+3. **Thread output**: before any thread is written to the N-200, a woodWOP sample with a helical
+   or thread macro from the shop PC (the same route as true 3D output).
+4. **Rapid surfaces on other machines**: they reach text programs today (the script post path);
+   the N-200 is unaffected. Confirm that is wanted before any non-N-200 machine runs them.
+
 ## Next run
 
 - M3.3 (rotary), when the owner says go.
@@ -2254,3 +2342,6 @@ lines along them stop where they leave the face.
 - **Run 14 (M3.1f)**: screenshots, README, ROADMAP. **M3.1 complete.** See `git log`.
 - **Run 15 (M3.1g)**: flat-area flat layers and lollipop badges (`077d6d3`); undercut roughing
   (`3ea2283`); solid face rows and columns and the plan view (`f0a258d`); docs. See `git log`.
+- **Run 15 (M3.2)**: thread milling, fold/flatten/wrap, hatching, detail views and line types
+  (`d68e3d3`); stroke fonts and rapid surfaces (`9d40204`); screenshots (M3.1g and M3.2), docs.
+  **M3.2 complete.** See `git log`.

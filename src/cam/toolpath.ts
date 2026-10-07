@@ -1567,6 +1567,11 @@ function genThread(op: ThreadOp, ctx: GenContext, tp: Toolpath, b: Builder) {
       tp.warnings.push(`T${t.number}'s tooth stands only ${(rt - neck).toFixed(2)} mm proud of its neck, less than the ${h.toFixed(3)} mm thread depth: the neck would rub the thread. Use a tool with a deeper tooth.`)
       continue
     }
+    // the collision check keeps its safety margin round the neck too: closer than that to the
+    // crests, it reports a shank collision (the check is not relaxed for thread mills)
+    const margin = ctx.machine.collisionMargin ?? DEFAULT_COLLISION_MARGIN
+    const clear = rt - neck - h
+    if (clear < margin - 1e-9) tp.warnings.push(`T${t.number}'s neck passes ${clear.toFixed(2)} mm from the thread's crests, inside the collision check's ${margin} mm safety margin: the collision check reports it as a shank collision. Check the real neck size (the tool data is a placeholder).`)
     const minor = D - 2 * h
     if (op.side === 'internal' && 2 * rt >= minor - 1e-9) {
       tp.warnings.push(`T${t.number} (Ø${t.diameter}) does not fit the core hole of a ${D} mm thread (Ø${minor.toFixed(3)}). Use a smaller thread mill.`)

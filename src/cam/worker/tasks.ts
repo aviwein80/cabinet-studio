@@ -19,10 +19,16 @@ import { type HeightImageSummary, readHeightImage, summarise } from '../relief/i
 import { checkReliefMesh, type HeightMapOptions, heightMapMesh, type HeightMapResult, type MeshReliefCheck, meshReliefInfo, type ReliefSize, sizeRelief, stripBase } from '../relief/relief'
 import { decodeMesh, encodeMesh, gunzip, gzip, sha256Hex } from '../model/blobs'
 import { polyline } from '../geom'
-import type { CamPart, Fixture, ModelPlacement, ModelRef, Recipe, ReliefInfo, RotarySetup, UpAxis } from '../types'
+import type { CamPart, Fixture, FixtureShape, ModelPlacement, ModelRef, Recipe, ReliefInfo, RotarySetup, UpAxis } from '../types'
 import { generateOp, type Move, type Toolpath } from '../toolpath'
-import type { MachineProfile } from '@/core/types'
+import type { FixtureType, MachineProfile } from '@/core/types'
 import { type Collision, partCollisions, type StockMarks } from '../collision/collision'
+import { machineCollisions, type MachineHit } from '../machine/check'
+import { type MachineReplay, replayProgram, replayToolpaths } from '../machine/replay'
+import type { CompareOptions } from '../compare/compare'
+import { comparePart, type PartCompare, placedModels } from '../compare/parts'
+import { autoPlace, type AutoPlaceResult } from '../fixtures/place'
+import { modelShape } from '../fixtures/fixture'
 import { readSolid, type SolidReadOptions } from '../solid/convert'
 import { decodeSolid, encodeSolid } from '../solid/encode'
 import { occt } from '../solid/occt'
@@ -117,6 +123,17 @@ export interface TaskMap {
    * through this machine's kinematics. The stock at the end and at evenly spaced points comes back too.
    */
   'sim.positionalCollide': { in: { panel: { length: number; width: number; thickness: number; fixtures?: Fixture[] }; toolpaths: Toolpath[]; machine: MachineProfile; cell: number; replay?: MachineProfile }; out: { found: Collision[]; snapshot: StockSnapshot; marks: StockMarks['out']; problems: string[] } }
+  /**
+   * M3.6 machine simulation: the toolpaths (or a program's text, a post's output) replayed on the
+   * machine model, and every machine part checked against the table, the part and its fixtures.
+   */
+  'sim.machine': { in: { panel: { length: number; width: number; thickness: number; fixtures?: Fixture[] }; toolpaths: Toolpath[]; machine: MachineProfile; at?: { x: number; y: number }; text?: string; spans?: Record<string, { start: number; end: number }> }; out: { replay: MachineReplay; hits: MachineHit[] } }
+  /** M3.6 part compare: the part simulated to its end, its stock against its models; meshes by blob hash. */
+  'sim.compare': { in: { part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; meshes: Record<string, Mesh>; opt?: CompareOptions }; out: PartCompare }
+  /** M3.6 fixtures placed automatically, clear of the toolpaths (`ids`: fresh ids, enough for every new one). */
+  'fixtures.autoPlace': { in: { part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; type: FixtureType; count: number; ids: string[] }; out: AutoPlaceResult }
+  /** M3.6 a fixture's shape from a model file (STL, OBJ, 3MF, STEP, IGES, BREP), in slices. */
+  'fixtures.fromModel': { in: { bytes: Uint8Array; name: string; units?: MeshUnits; up?: UpAxis; slices?: number; vendor?: string }; out: FixtureShape }
 }
 
 export type SurfaceJob =
@@ -206,6 +223,34 @@ export const TASKS: { [K in TaskName]: Handler<K> } = {
     const marks: StockMarks = { every: 100, max: markCount(stock.snapshot().data.byteLength), out: [] }
     const r = positionalCollisions(panel, toolpaths, machine, { work, stock, replay, marks })
     return { found: r.found, snapshot: r.stock.snapshot(), marks: marks.out, problems: [...(r.run.program?.problems ?? []), ...(r.run.program5?.problems ?? [])] }
+  },
+  'sim.machine': ({ panel, toolpaths, machine, at, text, spans }, work) => {
+    const replay = text !== undefined ? replayProgram(text, panel, machine, { at }) : replayToolpaths(toolpaths, panel, machine, { at, spans })
+    return { replay, hits: machineCollisions(replay, panel, machine, { work }) }
+  },
+  'sim.compare': ({ part, toolpaths, machine, meshes, opt }, work) => comparePart(part, toolpaths, machine, placedModels(part, new Map(Object.entries(meshes))), opt, work),
+  'fixtures.autoPlace': ({ part, toolpaths, machine, type, count, ids }, work) => {
+    let k = 0
+    return autoPlace(part, toolpaths, machine, type, count, () => ids[k++] ?? `fx-${k}`, work)
+  },
+  async 'fixtures.fromModel'({ bytes, name, units, up, slices, vendor }, work) {
+    let mesh: Mesh
+    if (isSolidFile(name)) {
+      work.progress?.(0, 'Loading the solid-model reader')
+      const solid = readSolid(await occt(vendor), bytes, name, {}, work)
+      const n = solid.bodies.reduce((a, b) => a + b.positions.length, 0)
+      const positions = new Float32Array(n)
+      const idx: number[] = []
+      let base = 0
+      for (const b of solid.bodies) {
+        positions.set(b.positions, base * 3)
+        for (const k of b.indices) idx.push(k + base)
+        base += b.positions.length / 3
+      }
+      mesh = { positions, indices: Uint32Array.from(idx) }
+    } else mesh = buildMesh(await readMeshFile(bytes, name, work), { units }, work).mesh
+    work.progress?.(0.9, 'Slices')
+    return modelShape(placeMesh(mesh, { ...DEFAULT_PLACEMENT, up: up ?? '+z' }), name, slices)
   },
   async 'relief.imageInfo'({ bytes, name }, work) {
     return summarise(await readHeightImage(bytes, name, work))

@@ -508,6 +508,33 @@ export interface MachineModel {
    * Read only when `capabilities.positional` is set and both axes are in `axes`.
    */
   positional?: PositionalKinematics
+  /**
+   * The machine's own parts for the machine simulation (M3.6, SIM-06): gantry, carriage, head,
+   * spindle, rotary table... as boxes and cylinders, each carried by an axis. Absent = invented
+   * ones for the machine's layout (`defaultBodies`, Configure badge). The table and spoilboard
+   * come from `table` and `spoilboard`.
+   */
+  bodies?: MachineBody[]
+}
+
+/**
+ * What carries a part of the machine (M3.6): the frame (fixed), the X axis (e.g. a gantry), the Y
+ * axis (its carriage), the Z axis (the head's slide), the head's first and second rotary axes,
+ * the table's first and second rotary axes (a table axis turns what stands on it about the
+ * kinematics' table centre). Head parts are placed from the spindle's gauge point (where the
+ * tool's stick-out is measured from) with every axis at 0, z up the spindle; X parts with X at 0;
+ * Y parts with X and Y at 0; frame and table parts in machine coordinates with every axis at 0.
+ */
+export type MachineLink = 'frame' | 'x' | 'y' | 'z' | 'head1' | 'head2' | 'table1' | 'table2'
+
+/** A part of the machine (M3.6, SIM-06): a box between two corners, or a cylinder along x, y or z from its base centre. */
+export interface MachineBody {
+  id: string
+  name: string
+  link: MachineLink
+  shape: { k: 'box'; min: [number, number, number]; max: [number, number, number] } | { k: 'cylinder'; base: [number, number, number]; axis: 'x' | 'y' | 'z'; r: number; h: number }
+  /** Invented size and place: shown with a Configure badge until confirmed. */
+  placeholder?: boolean
 }
 
 /**

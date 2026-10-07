@@ -113,6 +113,42 @@ export interface GcodeOptions {
 
 const WORD = /([A-Z])\s*([-+]?(?:\d+\.?\d*|\.\d+))/g
 
+/**
+ * One line of G-code as words: comments ("( ... )", brackets inside a comment kept with it, and
+ * "; ..."), the letter-number words, and anything left that is not a word (`rest`). `skip`: an
+ * empty line, "%" or a block-delete line.
+ */
+export function gcodeLine(raw: string): { words: [string, number][]; comments: string[]; rest: string; skip: boolean } {
+  const comments: string[] = []
+  let s = ''
+  let depth = 0
+  let com = ''
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (depth === 0 && ch === ';') {
+      comments.push(raw.slice(i + 1).trim())
+      break
+    }
+    if (ch === '(') {
+      if (depth++ > 0) com += ch
+    } else if (ch === ')' && depth > 0) {
+      if (--depth > 0) com += ch
+      else {
+        comments.push(com.trim())
+        com = ''
+        s += ' '
+      }
+    } else if (depth > 0) com += ch
+    else s += ch
+  }
+  if (depth > 0) comments.push(com.trim())
+  s = s.trim().toUpperCase()
+  if (!s || s === '%' || s.startsWith('/')) return { words: [], comments, rest: '', skip: true }
+  const words: [string, number][] = []
+  const rest = s.replace(WORD, (_m, l: string, v: string) => (words.push([l, Number(v)]), '')).replace(/\s+/g, '')
+  return { words, comments, rest, skip: false }
+}
+
 export function readGcode(text: string, opts: GcodeOptions = {}): ReadProgram {
   const zTop = opts.zTop ?? 0
   const warnings: string[] = []
@@ -172,40 +208,14 @@ export function readGcode(text: string, opts: GcodeOptions = {}): ReadProgram {
       return
     }
     const ln = idx + 1
-    // comments: "( ... )" (brackets inside a comment, as in tool names, are kept with it) and "; ..."
-    const comments: string[] = []
-    let s = ''
-    let depth = 0
-    let com = ''
-    for (let i = 0; i < raw.length; i++) {
-      const ch = raw[i]
-      if (depth === 0 && ch === ';') {
-        comments.push(raw.slice(i + 1).trim())
-        break
-      }
-      if (ch === '(') {
-        if (depth++ > 0) com += ch
-      } else if (ch === ')' && depth > 0) {
-        if (--depth > 0) com += ch
-        else {
-          comments.push(com.trim())
-          com = ''
-          s += ' '
-        }
-      } else if (depth > 0) com += ch
-      else s += ch
-    }
-    if (depth > 0) comments.push(com.trim())
-    s = s.trim().toUpperCase()
-    if (comments.length && comments.some(Boolean)) lastComment = comments.filter(Boolean).join(' ')
-    if (!s || s === '%' || s.startsWith('/')) return
-    const words: [string, number][] = []
-    let rest = s.replace(WORD, (_m, l: string, v: string) => (words.push([l, Number(v)]), ''))
-    rest = rest.replace(/\s+/g, '')
-    if (rest) {
-      errors.push(`Line ${ln}: cannot read "${rest}".`)
+    const line = gcodeLine(raw)
+    if (line.comments.length && line.comments.some(Boolean)) lastComment = line.comments.filter(Boolean).join(' ')
+    if (line.skip) return
+    if (line.rest) {
+      errors.push(`Line ${ln}: cannot read "${line.rest}".`)
       return
     }
+    const words = line.words
     const val = (l: string) => {
       const w = words.filter(([k]) => k === l)
       return w.length ? w[w.length - 1][1] : undefined
@@ -536,4 +546,197 @@ export function mprToToolpaths(doc: MprDoc, machine?: Pick<MachineProfile, 'tool
 export function readProgram(text: string, opts: GcodeOptions = {}): ReadProgram {
   if (isMprText(text)) return { ...mprToToolpaths(readMpr(text), opts.machine), lines: text.split(/\r?\n/).length }
   return readGcode(text, opts)
+}
+
+// ---------------------------------------------------------------------------------------------
+// G-code as machine axes (M3.6, machine simulation)
+// ---------------------------------------------------------------------------------------------
+
+/** One position of the machine's axes a program asks for. */
+export interface AxisBlock {
+  /** Line number. */
+  ln: number
+  t: 'rapid' | 'feed'
+  /** X, Y, Z in mm as written (work coordinates), or machine coordinates (`machine`, G53). */
+  x: number
+  y: number
+  z: number
+  /** The rotary axes' angles (degrees) by letter, as written (never wrapped). */
+  rot: Partial<Record<'A' | 'B' | 'C', number>>
+  /** G53: X, Y, Z of this block in machine coordinates; `set` says which of them the line gave. */
+  machine?: { set: ('X' | 'Y' | 'Z')[] }
+  /** Feed (mm/min), or moves per minute with inverse-time feeds (G93). */
+  f: number
+  inverse: boolean
+  /** Tool number in the spindle. */
+  tool?: number
+  /** The operation's name (the comment before it). */
+  label: string
+}
+
+export interface AxisProgram {
+  blocks: AxisBlock[]
+  /** Tool changes: before which block, which tool. */
+  changes: { at: number; tool: number | undefined; label: string }[]
+  warnings: string[]
+  errors: string[]
+}
+
+/**
+ * Read a G-code program as positions of the machine's axes: G0/G1 (G2/G3 arcs in the XY plane as
+ * straight moves within 0.01 mm), X Y Z and the rotary axes `letters` (degrees, as written), G90 /
+ * G91, G20 / G21, G53 (machine coordinates for that line), G93 / G94 feeds, T / M6 tool changes,
+ * comments. For the machine simulation's replay of a post's output. Drill cycles are refused (a
+ * post for a machine with rotary axes writes them as moves).
+ */
+export function readGcodeAxes(text: string, letters: readonly ('A' | 'B' | 'C')[] = []): AxisProgram {
+  const warnings: string[] = []
+  const errors: string[] = []
+  const once = new Set<string>()
+  const warnOnce = (key: string, msg: string) => {
+    if (once.has(key)) return
+    once.add(key)
+    warnings.push(msg)
+  }
+  const blocks: AxisBlock[] = []
+  const changes: AxisProgram['changes'] = []
+  const hasM6 = /(^|[^0-9.])M0*6(?![0-9])/i.test(text.replace(/\([^)]*\)|;.*$/gm, ''))
+  let scale = 1
+  let abs = true
+  let inverse = false
+  let motion: 'G0' | 'G1' | 'G2' | 'G3' | null = null
+  let feed = 0
+  let selected: number | undefined
+  let tool: number | undefined
+  let label = ''
+  const at = { x: 0, y: 0, z: 0, rot: {} as Partial<Record<'A' | 'B' | 'C', number>> }
+  let ended = false
+  text.split(/\r?\n/).forEach((raw, idx) => {
+    if (ended) return
+    const ln = idx + 1
+    const line = gcodeLine(raw)
+    if (line.comments.some(Boolean)) label = line.comments.filter(Boolean).join(' ')
+    if (line.skip) return
+    if (line.rest) {
+      errors.push(`Line ${ln}: cannot read "${line.rest}".`)
+      return
+    }
+    const words = line.words
+    const val = (l: string) => {
+      const w = words.filter(([k]) => k === l)
+      return w.length ? w[w.length - 1][1] : undefined
+    }
+    let machine = false
+    for (const g of words.filter(([k]) => k === 'G').map(([, v]) => Math.round(v * 10) / 10)) {
+      if (g === 0 || g === 1 || g === 2 || g === 3) {
+        motion = `G${g}` as typeof motion
+      } else if (g === 20) scale = 25.4
+      else if (g === 21) scale = 1
+      else if (g === 90) abs = true
+      else if (g === 91) abs = false
+      else if (g === 93) inverse = true
+      else if (g === 94) inverse = false
+      else if (g === 53) machine = true
+      else if (g === 81 || g === 82 || g === 83) {
+        errors.push(`Line ${ln}: drilling cycle G${g} is not replayed on the machine (a post for rotary axes writes holes as moves).`)
+        return
+      } else if (g === 17 || g === 40 || g === 49 || g === 80 || g === 64 || g === 61 || g === 4 || (g >= 54 && g <= 59.3)) {
+        // plane XY, cancels, path modes, dwell, work offset (the replay puts the work offset at the part's origin)
+      } else if (g === 18 || g === 19) {
+        errors.push(`Line ${ln}: arcs in the G${g} plane are not replayed.`)
+        return
+      } else warnOnce(`g${g}`, `Line ${ln}: G${g} is not known to the replay; ignored.`)
+    }
+    const F = val('F')
+    if (F !== undefined) feed = inverse ? F : F * scale
+    const T = val('T')
+    if (T !== undefined) selected = Math.round(T)
+    const ms = words.filter(([k]) => k === 'M').map(([, v]) => v)
+    if (ms.some((m) => m === 30 || m === 2)) ended = true
+    if (ms.some((m) => m === 6) || (!hasM6 && T !== undefined)) {
+      tool = selected
+      changes.push({ at: blocks.length, tool, label })
+    }
+    for (const l of ['A', 'B', 'C'] as const) if (val(l) !== undefined && !letters.includes(l)) warnOnce(`axis-${l}`, `Line ${ln}: the ${l} axis is not one of this machine's; ignored.`)
+    const X = val('X')
+    const Y = val('Y')
+    const Z = val('Z')
+    const rotWords = letters.filter((l) => val(l) !== undefined)
+    if (X === undefined && Y === undefined && Z === undefined && !rotWords.length) return
+    if (!motion) {
+      warnOnce('no-motion', `Line ${ln}: a position without G0 or G1 is read as a rapid.`)
+      motion = 'G0'
+    }
+    const next = { x: at.x, y: at.y, z: at.z, rot: { ...at.rot } }
+    const set: ('X' | 'Y' | 'Z')[] = []
+    for (const [k, v] of [
+      ['X', X],
+      ['Y', Y],
+      ['Z', Z],
+    ] as const) {
+      if (v === undefined) continue
+      set.push(k)
+      const key = k.toLowerCase() as 'x' | 'y' | 'z'
+      next[key] = machine || abs ? v * scale : next[key] + v * scale
+    }
+    for (const l of rotWords) next.rot[l] = abs ? val(l)! : (next.rot[l] ?? 0) + val(l)!
+    const t: AxisBlock['t'] = motion === 'G0' ? 'rapid' : 'feed'
+    const base = { ln, t, f: feed, inverse, ...(tool !== undefined ? { tool } : {}), label }
+    if ((motion === 'G2' || motion === 'G3') && !machine) {
+      // arcs in XY: I, J from the start (or R), as straight moves within 0.01 mm; Z and the rotary axes run evenly
+      const I = val('I')
+      const J = val('J')
+      const R = val('R')
+      let cx: number
+      let cy: number
+      const ccw = motion === 'G3'
+      if (I !== undefined || J !== undefined) {
+        cx = at.x + (I ?? 0) * scale
+        cy = at.y + (J ?? 0) * scale
+      } else if (R !== undefined) {
+        const r = Math.abs(R * scale)
+        const dx = next.x - at.x
+        const dy = next.y - at.y
+        const d = Math.hypot(dx, dy)
+        if (d < 1e-9 || d > 2 * r + 1e-6) {
+          errors.push(`Line ${ln}: arc with R${R} cannot reach its end.`)
+          return
+        }
+        const h = Math.sqrt(Math.max(0, r * r - (d / 2) ** 2))
+        const s = (ccw ? 1 : -1) * (R < 0 ? -1 : 1)
+        cx = (at.x + next.x) / 2 - (s * h * dy) / d
+        cy = (at.y + next.y) / 2 + (s * h * dx) / d
+      } else {
+        errors.push(`Line ${ln}: arc without I, J or R.`)
+        return
+      }
+      const r = Math.hypot(at.x - cx, at.y - cy)
+      const a0 = Math.atan2(at.y - cy, at.x - cx)
+      let sw = Math.atan2(next.y - cy, next.x - cx) - a0
+      if (ccw) while (sw <= 1e-12) sw += Math.PI * 2
+      else while (sw >= -1e-12) sw -= Math.PI * 2
+      const step = r > 0.01 ? 2 * Math.acos(Math.max(-1, 1 - 0.01 / r)) : Math.PI / 2
+      const n = Math.max(1, Math.ceil(Math.abs(sw) / step))
+      const from = { ...at, rot: { ...at.rot } }
+      for (let i = 1; i <= n; i++) {
+        const k = i / n
+        const a = a0 + sw * k
+        const rot: AxisBlock['rot'] = {}
+        for (const l of letters) if (next.rot[l] !== undefined) rot[l] = (from.rot[l] ?? next.rot[l]!) + (next.rot[l]! - (from.rot[l] ?? next.rot[l]!)) * k
+        blocks.push({ ...base, t: 'feed', x: i === n ? next.x : cx + r * Math.cos(a), y: i === n ? next.y : cy + r * Math.sin(a), z: from.z + (next.z - from.z) * k, rot })
+      }
+    } else blocks.push({ ...base, x: next.x, y: next.y, z: next.z, rot: { ...next.rot }, ...(machine ? { machine: { set } } : {}) })
+    if (!machine) {
+      at.x = next.x
+      at.y = next.y
+      at.z = next.z
+    } else {
+      // (a G53 line moves the machine; later work coordinates are from the work offset again)
+      if (set.includes('X')) at.x = NaN
+      if (set.includes('Y')) at.y = NaN
+      if (set.includes('Z')) at.z = NaN
+    }
+    at.rot = next.rot
+  })
+  return { blocks, changes, warnings, errors }
 }

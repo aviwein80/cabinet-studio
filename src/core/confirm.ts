@@ -11,6 +11,7 @@ import { defaultToolAxis, feedsFor } from '@/cam/ops'
 import type { CamOp, CamPart } from '@/cam/types'
 import { aggregateOf, effectiveGauge, effectiveHolder, machineModelOf, PLACEHOLDER_N200_MODEL } from './machineModel'
 import { fixtureTypesOf, PLACEHOLDER_FIXTURE_TYPES } from '@/cam/fixtures/fixture'
+import { bodiesInvented, bodiesOf } from '@/cam/machine/model'
 import type { Fixture, FixtureShape } from '@/cam/types'
 import type { MachineProfile, Tool } from './types'
 
@@ -133,6 +134,7 @@ export type ConfigTarget =
   | { kind: 'holder'; holderId: string }
   | { kind: 'aggregate'; aggregateId: string }
   | { kind: 'model'; fact: ModelFact | 'positional' }
+  | { kind: 'bodies' }
   | { kind: 'default'; key: CutDefaultKey }
   | { kind: 'op'; partId: string; jobId?: string; opId: string; key: CutDefaultKey | 'blade' }
   | { kind: 'material'; materialId: string; part: 'price' | 'density' }
@@ -148,7 +150,7 @@ export interface Unconfirmed {
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures'
   target: ConfigTarget
 }
 
@@ -170,6 +172,8 @@ export const keyOf = (t: ConfigTarget): string => {
       return `material:${t.materialId}:${t.part}`
     case 'nest':
       return `nest:${t.key}`
+    case 'bodies':
+      return 'bodies:machine'
     case 'fixtureType':
       return `fixtureType:${t.typeId}`
     case 'fixture':
@@ -185,10 +189,23 @@ const fmt = (n: number) => String(Math.round(n * 1000) / 1000)
 
 /** M3.4: the 3+2 kinematics of a machine model (another machine's, never the N-200's) while invented. */
 export const POSITIONAL_FACT_LABEL = '3+2 axes: pivot, table centre and where the part sits'
+/** M3.6: the machine's own parts for the machine simulation while invented. */
+export const BODIES_FACT_LABEL = 'Machine parts for the machine simulation (gantry, head, spindle, tables)'
 
-function factValue(m: MachineProfile, f: ModelFact | 'positional'): string {
+/** M3.6: the machine's parts (machine simulation) while invented and not confirmed. */
+export function bodiesItem(m: MachineProfile): Unconfirmed | null {
+  const target: ConfigTarget = { kind: 'bodies' }
+  if (!bodiesInvented(machineModelOf(m)) || isConfirmed(m, keyOf(target))) return null
+  return { key: keyOf(target), label: BODIES_FACT_LABEL, value: factValue(m, 'bodies'), group: 'Machine parts', target }
+}
+
+function factValue(m: MachineProfile, f: ModelFact | 'positional' | 'bodies'): string {
   const mm = machineModelOf(m)
   switch (f) {
+    case 'bodies': {
+      const b = bodiesOf(mm)
+      return `${b.length} part${b.length === 1 ? '' : 's'}${mm.bodies ? '' : ', invented for this layout'}`
+    }
     case 'positional': {
       const k = mm.positional
       return k ? `${k.layout} ${k.first}/${k.second}, pivot ${fmt(k.pivot)} mm, ${k.tcp ? 'tip control' : 'no tip control'}` : 'none'
@@ -294,6 +311,10 @@ export function machineUnconfirmed(m: MachineProfile): Unconfirmed[] {
     const target: ConfigTarget = { kind: 'model', fact: 'positional' }
     if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: POSITIONAL_FACT_LABEL, value: factValue(m, 'positional'), group: 'Machine model', target })
   }
+  // M3.6: the machine's own parts for the machine simulation while invented (the simulator only:
+  // never part of what is written, so not part of the machine-model warning on exports)
+  const bodies = bodiesItem(m)
+  if (bodies) out.push(bodies)
   // M3.6: the shop's clamps, pods and rails while their sizes are invented
   for (const f of fixtureTypesOf(m)) {
     const target: ConfigTarget = { kind: 'fixtureType', typeId: f.id }
@@ -326,6 +347,11 @@ export function confirmKey(m: MachineProfile, key: string) {
     m.fixtureTypes = structuredClone(m.fixtureTypes ?? PLACEHOLDER_FIXTURE_TYPES)
     const f = m.fixtureTypes.find((x) => `fixtureType:${x.id}` === key)
     if (f) f.placeholder = false
+  }
+  if (key === 'bodies:machine') {
+    // the parts shown are right: keep them as the machine's own
+    m.physical = structuredClone(m.physical ?? PLACEHOLDER_N200_MODEL)
+    m.physical.bodies = bodiesOf(m.physical).map((b) => ({ ...b, placeholder: undefined }))
   }
   if (key === 'model:positional' && m.physical?.positional) {
     m.physical = structuredClone(m.physical)

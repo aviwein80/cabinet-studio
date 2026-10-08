@@ -29,6 +29,24 @@ tool table, are paused.
    shelf-pin rows, Salice Silentia+ 110° hinge cups with 3 mm mounting plates, Blum TANDEM
    undermount slides (15, 18 and 21 in, chosen from the cabinet depth), drawer boxes, and
    edgebanding. Hinge and slide holes are bored into the parts automatically.
+   **Corner cabinets, fillers and end panels** (Kitchen-2):
+   - **Blind corner** base and wall cabinets: blind side (left or right), blind width, door width,
+     pull-out clearance (how far it stands off the side wall) and an optional blind panel (a
+     finished panel in the door board over the blind part; the run on the side wall butts against
+     it). One door, hinged on the open side, with the same Salice cups and 3 mm plates as every
+     cabinet; the usual carcass, edgebanding and machining. Drawers are not fitted in a blind corner.
+   - **Fillers**: a strip in the door board, flush with the doors beside it (from the toe kick up on
+     a base), with an optional return behind it (one side or both) and a scribe allowance on the
+     wall side, cut on and trimmed to the wall on site.
+   - **End panels** for bases, wall cabinets and talls: flush with the door faces or standing proud
+     of them, an optional toe-kick notch, and a scribe allowance at the back.
+   - Fillers and end panels are placed in the room like cabinets (numbered F1, E1...), so the plan,
+     3D view, elevations, cut list, nesting and labels all carry them; a label says which edge is
+     scribed and by how much.
+   - **US presets** in inches: 36" blind base, 24" blind wall, 3" fillers (base and wall), base,
+     wall and tall end panels. The invented values in them (pull-out 3", filler return 3", scribe
+     1/2", proud 1/4") carry Configure badges until confirmed.
+   - L-shaped (pie-cut and diagonal) corner cabinets are not built yet (see ROADMAP.md).
 3. **Per-job customisation**: each cabinet in a job is a copy of its template. You can change any
    parameter, exclude parts, change the edgeband on any edge, or add custom holes. A 3D view
    (orbit, exploded view, holes shown) updates live. The **Room** tab places every cabinet in the
@@ -37,10 +55,24 @@ tool table, are paused.
    there, or open the full editor and come back to the room. Snap is on by default: cabinets
    meet side to side, fronts and tops line up, and a wall cabinet sits on a base. Turn Snap off,
    or hold Alt, to place freely, including overlaps.
+   **Turning the corner** (Kitchen-2): "Arrange along the back wall" reads the job's order as
+   walking the kitchen left to right: the left wall from its front end to the back-left corner,
+   the back wall left to right, then the right wall from the back-right corner to its front end. A
+   blind-left corner cabinet stands in the back-left corner (a blind-right one in the back-right),
+   pulled out from the side wall; the side-wall run butts against its blind panel. Widening a
+   cabinet moves the run away from the corner, and a corner cabinet that gets wider, deeper or
+   pulled further out moves the runs on both walls. The corner shows on the back wall and end on
+   at the corner end of the side wall's elevation. The room says when a run's doors stand in front
+   of a corner door, and when a run is short of its wall: **Fill gap** adds one filler, or splits
+   it between both ends. Turned cabinets now keep their hand (a hinge or blind side on the left
+   stays on the left), and the side walls' elevations read as seen from the room.
 4. **Millimetres or inches.** The sidebar switches the whole shop. Lengths are stored in
    millimetres. Inches display as fractions to the nearest 1/16 in (for example `23-1/4"`), and
    you can type a decimal or a fraction. Showing the same value again does not change the stored
-   millimetres.
+   millimetres. In an inch shop, sizes and positions in the export check and the nesting header
+   are in inches too; machining values (depths, thicknesses, tolerances, small clearances) stay
+   exact in millimetres, and tool and drill sizes read exactly (a 6 mm drill is `6 mm`, a 12.7 mm
+   bit `1/2"`). Enter applies every field, as Tab does.
 5. **Cut list** with edgeband compensation and optional pre-mill allowance, plus a BOM: sheets,
    edgeband metres and hardware. The default sheet is **5 ft × 12 ft (1524 × 3658 mm)**.
 6. **Nesting** (built in): MaxRects with 16 heuristic and order combinations, keeping the result
@@ -817,11 +849,13 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   types.ts         domain model (mm internally; cabinet X=width, Y=depth, Z=up; part x=length/grain)
   units.ts         mm storage, fractional-inch display, parse 23-1/4 and 23.25
   hardware/        published Salice Silentia+ and Blum TANDEM boring numbers
-  room.ts          placements, wall and neighbour snap (including tops), arrange a run
+  room.ts          placements, wall and neighbour snap (including tops), arrange runs round a
+                   corner, neighbour push, room problems, run gaps and Fill gap
   elevation.ts     plan-facing walls and the door/drawer divisions drawn on an elevation
   library/         CSV/XLSX/JSON import, and keep-or-update when a library edit hits existing jobs
   geometry.ts      frames, world<->part transforms, polygons
-  construction/    parametric carcass generator -> parts with drilling/grooves in part coords
+  construction/    parametric carcass generator -> parts with drilling/grooves in part coords;
+                   blind corners; panels.ts fillers and end panels; builder.ts the part builder
   cutlist.ts       job expansion, part numbering/IDs, edgeband cut-size compensation, BOM
   nesting.ts       MaxRects nesting with grain/rotation/spacing/trim
   sheetCuts.ts     shared-line cutting and bridged groups (plans, measuring, independent checks)

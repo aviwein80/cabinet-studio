@@ -22,6 +22,28 @@ Next for the reader: machine edge grooves and edge profiles (needs the aggregate
 underside milling in the turned-over program, and a per-shop "likely features" list so the
 reader recognises the shop's own hardware codes.
 
+## Kitchen-2: corner cabinets, fillers and end panels (October 2026)
+
+Progress, tests and limits: `docs/stage-2-3-progress.md`, "Kitchen-2".
+
+- **Done:** blind corner base and wall cabinets (blind side, blind width, door width, pull-out
+  clearance, blind panel; one door on the open side with the usual Salice cups and 3 mm plates);
+  fillers (return, scribe) and finished end panels (flush or proud, toe-kick notch, scribe) placed
+  in the room like cabinets, through the cut list, nesting and labels; runs that turn the corner
+  (Arrange and the neighbour push); Fill gap; US presets in inches; the Polish-1 leftovers (sizes in
+  export messages and the nesting header in inches, exact metric tool sizes, Enter applies every
+  field). Turned cabinets were mirror images and the side-wall elevations were mirrored: both fixed.
+- **Deferred: L-shaped corner cabinets.** A pie-cut (90°) corner needs an L-shaped bottom, top and
+  shelves whose two inside front edges are banded; the part model bands only the four edges of a
+  rectangle, so the cut list, labels and edgeband compensation could not describe them. Its folding
+  door also needs a pie-cut hinge whose boring is not in the hardware data. A diagonal (45°) corner
+  needs a part at 45° (the 3D view and the part frames are square to the room) and angled hinge
+  plates or a stile. What would bring them: an edge model for shaped parts, and the shop's hinge
+  for each (see decisions in the progress file).
+- Kitchen-2 placeholders with Configure badges until confirmed: blind pull-out 3", filler return
+  3", scribe allowance 1/2", end panel proud 1/4". The US presets' 4" x 3" toe kick and 34-1/2" x
+  24" bases follow the usual US sizes; the shop's own standards are still question 4 below.
+
 ## Custom-part Stage 2 and 3 (both complete)
 
 Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-progress.md`.
@@ -234,7 +256,7 @@ built for them. Each would come back only with the change in the last column.
   legs.
 - Horizontal drilling (103 BohrHoriz) if the N-200 has the unit. Otherwise, a separate
   edge-drilling list for the boring machine.
-- Fillers, end panels, kick boards and countertop cut-outs.
+- Fillers and end panels: done (Kitchen-2). Kick boards and countertop cut-outs: open.
 
 ## Phase 2: nesting and machining
 

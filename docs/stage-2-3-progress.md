@@ -3171,11 +3171,186 @@ label), `21-new-part-length-resizes-outline`, `22-relief-dialog-enter-applies`,
 - Only `LenInput` and `NumField` apply on Enter; a few plain inputs elsewhere (3D model placement,
   surfaces) still apply on blur.
 
+## Kitchen-2: corner cabinets, fillers and end panels
+
+A design round on the cabinet side, not a milestone of the Stage 2-3 spec. Split in three: a (corner
+cabinets and the room), b (fillers, end panels, Fill gap, US presets), c (the Polish-1 leftovers).
+Baseline before the round: head `52e5fef`, 1076 tests (1075 + 1 skipped), 17 lint warnings,
+typecheck and build clean. After: 1107 tests (1106 + 1 skipped; 31 new in
+`tests/kitchen-2.test.ts`), 17 lint warnings, typecheck and build clean. The 90 s performance limit
+is unchanged (see "Test-suite note" below).
+
+### A. Corner cabinets
+
+- **Blind corner base and wall** (`CarcassParams.corner`, `blindSpans` in
+  `core/construction/carcass.ts`): blind side (left or right), blind width (from the blind side),
+  door width (width - blind width - door gap; typing a door width changes the cabinet's width and
+  keeps the blind part), pull-out clearance (how far it stands off the side wall when the room is
+  arranged), blind panel on or off. The carcass is the usual one (notched sides, dadoed bottom,
+  rails or full top, grooved back, shelves on 32 mm pins, joinery). One door covers the open part,
+  hinged on the open side: Salice cups in the door, 3 mm plate holes in that side only (the blind
+  side gets none). The blind panel is a door-board part over the blind part, banded all round,
+  grain along its height. Drawers are left out with a warning; a pair of doors is fitted as one.
+- **L-shaped corners deferred** (reasons in `ROADMAP.md`, "Kitchen-2"): the pie-cut's L-shaped
+  bottom, top and shelves have banded inside edges the four-edge part model cannot describe; its
+  folding door needs a hinge whose boring is not in the hardware data; a diagonal corner needs parts
+  at 45° (frames, 3D view) and angled hinge plates.
+- **Turned cabinets keep their hand** (`toRoom`): 90° and 270° used to mirror the cabinet (a left
+  hinge or blind side came out on the right); every rotation is now a true turn. The left and right
+  walls' elevations were drawn mirrored too (`alongWall`, `placementFromElevation`): facing the left
+  wall the front wall is on your left, facing the right wall the back wall is. Plan fronts are
+  worked out through `toRoom`, so plan, 3D and elevations agree.
+- **Arrange turns the corner** (`arrangeCabinets`): the job's order is the walking order (left wall
+  from its front end to the back-left corner, back wall left to right, right wall from the
+  back-right corner to its front end). The first blind-left corner cabinet in a run stands in the
+  back-left corner, its pull-out off the left wall; the cabinets before it go on the left wall,
+  turned to face the room, butted against its blind panel (or its box without one). A blind-right
+  one mirrors that on the right wall. With only a right corner the back run is held against it.
+  Floor and wall cabinets are separate runs; wall cabinets skip spans a tall one occupies on any of
+  the three walls. Without a corner cabinet the old layout stays, with two fixes: the return on the
+  left wall faced into the wall (90) and now faces the room (270); several returned cabinets were
+  put in one place and now follow one another towards the front (`tests/design.test.ts` updated:
+  rotation 270).
+- **The neighbour push follows the run round the corner** (`pushNeighbours`): a run held by a corner
+  cabinet grows away from it (on a side wall towards the front, on the back wall away from the
+  corner); a corner cabinet that gets wider, deeper or pulled further out moves the back run and the
+  side-wall run butted against its face; a corner cabinet is never pushed out of its corner (the
+  overlap shows instead). Without a corner, a cabinet grows to the right as before. The cabinet
+  editor and the Room tab both use it (width, depth, pull-out, door width, blind side).
+- **Room problems** (`roomProblems`): besides overlaps and cabinets past a wall, a return whose
+  doors stand in front of a blind corner's door is reported. The Room side panel shows the corner
+  door's clearance (`cornerClearance`): 2-3/8" with the presets (3" pull-out + 24" blind part +
+  1.5 mm gap - 24" return - 18 mm fronts).
+- **Elevations**: a blind corner shows on the back wall and end on (hatched, "B3 corner") at the
+  corner end of the side wall's elevation; it is moved from the back wall or the plan.
+
+### B. Fillers and end panels
+
+- **Fillers** (`PanelParams` type `filler`, `core/construction/panels.ts`): the strip in the door
+  board, Y from minus the board thickness to 0 (flush with the doors beside it), from the toe kick
+  up on a base; both long edges banded except a scribed one, the underside too on a wall filler;
+  a return in the carcass board behind it (left, right or both; 0 = a flat strip); a toe-kick piece
+  when the cabinets have a toe-kick board; a scribe allowance on the chosen side, cut on (the part
+  includes it) and noted on the label (`Part.scribe`).
+- **End panels** (type `end-panel`): width in the room = the board's thickness (choosing the board
+  sets it); front flush with the door faces or proud of them by an amount; back edge with a scribe
+  allowance; toe-kick notch for bases and talls (the cabinet's toe-kick size); front edge banded
+  (wall panels also top and bottom, talls the top), never the scribed edge; machined face towards
+  the cabinet.
+- They are room items like cabinets (numbers F1..., E1...; `nextCabinetNumber`), so plan (own
+  colours), 3D, elevations (narrow boxes labelled above), cut list, nesting and labels carry them.
+- **Fill gap** (`runGaps`, `fillGap`): a run short of its wall (back wall: left wall or a left
+  corner's side to the right wall or a right corner; a side run that turns a corner: front wall to
+  the corner cabinet's face) by up to 12 in shows a notice beside the overlap notices, with "Fill
+  gap: one filler" (the run moves to its corner end, or the start, and one filler takes the gap)
+  and "Split" (the run is centred, half at each end). The filler comes from the library's filler
+  template for that level, sized to the cabinet beside it; against a wall it gets the template's
+  scribe on the wall side. It is placed in the job's walking order, so Arrange keeps it there.
+- **US presets** (`KITCHEN_PRESETS`): Blind corner base 36" (24" blind, 11-7/8" door), Blind corner
+  wall 24" (12" blind, 11-7/8" door, 30" x 12"), Filler 3" base and wall, End panel base (34-1/2" x
+  24"), wall (30" x 12") and tall (84" x 24"). Sizes are exact inches stored to 0.001 mm (24" is
+  609.6, not 609.5999999999999). A shop file saved before gets them once (`Library.seeded`); a preset
+  the shop deletes stays deleted. The Add cabinet dialog groups templates: cabinets, corner
+  cabinets, fillers and end panels.
+- **Configure badges** (`kitchenUnconfirmed`, group "Kitchen defaults"): pull-out 3", filler return
+  3", scribe 1/2" and end panel proud 1/4" are invented; while a cabinet uses one of them unchanged
+  and the shop has not confirmed it, the field shows Configure / Mark as confirmed. Changing the
+  value makes it the owner's own. Never part of the export check (the sample's validation is
+  unchanged).
+
+### C. Polish-1 leftovers
+
+| # | Fix | Where | Test |
+|---|---|---|---|
+| 8 | Export-check sizes in the shop unit: SMALL_PART part sizes, a sheet larger than the table, hole positions (OP_OUTSIDE, FLIP_OUTSIDE), nesting spacing, edge trim, shared-line lengths in feet; sizes in construction warnings (cabinet depth for the TANDEM runner, drawer box, drawer fronts, blind corner door and blind width, filler width). Machining values (depths, thicknesses, tool sizes, tolerances, clearances) stay exact in mm, as decided in Polish-1. Millimetre text is byte-identical. | `validator.ts`, `construction/*`, `cutlist.ts` (`sizeText`) | `C 8` |
+| 9 | Nesting header "Trim 3/8" · spacing 9/16"" in inch mode (`trimSpacingText`); also the Machine page's "Part spacing = ... = 9/16"", with Extra spacing and Pre-mill kept in mm (small clearances, `NumField metric`) | `JobPage`, `MachinePage` | `C 9` |
+| 10 | Tool and drill sizes read exactly in an inch shop (`toolSize`, `exactInches`): a 6 mm drill is "6 mm" (was 1/4"), a 12.7 mm bit "1/2"". Tool grid, tool dialog (`NumField tool`), drilling-pattern holes. Both texts carry their unit and read back exactly; a bare number typed still means the shop unit. | `toolData.ts`, `ToolDialog`, `PatternsTab` | `C 10` |
+| 11 | Enter applies the plain fields that applied only on leaving them (`enterApplies`): model placement (turn, scale), simplify, solid fillet radius, revolve angle, edits panel (heights, feed %, steps), query values, fill holes, split into panels, trace width, import outline layer, slide holes, material cost, aggregate angles. A test scans every `<input>` in the app that applies on blur and requires Enter too. | 14 files | `C 11` |
+
+### Acceptance
+
+- **An L-shaped kitchen built from presets in the UI** (screenshots 01-09): left wall E1 end panel,
+  B1 18", B2 24" drawers; B3 Blind corner base 36"; back wall B4 30", B5 sink 36", B6 24", B7 12";
+  wall cabinets E2, W1 30" on the left wall, W2 Blind corner wall 24", W3-W6 on the back wall;
+  "Arrange along the back wall" turns the corner; both runs were 3" short of the right wall and
+  "Fill gap" added F1 and F2 (scribed to the wall). No overlap or other room notice remains.
+  The same kitchen in the tests (`A3`): every placement checked; `roomProblems` empty; no part of
+  any cabinet intersects another cabinet's parts in 3D (every part placed through `toRoom`; checked
+  by hand that moving B2 30 mm towards the corner makes the test fail); no two boxes overlap in either elevation; the corner on
+  the back wall and end on at the left wall's corner end.
+- **Cut list, nesting and labels** (`B4/B5` "the cut list..."): Blind panel, Filler, Filler
+  return and End panel rows with their finished and cut sizes (end panel 34-1/2" x 24" + 18 mm +
+  1/2" scribe, cut 1 mm less across for its banded front), edges and grain (door-board parts grain
+  locked on a grained board, never turned on the sheet); every part nested exactly once; one label
+  per part, the filler's with "Scribe 1/2" on <its edge>: trim to the wall"; no export errors.
+- **Tests**: corner geometry (cups and plates on the open side only, blind panel and door spans,
+  mirror for blind right, wall version, warnings), filler and end-panel parts, arrange round the
+  corner (left and right corners), the push round the corner (pull-out, depth, side-wall widening,
+  back-run widening, right-corner-only), Fill gap (one and split), presets and seeding, badges, the
+  units fixes and Enter.
+- **Goldens**: Stage 1 MPR goldens (`tests/mpr.test.ts`), the 20 custom-part goldens and
+  `npm run sample` are byte-identical (no file under `examples/` or `tests/golden/` changed): no
+  existing cabinet's parts change, and the export text only changes in inch mode.
+
+### Test-suite note (Kitchen-2)
+
+In this cloud container the full suite runs four test files at a time on 4 cores, and
+`tests/perf.test.ts` "adaptive clearing per Z level" took 92-93 s against its 90 s limit in two
+full runs (the baseline before any change, and one with the preview server running beside it); run
+on its own it takes 61-64 s. It times adaptive Z-level roughing, which this round does not touch.
+The final full run, with nothing else running, passed every test including it. The limit is
+unchanged.
+
+### Kitchen-2 screenshots
+
+In `docs/screenshots/kitchen-2/` (browser preview, inch mode, the demo job "L-shaped kitchen" built
+through the UI as above; each under 300 KB):
+
+`01-add-dialog-corners-fillers-end-panels`, `01b-add-dialog-fillers-end-panels` (grouped templates,
+US presets), `02-job-cabinets-inches`, `03-blind-corner-base-editor` (blind settings, pull-out badge,
+11-7/8" door), `04-end-panel-editor` (left end, flush, scribe badge, notch, only the front edge
+banded), `05-arranged-run-short-fill-gap-offered` (the two Fill gap notices), `06-l-kitchen-3d`,
+`06b-blind-corner-3d-closeup` (the return butted against the blind corner), `07-l-kitchen-plan`,
+`08-l-kitchen-back-elevation`, `09-l-kitchen-left-elevation` (the corner end on at the corner end),
+`10-cut-list-new-parts` (Blind panel, End panel rows), `11-nesting-header-inches`,
+`12-export-check-sizes-in-inches` (SMALL_PART in inches), `13-corner-selected-clearance-and-badge`
+(2-3/8" to B2's front), `14-pull-out-4in-back-run-follows-filler-past-wall` (the back run moved 1";
+the wall-end filler then runs past the wall and the room says so), `15-tool-table-6mm-in-inch-mode`
+(T205 "6 mm", the 12.7 mm V-bit "1/2""), `16-machine-nesting-spacing-inches`.
+
+### Limits recorded (Kitchen-2)
+
+- L-shaped (pie-cut, diagonal) corner cabinets: deferred, above.
+- A blind corner always stands on the back wall with its blind side in the corner; one on a side
+  wall (the back run butting its face) is placed by hand (Rotate). Its door hangs on the open side;
+  a door hinged beside the blind panel (on a partition) is not built.
+- The arrangement only knows the back, left and right walls; nothing is arranged on the front wall.
+- The blind panel is fixed from inside on site; it gets no boring.
+- In the plan, wall cabinets are still drawn over the bases, so a side-wall upper hides part of the
+  base below it (as before).
+- Fill gap is offered for gaps up to 12 in; a wider space is left for a cabinet.
+
+### Kitchen-2 decisions needed
+
+1. **L-shaped corners**: build the pie-cut next with two doors each hinged on its own end side
+   (standard Salice cups and plates, all known), adding an edge model for the L parts' inside
+   edges; or wait for the shop's pie-cut folding hinge (part number, cup and arm boring) and build
+   the folding door. Recommendation: two separately hinged doors first. Until then: blind corners
+   only.
+2. **The invented kitchen values**: 3" pull-out, 3" filler return, 1/2" scribe, 1/4" proud. Confirm
+   or give the shop's own; they stay badged until then.
+3. **Blind corner door side**: hinged on the open side (standard hinges, nothing new to bore). If the
+   shop hangs it beside the blind panel on a partition, say so and it can be added.
+4. **Corner layout convention**: job order = walking order, corner cabinet on the back wall. Keep,
+   or prefer a different order (for example the back wall first, then the return)?
+5. **Perf test in the cloud container**: keep as is (passes alone), or run `tests/perf.test.ts` in
+   a file of its own after the rest (the 90 s limit unchanged either way)?
+
 ## Next run
 
-- Stage 3 and Polish-1 are complete. What comes next is the owner's call: the shop facts in
-  "Stage 3 exit" (they unlock real output one switch at a time), Phase 0 in `ROADMAP.md` (proving the
-  output on the N-200), the Polish-1 limits above, or any deferred item above.
+- Stage 3, Polish-1 and Kitchen-2 are complete. Next is the owner's call: the Kitchen-2 decisions
+  above (L-shaped corners first), the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any
+  limit recorded above.
 
 ## Run log
 
@@ -3252,3 +3427,5 @@ label), `21-new-part-length-resizes-outline`, `22-relief-dialog-enter-applies`,
   (`ee205b4`), drilling tolerance, matched drill diameter, 6 mm drill, drawer-box material
   (`b0b4ce2`), room and cabinets (`06162e0`), custom parts and simulation (`49f9e1c`); screenshots,
   docs. See `git log`.
+- **Run 22 (Kitchen-2)**: blind corners, the room turning the corner, fillers, end panels, Fill gap,
+  US presets (`06bf4b6`); Polish-1 leftovers (`f03c73b`); screenshots, docs. See `git log`.

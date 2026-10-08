@@ -17,6 +17,7 @@ import { drillToleranceOf, nestSettingsOf, partSpacing } from '@/core/machining'
 import { fmt } from '@/core/geometry'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
+import { formatLength } from '@/core/units'
 import { MachineModelSection } from './machine/MachineModelSection'
 import { CutDefaultsSection } from './machine/CutDefaultsSection'
 import { ConfigureBadge, UnconfirmedList, ValueBadges } from '@/components/Configure'
@@ -334,11 +335,12 @@ export function MachinePage() {
             {feat.batchAdditions && <ToolOrderSection machine={m} updateMachine={updateMachine} />}
             {!other && (
             <>
-            <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${partSpacing(m, s)} mm`}>
+            <Section title="Nesting" description={`Part spacing = cut-out tool Ø + extra = ${s.units === 'in' ? formatLength(partSpacing(m, s), 'in') : `${partSpacing(m, s)} mm`}`}>
               <div className="grid grid-cols-2 gap-2">
                 <NumField label="Edge trim" value={s.nesting.edgeTrim} min={0} max={50} onChange={(v) => updateSettings((x) => (x.nesting.edgeTrim = v))} />
-                <NumField label="Extra spacing" value={s.nesting.extraSpacing} min={0} max={20} step={0.5} onChange={(v) => updateSettings((x) => (x.nesting.extraSpacing = v))} />
-                <NumField label="Pre-mill / edge" value={s.nesting.premill} min={0} max={3} step={0.5} onChange={(v) => updateSettings((x) => (x.nesting.premill = v))} hint="Edgebander pre-mill" />
+                {/* Kitchen-2: small machining clearances stay in mm in an inch shop (2 mm read 1/16") */}
+                <NumField label="Extra spacing" metric value={s.nesting.extraSpacing} min={0} max={20} step={0.5} onChange={(v) => updateSettings((x) => (x.nesting.extraSpacing = v))} />
+                <NumField label="Pre-mill / edge" metric value={s.nesting.premill} min={0} max={3} step={0.5} onChange={(v) => updateSettings((x) => (x.nesting.premill = v))} hint="Edgebander pre-mill" />
               </div>
               <SwitchField label="Allow 90° rotation" checked={s.nesting.allowRotation} onChange={(v) => updateSettings((x) => (x.nesting.allowRotation = v))} hint="Grain-locked parts on grained sheets are never rotated." />
               <SelectField

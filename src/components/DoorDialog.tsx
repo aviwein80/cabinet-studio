@@ -108,16 +108,16 @@ export function DoorDialog({ open, onOpenChange, onCreate }: { open: boolean; on
                         aria-pressed={s.id === spec.styleId}
                         className={cn('flex flex-col items-center gap-1 rounded-lg border p-2 text-xs transition', s.id === spec.styleId ? 'border-amber-500 bg-amber-50 ring-1 ring-amber-500' : 'hover:bg-muted/50')}
                       >
-                        <PartThumb part={thumb} className="h-16 w-full" />
+                        <PartThumb part={thumb} upright className="h-16 w-full" />
                         {s.name}
                       </button>
                     )
                   })}
                 </div>
-                <div className="flex min-h-56 items-center justify-center rounded-lg border bg-stone-50 p-3">{built && <PartThumb part={built.part} className="h-64 w-full" />}</div>
+                <div className="flex min-h-56 items-center justify-center rounded-lg border bg-stone-50 p-3">{built && <PartThumb part={built.part} upright className="h-64 w-full" />}</div>
                 {built && (
                   <p className="text-xs text-muted-foreground">
-                    {fmt(spec.width)} wide × {fmt(spec.height)} high, lying with its height along X. {built.part.ops.length} operations:{' '}
+                    {fmt(spec.width)} wide × {fmt(spec.height)} high, seen from the front (cut lying with its height along X). {built.part.ops.length} operations:{' '}
                     {built.part.ops.map((o) => o.name).join(', ')}.
                   </p>
                 )}

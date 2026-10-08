@@ -1,5 +1,5 @@
 import { migratePart } from '@/cam/doc'
-import { defaultAppData, fillHardwareSpecs, KITCHEN_PRESETS, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE } from './defaults'
+import { defaultAppData, DRAWER_BOARD_PLACEHOLDER, drawerBoard, fillHardwareSpecs, KITCHEN_PRESETS, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE } from './defaults'
 import { DEFAULT_FEATURES } from './features'
 import { DEFAULT_ROOM } from './room'
 import type { AppData, CarcassParams, MachineProfile } from './types'
@@ -47,6 +47,8 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
     seeded.add(t.id)
   }
   library.seeded = [...seeded]
+  // Polish-2: drawer boxes default to a 16 mm board; a library without one gets a placeholder (Configure badge)
+  if (!drawerBoard(library)) library.materials = [...(library.materials ?? []), { ...DRAWER_BOARD_PLACEHOLDER }]
   if (library.partLibrary) library.partLibrary = library.partLibrary.map(migratePart)
   const jobs = (raw.jobs ?? []).map((j) => ({
     ...j,

@@ -484,7 +484,7 @@ export function buildSheetProgram(
         machiningOps: machining.length,
         backHoles,
         warnings: [
-          ...paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)),
+          ...paths.flatMap((tp) => [...tp.warnings, ...(tp.notes ?? [])].map((w) => `${tp.name}: ${w}`)),
           // Polish-1: a cut-out written before other machining frees the part first
           ...cutFreeEarly(inst.cam).map((e) => `${e.cut.name}: cuts the part free before ${e.after.map((a) => a.name).join(', ')}. Move the cut-out last (Operations).`),
         ],

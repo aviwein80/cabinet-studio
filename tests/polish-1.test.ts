@@ -220,11 +220,17 @@ describe('Polish-1 drilling and output', () => {
     expect(sides.every((p) => p.materialId === 'mat-pb16-white' && p.thickness === 16)).toBe(true)
     expect(g.warnings.some((w) => /TANDEM allows drawer sides/.test(w))).toBe(false)
 
-    // no box material (cabinets saved before Polish-1): the 18 mm carcass board, and the warning says how to fix it
+    // no box material (cabinets saved before Polish-1). Polish-2, owner decision: the 16 mm drawer-box
+    // board, no warning; only a library with no 16 mm board leaves the 18 mm carcass board, and the
+    // warning says how to fix it
     const old = cabinet('tpl-base-drawers', (p) => (p.drawers.boxMaterialId = undefined))
     const g2 = generateCarcass(old.params, lib)
-    expect(g2.parts.find((p) => p.key === 'drawer-1-side-l')!.thickness).toBe(18)
-    expect(g2.warnings.find((w) => /TANDEM allows drawer sides/.test(w))).toMatch(/18 mm carcass board; choose a drawer-box material of 16 mm or less/)
+    expect(g2.parts.find((p) => p.key === 'drawer-1-side-l')).toMatchObject({ thickness: 16, materialId: 'mat-pb16-white' })
+    expect(g2.warnings.some((w) => /TANDEM allows drawer sides/.test(w))).toBe(false)
+    const no16 = { ...lib, materials: lib.materials.filter((m) => m.thickness !== 16) }
+    const g3 = generateCarcass(old.params, no16)
+    expect(g3.parts.find((p) => p.key === 'drawer-1-side-l')!.thickness).toBe(18)
+    expect(g3.warnings.find((w) => /TANDEM allows drawer sides/.test(w))).toMatch(/18 mm carcass board; choose a drawer-box material of 16 mm or less/)
 
     // an 18 mm box material chosen on purpose is still warned about, by name
     const thick = cabinet('tpl-base-drawers', (p) => (p.drawers.boxMaterialId = 'mat-mdf18'))

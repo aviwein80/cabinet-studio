@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { formatLength, parseLength, toolSize } from '@/core/units'
+import { fineLength, formatLength, parseLength, toolSize } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
@@ -34,6 +34,7 @@ export function NumField({
   badge,
   metric,
   tool,
+  fine,
 }: {
   label: string
   value: number
@@ -50,11 +51,14 @@ export function NumField({
   metric?: boolean
   /** Kitchen-2: a tool size: in an inch shop an exact inch fraction, else exact millimetres ("6 mm", not 1/4"); steps in mm. */
   tool?: boolean
+  /** Polish-2: a thin length (edgeband thickness, corner radius): in an inch shop an exact fraction or decimal inches (0.039"), never rounded to 1/16; steps in mm. */
+  fine?: boolean
 }) {
   const units: UnitSystem = useStore((s) => (suffix === 'mm' && !metric ? (s.data?.settings.units ?? 'mm') : 'mm'))
   const length = suffix === 'mm'
-  const shown = length ? (tool ? toolSize(value, units) : formatLength(value, units)) : String(value)
-  const inchSteps = units === 'in' && !tool
+  const show = (v: number) => (tool ? toolSize(v, units) : fine ? fineLength(v, units) : formatLength(v, units))
+  const shown = length ? show(value) : String(value)
+  const inchSteps = units === 'in' && !tool && !fine
   const [text, setText] = useState(shown)
   const id = useId()
   useEffect(() => setText(shown), [shown])
@@ -83,7 +87,7 @@ export function NumField({
               e.preventDefault()
               const n = (Number.isFinite(inUnit) ? inUnit : value) + (e.key === 'ArrowUp' ? (inchSteps ? 25.4 / 16 : step) : inchSteps ? -25.4 / 16 : -step)
               const c = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n))
-              setText(length ? (tool ? toolSize(c, units) : formatLength(c, units)) : String(c))
+              setText(length ? show(c) : String(c))
               onChange(c)
             }
           }}

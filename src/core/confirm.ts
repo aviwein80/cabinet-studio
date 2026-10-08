@@ -14,7 +14,7 @@ import { fixtureTypesOf, PLACEHOLDER_FIXTURE_TYPES } from '@/cam/fixtures/fixtur
 import { bodiesInvented, bodiesOf } from '@/cam/machine/model'
 import type { Fixture, FixtureShape } from '@/cam/types'
 import { KITCHEN_DEFAULTS } from './defaults'
-import type { CarcassParams, Job, MachineProfile, Tool } from './types'
+import type { CarcassParams, Job, MachineProfile, Material, Tool } from './types'
 
 /** Machine-model facts tracked one by one. */
 export const MODEL_FACTS = ['table', 'travel', 'toolChange', 'safeZ', 'spoilboard', 'saw', 'aggregate'] as const
@@ -138,7 +138,7 @@ export type ConfigTarget =
   | { kind: 'bodies' }
   | { kind: 'default'; key: CutDefaultKey }
   | { kind: 'op'; partId: string; jobId?: string; opId: string; key: CutDefaultKey | 'blade' }
-  | { kind: 'material'; materialId: string; part: 'price' | 'density' }
+  | { kind: 'material'; materialId: string; part: 'price' | 'density' | 'board' }
   | { kind: 'nest'; key: NestValueKey }
   | { kind: 'fixtureType'; typeId: string }
   | { kind: 'fixture'; partId: string; jobId?: string; fixtureId: string }
@@ -234,14 +234,26 @@ export function kitchenUnconfirmed(p: CarcassParams, m: Pick<MachineProfile, 'co
  * Kitchen-3c: a job's inside corner radius of L parts, while it is the default (the cut-out tool's
  * radius, `cutterRadius`) and the shop has not confirmed it; only for a job with L parts (a pie-cut).
  */
-export function lCornerUnconfirmed(job: Pick<Job, 'cabinets' | 'lCornerRadius'>, m: Pick<MachineProfile, 'confirmed'>, cutterRadius: number): Unconfirmed[] {
+export function lCornerUnconfirmed(job: Pick<Job, 'cabinets' | 'lCornerRadius'>, m: Pick<MachineProfile, 'confirmed'>, cutterRadius: number, fmtLen: (mm: number) => string = (mm) => `${fmt(mm)} mm`): Unconfirmed[] {
   if (job.lCornerRadius !== undefined || !job.cabinets.some((c) => c.params.corner?.type === 'pie-cut' && !c.params.panel)) return []
   const target: ConfigTarget = { kind: 'kitchen', key: 'lCornerRadius' }
   if (isConfirmed(m, keyOf(target))) return []
-  return [{ key: keyOf(target), label: KITCHEN_VALUE_LABEL.lCornerRadius, value: `${fmt(cutterRadius)} mm (the cut-out tool's radius)`, group: 'Kitchen defaults', target }]
+  return [{ key: keyOf(target), label: KITCHEN_VALUE_LABEL.lCornerRadius, value: `${fmtLen(cutterRadius)} (the cut-out tool's radius)`, group: 'Kitchen defaults', target }]
 }
 
 export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) => !!m.confirmed?.includes(key)
+
+/**
+ * Polish-2: a board the app added as a PLACEHOLDER (the 16 mm drawer-box board, when the library had
+ * none), until the shop confirms it or saves its own board over it. Shown where it is used (a
+ * cabinet's drawer-box material) and in its edit dialog.
+ */
+export function placeholderBoard(mat: Pick<Material, 'id' | 'code' | 'thickness' | 'placeholder'> | null | undefined, m: Pick<MachineProfile, 'confirmed'>): Unconfirmed | null {
+  if (!mat?.placeholder) return null
+  const target: ConfigTarget = { kind: 'material', materialId: mat.id, part: 'board' }
+  if (isConfirmed(m, keyOf(target))) return null
+  return { key: keyOf(target), label: `${mat.code}: drawer-box board`, value: `placeholder ${fmt(mat.thickness)} mm board`, group: 'Materials', target }
+}
 
 /** Tools whose lengths matter to collision checks: 3D shapes, and every router in a holder (M2.7). */
 const hasLengths = (m: MachineProfile, t: Tool) => t.type === 'router' && (t.shape === 'ball' || t.shape === 'bull' || t.shape === 'lollipop' || t.shape === 'barrel' || t.shape === 'form' || !!effectiveHolder(m, t))

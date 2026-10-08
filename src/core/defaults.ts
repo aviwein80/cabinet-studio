@@ -22,6 +22,38 @@ export const DEFAULT_MATERIALS: Material[] = [
   { id: 'mat-hdf6-white', code: 'HDF6-WHT', name: 'HDF 6 white back', thickness: 6, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#e9e7e2' },
 ]
 
+/** Polish-2: the drawer-box board drawer boxes use unless the cabinet chooses another (Blum TANDEM takes 16 mm sides). */
+export const DRAWER_BOARD_ID = 'mat-pb16-white'
+
+/** Polish-2: PLACEHOLDER drawer-box board, added to a library that has no 16 mm board (Configure badge until confirmed). */
+export const DRAWER_BOARD_PLACEHOLDER: Material = {
+  id: 'mat-drawer16',
+  code: 'DRAWER-16',
+  name: 'Drawer box board 16 mm (placeholder)',
+  thickness: 16,
+  sheetLength: 3658,
+  sheetWidth: 1524,
+  grain: false,
+  color: '#f3f2ee',
+  placeholder: true,
+}
+
+/**
+ * Polish-2: the board drawer boxes use when the cabinet has no box material of its own (owner
+ * decision: 16 mm, what Blum TANDEM is made for): the built-in drawer-box board, else the placeholder,
+ * else another 16 mm board (one named for drawers first); null when the library has no 16 mm board.
+ */
+export function drawerBoard(lib: Pick<Library, 'materials'>): Material | null {
+  const is16 = (m: Material) => Math.abs(m.thickness - 16) < 0.05
+  return (
+    lib.materials.find((m) => m.id === DRAWER_BOARD_ID) ??
+    lib.materials.find((m) => m.id === DRAWER_BOARD_PLACEHOLDER.id) ??
+    lib.materials.find((m) => is16(m) && /drawer/i.test(`${m.code} ${m.name}`)) ??
+    lib.materials.find(is16) ??
+    null
+  )
+}
+
 export const DEFAULT_EDGEBANDS: EdgeBand[] = [
   { id: 'eb-white-1', code: 'EB-WHT-1.0', name: 'ABS white 1.0 x 22', thickness: 1, width: 22, color: '#f5f5f2' },
   { id: 'eb-white-04', code: 'EB-WHT-0.4', name: 'PVC white 0.4 x 22', thickness: 0.4, width: 22, color: '#f5f5f2' },

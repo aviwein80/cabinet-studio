@@ -4,7 +4,7 @@ import { pieFootprint } from '@/core/construction/pieCut'
 import { footprint, toRoom } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, Room, UnitSystem } from '@/core/types'
-import { elevationLabels, fitSize, wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
+import { elevationLabels, fitSize, narrowLabelRows, wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
 
 function upright(y: number) {
   return `translate(0 ${2 * y}) scale(1 -1)`
@@ -165,6 +165,9 @@ export function ElevationView({
   const pad = Math.max(length, room.height) * 0.08
   const font = Math.max(length, room.height) / 36
   const stroke = length / 500
+  const isNarrow = (item: Pick<ElevationCabinet, 'w'>) => item.w < font * 2.2
+  // Polish-2: narrow neighbours' numbers stacked, not on top of each other
+  const rows = narrowLabelRows(items, font * 0.6, isNarrow)
   return (
     <svg viewBox={`${-pad} ${-pad} ${length + 2 * pad} ${room.height + 2 * pad}`} className="h-full w-full touch-none" onPointerMove={onMove} onPointerUp={onUp}>
       <defs>
@@ -186,7 +189,8 @@ export function ElevationView({
           // Kitchen-2: a corner cabinet seen end on from the side wall; fillers and end panels are narrow
           const nameText = `${item.number}${item.endView ? ' corner' : item.faces || item.kind === 'end-panel' ? '' : ' back'}`
           const nameSize = fitSize(nameText, font, item.w * 0.92)
-          const narrow = item.w < font * 2.2
+          const narrow = isNarrow(item)
+          const labelY = item.z + item.h + font * 0.35 + (rows.get(item.id) ?? 0) * font * 0.62
           return (
             <g key={item.id} className={item.endView ? 'cursor-pointer' : 'cursor-grab'} onPointerDown={(e) => onDown(e, item.id)}>
               <rect x={item.x} y={item.z} width={item.w} height={item.h} fill={item.endView ? 'url(#corner-hatch)' : item.faces ? BOX_FILL[item.kind] : '#d6d3d1'} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
@@ -195,7 +199,7 @@ export function ElevationView({
               ))}
               {narrow ? (
                 // too narrow for a label across it (a filler, an end panel): the number above it
-                <text x={item.x + item.w / 2} y={item.z + item.h + font * 0.35} textAnchor="middle" fontSize={font * 0.6} fill="#1c1917" transform={upright(item.z + item.h + font * 0.35)}>
+                <text x={item.x + item.w / 2} y={labelY} textAnchor="middle" fontSize={font * 0.6} fill="#1c1917" transform={upright(labelY)}>
                   {item.number}
                 </text>
               ) : (

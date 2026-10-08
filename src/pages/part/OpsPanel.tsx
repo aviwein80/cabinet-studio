@@ -1,7 +1,7 @@
-import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Info, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
-import { cutFreeEarly, enclosedShapes, makeEntity, moveCutOutsLast, opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
+import { cutFreeEarly, enclosedShapes, makeEntity, moveCutOutsLast, opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, withNewOp, type OpState } from '@/cam/doc'
 import type { P } from '@/cam/geom'
 import { isClimb, isoDepth } from '@/cam/more25d/thread'
 import { findDrill } from '@/core/machining'
@@ -133,7 +133,8 @@ export function OpsPanel({
       const closed = sel.filter((id) => part.entities.some((e) => e.id === id && (e.g.t === 'circle' || (e.g.t === 'contour' && e.g.c.closed))))
       op = { ...op, geometry: op.kind === 'finish3d' && op.strategy === 'projection' ? sel : closed, surface: { ...op.surface, modelId: part.models?.[0]?.id ?? '' } }
     }
-    setOps([...part.ops, op])
+    // Polish-2: inside work goes before the cut-out
+    setOps(withNewOp(part, op))
     setSelectedOp(op.id)
   }
   const move = (i: number, d: number) => {
@@ -242,8 +243,8 @@ export function OpsPanel({
             size="sm"
             variant="ghost"
             className="h-7 text-[11px] text-stone-300 hover:bg-white/5"
-            onClick={() => setOps(orderByTool(part.ops, (o) => tpOf(o.id)?.tool ?? null, toolOrderOf(machine)))}
-            title="Group operations by tool, in tool-table order, to save tool changes"
+            onClick={() => setOps(moveCutOutsLast({ ...part, ops: orderByTool(part.ops, (o) => tpOf(o.id)?.tool ?? null, toolOrderOf(machine)) }))}
+            title="Group operations by tool, in tool-table order, to save tool changes (the cut-out stays last)"
           >
             Sort by tool
           </Button>
@@ -320,7 +321,7 @@ export function OpsPanel({
                           ? 'through'
                           : formatLength(op.levels.depth, units)}
                   {(op.kind === 'pocket' || op.kind === 'finish3d') && op.rest && !(op.kind === 'finish3d' && op.strategy === 'projection') ? ' · rest' : (op.kind === 'pocket' || op.kind === 'rough3d') && op.pattern === 'adaptive' ? ' · adaptive' : ''}
-                  {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : null}
+                  {tp?.warnings.length ? <TriangleAlert className="ml-1 inline size-3 text-amber-400" /> : tp?.notes?.length ? <Info className="ml-1 inline size-3 text-sky-300" /> : null}
                 </div>
               </div>
               {tp?.edited?.lost ? <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-300">Edits lost</span> : null}
@@ -357,7 +358,7 @@ export function OpsPanel({
             }}
             onDuplicate={() => {
               const copy = { ...structuredClone(current), id: nanoid(8), name: `${current.name} copy`, builtHash: undefined }
-              setOps([...part.ops, copy])
+              setOps(withNewOp(part, copy))
               setSelectedOp(copy.id)
             }}
             onAccept={() => accept([current.id])}
@@ -486,6 +487,16 @@ function OpEditor({
           ))}
         </div>
       )}
+      {/* Polish-2: how the operation is made (a turned-over program), not a warning */}
+      {tp?.notes?.length ? (
+        <div className="space-y-1 border-b border-white/10 bg-sky-500/10 px-4 py-2 text-[11px] text-sky-100">
+          {tp.notes.map((w, i) => (
+            <div key={i} className="flex gap-1.5">
+              <Info className="mt-0.5 size-3 shrink-0" /> {w}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {(op.kind === 'finish3d' || op.kind === 'rough3d') && (
         <Group title="Tool">

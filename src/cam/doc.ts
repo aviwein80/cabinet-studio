@@ -242,16 +242,35 @@ export function enclosedShapes(op: Pick<CamOp, 'geometry' | 'face'>, part: CamPa
  * outline, on face 1) while operations after them in the list still machine it. Drilling is left
  * out: it is always written first, whatever the list order.
  */
+/** Polish-1: an operation that cuts the part free: a through profile on its outline, face 1. */
+export function isCutOut(part: CamPart, o: CamOp) {
+  const outline = partOutline(part).entity?.id
+  return !!outline && o.enabled && o.kind === 'profile' && o.face === 1 && !o.tiltedPlane && o.geometry.includes(outline) && (o.levels.through || o.levels.depth >= part.thickness - 1e-9)
+}
+
 export function cutFreeEarly(part: CamPart): { cut: CamOp; after: CamOp[] }[] {
   const outline = partOutline(part).entity?.id
   if (!outline) return []
-  const isCut = (o: CamOp) => o.enabled && o.kind === 'profile' && o.face === 1 && !o.tiltedPlane && o.geometry.includes(outline) && (o.levels.through || o.levels.depth >= part.thickness - 1e-9)
+  const isCut = (o: CamOp) => isCutOut(part, o)
   const out: { cut: CamOp; after: CamOp[] }[] = []
   part.ops.forEach((o, i) => {
     if (!isCut(o)) return
     const after = part.ops.slice(i + 1).filter((x) => x.enabled && x.kind !== 'drill' && x.kind !== 'code' && !isCut(x))
     if (after.length) out.push({ cut: o, after })
   })
+  return out
+}
+
+/**
+ * Polish-2: where a new operation goes: inside work before the part's cut-out (the cut-out stays
+ * last, so the part is not cut free first), a cut-out (or anything on a part without one) at the end.
+ */
+export function withNewOp(part: CamPart, ...ops: CamOp[]): CamOp[] {
+  let out = part.ops
+  for (const op of ops) {
+    const at = isCutOut(part, op) ? -1 : out.findIndex((o) => isCutOut(part, o))
+    out = at < 0 ? [...out, op] : [...out.slice(0, at), op, ...out.slice(at)]
+  }
   return out
 }
 

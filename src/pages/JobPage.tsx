@@ -26,7 +26,7 @@ import { backend, type OutFile } from '@/app/backend'
 import { buildFiles, bomCsv, useJobOutput, type ExportKind } from '@/app/jobOutput'
 import { useStore, type JobTab } from '@/app/store'
 import { CabinetThumb } from '@/components/CabinetThumb'
-import { kindLabel } from '@/components/kindLabel'
+import { contentsLabel, kindLabel } from '@/components/kindLabel'
 import { EmptyState, PageHeader } from '@/components/PageHeader'
 import { SheetView } from '@/components/SheetView'
 import { NumField, TextField } from '@/components/fields'
@@ -39,9 +39,9 @@ import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { cutListCsv } from '@/core/cutlist'
+import { cutListCsv, EDGEBAND_OVERHANG } from '@/core/cutlist'
 import { jobRemnants, updateOffcutStock } from '@/core/offcuts'
-import { formatDims, formatLength, trimSpacingText } from '@/core/units'
+import { fineText, formatDims, formatLength, runLength, sizeText, trimSpacingText } from '@/core/units'
 import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
 import type { AppData, CabinetTemplate, Job } from '@/core/types'
@@ -183,7 +183,7 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
         </div>
         {hasL && (
           <NumField
-            metric
+            fine
             label="Inside corner radius of L parts (as cut)"
             value={job.lCornerRadius ?? cutterR}
             min={0}
@@ -191,8 +191,8 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
             step={0.5}
             onChange={(v) => setJob((j) => (j.lCornerRadius = v))}
             cfg="kitchen:lCornerRadius"
-            badge={<ValueBadges item={lCornerUnconfirmed(job, data.machine, cutterR)[0]} />}
-            hint={`Pie-cut bottoms, tops and shelves. Default: the cut-out tool's radius (${cutterR} mm), what it leaves anyway; larger lets one band wrap round the corner. A part can have its own in the cabinet editor.`}
+            badge={<ValueBadges item={lCornerUnconfirmed(job, data.machine, cutterR, (mm) => fineText(mm, data.settings.units))[0]} />}
+            hint={`Pie-cut bottoms, tops and shelves. Default: the cut-out tool's radius (${fineText(cutterR, data.settings.units)}), what it leaves anyway; larger lets one band wrap round the corner. A part can have its own in the cabinet editor.`}
           />
         )}
       </div>
@@ -225,7 +225,7 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                   <div className="mt-1 text-[11px] text-muted-foreground">
                     {c.params.panel
                       ? `${kindLabel(c.params)} · ${matName(c.params.doorMaterialId)}`
-                      : `${c.params.corner ? `${kindLabel(c.params)} · ` : ''}${matName(c.params.carcassMaterialId)} · ${c.params.doors.count} door${c.params.doors.count === 1 ? '' : 's'} · ${c.params.shelves.count} shelf`}
+                      : `${c.params.corner ? `${kindLabel(c.params)} · ` : ''}${matName(c.params.carcassMaterialId)} · ${contentsLabel(c.params)}`}
                   </div>
                   {Object.values(c.overrides).some((o) => o.exclude || o.edges || o.extraOps?.length || o.materialId || o.cornerRadius !== undefined) && (
                     <Badge variant="outline" className="mt-1.5 text-[10px]">
@@ -329,7 +329,7 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Cut sizes include edgeband compensation (finished − band thickness + pre-mill {data.settings.nesting.premill} mm per banded edge). L = grain locked along length.
+          Cut sizes include edgeband compensation (finished − band thickness + pre-mill {fineText(data.settings.nesting.premill, data.settings.units)} per banded edge). L = grain locked along length.
         </p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => saveOne({ name: `${base}_cutlist.csv`, data: cutListCsv(out.cutList) }, 'csv', 'CSV')}>
@@ -387,7 +387,8 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
             return [code, m ? `${formatLength(m.sheetLength, data.settings.units)} × ${formatLength(m.sheetWidth, data.settings.units)}` : '', `${progs.length}`]
           })}
         />
-        <SummaryTable title="Edgeband (incl. 50 mm overhang per edge)" rows={out.edgebands.map((e) => [e.code, e.name, `${e.metres} m`])} />
+        {/* Polish-2: feet and inches in an inch shop */}
+        <SummaryTable title={`Edgeband (incl. ${sizeText(EDGEBAND_OVERHANG, data.settings.units)} overhang per edge)`} rows={out.edgebands.map((e) => [e.code, e.name, runLength(e.length, data.settings.units)])} />
         <SummaryTable title="Hardware" rows={out.hardware.map((h) => [h.code, h.name, `${h.qty}`])} />
       </div>
     </div>
@@ -715,7 +716,7 @@ const EXPORTS: { kind: ExportKind; label: string; desc: string; icon: typeof Fil
   { kind: 'sheetmap-pdf', label: 'Sheet maps PDF', desc: 'A4 layout with label spots and edge codes', icon: FileText, ext: 'pdf' },
   { kind: 'labels-zpl', label: 'Labels ZPL', desc: 'Raw Zebra 203 dpi, send direct to printer', icon: Printer, ext: 'zpl' },
   { kind: 'cutlist-csv', label: 'Cut list CSV', desc: 'Grouped parts with edges', icon: Table2, ext: 'csv' },
-  { kind: 'bom-csv', label: 'BOM CSV', desc: 'Sheets, edgeband metres, hardware', icon: Table2, ext: 'csv' },
+  { kind: 'bom-csv', label: 'BOM CSV', desc: 'Sheets, edgeband totals, hardware', icon: Table2, ext: 'csv' },
   { kind: 'areas-csv', label: 'Areas and costs CSV', desc: 'Per sheet and part: parts, remnants, scrap', icon: Table2, ext: 'csv' },
 ]
 

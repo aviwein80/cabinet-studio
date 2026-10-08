@@ -14,6 +14,7 @@
  */
 import { nanoid } from 'nanoid'
 import { line, type Contour } from '../geom'
+import { withNewOp } from '../doc'
 import { defaultOp, fromTemplate } from '../ops'
 import type { CamOp, CamOpKind, CamPart, Entity, FaceId, Geom, Layer, ModelPlacement, ModelRef, ProfileSide, Recipe, SolidRole } from '../types'
 import type { PanelFrame } from './align'
@@ -260,7 +261,8 @@ export function machineFaces(part: CamPart, model: ModelRef, solid: SolidData, f
   op.name = `${op.name} (faces ${[...new Set(shapes.flatMap((s) => s.faces))].sort((a, b) => a - b).slice(0, 6).join(', ')}${shapes.flatMap((s) => s.faces).length > 6 ? '…' : ''})`
   if (action === 'saw') warnings.push('Saw cuts need a saw unit on the machine; the export checker refuses them for a machine without one.')
   const layers = part.layers.some((l) => l.id === FACE_LAYER.id) ? part.layers : [...part.layers, { ...FACE_LAYER }]
-  return { part: { ...part, layers, entities: [...part.entities, ...entities], ops: [...part.ops, op], updatedAt: new Date().toISOString() }, op, entities, warnings }
+  // Polish-2: before the part's cut-out, if it has one
+  return { part: { ...part, layers, entities: [...part.entities, ...entities], ops: withNewOp(part, op), updatedAt: new Date().toISOString() }, op, entities, warnings }
 }
 
 /** Every shape the picked faces make, whatever kind (for sending faces to a layer). */

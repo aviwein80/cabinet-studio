@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatLength, parseLength } from '@/core/units'
+import { fineLength, formatLength, parseLength } from '@/core/units'
 import { cn } from '@/lib/utils'
 
 export type Column<T> = {
@@ -18,6 +18,8 @@ export type Column<T> = {
   mono?: boolean
   /** Numeric column stored in millimetres, shown in the shop unit. */
   length?: boolean
+  /** Polish-2: a thin length (edgeband thickness): never rounded to 1/16 in (0.039", see `fineLength`). */
+  fine?: boolean
   /** Shown, but changed from the Edit form so a geometry change can ask about existing jobs. */
   readOnly?: boolean
 }
@@ -83,7 +85,7 @@ export function EditableTable<T extends { id: string }>({
                   return (
                     <TableCell key={c.key} className="py-1">
                       {c.readOnly ? (
-                        <span className="block px-1.5 text-xs text-muted-foreground tabular-nums">{c.type === 'bool' ? (v ? 'Yes' : 'No') : c.length && typeof v === 'number' ? formatLength(v, units) : v == null || v === '' ? '—' : String(v)}</span>
+                        <span className="block px-1.5 text-xs text-muted-foreground tabular-nums">{c.type === 'bool' ? (v ? 'Yes' : 'No') : c.length && typeof v === 'number' ? (c.fine ? fineLength(v, units) : formatLength(v, units)) : v == null || v === '' ? '—' : String(v)}</span>
                       ) : c.type === 'bool' ? (
                         <Checkbox checked={!!v} onCheckedChange={(x) => onChange(r.id, c.key, x === true)} />
                       ) : c.type === 'color' ? (
@@ -103,7 +105,7 @@ export function EditableTable<T extends { id: string }>({
                         </Select>
                       ) : (
                         <CellInput
-                          value={c.length && typeof v === 'number' ? formatLength(v, units) : String(v ?? '')}
+                          value={c.length && typeof v === 'number' ? (c.fine ? fineLength(v, units) : formatLength(v, units)) : String(v ?? '')}
                           numeric={c.type === 'num' && !c.length}
                           mono={c.mono || c.length}
                           onCommit={(x) => {

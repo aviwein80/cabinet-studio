@@ -36,7 +36,7 @@ const MATERIAL_COLS: Column<Material>[] = [
 const BAND_COLS: Column<EdgeBand>[] = [
   { key: 'code', label: 'Code', type: 'text', mono: true, width: '140px' },
   { key: 'name', label: 'Name', type: 'text' },
-  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true, readOnly: true },
+  { key: 'thickness', label: 'T', type: 'num', width: '80px', length: true, fine: true, readOnly: true },
   { key: 'width', label: 'Width', type: 'num', width: '90px', length: true, readOnly: true },
   { key: 'color', label: 'Colour', type: 'color', width: '60px' },
 ]

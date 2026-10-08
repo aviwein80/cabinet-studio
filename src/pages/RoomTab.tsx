@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { buildCabinet } from '@/core/construction/carcass'
 import { WALLS, elevationOf, placementFromElevation, type WallId } from '@/core/elevation'
 import { KITCHEN_PRESETS } from '@/core/defaults'
-import { arrangeCabinets, cornerClearance, fillGap, footprint, nextRotation, pieClearance, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type RoomBlock, type RunGap } from '@/core/room'
+import { arrangeCabinets, cornerClearance, fillGap, fillersPastWall, footprint, nextRotation, pieClearance, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type FillerShrink, type RoomBlock, type RunGap } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Part, Room } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -118,13 +118,22 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
   const elev = elevationOf(job.cabinets, room, wall, place, lib)
   // Polish-1: overlaps and cabinets past a wall are always shown, with a way to fix them
   // (Kitchen-2: and blind corner doors the return stands in front of, and runs short of their wall)
-  const problems = roomProblems(job.cabinets, room, place, lib)
+  const problems = roomProblems(job.cabinets, room, place, lib, units)
+  // Polish-2: a filler past a wall can be shrunk to fit
+  const shrinks = fillersPastWall(job.cabinets, room, place, units)
   const gaps = runGaps(job.cabinets, room, place, lib)
   const numberOf = (id: string) => job.cabinets.find((c) => c.id === id)?.number ?? '?'
   const rearrange = () =>
     setJob((j) => {
       const laid = arrangeCabinets(j.cabinets, j.room ?? room, lib)
       for (const c of j.cabinets) if (laid[c.id]) c.placement = laid[c.id]
+    })
+  const shrinkFiller = (f: FillerShrink) =>
+    setJob((j) => {
+      const c = j.cabinets.find((x) => x.id === f.id)
+      if (!c) return
+      c.params.width = f.width
+      c.placement = f.placement
     })
   const L = (mm: number) => formatLength(mm, units)
   // Kitchen-2, Kitchen-3: what stands in the way of a corner cabinet's doors
@@ -257,6 +266,12 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
             <Button size="xs" variant="outline" onClick={rearrange}>
               Re-arrange along the back wall
             </Button>
+            {/* Polish-2: a filler cut for a wider wall (or typed too wide) can be shrunk to fit */}
+            {shrinks.map((f) => (
+              <Button key={f.id} size="xs" variant="outline" onClick={() => shrinkFiller(f)}>
+                Shrink {numberOf(f.id)} to {L(f.width)} to fit
+              </Button>
+            ))}
           </div>
         )}
         {gaps.length > 0 && (

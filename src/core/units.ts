@@ -136,6 +136,27 @@ export function sizeText(mm: number, units: UnitSystem) {
   return units === 'in' ? formatInches(mm) : `${fmt(mm)} mm`
 }
 
+/**
+ * Polish-2: a thin length (an edgeband's thickness, an inside corner radius) in the shop unit without
+ * rounding it to 1/16 in: an exact inch fraction when it is one (1/2"), else decimal inches to 0.001
+ * (a 1 mm band reads 0.039", not 1/16"; a 6 mm radius 0.236"). Millimetres as `fmt` gives them.
+ */
+export function fineLength(mm: number, units: UnitSystem) {
+  if (units === 'mm') return fmt(mm)
+  if (Math.abs(mm) < 0.0005) return '0"'
+  return exactInches(mm) ?? `${toInches(mm).toFixed(3)}"`
+}
+
+/** Polish-2: `fineLength` in a message: "0.236"" in an inch shop, "6 mm" otherwise. */
+export function fineText(mm: number, units: UnitSystem) {
+  return units === 'in' ? fineLength(mm, 'in') : `${fmt(mm)} mm`
+}
+
+/** Polish-2: a running length of edgeband: metres to 0.01 in a millimetre shop, feet to 0.1 in an inch shop. */
+export function runLength(mm: number, units: UnitSystem) {
+  return units === 'in' ? `${(Math.round((mm / (MM_PER_IN * 12)) * 10) / 10).toFixed(1)} ft` : `${Math.round(mm / 10) / 100} m`
+}
+
 /** Kitchen-2: the nesting header's trim and part spacing, in the shop unit (it always said mm). */
 export function trimSpacingText(trim: number, spacing: number, units: UnitSystem) {
   return units === 'in' ? `Trim ${formatInches(trim)} · spacing ${formatInches(spacing)}` : `Trim ${trim} · spacing ${spacing} mm`

@@ -5,18 +5,26 @@ import { labelsZpl } from './labels/zpl'
 import { encodeCp1252 } from './mpr/writer'
 import { mprFiles, type JobOutput } from './pipeline'
 import type { AppData, Job } from './types'
+import { formatInches, runLength } from './units'
 
 export type OutFile = { name: string; data: string | Uint8Array }
 
+/**
+ * The BOM (order list). Polish-2: in an inch shop the sheet sizes are in inches ("144 x 60 in") and
+ * edgeband in feet; a millimetre shop's file is as before ("3658x1524", metres).
+ */
 export function bomCsv(out: JobOutput, data: AppData) {
+  const inch = data.settings.units === 'in'
   const lines = ['Type,Code,Name,Qty,Unit']
   const sheetsByMat = new Map<string, number>()
   for (const p of out.programs) sheetsByMat.set(p.materialCode, (sheetsByMat.get(p.materialCode) ?? 0) + 1)
+  const inches = (mm: number) => formatInches(mm).replace('"', '')
   for (const [code, n] of sheetsByMat) {
     const m = data.library.materials.find((mm) => mm.code === code)
-    lines.push(['Sheet', code, `"${m?.name ?? code} ${m?.sheetLength}x${m?.sheetWidth}"`, n, 'sheets'].join(','))
+    const size = inch && m ? `${inches(m.sheetLength)} x ${inches(m.sheetWidth)} in` : `${m?.sheetLength}x${m?.sheetWidth}`
+    lines.push(['Sheet', code, `"${m?.name ?? code} ${size}"`, n, 'sheets'].join(','))
   }
-  for (const e of out.edgebands) lines.push(['Edgeband', e.code, `"${e.name}"`, e.metres, 'm'].join(','))
+  for (const e of out.edgebands) lines.push(['Edgeband', e.code, `"${e.name}"`, ...(inch ? [runLength(e.length, 'in').replace(' ft', ''), 'ft'] : [e.metres, 'm'])].join(','))
   for (const h of out.hardware) lines.push(['Hardware', h.code, `"${h.name}"`, h.qty, 'pcs'].join(','))
   return lines.join('\r\n') + '\r\n'
 }

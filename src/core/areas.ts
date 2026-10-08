@@ -14,7 +14,7 @@
 import type { PartInstance } from './cutlist'
 import { polygonArea } from './geometry'
 import type { JobNest } from './machining'
-import type { Library, Material, UnitSystem } from './types'
+import type { Library, Material, MaterialCost, UnitSystem } from './types'
 import type { Unconfirmed } from './confirm'
 
 const MM2_PER_M2 = 1e6
@@ -183,6 +183,14 @@ export function materialUnconfirmed(lib: Pick<Library, 'materials'>, ids?: Itera
     if (c?.by === 'weight' && !(c.density && c.density > 0)) out.push({ key: `material:${m.id}:density`, label: `${m.code} density`, value: 'not set', group: 'Materials', target: { kind: 'material', materialId: m.id, part: 'density' } })
   }
   return out
+}
+
+/** Polish-2: the material dialog's "Costed by": the area unit is the one the price is typed in (ft² in an inch shop). */
+export function costByOptions(inches: boolean): { value: MaterialCost['by']; label: string }[] {
+  return [
+    { value: 'area', label: `Area (per ${inches ? 'ft²' : 'm²'})` },
+    { value: 'weight', label: 'Weight (per kg)' },
+  ]
 }
 
 /** Areas and costs as CSV (one row per sheet, then one per part, then the job total). */

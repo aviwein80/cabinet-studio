@@ -12,7 +12,7 @@ import { useStore } from '@/app/store'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import type { PartInstance } from '@/core/cutlist'
-import { checkSheet, type Clash, footprint, layoutOf, nestListJson, openingsOf, readNestList, regionOnSheet, snapPlacement, turnHalf, turnQuarter } from '@/core/manualNest'
+import { checkSheet, type Clash, footprint, layoutOf, markUntouched, nestListJson, openingsOf, readNestList, regionOnSheet, snapPlacement, turnHalf, turnQuarter } from '@/core/manualNest'
 import { cutoutTool } from '@/core/machining'
 import type { JobOutput } from '@/core/pipeline'
 import type { AppData, Job, SavedSheet } from '@/core/types'
@@ -126,7 +126,8 @@ export function NestEditor({ job, data, out, sheetIdx: startIdx, onClose }: { jo
     setIdx(target === 'new' ? draft.length : target)
   }
   const save = () => {
-    const sheets = draft
+    // Polish-2: sheets left as the nester laid them out stay "nested automatically"
+    const sheets = markUntouched(draft, out.nest)
       .filter((s) => s.placements.length)
       .map((s) => {
         const inside = openingsOf(s, instances)

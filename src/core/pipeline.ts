@@ -9,8 +9,7 @@ import { bridgesOn, buildAllPrograms, cutoutTool, flipSheetsOn, nestJob, nestSet
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeCodes, Job } from './types'
-import { formatLength } from './units'
-import { fmt } from './geometry'
+import { fineText, formatLength } from './units'
 import { multiAxisIssues, positionalIssues, rotaryIssues, validateJob, type Issue } from './validator'
 
 export interface LabelRecord {
@@ -59,6 +58,16 @@ export interface JobOutput {
  * `paths3d`: 3D toolpaths calculated beforehand in the compute worker (by `pathKey`). Without
  * them, 3D operations write nothing and the export checker says so.
  */
+/**
+ * Polish-2: everything a job's output depends on, as one text: the job without its notes and its save
+ * time, and the library, machine and settings (all `runJob` reads). Typing in the job's notes changes
+ * neither, so the screen does not work the job out again on every key (about 0.6 s a key on a 63-part
+ * kitchen).
+ */
+export function outputKey(job: Job, data: Pick<AppData, 'library' | 'machine' | 'settings'>) {
+  return JSON.stringify([{ ...job, notes: '', updatedAt: '' }, data.library, data.machine, data.settings])
+}
+
 export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelCheck; paths3d?: ReadonlyMap<string, Toolpath> } = {}): JobOutput {
   const { library: lib, machine, settings } = data
   // Kitchen-3c: the cut-out tool's radius is the default inside corner radius of L parts
@@ -124,7 +133,8 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
       if (sc) notes.push(`Scribe ${formatLength(sc.amount, settings.units)}${settings.units === 'mm' ? ' mm' : ''} on ${sc.edge}: trim to the wall`)
       // Kitchen-3c: a part fixed on site (a corner cleat) says where; an L part its inside corner radius as cut
       if (inst.part.onSite) notes.push(inst.part.onSite)
-      if (inst.lCut && inst.lCut.radius > 0) notes.push(`Inside corner R${fmt(inst.lCut.radius)} mm`)
+      // Polish-2: in the shop unit (an inch shop reads R0.236", not R6 mm)
+      if (inst.lCut && inst.lCut.radius > 0) notes.push(`Inside corner R${fineText(inst.lCut.radius, settings.units)}`)
       const spot = sheetSpots.find((s) => s.uid === pl.uid)!
       if (!spot.fits) notes.push('Label does not fit: apply to back face')
       labels.push({

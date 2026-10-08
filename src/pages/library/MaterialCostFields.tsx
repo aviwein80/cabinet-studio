@@ -4,7 +4,7 @@ import { ConfigureBadge } from '@/components/Configure'
 import { focusField } from '@/components/configureFocus'
 import { Field, SelectField } from '@/components/fields'
 import { Input } from '@/components/ui/input'
-import { kgPerM2, materialUnconfirmed, ratePerM2 } from '@/core/areas'
+import { costByOptions, kgPerM2, materialUnconfirmed, ratePerM2 } from '@/core/areas'
 import { useStore } from '@/app/store'
 import type { Material, MaterialCost } from '@/core/types'
 import { enterApplies } from '@/components/enterApplies'
@@ -61,10 +61,7 @@ export function MaterialCostFields({ material, currency, onChange }: { material:
         <SelectField
           label="Costed by"
           value={c.by}
-          options={[
-            { value: 'area', label: 'Area (per m²)' },
-            { value: 'weight', label: 'Weight (per kg)' },
-          ]}
+          options={costByOptions(inches)}
           onChange={(v) => set({ by: v })}
         />
         <Field label={`Price, ${currency} per ${c.by === 'area' ? (perFt2 ? 'ft²' : 'm²') : 'kg'}`} cfg={`material:${material.id}:price`} badge={badge('price')}>
@@ -76,7 +73,7 @@ export function MaterialCostFields({ material, currency, onChange }: { material:
       </div>
       <p className="text-[11px] leading-snug text-muted-foreground">
         Label only: nothing cut changes. {rate === null ? 'No cost is shown until the price is entered' + (c.by === 'weight' ? ' with the density' : '') + '.' : `Sheet cost ${currency}${(perFt2 ? rate * M2_PER_FT2 : rate).toFixed(2)} per ${perFt2 ? 'ft²' : 'm²'} (${currency}${((rate * material.sheetLength * material.sheetWidth) / 1e6).toFixed(2)} a full sheet).`}
-        {kg !== null && ` ${kg.toFixed(1)} kg per m², ${((kg * material.sheetLength * material.sheetWidth) / 1e6).toFixed(1)} kg a sheet.`}
+        {kg !== null && ` ${(inches ? kg * M2_PER_FT2 : kg).toFixed(inches ? 2 : 1)} kg per ${inches ? 'ft²' : 'm²'}, ${((kg * material.sheetLength * material.sheetWidth) / 1e6).toFixed(1)} kg a sheet.`}
       </p>
     </div>
   )

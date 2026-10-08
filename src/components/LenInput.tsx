@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import type { UnitSystem } from '@/core/types'
-import { formatLength, parseLength } from '@/core/units'
+import { fineLength, formatLength, parseLength } from '@/core/units'
 import { cn } from '@/lib/utils'
 
-/** Length cell in the shop's units. Empty means “not given” (NaN) and is shown as required. */
-export function LenInput({ value, units, onChange, label, plain, optional, className, placeholder }: { value: number; units: UnitSystem; onChange: (v: number) => void; label: string; plain?: boolean; optional?: boolean; className?: string; placeholder?: string }) {
-  const shown = Number.isFinite(value) ? (plain ? String(value) : formatLength(value, units)) : ''
+/**
+ * Length cell in the shop's units. Empty means “not given” (NaN) and is shown as required. `fine`
+ * (Polish-2): a thin length shown without rounding to 1/16 in (0.236", see `fineLength`).
+ */
+export function LenInput({ value, units, onChange, label, plain, optional, className, placeholder, fine }: { value: number; units: UnitSystem; onChange: (v: number) => void; label: string; plain?: boolean; optional?: boolean; className?: string; placeholder?: string; fine?: boolean }) {
+  const shown = Number.isFinite(value) ? (plain ? String(value) : fine ? fineLength(value, units) : formatLength(value, units)) : ''
   const [text, setText] = useState(shown)
   const [last, setLast] = useState(shown)
   if (shown !== last) {

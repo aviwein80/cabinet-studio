@@ -19,17 +19,16 @@ import { SolidImportDialog } from '@/components/SolidImportDialog'
 import { useStore } from '@/app/store'
 import { featuresOf } from '@/core/features'
 import { contourPath } from '@/pages/part/hit'
+import { thumbFrame } from '@/components/thumbFrame'
 import { ProgramReadDialog } from '@/pages/part/ProgramReadDialog'
 
-export function PartThumb({ part, className }: { part: CamPart; className?: string }) {
+/** `upright` (Polish-2): drawn standing, X up (a door as it hangs, see `thumbFrame`). */
+export function PartThumb({ part, className, upright }: { part: CamPart; className?: string; upright?: boolean }) {
   const cs = part.entities.filter((e) => e.face === 1 && !layerOf(part, e.layer)?.construction).map((e) => ({ e, cs: entityContours(e) }))
-  const b = boxOf([...cs.flatMap((x) => x.cs), rect(0, 0, part.length, part.width)])
-  const w = Math.max(1, b.maxX - b.minX)
-  const h = Math.max(1, b.maxY - b.minY)
-  const pad = Math.max(w, h) * 0.06
+  const f = thumbFrame(boxOf([...cs.flatMap((x) => x.cs), rect(0, 0, part.length, part.width)]), upright)
   return (
-    <svg viewBox={`${b.minX - pad} ${-(b.maxY + pad)} ${w + 2 * pad} ${h + 2 * pad}`} className={className} preserveAspectRatio="xMidYMid meet">
-      <g transform="scale(1,-1)">
+    <svg viewBox={f.viewBox} className={className} preserveAspectRatio="xMidYMid meet">
+      <g transform={f.transform}>
         {cs.map(({ e, cs }) => (
           <path
             key={e.id}

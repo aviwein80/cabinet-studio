@@ -14,7 +14,12 @@ export const WALLS: { id: WallId; label: string }[] = [
 
 const ON_WALL = 40
 
-/** Closest wall whose footprint edge is within 40 mm. A corner tie prefers back, then front, then left. */
+/**
+ * Closest wall whose footprint edge is within 40 mm. A corner tie prefers back, then front, then left.
+ * Polish-2: gaps are compared to 0.01 mm, so a corner cabinet whose back edge lands a rounding error
+ * (2e-13 mm) off the back wall is still a tie, not a left-wall cabinet (a 24" tall cabinet in the
+ * back-left corner of a 6 ft deep room was left out of the back wall's elevation).
+ */
 export function cabinetOnWall(fp: { x: number; y: number; w: number; d: number }, room: Room): WallId | null {
   const candidates: { wall: WallId; gap: number }[] = [
     { wall: 'back', gap: Math.abs(fp.y + fp.d - room.depth) },
@@ -23,7 +28,8 @@ export function cabinetOnWall(fp: { x: number; y: number; w: number; d: number }
     { wall: 'right', gap: Math.abs(fp.x + fp.w - room.width) },
   ]
   const hits = candidates.filter((h) => h.gap <= ON_WALL)
-  hits.sort((a, b) => a.gap - b.gap)
+  const q = (gap: number) => Math.round(gap * 100)
+  hits.sort((a, b) => q(a.gap) - q(b.gap))
   return hits[0]?.wall ?? null
 }
 
@@ -277,4 +283,27 @@ export function elevationLabels(item: Pick<ElevationCabinet, 'w' | 'h' | 'z'>, f
   const lines = labelWidth(one, small) <= room || !floor ? [one] : [h, floor]
   const size = Math.min(...lines.map((l) => fitSize(l, small, room)))
   return { width, size, lines: lines.map((text, i) => ({ text, y: size * (0.35 + (lines.length - 1 - i) * 1.15) })) }
+}
+
+/**
+ * Polish-2: the number of an item too narrow for a label across it (a filler, an end panel) goes
+ * above it; side by side (an end panel and the filler beside it) they ran into each other ("E2F1").
+ * Each such label gets the lowest row above its box where it is clear of the labels already placed
+ * at about the same height (0 = just above the box, 1 = one line higher...). `narrow` picks the items
+ * labelled this way; `size` is the label's font size.
+ */
+export function narrowLabelRows(items: Pick<ElevationCabinet, 'id' | 'number' | 'x' | 'w' | 'z' | 'h'>[], size: number, narrow: (item: Pick<ElevationCabinet, 'w'>) => boolean) {
+  const rows = new Map<string, number>()
+  const placed: { x0: number; x1: number; top: number; row: number }[] = []
+  const gap = size * 0.25
+  for (const it of items.filter(narrow).sort((a, b) => a.x + a.w / 2 - (b.x + b.w / 2))) {
+    const half = labelWidth(it.number, size) / 2 + gap / 2
+    const cx = it.x + it.w / 2
+    const top = it.z + it.h
+    let row = 0
+    while (placed.some((p) => p.row === row && Math.abs(p.top - top) < size * 1.2 && cx - half < p.x1 && cx + half > p.x0)) row++
+    placed.push({ x0: cx - half, x1: cx + half, top, row })
+    rows.set(it.id, row)
+  }
+  return rows
 }

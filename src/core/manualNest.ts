@@ -33,6 +33,21 @@ export function layoutOf(nest: Pick<JobNest, 'sheets'>): SavedSheet[] {
   }))
 }
 
+/**
+ * Polish-2: the edited layout ready to save: a sheet left exactly as the nester laid it out (same
+ * board, size and every part where it was) is marked `auto`, so only the sheets really changed by
+ * hand say "laid out by hand" (saving one edited sheet marked all of them, a custom part's sheet too).
+ */
+export function markUntouched(draft: SavedSheet[], nest: Pick<JobNest, 'sheets'>): SavedSheet[] {
+  const before = layoutOf(nest)
+  const same = (a: SavedSheet, b: SavedSheet) => JSON.stringify({ ...a, auto: undefined }) === JSON.stringify({ ...b, auto: undefined })
+  return draft.map((s, i) => {
+    const { auto: _a, ...rest } = s
+    const was = nest.sheets[i]
+    return was && !was.manual && same(rest, before[i]) ? { ...rest, auto: true } : rest
+  })
+}
+
 export interface ManualInfo {
   savedAt: string
   /** Parts in the layout that are no longer in the job (uid and the label's part id when known). */
@@ -83,7 +98,7 @@ export function applySavedNest(saved: SavedNest, instances: PartInstance[], lib:
       utilization: Math.round((area / (s.sheetLength * s.sheetWidth)) * 1000) / 10,
       ...(s.offcutId ? { offcutId: s.offcutId } : {}),
       ...(s.flip ? { flip: { ...s.flip } } : {}),
-      manual: true,
+      ...(s.auto ? {} : { manual: true }),
       remnants: remnantsOf({ length: s.sheetLength, width: s.sheetWidth }, placements, { spacing: nestSpacing(machine, settings), offcutType: ns.offcutType, offcutMin: { length: ns.offcutMinLength, width: ns.offcutMinWidth } }),
     })
   }

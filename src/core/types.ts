@@ -32,6 +32,11 @@ export interface Material {
   notes?: string
   /** Material cost (M2.8, NEW-20). Absent until the shop enters a price. */
   cost?: MaterialCost
+  /**
+   * Polish-2: PLACEHOLDER added by the app (the 16 mm drawer-box board, when the library had none):
+   * a Configure badge until the shop confirms it or edits it into its own board.
+   */
+  placeholder?: boolean
 }
 
 /** How a sheet material is costed: per square metre of sheet, or per kilogram (needs the density). */
@@ -480,6 +485,11 @@ export interface SavedSheet {
   offcutId?: string
   flip?: { axis: 'end' | 'side'; reference: number; length: number; width: number }
   placements: { uid: string; x: number; y: number; rotated: boolean; flip?: boolean; inside?: string }[]
+  /**
+   * Polish-2: saved with the layout but left as the nester laid it out (the editor changed other
+   * sheets): shown "nested automatically", not "laid out by hand". Absent on sheets saved before.
+   */
+  auto?: boolean
 }
 
 // ---------------------------------------------------------------------------------------------

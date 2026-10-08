@@ -286,8 +286,14 @@ export function cutList(instances: PartInstance[], lib: Library): CutListRow[] {
     .sort((a, b) => a.materialCode.localeCompare(b.materialCode) || b.cutLength * b.cutWidth - a.cutLength * a.cutWidth)
 }
 
-/** Edgeband running metres per band, with a per-edge overhang allowance for trimming. */
-export function edgebandUsage(instances: PartInstance[], lib: Library, overhangPerEdge = 50) {
+/** Polish-2: the trimming allowance added to every banded edge in the edgeband totals, mm. */
+export const EDGEBAND_OVERHANG = 50
+
+/**
+ * Edgeband running metres per band, with a per-edge overhang allowance for trimming. `length` is the
+ * same total in mm (Polish-2: shown in feet in an inch shop).
+ */
+export function edgebandUsage(instances: PartInstance[], lib: Library, overhangPerEdge = EDGEBAND_OVERHANG) {
   const totals = new Map<string, number>()
   for (const inst of instances) {
     const p = inst.part
@@ -302,7 +308,7 @@ export function edgebandUsage(instances: PartInstance[], lib: Library, overhangP
   }
   return [...totals.entries()].map(([id, mm]) => {
     const b = lib.edgebands.find((e) => e.id === id)
-    return { id, code: b?.code ?? id, name: b?.name ?? id, metres: Math.round(mm / 10) / 100 }
+    return { id, code: b?.code ?? id, name: b?.name ?? id, metres: Math.round(mm / 10) / 100, length: mm }
   })
 }
 

@@ -5,7 +5,7 @@ import { isFlatLayer, pathKey, type Toolpath } from '@/cam/toolpath'
 import { compute } from '@/cam/worker/client'
 import { Cancelled } from '@/core/cancel'
 import { featuresOf } from '@/core/features'
-import { runJob, type JobOutput } from '@/core/pipeline'
+import { outputKey, runJob, type JobOutput } from '@/core/pipeline'
 import type { AppData, Job } from '@/core/types'
 import { loadModelMesh } from '@/pages/part/modelData'
 
@@ -17,14 +17,16 @@ const done3d = new Map<string, Toolpath>()
  * calculated in the compute worker so the screen stays responsive. Returns the toolpaths found so
  * far and how many are still being calculated.
  */
-function useJob3dPaths(job: Job | undefined, data: AppData | null) {
+function useJob3dPaths(job: Job | undefined, data: AppData | null, inputs: string) {
   const [version, setVersion] = useState(0)
   const want = useMemo(() => {
     if (!job || !data) return []
     const f = featuresOf(data.settings)
     if (!f.camMprOutput || !f.cam3dMprOutput) return []
     return (job.camParts ?? []).flatMap((part) => part.ops.filter((op) => op.enabled && isFlatLayer(op)).map((op) => ({ part, op, key: pathKey(op, part, data.machine) })))
-  }, [job, data])
+    // only when what the output depends on changes (`outputKey`), not on every keystroke in the notes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputs])
   const missing = want.filter((w) => !done3d.has(w.key))
 
   useEffect(() => {
@@ -65,7 +67,9 @@ function useJob3dPaths(job: Job | undefined, data: AppData | null) {
 }
 
 export function useJobOutput(job: Job | undefined, data: AppData | null): { out: JobOutput | null; error: string | null; pending3d: number } {
-  const { paths, pending } = useJob3dPaths(job, data)
+  // Polish-2: typing in the job's notes does not work the whole job out again on every key
+  const inputs = useMemo(() => (job && data ? outputKey(job, data) : ''), [job, data])
+  const { paths, pending } = useJob3dPaths(job, data, inputs)
   const res = useMemo(() => {
     if (!job || !data) return { out: null, error: null }
     try {
@@ -74,7 +78,9 @@ export function useJobOutput(job: Job | undefined, data: AppData | null): { out:
       console.error(e)
       return { out: null, error: e instanceof Error ? e.message : String(e) }
     }
-  }, [job, data, paths])
+    // the job and data of the render where `inputs` changed are the ones it depends on
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputs, paths])
   return { ...res, pending3d: pending }
 }
 

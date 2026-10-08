@@ -5,6 +5,7 @@
  * values (each shows its "Configure" badge until the shop sets its own).
  */
 import { nanoid } from 'nanoid'
+import { withNewOp } from '../doc'
 import { defaultOp } from '../ops'
 import type { CamOp, CamPart, Finish3dOp, ModelRef, ReliefInfo, Rough3dOp } from '../types'
 import type { MeshUnits } from '../mesh/types'
@@ -72,5 +73,6 @@ export function addRelief(part: CamPart, a: AddRelief): { part: CamPart; model: 
     ops.push({ ...r, name: `Relief roughing: ${a.name}`, surface: { ...r.surface, modelId: model.id } }, { ...f, name: `Relief finishing: ${a.name}`, surface: { ...f.surface, modelId: model.id } })
   }
   const layers = part.layers.some((l) => l.id === RELIEF_LAYER.id) ? part.layers : [...part.layers, { ...RELIEF_LAYER }]
-  return { part: { ...part, layers, models: [...(part.models ?? []), model], ops: [...part.ops, ...ops] }, model, ops }
+  // Polish-2: before the part's cut-out, if it has one
+  return { part: { ...part, layers, models: [...(part.models ?? []), model], ops: withNewOp(part, ...ops) }, model, ops }
 }

@@ -3,6 +3,7 @@ import { PLATE_ID, hingeCode, plateBoring, slideBoring, SLIDE_IDS } from '../har
 import { BLUM, hingeHeights, selectTandem } from '../hardware/specs'
 import { onPart } from '../lpart'
 import type { BlindCornerParams, CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, UnitSystem, Vec2 } from '../types'
+import { drawerBoard } from '../defaults'
 import { formatInches } from '../units'
 import { box, materialThickness, PartBuilder } from './builder'
 import { generatePanel } from './panels'
@@ -262,10 +263,13 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
     const slideId = SLIDE_IDS[slide.part]
     const runner = slideBoring(lib, slide, slideId ? pin?.hardware?.[slideId] : undefined)
     if (D + 0.01 < runner.minCabinetDepth) warnings.push(`Cabinet depth ${S(D)} is under the ${S(runner.minCabinetDepth)} minimum for a ${slide.inches} in TANDEM runner.`)
-    // Polish-1: the box (sides, subfront, back) is its own material when one is chosen; absent =
-    // the carcass board, as before. The TANDEM side limit is checked against what is really used.
-    const boxMat = p.drawers.boxMaterialId ? lib.materials.find((m) => m.id === p.drawers.boxMaterialId) : undefined
-    if (p.drawers.boxMaterialId && !boxMat) warnings.push(`Drawer-box material ${p.drawers.boxMaterialId} is not in the library; the boxes use the carcass board.`)
+    // Polish-1: the box (sides, subfront, back) is its own material when one is chosen. Polish-2:
+    // otherwise the library's 16 mm drawer-box board (owner decision), the carcass board only when
+    // the library has none. The TANDEM side limit is checked against what is really used.
+    const chosen = p.drawers.boxMaterialId ? lib.materials.find((m) => m.id === p.drawers.boxMaterialId) : undefined
+    const fallback = drawerBoard(lib)
+    if (p.drawers.boxMaterialId && !chosen) warnings.push(`Drawer-box material ${p.drawers.boxMaterialId} is not in the library; the boxes use ${fallback ? `the drawer-box board (${fallback.code})` : 'the carcass board'}.`)
+    const boxMat = chosen ?? fallback ?? undefined
     const boxM = boxMat ? boxMat.id : cm
     const sideT = boxMat ? boxMat.thickness : T
     if (sideT > BLUM.maxSideThickness + 0.01)

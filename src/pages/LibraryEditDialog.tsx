@@ -11,6 +11,8 @@ import type { EdgeBand, Hardware, HardwareCategory, Material } from '@/core/type
 import { featuresOf } from '@/core/features'
 import { MaterialCostFields } from './library/MaterialCostFields'
 import { enterApplies } from '@/components/enterApplies'
+import { ValueBadges } from '@/components/Configure'
+import { placeholderBoard } from '@/core/confirm'
 
 type Row = Hardware | Material | EdgeBand
 
@@ -59,17 +61,20 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
     })
 
   const save = (choice: 'ask' | 'keep' | 'update') => {
-    const keys = drivingKeys(draft, kind)
-    const changed = geometryChanged(item, draft, keys)
-    const consumers = changed ? listConsumers(data.jobs, kind, draft) : []
+    // Polish-2: a placeholder board saved with the shop's own code, name or sizes is the shop's board
+    const own = kind === 'material' && (draft as Material).placeholder && (['code', 'name', 'thickness', 'sheetLength', 'sheetWidth'] as const).some((k) => (draft as Material)[k] !== (item as Material)[k])
+    const row: Row = own ? { ...(draft as Material), placeholder: undefined } : draft
+    const keys = drivingKeys(row, kind)
+    const changed = geometryChanged(item, row, keys)
+    const consumers = changed ? listConsumers(data.jobs, kind, row) : []
     if (choice === 'ask' && changed && consumers.length > 0) {
       setAsk(consumers)
       return
     }
     mutate((d) => {
-      if (!changed) replaceLibraryItem(d, kind, draft)
-      else if (choice === 'keep') applyKeep(d, kind, item, draft)
-      else applyUpdate(d, kind, item, draft)
+      if (!changed) replaceLibraryItem(d, kind, row)
+      else if (choice === 'keep') applyKeep(d, kind, item, row)
+      else applyUpdate(d, kind, item, row)
     })
     if (!changed) toast.success('Saved. Name and code are labels, so no job geometry changed.')
     else if (choice === 'keep') toast.success('Saved. These jobs keep their old values. New cabinets use the new one.')
@@ -122,6 +127,11 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
             )}
             {kind === 'material' && (
               <>
+                {(draft as Material).placeholder && (
+                  <Field label="Placeholder board" cfg={`material:${draft.id}:board`} badge={<ValueBadges item={placeholderBoard(draft as Material, data.machine) ?? undefined} />}>
+                    <p className="text-[11px] leading-snug text-muted-foreground">Added by the app: drawer boxes use a 16 mm board (Blum TANDEM) and the library had none. Enter the shop's board (code, name, sheet size) and save, or mark it as confirmed.</p>
+                  </Field>
+                )}
                 <NumField label="Thickness" hint="Drives geometry. Part thickness and the nesting sheet both follow this." value={(draft as Material).thickness} min={1} max={50} onChange={(v) => set((r) => ((r as Material).thickness = v))} />
                 <NumField label="Sheet length" hint="Drives nesting." value={(draft as Material).sheetLength} min={100} max={6000} onChange={(v) => set((r) => ((r as Material).sheetLength = v))} />
                 <NumField label="Sheet width" hint="Drives nesting." value={(draft as Material).sheetWidth} min={100} max={4000} onChange={(v) => set((r) => ((r as Material).sheetWidth = v))} />
@@ -143,7 +153,7 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
             )}
             {kind === 'edgeband' && (
               <>
-                <NumField label="Thickness" hint="Drives the cut size. Each banded edge is shortened by this, plus pre-mill." value={(draft as EdgeBand).thickness} min={0} max={5} onChange={(v) => set((r) => ((r as EdgeBand).thickness = v))} />
+                <NumField fine label="Thickness" hint="Drives the cut size. Each banded edge is shortened by this, plus pre-mill." value={(draft as EdgeBand).thickness} min={0} max={5} onChange={(v) => set((r) => ((r as EdgeBand).thickness = v))} />
                 <NumField label="Width" hint="Drives the band strip width on the BOM." value={(draft as EdgeBand).width} min={1} max={60} onChange={(v) => set((r) => ((r as EdgeBand).width = v))} />
                 <TextField label="Colour" hint="Appearance only." value={(draft as EdgeBand).color} onChange={(v) => set((r) => ((r as EdgeBand).color = v))} />
               </>

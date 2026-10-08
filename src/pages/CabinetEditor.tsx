@@ -17,7 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/construction/carcass'
-import { KITCHEN_DEFAULTS } from '@/core/defaults'
+import { drawerBoard, KITCHEN_DEFAULTS } from '@/core/defaults'
+import { ValueBadges } from '@/components/Configure'
+import { placeholderBoard } from '@/core/confirm'
 import { TemplateJobsButton } from '@/pages/LibraryEditDialog'
 import { formatLength, sizedName } from '@/core/units'
 import type { AnyEdgeKey, CabinetInstance, CarcassParams, DrillOp, Library, Part, PartOverride, UnitSystem } from '@/core/types'
@@ -98,6 +100,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
       .filter((m) => (thin === undefined ? true : thin ? m.thickness <= 10 : m.thickness > 10))
       .map((m) => ({ value: m.id, label: `${m.code} · ${m.name}` }))
   const bandOptions = [{ value: NONE, label: 'None' }, ...lib.edgebands.map((e) => ({ value: e.id, label: `${e.code} · ${e.name}` }))]
+  const drawerDefault = drawerBoard(lib)
   const finalParts = built.final?.parts ?? []
   const warnings = built.final?.warnings ?? []
   // Kitchen-2: fillers and end panels use few of the carcass settings; a blind corner has one door, no drawers
@@ -399,9 +402,11 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               <SelectField
                 label="Box material"
                 value={p.drawers.boxMaterialId ?? NONE}
-                options={[{ value: NONE, label: 'Same as carcass' }, ...lib.materials.filter((m) => m.thickness > 10).map((m) => ({ value: m.id, label: `${m.code} · ${m.name}${m.thickness > 16.01 ? ' (too thick for TANDEM)' : ''}` }))]}
+                // Polish-2: not chosen = the library's 16 mm drawer-box board (owner decision); the carcass board only when there is none
+                options={[{ value: NONE, label: drawerDefault ? `Drawer-box board: ${drawerDefault.code} · ${drawerDefault.name}` : 'Same as carcass (no 16 mm board in the library)' }, ...lib.materials.filter((m) => m.thickness > 10).map((m) => ({ value: m.id, label: `${m.code} · ${m.name}${m.thickness > 16.01 ? ' (too thick for TANDEM)' : ''}` }))]}
                 onChange={(v) => setP((x) => (x.drawers.boxMaterialId = v === NONE ? undefined : v))}
                 hint="Sides, subfront and back. Blum TANDEM takes sides up to 16 mm (5/8 in)."
+                badge={<ValueBadges item={placeholderBoard(p.drawers.boxMaterialId ? lib.materials.find((m) => m.id === p.drawers.boxMaterialId) : drawerDefault, data.machine) ?? undefined} />}
               />
             )}
             {p.doors.count > 0 && p.drawers.count > 0 && (
@@ -557,11 +562,11 @@ function PartsTable({
                       onChange={(v) => setOverride(raw.key, (o) => (o.edges = { ...(o.edges ?? {}), [k]: v }))}
                     />
                   ))}
-                  {/* Kitchen-3c: this L part's own inside corner radius (as cut, mm); blank = the job's */}
+                  {/* Kitchen-3c: this L part's own inside corner radius (as cut); blank = the job's. Polish-2: in the shop unit */}
                   {part.shape === 'L' && editable && (
-                    <span className="ml-1 flex items-center gap-0.5 text-[10px] text-muted-foreground" title="Inside corner radius as cut, in mm. Blank: the job's.">
+                    <span className="ml-1 flex items-center gap-0.5 text-[10px] text-muted-foreground" title={`Inside corner radius as cut, in ${units === 'in' ? 'inches' : 'mm'}. Blank: the job's.`}>
                       R
-                      <LenInput label={`${part.name} inside corner radius`} units="mm" value={ov?.cornerRadius ?? NaN} optional placeholder="job" className="h-6 w-12" onChange={(v) => setOverride(raw.key, (o) => (o.cornerRadius = Number.isFinite(v) && v >= 0 ? v : undefined))} />
+                      <LenInput label={`${part.name} inside corner radius`} units={units} fine value={ov?.cornerRadius ?? NaN} optional placeholder="job" className="h-6 w-14" onChange={(v) => setOverride(raw.key, (o) => (o.cornerRadius = Number.isFinite(v) && v >= 0 ? v : undefined))} />
                     </span>
                   )}
                 </div>
@@ -678,8 +683,9 @@ function AddHoleDialog({ part, onClose, onAdd }: { part: Part | null; onClose: (
         <div className="grid grid-cols-2 gap-3">
           <NumField label="x" value={h.x} onChange={(v) => setH({ ...h, x: v })} />
           <NumField label="y" value={h.y} onChange={(v) => setH({ ...h, y: v })} />
-          <NumField label="Diameter" value={h.diameter} min={2} max={40} step={0.5} onChange={(v) => setH({ ...h, diameter: v })} />
-          {!h.through && <NumField label="Depth" value={h.depth} min={1} max={60} step={0.5} onChange={(v) => setH({ ...h, depth: v })} />}
+          {/* Polish-2: drill sizes exact in an inch shop ("8 mm", or an exact fraction), never rounded to 1/16 */}
+          <NumField tool label="Diameter" value={h.diameter} min={2} max={40} step={0.5} onChange={(v) => setH({ ...h, diameter: v })} />
+          {!h.through && <NumField tool label="Depth" value={h.depth} min={1} max={60} step={0.5} onChange={(v) => setH({ ...h, depth: v })} />}
           <div className="col-span-2">
             <SwitchField label="Through hole" checked={h.through} onChange={(v) => setH({ ...h, through: v })} hint="Goes through the panel plus the machine's through depth into the spoilboard." />
           </div>

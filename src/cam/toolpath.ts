@@ -151,6 +151,12 @@ export interface Toolpath {
   moves: Move[]
   intents: Intent[]
   warnings: string[]
+  /**
+   * Polish-2: how the operation is made, not a problem with it (hinge cups drilled from face 6 go in
+   * a second program after the part is turned over). Shown with an info mark, not the warning
+   * triangle; the export check lists them as before.
+   */
+  notes?: string[]
   stats: { cut: number; rapid: number; minutes: number }
   /** Flagged move ranges (indices into `moves`, `to` exclusive): trochoidal loops of adaptive clearing. */
   sections?: { kind: 'trochoidal'; from: number; to: number }[]
@@ -1145,7 +1151,7 @@ function genDrill(op: DrillOp, ctx: GenContext, tp: Toolpath, b: Builder) {
     }
     if (tool) (tp.drills ??= []).push({ hole: d, face, tool: tool.number, diameter: tool.diameter, fits: drillFits(machine, tool.diameter, d) })
     if (face === 6) {
-      tp.warnings.push(`${list.length} hole(s) on face 6 (underside) go into a separate program run after the part is turned over end for end.`)
+      tp.notes = [...(tp.notes ?? []), `${list.length} hole(s) on face 6 (underside) go into a separate program run after the part is turned over end for end.`]
       for (const h of list) {
         const through = op.levels.through || h.depth >= T - 1e-9
         const depth = through ? T + machine.throughDepth : h.depth

@@ -1,5 +1,6 @@
 import { pieFootprint } from './construction/pieCut'
-import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Library, Room, Vec3 } from './types'
+import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Library, Room, UnitSystem, Vec3 } from './types'
+import { MM_PER_IN } from './units'
 
 /** 12 ft × 10 ft × 8 ft. Wall cabinets sit 54 in off the floor. */
 export const DEFAULT_ROOM: Room = { width: 3657.6, depth: 3048, height: 2438.4 }
@@ -418,8 +419,47 @@ function cornersAt(placed: Placed[], room: Room, box: Box) {
  * change follows the run round the corner. Without a corner, a cabinet grows to the right (or along
  * the wall), as before. Only cabinets with a placement of their own are moved (an arranged layout
  * reflows by itself). `old` is the old width, or the old width, depth and pull-out. Returns the ids moved.
+ *
+ * Polish-2: when the room is still as Arrange (or Fill gap) laid it out, nothing moved by hand since,
+ * it stays that way: after the push, every placed cabinet is put where Arrange now puts it, so a
+ * change of width (or depth) never needs Arrange pressed again (a vanity base narrowed from 36" to
+ * 30" brings the drawer base back from the return onto the back wall). The size change of a cabinet
+ * without a placement of its own does the same. A room with cabinets moved by hand gets the push only.
  */
 export function pushNeighbours(cabinets: CabinetInstance[], id: string, old: number | { width?: number; depth?: number; pullOut?: number }, room: Room, lib?: Library): string[] {
+  const cab = cabinets.find((c) => c.id === id)
+  if (!cab) return []
+  const prev = typeof old === 'number' ? { width: old } : old
+  const pullNow = cab.params.corner?.type === 'blind' ? cab.params.corner.pullOut : 0
+  const was = { width: prev.width ?? cab.params.width, depth: prev.depth ?? cab.params.depth, pullOut: prev.pullOut ?? pullNow }
+  if (Math.abs(cab.params.width - was.width) < 1e-9 && Math.abs(cab.params.depth - was.depth) < 1e-9 && Math.abs(pullNow - was.pullOut) < 1e-9) return []
+  // Polish-2: is the room as Arrange (or Fill gap) left it, nothing moved by hand since?
+  const before = cabinets.map((c) => (c.id === id ? withSizes(c, was) : c))
+  const laid = arrangeCabinets(before, room, lib)
+  const settled = cabinets.some((c) => c.placement) && cabinets.every((c) => !c.placement || !laid[c.id] || samePlace(c.placement, laid[c.id]))
+  const moved = cab.placement ? pushRun(cabinets, id, old, room, lib) : []
+  if (!settled) return moved
+  // ... then it stays as Arrange would lay it out: the push above, and what a push cannot do (a
+  // cabinet that no longer fits returned round the corner, or one that fits again brought back)
+  const after = arrangeCabinets(cabinets, room, lib)
+  for (const c of cabinets) {
+    const pl = after[c.id]
+    if (!c.placement || !pl || samePlace(c.placement, pl)) continue
+    c.placement = pl
+    if (c.id !== id && !moved.includes(c.id)) moved.push(c.id)
+  }
+  return moved
+}
+
+const samePlace = (a: CabinetPlacement, b: CabinetPlacement) => a.rotation === b.rotation && Math.abs(a.x - b.x) <= TOUCH && Math.abs(a.y - b.y) <= TOUCH && Math.abs(a.z - b.z) <= TOUCH
+
+/** A cabinet with its width, depth and (a blind corner's) pull-out set back to `s`. */
+function withSizes(c: CabinetInstance, s: { width: number; depth: number; pullOut: number }): CabinetInstance {
+  return { ...c, params: { ...c.params, width: s.width, depth: s.depth, ...(c.params.corner?.type === 'blind' ? { corner: { ...c.params.corner, pullOut: s.pullOut } } : {}) } }
+}
+
+/** The neighbour push itself (Polish-1, Kitchen-2, Kitchen-3), for a cabinet with a placement of its own. */
+function pushRun(cabinets: CabinetInstance[], id: string, old: number | { width?: number; depth?: number; pullOut?: number }, room: Room, lib?: Library): string[] {
   const cab = cabinets.find((c) => c.id === id)
   if (!cab?.placement) return []
   const prev = typeof old === 'number' ? { width: old } : old
@@ -649,6 +689,60 @@ export type RoomBlock = {
   kind: 'blind' | 'opening' | 'door'
 }
 
+/** Polish-2: a filler past a wall, and the width (and placement) at which it fits. */
+export interface FillerShrink {
+  id: string
+  width: number
+  placement: CabinetPlacement
+}
+
+/**
+ * Polish-2: the width at which a filler standing past a wall along its run fits between the walls,
+ * keeping the edge that meets the run where it is; null when it is not past a wall along its run,
+ * stands past one across it (too deep), or would be under 3 mm.
+ */
+export function shrinkToFit(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement, room: Room, tol = TOUCH): Omit<FillerShrink, 'id'> | null {
+  const fp = footprint(c.params.width, c.params.depth, pl)
+  const along = turned(pl.rotation) ? 'y' : 'x'
+  const start = fp[along]
+  const len = along === 'x' ? fp.w : fp.d
+  const roomLen = along === 'x' ? room.width : room.depth
+  const across = along === 'x' ? { s: fp.y, l: fp.d, r: room.depth } : { s: fp.x, l: fp.w, r: room.width }
+  if (across.s < -tol || across.s + across.l > across.r + tol) return null
+  const lo = Math.max(0, -start)
+  const hi = Math.max(0, start + len - roomLen)
+  if (lo <= tol && hi <= tol) return null
+  const width = Math.round((len - lo - hi) * 1000) / 1000
+  if (width < 3) return null
+  return { width, placement: { ...pl, [along]: lo > 0 ? 0 : pl[along] } }
+}
+
+/**
+ * Polish-2: the fillers that run past a wall (`roomProblems`' outside list), each with the width (and
+ * placement) at which it fits, keeping its edge against the run where it is: offered as "Shrink F1
+ * to fit" when Re-arrange (or a shorter wall) leaves a filler cut for a wider gap past the wall.
+ */
+export function fillersPastWall(cabinets: CabinetInstance[], room: Room, place: (c: CabinetInstance) => CabinetPlacement, units: UnitSystem = 'mm'): FillerShrink[] {
+  const tol = pastWallTolerance(units)
+  const out: FillerShrink[] = []
+  for (const c of cabinets) {
+    if (c.params.panel?.type !== 'filler') continue
+    const fit = shrinkToFit(c, place(c), room, tol)
+    if (fit) out.push({ id: c.id, ...fit })
+  }
+  return out
+}
+
+/**
+ * Polish-2: how far a cabinet may stand past a wall before the room says it runs past it: the
+ * rounding of a size shown in the shop unit. Sizes in an inch shop are shown to 1/16 in, so a filler
+ * typed to the 1-5/16" shown for a 32.8 mm gap (33.34 mm) fits; never more than half that step.
+ * In millimetres, half a millimetre (as before).
+ */
+export function pastWallTolerance(units: UnitSystem) {
+  return units === 'in' ? Math.max(TOUCH, MM_PER_IN / 32) : TOUCH
+}
+
 /**
  * Polish-1: what in the room needs attention: cabinets whose boxes overlap (pairs of ids), and
  * cabinets that run past a wall. Kitchen-2: blind corner doors that the return's doors stand in
@@ -656,14 +750,15 @@ export type RoomBlock = {
  * clear for its doors), and a cabinet beside one of its doors must not stand proud of it. Shown in
  * the room so an overlap is never silent.
  */
-export function roomProblems(cabinets: CabinetInstance[], room: Room, place: (c: CabinetInstance) => CabinetPlacement, lib?: Library) {
+export function roomProblems(cabinets: CabinetInstance[], room: Room, place: (c: CabinetInstance) => CabinetPlacement, lib?: Library, units: UnitSystem = 'mm') {
   const boxes = cabinets.map((c) => ({ c, b: boxOf(c, place(c)), plan: planBoxes(c, place(c)) }))
   const overlaps: [string, string][] = []
   for (let i = 0; i < boxes.length; i++)
     for (let j = i + 1; j < boxes.length; j++) {
       if (boxes[i].plan.some((a) => boxes[j].plan.some((b) => overlap3(a, b)))) overlaps.push([boxes[i].c.id, boxes[j].c.id])
     }
-  const outside = boxes.filter(({ b }) => b.x < -TOUCH || b.y < -TOUCH || b.x + b.w > room.width + TOUCH || b.y + b.d > room.depth + TOUCH).map(({ c }) => c.id)
+  const tol = pastWallTolerance(units)
+  const outside = boxes.filter(({ b }) => b.x < -tol || b.y < -tol || b.x + b.w > room.width + tol || b.y + b.d > room.depth + tol).map(({ c }) => c.id)
   const blocked: RoomBlock[] = []
   for (const c of cabinets) {
     if (!cornerSide(c.params)) continue

@@ -6,7 +6,7 @@ import { MAIN_MACHINE, newMachineSetup, profileOf } from '@/core/machines'
 import { checkPassword } from '@/core/admin'
 import { sampleJob } from '@/core/sample'
 import { normalizeData } from '@/core/normalize'
-import { DEFAULT_ROOM, pushNeighbours } from '@/core/room'
+import { DEFAULT_ROOM, nextCabinetNumber, pushNeighbours } from '@/core/room'
 import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, MachineSetup, ShopSettings } from '@/core/types'
 import { draftBlock } from '@/core/spec/draft'
@@ -118,13 +118,6 @@ export const useStore = create<State>((set, get) => {
     j.updatedAt = now()
   }
 
-  const nextCabinetNumber = (j: Job, kind: CarcassParams['kind']) => {
-    const prefix = kind === 'wall' ? 'W' : kind === 'tall' ? 'T' : 'B'
-    let n = 1
-    while (j.cabinets.some((c) => c.number === `${prefix}${n}`)) n++
-    return `${prefix}${n}`
-  }
-
   return {
     data: null,
     loadError: null,
@@ -135,6 +128,8 @@ export const useStore = create<State>((set, get) => {
     configure: null,
     openConfigure(t) {
       const r = get().route
+      // Kitchen-2: a cabinet's own value; its badge sits beside the field on the page already open
+      if (t.kind === 'kitchen') return set({ configure: t })
       if (t.kind === 'op' || t.kind === 'fixture') {
         if (!(r.page === 'part' && r.partId === t.partId)) set({ route: { page: 'part', partId: t.partId, ...(t.jobId ? { jobId: t.jobId } : {}) } })
       } else if (t.kind === 'material') {
@@ -227,7 +222,7 @@ export const useStore = create<State>((set, get) => {
         touchJob(d, jobId, (j) => {
           j.cabinets.push({
             id,
-            number: nextCabinetNumber(j, template.params.kind),
+            number: nextCabinetNumber(j, template.params),
             name: template.name,
             templateId: template.id,
             qty: 1,
@@ -242,10 +237,11 @@ export const useStore = create<State>((set, get) => {
     updateCabinet(jobId, cab) {
       mutate((d) =>
         touchJob(d, jobId, (j) => {
-          const old = j.cabinets.find((c) => c.id === cab.id)?.params.width
+          const prev = j.cabinets.find((c) => c.id === cab.id)?.params
           j.cabinets = j.cabinets.map((c) => (c.id === cab.id ? clone(cab) : c))
-          // Polish-1: a wider (or narrower) placed cabinet moves its neighbours along the run
-          if (old !== undefined && old !== cab.params.width) pushNeighbours(j.cabinets, cab.id, old, { ...DEFAULT_ROOM, ...(j.room ?? {}) })
+          // Polish-1: a wider (or narrower) placed cabinet moves its neighbours along the run;
+          // Kitchen-2: so does a corner cabinet's depth or pull-out, round the corner
+          if (prev) pushNeighbours(j.cabinets, cab.id, { width: prev.width, depth: prev.depth, pullOut: prev.corner?.pullOut }, { ...DEFAULT_ROOM, ...(j.room ?? {}) }, d.library)
         }),
       )
     },
@@ -257,7 +253,7 @@ export const useStore = create<State>((set, get) => {
           if (!src) return
           const copy = clone(src)
           copy.id = `cab-${nanoid(8)}`
-          copy.number = nextCabinetNumber(j, src.params.kind)
+          copy.number = nextCabinetNumber(j, src.params)
           j.cabinets.splice(j.cabinets.indexOf(src) + 1, 0, copy)
         }),
       )

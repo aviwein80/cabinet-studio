@@ -9,6 +9,7 @@ import { bridgesOn, buildAllPrograms, flipSheetsOn, nestJob, nestSettingsOf, sha
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeKey, Job } from './types'
+import { formatLength } from './units'
 import { multiAxisIssues, positionalIssues, rotaryIssues, validateJob, type Issue } from './validator'
 
 export interface LabelRecord {
@@ -114,6 +115,9 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
         for (const s of skipped) byDia.set(s.diameter, (byDia.get(s.diameter) ?? 0) + 1)
         notes.push(`Edge drill: ${[...byDia.entries()].map(([d, n]) => `${n}x D${d}`).join(', ')}`)
       }
+      // Kitchen-2: a scribe allowance is cut on and trimmed to the wall on site
+      const sc = inst.part.scribe
+      if (sc) notes.push(`Scribe ${formatLength(sc.amount, settings.units)}${settings.units === 'mm' ? ' mm' : ''} on ${sc.edge}: trim to the wall`)
       const spot = sheetSpots.find((s) => s.uid === pl.uid)!
       if (!spot.fits) notes.push('Label does not fit: apply to back face')
       labels.push({

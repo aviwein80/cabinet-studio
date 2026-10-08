@@ -13,7 +13,8 @@ import { aggregateOf, effectiveGauge, effectiveHolder, machineModelOf, PLACEHOLD
 import { fixtureTypesOf, PLACEHOLDER_FIXTURE_TYPES } from '@/cam/fixtures/fixture'
 import { bodiesInvented, bodiesOf } from '@/cam/machine/model'
 import type { Fixture, FixtureShape } from '@/cam/types'
-import type { MachineProfile, Tool } from './types'
+import { KITCHEN_DEFAULTS } from './defaults'
+import type { CarcassParams, MachineProfile, Tool } from './types'
 
 /** Machine-model facts tracked one by one. */
 export const MODEL_FACTS = ['table', 'travel', 'toolChange', 'safeZ', 'spoilboard', 'saw', 'aggregate'] as const
@@ -141,6 +142,16 @@ export type ConfigTarget =
   | { kind: 'nest'; key: NestValueKey }
   | { kind: 'fixtureType'; typeId: string }
   | { kind: 'fixture'; partId: string; jobId?: string; fixtureId: string }
+  | { kind: 'kitchen'; key: KitchenValueKey }
+
+/** Kitchen-2: corner, filler and end-panel values that are placeholders until the shop confirms them. */
+export type KitchenValueKey = keyof typeof KITCHEN_DEFAULTS
+export const KITCHEN_VALUE_LABEL: Record<KitchenValueKey, string> = {
+  pullOut: 'Blind corner pull-out from the side wall',
+  fillerReturn: 'Filler return depth',
+  scribe: 'Scribe allowance',
+  proud: 'End panel standing proud of the doors',
+}
 
 /** Nesting values (M2.8) that are placeholders until the shop confirms them. */
 export type NestValueKey = 'sharedSmall' | 'bridgeWidth' | 'bridgeMaxLength' | 'bridgeMaxArea' | 'flipAxis' | 'flipReference'
@@ -150,7 +161,7 @@ export interface Unconfirmed {
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures' | 'Kitchen defaults'
   target: ConfigTarget
 }
 
@@ -178,7 +189,33 @@ export const keyOf = (t: ConfigTarget): string => {
       return `fixtureType:${t.typeId}`
     case 'fixture':
       return `fixture:${t.partId}:${t.fixtureId}`
+    case 'kitchen':
+      return `kitchen:${t.key}`
   }
+}
+
+/**
+ * Kitchen-2: a cabinet's corner, filler or end-panel values still at the built-in placeholder
+ * (`KITCHEN_DEFAULTS`) while the shop has not confirmed it. A value changed to anything else is the
+ * owner's own. Shown as Configure badges on the cabinet; never part of the export check.
+ */
+export function kitchenUnconfirmed(p: CarcassParams, m: Pick<MachineProfile, 'confirmed'>, fmtLen: (mm: number) => string = (mm) => `${fmt(mm)} mm`): Unconfirmed[] {
+  const out: Unconfirmed[] = []
+  const check = (key: KitchenValueKey, value: number | undefined) => {
+    if (value === undefined || Math.abs(value - KITCHEN_DEFAULTS[key]) > 0.001) return
+    const target: ConfigTarget = { kind: 'kitchen', key }
+    if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: KITCHEN_VALUE_LABEL[key], value: fmtLen(value), group: 'Kitchen defaults', target })
+  }
+  if (p.corner?.type === 'blind' && !p.panel) check('pullOut', p.corner.pullOut)
+  if (p.panel?.type === 'filler') {
+    if (p.panel.returnDepth > 0) check('fillerReturn', p.panel.returnDepth)
+    if (p.panel.scribeSide !== 'none') check('scribe', p.panel.scribe)
+  }
+  if (p.panel?.type === 'end-panel') {
+    if (p.panel.scribe > 0) check('scribe', p.panel.scribe)
+    if (p.panel.front === 'proud') check('proud', p.panel.proud)
+  }
+  return out
 }
 
 export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) => !!m.confirmed?.includes(key)

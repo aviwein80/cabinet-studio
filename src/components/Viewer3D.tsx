@@ -52,6 +52,7 @@ function explodeOffset(p: Part, amount: number, width: number): Vec3 {
       return [0, d, 0]
     case 'door':
     case 'drawer':
+    case 'blind-panel':
       return [0, -d * 1.4, 0]
     case 'shelf':
       return [0, -d * 0.5, 0]
@@ -62,7 +63,7 @@ function explodeOffset(p: Part, amount: number, width: number): Vec3 {
 
 /** Door, or a drawer front sitting in front of the cabinet face. Box parts stay solid. */
 function isFront(p: Part) {
-  return p.role === 'door' || (p.role === 'drawer' && /front/i.test(p.name))
+  return p.role === 'door' || p.role === 'blind-panel' || (p.role === 'drawer' && /front/i.test(p.name))
 }
 
 function holeRotation(n: Vec3): [number, number, number] {

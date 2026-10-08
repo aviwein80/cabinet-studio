@@ -1,36 +1,9 @@
-import {
-  EPS,
-  X,
-  Y,
-  Z,
-  frameFromBox,
-  neg,
-  r3,
-  rectPolygon,
-  toLocal,
-  vecEq,
-  type Box3,
-} from '../geometry'
+import { EPS, X, Y, Z, neg, r3, rectPolygon } from '../geometry'
 import { PLATE_ID, hingeCode, plateBoring, slideBoring, SLIDE_IDS } from '../hardware/resolve'
 import { BLUM, hingeHeights, selectTandem } from '../hardware/specs'
-import type {
-  CabinetInstance,
-  CarcassParams,
-  DrillOp,
-  EdgeKey,
-  GrooveOp,
-  HDrillDir,
-  HDrillOp,
-  HardwareLine,
-  HardwarePin,
-  Library,
-  Operation,
-  OpPurpose,
-  Part,
-  PartRole,
-  Vec2,
-  Vec3,
-} from '../types'
+import type { CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, Vec2 } from '../types'
+import { box, materialThickness, PartBuilder } from './builder'
+import { generatePanel } from './panels'
 
 export interface GeneratedCabinet {
   parts: Part[]
@@ -45,155 +18,12 @@ export const HW = {
   screw: 'SCREW-4x50',
 } as const
 
-class PartBuilder {
-  part: Part
-  private seq = 0
-  constructor(key: string, name: string, role: PartRole, materialId: string, box: Box3, u: Vec3, n: Vec3, grain: 'length' | 'none') {
-    const f = frameFromBox(box, u, n)
-    this.part = {
-      key,
-      name,
-      role,
-      materialId,
-      length: f.length,
-      width: f.width,
-      thickness: f.thickness,
-      grain,
-      edges: {},
-      ops: [],
-      frame: f.frame,
-    }
-  }
-
-  private nextId() {
-    this.seq += 1
-    return `${this.part.key}-${this.seq}`
-  }
-
-  private inside(x: number, y: number) {
-    return x >= -EPS && y >= -EPS && x <= this.part.length + EPS && y <= this.part.width + EPS
-  }
-
-  /** Vertical hole whose entry point `p` lies on the face-up face. */
-  drill(p: Vec3, diameter: number, depth: number, purpose: OpPurpose, through = false) {
-    const l = toLocal(this.part.frame, p)
-    if (!this.inside(l.x, l.y)) return
-    const dup = this.part.ops.some(
-      (o) => o.kind === 'drill' && Math.abs(o.x - l.x) < 0.01 && Math.abs(o.y - l.y) < 0.01 && o.diameter === diameter,
-    )
-    if (dup) return
-    const op: DrillOp = {
-      kind: 'drill',
-      id: this.nextId(),
-      x: l.x,
-      y: l.y,
-      diameter,
-      depth: through ? this.part.thickness : depth,
-      through,
-      purpose,
-    }
-    this.part.ops.push(op)
-  }
-
-  /** Horizontal hole into an edge. `p` is the entry point on the edge, `dir` the world drilling direction. */
-  hdrill(p: Vec3, dir: Vec3, diameter: number, depth: number, purpose: OpPurpose) {
-    const l = toLocal(this.part.frame, p)
-    const f = this.part.frame
-    let d: HDrillDir
-    if (vecEq(dir, f.u)) d = 'XP'
-    else if (vecEq(dir, neg(f.u))) d = 'XM'
-    else if (vecEq(dir, f.v)) d = 'YP'
-    else if (vecEq(dir, neg(f.v))) d = 'YM'
-    else throw new Error(`hdrill direction not in part plane for ${this.part.key}`)
-    const op: HDrillOp = { kind: 'hdrill', id: this.nextId(), x: l.x, y: l.y, z: l.depth, diameter, depth, dir: d, purpose }
-    this.part.ops.push(op)
-  }
-
-  /** Recess defined as a world-space box intersecting the face-up face. */
-  groove(box: Box3, purpose: OpPurpose) {
-    const corners: Vec3[] = []
-    for (const x of [box.min[0], box.max[0]])
-      for (const y of [box.min[1], box.max[1]]) for (const z of [box.min[2], box.max[2]]) corners.push([x, y, z])
-    const loc = corners.map((c) => toLocal(this.part.frame, c))
-    const L = this.part.length
-    const W = this.part.width
-    const x1 = Math.max(0, Math.min(...loc.map((c) => c.x)))
-    const x2 = Math.min(L, Math.max(...loc.map((c) => c.x)))
-    const y1 = Math.max(0, Math.min(...loc.map((c) => c.y)))
-    const y2 = Math.min(W, Math.max(...loc.map((c) => c.y)))
-    const depth = Math.max(...loc.map((c) => c.depth))
-    if (x2 - x1 < EPS || y2 - y1 < EPS || depth < EPS) return
-    const op: GrooveOp = {
-      kind: 'groove',
-      id: this.nextId(),
-      x1: r3(x1),
-      y1: r3(y1),
-      x2: r3(x2),
-      y2: r3(y2),
-      depth: r3(depth),
-      open: { x1: x1 < EPS, x2: x2 > L - EPS, y1: y1 < EPS, y2: y2 > W - EPS },
-      purpose,
-    }
-    this.part.ops.push(op)
-  }
-
-  /** Band the edge whose outward normal points along world direction `dir`. */
-  band(dir: Vec3, bandId: string | null) {
-    if (!bandId) return
-    const f = this.part.frame
-    let k: EdgeKey | null = null
-    if (vecEq(dir, neg(f.v))) k = 'L1'
-    else if (vecEq(dir, f.v)) k = 'L2'
-    else if (vecEq(dir, neg(f.u))) k = 'W1'
-    else if (vecEq(dir, f.u)) k = 'W2'
-    if (k) this.part.edges[k] = bandId
-  }
-
-  bandAll(bandId: string | null) {
-    if (!bandId) return
-    for (const k of ['L1', 'L2', 'W1', 'W2'] as EdgeKey[]) this.part.edges[k] = bandId
-  }
-
-  /** Remove a corner notch (world box) from the outline. Only corner notches are supported. */
-  notch(box: Box3) {
-    const loc = [box.min, box.max].map((c) => toLocal(this.part.frame, c))
-    const L = this.part.length
-    const W = this.part.width
-    const nx1 = Math.max(0, Math.min(loc[0].x, loc[1].x))
-    const nx2 = Math.min(L, Math.max(loc[0].x, loc[1].x))
-    const ny1 = Math.max(0, Math.min(loc[0].y, loc[1].y))
-    const ny2 = Math.min(W, Math.max(loc[0].y, loc[1].y))
-    if (nx2 - nx1 < EPS || ny2 - ny1 < EPS) return
-    const atX0 = nx1 < EPS
-    const atY0 = ny1 < EPS
-    const atXL = nx2 > L - EPS
-    const atYW = ny2 > W - EPS
-    let poly: Vec2[]
-    if (atX0 && atY0) poly = [{ x: nx2, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: 0, y: W }, { x: 0, y: ny2 }, { x: nx2, y: ny2 }]
-    else if (atX0 && atYW) poly = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: nx2, y: W }, { x: nx2, y: ny1 }, { x: 0, y: ny1 }]
-    else if (atXL && atY0) poly = [{ x: 0, y: 0 }, { x: nx1, y: 0 }, { x: nx1, y: ny2 }, { x: L, y: ny2 }, { x: L, y: W }, { x: 0, y: W }]
-    else if (atXL && atYW) poly = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: ny1 }, { x: nx1, y: ny1 }, { x: nx1, y: W }, { x: 0, y: W }]
-    else throw new Error(`notch on ${this.part.key} is not at a corner`)
-    this.part.outline = poly.map((p) => ({ x: r3(p.x), y: r3(p.y) }))
-  }
-}
-
-const box = (min: Vec3, max: Vec3): Box3 => ({ min, max })
 
 export function hingeCount(doorHeight: number) {
   if (doorHeight <= 900) return 2
   if (doorHeight <= 1600) return 3
   if (doorHeight <= 2000) return 4
   return 5
-}
-
-function materialThickness(lib: Library, id: string, warnings: string[], fallback: number) {
-  const m = lib.materials.find((mm) => mm.id === id)
-  if (!m) {
-    warnings.push(`Material "${id}" is not in the library; using ${fallback} mm.`)
-    return fallback
-  }
-  return m.thickness
 }
 
 /** Joint positions along a panel's depth for dowels / connectors. */
@@ -206,6 +36,8 @@ function jointPositions(y0: number, y1: number) {
 }
 
 export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware?: Record<string, HardwarePin> }): GeneratedCabinet {
+  // Kitchen-2: fillers and end panels are not carcasses
+  if (p.panel) return generatePanel(p, lib)
   const warnings: string[] = []
   const hardware = new Map<string, number>()
   const addHw = (code: string, n: number) => n > 0 && hardware.set(code, (hardware.get(code) ?? 0) + n)
@@ -327,7 +159,10 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
   }
 
   const rowYs = [p.shelfPins.setbackFront, backFrontY - p.shelfPins.setbackBack]
-  const drawerCountEarly = Math.max(0, Math.round(p.drawers?.count ?? 0))
+  // Kitchen-2: a blind corner has one door and no drawers
+  const blind = p.corner?.type === 'blind' ? p.corner : undefined
+  if (blind && (p.drawers?.count ?? 0) > 0) warnings.push('Drawers are left out of a blind corner cabinet.')
+  const drawerCountEarly = blind ? 0 : Math.max(0, Math.round(p.drawers?.count ?? 0))
   if (p.shelves.count > 0 && drawerCountEarly === 0 && p.shelfPins.enabled) {
     for (const { b, faceX } of sides) {
       for (const y of rowYs) for (const z of gridZ) b.drill([faceX, y, z], p.shelfPins.diameter, p.shelfPins.depth, 'shelf-pin')
@@ -374,7 +209,7 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
   if (p.joinery === 'screw') addHw(HW.screw, connectorCount)
 
   // ---- shelves ----------------------------------------------------------------------------
-  const drawerCount = Math.max(0, Math.round(p.drawers?.count ?? 0))
+  const drawerCount = drawerCountEarly
   if (drawerCount > 0 && p.shelves.count > 0) warnings.push('Shelves are left out while drawers are fitted.')
   const shelfCount = drawerCount > 0 ? 0 : p.shelves.count
   const shelfDepth = r3(backFrontY - p.shelves.frontSetback - 2)
@@ -478,13 +313,21 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
   }
 
   // ---- doors with Salice cups and 3 mm plates ---------------------------------------------
+  const blindSpan = blind ? blindSpans(p, blind, warnings) : null
+  if (blindSpan?.panel) {
+    // Kitchen-2: the finished panel over the blind part, as tall as the door; the return run butts against it
+    const bp = new PartBuilder('blind-panel', 'Blind panel', 'blind-panel', p.doorMaterialId, box([blindSpan.panel.x0, -Td, frontZ0], [blindSpan.panel.x1, 0, frontZ1]), Z, Y, 'length')
+    bp.bandAll(p.edgebands.door)
+    parts.push(bp)
+  }
   if (p.doors.count > 0) {
     const dz0 = drawerCount > 0 ? drawerTop + g : frontZ0
     const dz1 = frontZ1
     const doorH = dz1 - dz0
-    if (doorH > 80) {
-      const spans: { x0: number; x1: number; hinge: 'left' | 'right' }[] =
-        p.doors.count === 1
+    if (doorH > 80 && !(blindSpan && !blindSpan.door)) {
+      const spans: { x0: number; x1: number; hinge: 'left' | 'right' }[] = blindSpan?.door
+        ? [blindSpan.door]
+        : p.doors.count === 1
           ? [{ x0: g / 2, x1: W - g / 2, hinge: p.doors.hingeSide }]
           : [
               { x0: g / 2, x1: W / 2 - g / 2, hinge: 'left' },
@@ -516,6 +359,27 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
     hardware: [...hardware.entries()].map(([hardwareCode, qty]) => ({ hardwareCode, qty })),
     warnings,
   }
+}
+
+/**
+ * Kitchen-2: the face of a blind corner, in cabinet X. The door covers the open part and is hinged
+ * on the open side (its plate goes in that side panel); the blind panel covers the blind part.
+ */
+export function blindSpans(p: CarcassParams, c: NonNullable<CarcassParams['corner']>, warnings: string[] = []) {
+  const W = p.width
+  const g = p.doors.gap
+  const bw = c.blindWidth
+  const doorW = W - bw - g
+  if (bw <= 0 || bw >= W) {
+    warnings.push(`Blind width ${r3(bw)} mm must be more than 0 and less than the cabinet width ${r3(W)} mm.`)
+    return { door: null, panel: null, doorWidth: 0 }
+  }
+  if (p.doors.count === 2) warnings.push('A blind corner has one door; the pair is fitted as one door.')
+  if (p.doors.count > 0 && doorW < 150) warnings.push(`The door is only ${r3(doorW)} mm wide; widen the cabinet or narrow the blind part.`)
+  const left = c.blindSide === 'left'
+  const door = p.doors.count > 0 && doorW > 20 ? (left ? { x0: bw + g / 2, x1: W - g / 2, hinge: 'right' as const } : { x0: g / 2, x1: W - bw - g / 2, hinge: 'left' as const }) : null
+  const panel = c.blindPanel ? (left ? { x0: 0, x1: bw - g / 2 } : { x0: W - bw + g / 2, x1: W }) : null
+  return { door, panel, doorWidth: r3(doorW) }
 }
 
 function toLocalBox(b: PartBuilder) {

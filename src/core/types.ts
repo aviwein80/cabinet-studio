@@ -171,7 +171,8 @@ export interface PartFrame {
   n: Vec3
 }
 
-export type PartRole = 'side' | 'bottom' | 'top' | 'rail' | 'back' | 'shelf' | 'door' | 'drawer' | 'toekick' | 'custom'
+/** Kitchen-2: `blind-panel` (the finished panel over a blind corner's blind part), `filler`, `end-panel`. */
+export type PartRole = 'side' | 'bottom' | 'top' | 'rail' | 'back' | 'shelf' | 'door' | 'drawer' | 'toekick' | 'custom' | 'blind-panel' | 'filler' | 'end-panel'
 
 export interface Part {
   key: string
@@ -188,6 +189,11 @@ export interface Part {
   /** Closed polygon in part coordinates (any winding). Undefined = full rectangle. */
   outline?: Vec2[]
   frame: PartFrame
+  /**
+   * Kitchen-2: extra width left on one edge to be scribed (trimmed) to the wall on site. The part's
+   * size already includes it; the label says which edge and how much.
+   */
+  scribe?: { edge: EdgeKey; amount: number }
 }
 
 export interface HardwareLine {
@@ -259,6 +265,66 @@ export interface CarcassParams {
      */
     boxMaterialId?: string
   }
+  /** Kitchen-2: a blind corner cabinet (base or wall). Absent = an ordinary cabinet. */
+  corner?: CornerParams
+  /**
+   * Kitchen-2: a filler strip or a finished end panel instead of a carcass. It is placed in the room
+   * like a cabinet (width along the run, depth into the room); the carcass settings are not used,
+   * except the materials, the toe kick and the door edgeband.
+   */
+  panel?: PanelParams
+}
+
+/**
+ * Kitchen-2: a blind corner. The blind side runs into the corner, behind the return run on the side
+ * wall; the return butts against the face of the blind part. One door covers the rest of the face,
+ * hinged on the open side (Salice cups and 3 mm plates as on every cabinet).
+ */
+export interface CornerParams {
+  type: 'blind'
+  blindSide: 'left' | 'right'
+  /** The blind part of the face, from the blind-side edge. Door width = width - blind width - door gap. */
+  blindWidth: number
+  /** Pull-out clearance: how far the blind side stands off the side wall when the room is arranged. */
+  pullOut: number
+  /** A finished panel in the door material over the blind part of the face. */
+  blindPanel: boolean
+}
+
+/** Kitchen-2: a filler strip or a finished end panel. */
+export type PanelParams = FillerParams | EndPanelParams
+
+/**
+ * A vertical filler strip in the door plane (door material), width along the run. An optional return
+ * (carcass material) behind it fixes it to the cabinet beside it. A scribe allowance adds width on the
+ * wall side, trimmed to the wall on site.
+ */
+export interface FillerParams {
+  type: 'filler'
+  /** Depth of the return behind the strip; 0 = a flat strip. */
+  returnDepth: number
+  returnSide: 'left' | 'right' | 'both'
+  /** Extra width on `scribeSide`, cut on and trimmed to the wall on site. */
+  scribe: number
+  scribeSide: 'none' | 'left' | 'right'
+}
+
+/**
+ * A finished end panel (door material) at the end of a run: width = its thickness, depth = the
+ * cabinets' depth. Its front is flush with the door faces or stands proud of them; a scribe allowance
+ * adds depth at the back, trimmed to the wall on site.
+ */
+export interface EndPanelParams {
+  type: 'end-panel'
+  /** Which end of the run it finishes; its show face looks away from the cabinets. */
+  side: 'left' | 'right'
+  front: 'flush' | 'proud'
+  /** How far the front stands past the door faces when `front` is 'proud'. */
+  proud: number
+  /** Notch the bottom front for the toe kick (bases and talls). */
+  toeKickNotch: boolean
+  /** Extra depth at the back edge, trimmed to the wall on site. */
+  scribe: number
 }
 
 /** Where a cabinet sits in the job's room. (x, y) is the minimum corner of its footprint, in mm. */
@@ -928,6 +994,11 @@ export interface Library {
   partLibrary?: CamPart[]
   /** Sheet remnants in stock. */
   offcuts?: Offcut[]
+  /**
+   * Kitchen-2: built-in templates added to this library once (by id), so presets added in a later
+   * version reach an existing shop file but a preset the shop deleted does not come back.
+   */
+  seeded?: string[]
   /** Single-stroke engraving fonts made in the font editor (NEW-24). */
   fonts?: import('../cam/types').StrokeFont[]
 }

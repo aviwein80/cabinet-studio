@@ -140,6 +140,106 @@ export const BUILTIN_TEMPLATES: CabinetTemplate[] = [
   },
 ]
 
+/** Exact inches to millimetres, kept to 0.001 mm (24 in is 609.6, not 609.5999999999999). */
+const inch = (n: number) => Math.round(n * 25.4 * 1000) / 1000
+
+/**
+ * Kitchen-2 PLACEHOLDER defaults for corners, fillers and end panels (mm): the shop's own values are
+ * not known yet, so each shows a Configure badge on the cabinet until confirmed (`kitchenUnconfirmed`).
+ */
+export const KITCHEN_DEFAULTS = {
+  /** How far a blind corner stands off the side wall. */
+  pullOut: inch(3),
+  /** Depth of a filler's return. */
+  fillerReturn: inch(3),
+  /** Scribe allowance on fillers and end panels. */
+  scribe: inch(0.5),
+  /** How far a proud end panel stands past the door faces. */
+  proud: inch(0.25),
+}
+
+/** US base cabinet: 34-1/2 in high, 24 in deep, on a 4 in toe kick set back 3 in. */
+const US_BASE: CarcassParams = {
+  ...clone(BASE_PARAMS),
+  width: inch(36),
+  height: inch(34.5),
+  depth: inch(24),
+  toeKick: { enabled: true, height: inch(4), setback: inch(3), board: false },
+}
+/** US wall cabinet: 30 in high, 12 in deep. */
+const US_WALL: CarcassParams = {
+  ...clone(US_BASE),
+  kind: 'wall',
+  width: inch(24),
+  height: inch(30),
+  depth: inch(12),
+  top: 'full',
+  toeKick: { ...US_BASE.toeKick, enabled: false },
+  shelves: { ...BASE_PARAMS.shelves, count: 2 },
+}
+
+/** Kitchen-2: US-size presets, in inches. */
+export const KITCHEN_PRESETS: CabinetTemplate[] = [
+  {
+    id: 'tpl-us-blind-base-36',
+    name: 'Blind corner base 36"',
+    description: 'Blind left: 24" blind part with a blind panel, 11-7/8" door hinged on the open side. Pulled 3" off the side wall in the room. Choose the blind side in the editor.',
+    generator: 'carcass',
+    params: { ...clone(US_BASE), doors: { ...BASE_PARAMS.doors, count: 1, hingeSide: 'right' }, corner: { type: 'blind', blindSide: 'left', blindWidth: inch(24), pullOut: KITCHEN_DEFAULTS.pullOut, blindPanel: true } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-blind-wall-24',
+    name: 'Blind corner wall 24"',
+    description: 'Blind left: 12" blind part with a blind panel, 11-7/8" door hinged on the open side, 30" high, 12" deep. Pulled 3" off the side wall in the room.',
+    generator: 'carcass',
+    params: { ...clone(US_WALL), doors: { ...BASE_PARAMS.doors, count: 1, hingeSide: 'right' }, corner: { type: 'blind', blindSide: 'left', blindWidth: inch(12), pullOut: KITCHEN_DEFAULTS.pullOut, blindPanel: true } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-filler-3',
+    name: 'Filler 3", base',
+    description: 'Filler strip in the door board, 34-1/2" high from the toe kick up, with a 3" return behind it. Scribe allowance 1/2" when set against a wall.',
+    generator: 'carcass',
+    params: { ...clone(US_BASE), width: inch(3), doors: { ...BASE_PARAMS.doors, count: 0 }, shelves: { ...BASE_PARAMS.shelves, count: 0 }, panel: { type: 'filler', returnDepth: KITCHEN_DEFAULTS.fillerReturn, returnSide: 'left', scribe: KITCHEN_DEFAULTS.scribe, scribeSide: 'none' } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-filler-3-wall',
+    name: 'Filler 3", wall',
+    description: 'Filler strip for wall cabinets, 30" high, 12" deep, with a 3" return. Scribe allowance 1/2" when set against a wall.',
+    generator: 'carcass',
+    params: { ...clone(US_WALL), width: inch(3), doors: { ...BASE_PARAMS.doors, count: 0 }, shelves: { ...BASE_PARAMS.shelves, count: 0 }, panel: { type: 'filler', returnDepth: KITCHEN_DEFAULTS.fillerReturn, returnSide: 'left', scribe: KITCHEN_DEFAULTS.scribe, scribeSide: 'none' } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-end-base',
+    name: 'End panel, base',
+    description: 'Finished end panel for a base run: 34-1/2" high, 24" deep, flush with the door faces, toe-kick notch, 1/2" scribe at the back.',
+    generator: 'carcass',
+    params: { ...clone(US_BASE), width: 18, doors: { ...BASE_PARAMS.doors, count: 0 }, shelves: { ...BASE_PARAMS.shelves, count: 0 }, panel: { type: 'end-panel', side: 'right', front: 'flush', proud: KITCHEN_DEFAULTS.proud, toeKickNotch: true, scribe: KITCHEN_DEFAULTS.scribe } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-end-wall',
+    name: 'End panel, wall',
+    description: 'Finished end panel for wall cabinets: 30" high, 12" deep, flush with the door faces, 1/2" scribe at the back.',
+    generator: 'carcass',
+    params: { ...clone(US_WALL), width: 18, doors: { ...BASE_PARAMS.doors, count: 0 }, shelves: { ...BASE_PARAMS.shelves, count: 0 }, panel: { type: 'end-panel', side: 'right', front: 'flush', proud: KITCHEN_DEFAULTS.proud, toeKickNotch: false, scribe: KITCHEN_DEFAULTS.scribe } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-end-tall',
+    name: 'End panel, tall',
+    description: 'Finished end panel for a tall cabinet: 84" high, 24" deep, flush with the door faces, toe-kick notch, 1/2" scribe at the back.',
+    generator: 'carcass',
+    params: { ...clone(US_BASE), kind: 'tall', width: 18, height: inch(84), top: 'full', doors: { ...BASE_PARAMS.doors, count: 0 }, shelves: { ...BASE_PARAMS.shelves, count: 0 }, panel: { type: 'end-panel', side: 'right', front: 'flush', proud: KITCHEN_DEFAULTS.proud, toeKickNotch: true, scribe: KITCHEN_DEFAULTS.scribe } },
+    builtIn: true,
+  },
+]
+
+BUILTIN_TEMPLATES.push(...KITCHEN_PRESETS)
+
 /**
  * PLACEHOLDER tool table. These numbers are invented. They must be replaced with the shop's real
  * HOMAG CENTATEQ N-200 tool table before any program is run, even in simulation.
@@ -234,6 +334,7 @@ export function defaultLibrary(): Library {
     edgebands: clone(DEFAULT_EDGEBANDS),
     hardware: clone(DEFAULT_HARDWARE),
     templates: clone(BUILTIN_TEMPLATES),
+    seeded: KITCHEN_PRESETS.map((t) => t.id),
   }
 }
 

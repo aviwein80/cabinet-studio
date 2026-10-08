@@ -1,14 +1,19 @@
 import { type PointerEvent, useEffect, useMemo, useState } from 'react'
 import { RotateCw } from 'lucide-react'
+import { nanoid } from 'nanoid'
 import { useStore } from '@/app/store'
 import { Viewer3D } from '@/components/Viewer3D'
+import { useConfigureTarget } from '@/components/configureFocus'
+import { KitchenFields } from '@/components/KitchenFields'
+import { kindLabel } from '@/components/kindLabel'
 import { NumField, SelectField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { buildCabinet } from '@/core/construction/carcass'
 import { WALLS, elevationOf, placementFromElevation, type WallId } from '@/core/elevation'
-import { arrangeCabinets, footprint, nextRotation, placementOf, pushNeighbours, roomProblems, snapPlacement, toRoom } from '@/core/room'
+import { KITCHEN_PRESETS } from '@/core/defaults'
+import { arrangeCabinets, cornerClearance, fillGap, footprint, nextRotation, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type RunGap } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Part, Room } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -64,7 +69,9 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
     }
   }, [])
 
-  const arranged = useMemo(() => arrangeCabinets(job.cabinets, room), [job.cabinets, room])
+  const lib = data.library
+  useConfigureTarget(['kitchen'])
+  const arranged = useMemo(() => arrangeCabinets(job.cabinets, room, lib), [job.cabinets, room, lib])
   const place = (c: CabinetInstance) => placementOf(c, arranged)
 
   const setRoom = (fn: (r: Room) => void) =>
@@ -81,6 +88,15 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
     setJob((j) => {
       const c = j.cabinets.find((x) => x.id === id)
       if (c) fn(c.params)
+    })
+  // Polish-1, Kitchen-2: a change of size (or a corner's pull-out) moves the run beside it, round the corner too
+  const resize = (id: string, fn: (p: CarcassParams) => void) =>
+    setJob((j) => {
+      const c = j.cabinets.find((x) => x.id === id)
+      if (!c) return
+      const old = { width: c.params.width, depth: c.params.depth, pullOut: c.params.corner?.pullOut }
+      fn(c.params)
+      pushNeighbours(j.cabinets, c.id, old, j.room ?? room, lib)
     })
 
   const parts = useMemo(() => {
@@ -101,13 +117,27 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
   const sel = job.cabinets.find((c) => c.id === selected) ?? null
   const elev = elevationOf(job.cabinets, room, wall, place)
   // Polish-1: overlaps and cabinets past a wall are always shown, with a way to fix them
-  const problems = roomProblems(job.cabinets, room, place)
+  // (Kitchen-2: and blind corner doors the return stands in front of, and runs short of their wall)
+  const problems = roomProblems(job.cabinets, room, place, lib)
+  const gaps = runGaps(job.cabinets, room, place, lib)
   const numberOf = (id: string) => job.cabinets.find((c) => c.id === id)?.number ?? '?'
   const rearrange = () =>
     setJob((j) => {
-      const laid = arrangeCabinets(j.cabinets, j.room ?? room)
+      const laid = arrangeCabinets(j.cabinets, j.room ?? room, lib)
       for (const c of j.cabinets) if (laid[c.id]) c.placement = laid[c.id]
     })
+  const L = (mm: number) => formatLength(mm, units)
+  const fillerFor = (level: RunGap['level']) =>
+    lib.templates.find((t) => t.params.panel?.type === 'filler' && (level === 'wall') === (t.params.kind === 'wall'))?.params ??
+    lib.templates.find((t) => t.params.panel?.type === 'filler')?.params ??
+    KITCHEN_PRESETS.find((t) => t.params.panel?.type === 'filler' && (level === 'wall') === (t.params.kind === 'wall'))!.params
+  const fill = (g: RunGap, mode: 'one' | 'split') =>
+    setJob((j) => {
+      const r = j.room ?? room
+      const laid = arrangeCabinets(j.cabinets, r, lib)
+      fillGap(j, g, mode, fillerFor(g.level), r, (c) => placementOf(c, laid), () => `cab-${nanoid(8)}`)
+    })
+  const wallName = { back: 'back wall', left: 'left wall', right: 'right wall' }
 
   const targets = (id: string) =>
     job.cabinets.filter((o) => o.id !== id).map((o) => ({ ...footprint(o.params.width, o.params.depth, place(o)), z: place(o).z, h: o.params.height }))
@@ -159,7 +189,8 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
       hit.svg.setPointerCapture(e.pointerId)
     } else if (phase === 'move' && drag?.mode === 'elevation') {
       const c = job.cabinets.find((x) => x.id === drag.id)
-      if (!c) return
+      // a corner cabinet seen end on from a side wall is moved from the back wall or the plan
+      if (!c || elev.find((x) => x.id === drag.id)?.endView) return
       const raw = placementFromElevation(place(c), c.params.width, c.params.depth, wall, along - drag.dx, z - drag.dy, room)
       setPlacement(c.id, snapTo(c, raw, snapOn && !e.altKey && !alt))
     } else if (phase === 'up') setDrag(null)
@@ -207,16 +238,34 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
             Arrange along the back wall
           </Button>
         </div>
-        {(problems.overlaps.length > 0 || problems.outside.length > 0) && (
+        {(problems.overlaps.length > 0 || problems.outside.length > 0 || problems.blocked.length > 0) && (
           <div role="alert" className="flex flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
             <span>
               {problems.overlaps.length > 0 && `${problems.overlaps.map(([a, b]) => `${numberOf(a)} and ${numberOf(b)}`).join(', ')} overlap. `}
               {problems.outside.length > 0 && `${problems.outside.map(numberOf).join(', ')} ${problems.outside.length === 1 ? 'runs' : 'run'} past a wall. `}
+              {problems.blocked.map((b) => `${numberOf(b.by)} stands ${L(-b.clearance)} in front of ${numberOf(b.corner)}'s door: pull the corner cabinet further out or widen its blind part. `).join('')}
               Move them, or re-arrange the room.
             </span>
             <Button size="xs" variant="outline" onClick={rearrange}>
               Re-arrange along the back wall
             </Button>
+          </div>
+        )}
+        {gaps.length > 0 && (
+          <div role="status" className="flex flex-col gap-1 border-b border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-900">
+            {gaps.map((g) => (
+              <div key={`${g.wall}-${g.level}`} className="flex flex-wrap items-center gap-2">
+                <span>
+                  The {g.level === 'wall' ? 'wall-cabinet' : 'base'} run on the {wallName[g.wall]} ({g.ids.map(numberOf).join(', ')}) is {L(g.total)} short of {g.endIsWall && g.startIsWall ? 'the wall' : 'its corner and wall'}.
+                </span>
+                <Button size="xs" variant="outline" onClick={() => fill(g, 'one')}>
+                  Fill gap: one filler {L(g.total)}
+                </Button>
+                <Button size="xs" variant="outline" onClick={() => fill(g, 'split')}>
+                  Split: {L(g.total / 2)} at each end
+                </Button>
+              </div>
+            ))}
           </div>
         )}
         <div className="relative min-h-0 flex-1 bg-[#f3f1ec]">
@@ -254,26 +303,27 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
+              {kindLabel(sel.params) && <span className="mr-1 font-medium text-stone-700">{kindLabel(sel.params)} ·</span>}
               {formatLength(sel.params.width, units)} × {formatLength(sel.params.height, units)} × {formatLength(sel.params.depth, units)}
             </p>
-            <NumField
-              label="Width"
-              value={sel.params.width}
-              min={100}
-              max={2400}
-              onChange={(v) =>
-                setJob((j) => {
-                  const c = j.cabinets.find((x) => x.id === sel.id)
-                  if (!c) return
-                  const old = c.params.width
-                  c.params.width = v
-                  // Polish-1: neighbours along the run move with it, so nothing overlaps
-                  pushNeighbours(j.cabinets, c.id, old, j.room ?? room)
-                })
-              }
-            />
+            {sel.params.panel?.type !== 'end-panel' && (
+              // Polish-1: neighbours along the run move with it, so nothing overlaps
+              <NumField label="Width" value={sel.params.width} min={sel.params.panel ? 3 : 100} max={2400} onChange={(v) => resize(sel.id, (p) => (p.width = v))} />
+            )}
             <NumField label="Height" value={sel.params.height} min={200} max={2800} onChange={(v) => setParams(sel.id, (p) => (p.height = v))} />
-            <NumField label="Depth" value={sel.params.depth} min={100} max={900} onChange={(v) => setParams(sel.id, (p) => (p.depth = v))} />
+            <NumField label="Depth" value={sel.params.depth} min={100} max={900} onChange={(v) => resize(sel.id, (p) => (p.depth = v))} />
+            {(sel.params.panel || sel.params.corner) && <KitchenFields p={sel.params} set={(fn) => resize(sel.id, fn)} lib={lib} />}
+            {sel.params.corner &&
+              (() => {
+                const cl = cornerClearance(job.cabinets, sel.id, room, place, lib)
+                return cl ? (
+                  <p className={cn('text-xs', cl.clearance < 0 ? 'text-red-700' : 'text-muted-foreground')}>
+                    {cl.clearance < 0 ? `${numberOf(cl.id)} stands ${L(-cl.clearance)} in front of this door.` : `${L(cl.clearance)} between this door and ${numberOf(cl.id)}'s front.`}
+                  </p>
+                ) : null
+              })()}
+            {!sel.params.panel && !sel.params.corner && (
+              <>
             <SelectField
               label="Doors"
               value={String(sel.params.doors.count) as '0' | '1' | '2'}
@@ -285,6 +335,8 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
               onChange={(v) => setParams(sel.id, (p) => (p.doors.count = Number(v) as 0 | 1 | 2))}
             />
             <NumField label="Drawers" suffix="" value={sel.params.drawers?.count ?? 0} min={0} max={6} onChange={(v) => setParams(sel.id, (p) => (p.drawers.count = Math.round(v)))} />
+              </>
+            )}
             <NumField
               label="Height off the floor"
               value={place(sel).z}

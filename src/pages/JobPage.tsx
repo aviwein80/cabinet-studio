@@ -23,6 +23,7 @@ import { backend, type OutFile } from '@/app/backend'
 import { buildFiles, bomCsv, useJobOutput, type ExportKind } from '@/app/jobOutput'
 import { useStore, type JobTab } from '@/app/store'
 import { CabinetThumb } from '@/components/CabinetThumb'
+import { kindLabel } from '@/components/kindLabel'
 import { EmptyState, PageHeader } from '@/components/PageHeader'
 import { SheetView } from '@/components/SheetView'
 import { NumField, TextField } from '@/components/fields'
@@ -40,7 +41,7 @@ import { jobRemnants, updateOffcutStock } from '@/core/offcuts'
 import { formatDims, formatLength } from '@/core/units'
 import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
-import type { AppData, Job } from '@/core/types'
+import type { AppData, CabinetTemplate, Job } from '@/core/types'
 import { RoomTab } from './RoomTab'
 import { PartList } from '@/components/PartList'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
@@ -201,7 +202,9 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                     {formatLength(c.params.width, data.settings.units)} × {formatLength(c.params.height, data.settings.units)} × {formatLength(c.params.depth, data.settings.units)}
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    {matName(c.params.carcassMaterialId)} · {c.params.doors.count} door{c.params.doors.count === 1 ? '' : 's'} · {c.params.shelves.count} shelf
+                    {c.params.panel
+                      ? `${kindLabel(c.params)} · ${matName(c.params.doorMaterialId)}`
+                      : `${c.params.corner ? `${kindLabel(c.params)} · ` : ''}${matName(c.params.carcassMaterialId)} · ${c.params.doors.count} door${c.params.doors.count === 1 ? '' : 's'} · ${c.params.shelves.count} shelf`}
                   </div>
                   {Object.values(c.overrides).some((o) => o.exclude || o.edges || o.extraOps?.length || o.materialId) && (
                     <Badge variant="outline" className="mt-1.5 text-[10px]">
@@ -248,7 +251,11 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
             <DialogDescription>The template is copied into the job, so later edits here do not change the library.</DialogDescription>
           </DialogHeader>
           <div className="grid max-h-[60vh] gap-2 overflow-auto sm:grid-cols-2">
-            {data.library.templates.map((t) => (
+            {templateGroups(data.library.templates).map(([group, list]) => [
+              <div key={group} className="pt-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase sm:col-span-2">
+                {group}
+              </div>,
+              ...list.map((t) => (
               <button
                 key={t.id}
                 className="flex gap-3 rounded-lg border p-3 text-left transition hover:border-stone-500 hover:bg-muted/50"
@@ -267,12 +274,23 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                   <div className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{t.description}</div>
                 </div>
               </button>
-            ))}
+              )),
+            ])}
           </div>
         </DialogContent>
       </Dialog>
     </div>
   )
+}
+
+/** Kitchen-2: templates in the Add dialog, grouped: cabinets, corner cabinets, fillers and end panels. */
+function templateGroups(templates: CabinetTemplate[]): [string, CabinetTemplate[]][] {
+  const groups: [string, CabinetTemplate[]][] = [
+    ['Cabinets', templates.filter((t) => !t.params.panel && !t.params.corner)],
+    ['Corner cabinets', templates.filter((t) => !t.params.panel && t.params.corner)],
+    ['Fillers and end panels', templates.filter((t) => t.params.panel)],
+  ]
+  return groups.filter(([, list]) => list.length > 0)
 }
 
 async function saveOne(file: OutFile, ext: string, label: string) {

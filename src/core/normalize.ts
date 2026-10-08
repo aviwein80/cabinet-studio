@@ -1,5 +1,5 @@
 import { migratePart } from '@/cam/doc'
-import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE } from './defaults'
+import { defaultAppData, fillHardwareSpecs, KITCHEN_PRESETS, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE } from './defaults'
 import { DEFAULT_FEATURES } from './features'
 import { DEFAULT_ROOM } from './room'
 import type { AppData, CarcassParams, MachineProfile } from './types'
@@ -38,6 +38,15 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
   const library = { ...d.library, ...(raw.library ?? {}) }
   library.hardware = fillHardwareSpecs(library.hardware ?? [])
   library.templates = (library.templates ?? []).map((t) => ({ ...t, params: withParams(t.params) }))
+  // Kitchen-2: the US presets reach a shop file saved before them, once (a preset deleted later stays deleted)
+  // (read from the file itself: the default library's list must not count as the file's)
+  const seeded = new Set(raw.library?.seeded ?? [])
+  for (const t of KITCHEN_PRESETS) {
+    if (seeded.has(t.id)) continue
+    if (!library.templates.some((x) => x.id === t.id)) library.templates.push(JSON.parse(JSON.stringify(t)))
+    seeded.add(t.id)
+  }
+  library.seeded = [...seeded]
   if (library.partLibrary) library.partLibrary = library.partLibrary.map(migratePart)
   const jobs = (raw.jobs ?? []).map((j) => ({
     ...j,

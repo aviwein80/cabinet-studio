@@ -269,7 +269,8 @@ export function importTemplates(rows: Row[], existing: CabinetTemplate[], lib: L
     if (!name) return errors.push(`Row ${i + 2}: missing name`)
     const kind = (str(get(r, 'kind')).toLowerCase() || 'base') as CabinetKind
     if (!['base', 'wall', 'tall'].includes(kind)) return errors.push(`Row ${i + 2} (${name}): kind must be base, wall or tall`)
-    const seed = BUILTIN_TEMPLATES.find((t) => t.params.kind === kind)?.params ?? BASE_PARAMS
+    // an ordinary carcass of that kind (Kitchen-2: never a corner, filler or end-panel preset)
+    const seed = BUILTIN_TEMPLATES.find((t) => t.params.kind === kind && !t.params.panel && !t.params.corner)?.params ?? BASE_PARAMS
     const params = JSON.parse(JSON.stringify(seed)) as typeof BASE_PARAMS
     params.kind = kind
     if (kind === 'tall') {

@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { useStore } from '@/app/store'
 import { EmptyState, PageHeader } from '@/components/PageHeader'
 import { Viewer3D } from '@/components/Viewer3D'
+import { useConfigureTarget } from '@/components/configureFocus'
+import { KitchenFields } from '@/components/KitchenFields'
 import { NONE, NumField, Section, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/construction/carcass'
+import { KITCHEN_DEFAULTS } from '@/core/defaults'
 import { TemplateJobsButton } from '@/pages/LibraryEditDialog'
 import { formatLength, sizedName } from '@/core/units'
 import type { CabinetInstance, CarcassParams, DrillOp, EdgeKey, Library, Part, PartOverride, UnitSystem } from '@/core/types'
@@ -32,6 +35,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   const [showOps, setShowOps] = useState(true)
   const [saveOpen, setSaveOpen] = useState(false)
   const [holeFor, setHoleFor] = useState<Part | null>(null)
+  useConfigureTarget(['kitchen'])
 
   const job = target.kind === 'cabinet' ? data?.jobs.find((j) => j.id === target.jobId) : undefined
   const cab: CabinetInstance | undefined = useMemo(() => {
@@ -95,6 +99,9 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   const bandOptions = [{ value: NONE, label: 'None' }, ...lib.edgebands.map((e) => ({ value: e.id, label: `${e.code} · ${e.name}` }))]
   const finalParts = built.final?.parts ?? []
   const warnings = built.final?.warnings ?? []
+  // Kitchen-2: fillers and end panels use few of the carcass settings; a blind corner has one door, no drawers
+  const panel = p.panel?.type
+  const corner = p.corner?.type === 'blind' && !panel
 
   return (
     <div className="flex h-full flex-col">
@@ -156,11 +163,56 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               onChange={(v) => setP((x) => (x.kind = v))}
             />
             <div className="grid grid-cols-1 gap-2">
-              <NumField label="Width" value={p.width} min={150} max={1500} onChange={(v) => setP((x) => (x.width = v))} />
+              {panel !== 'end-panel' && <NumField label="Width" value={p.width} min={panel ? 3 : 150} max={1500} onChange={(v) => setP((x) => (x.width = v))} />}
               <NumField label="Height" value={p.height} min={200} max={2700} onChange={(v) => setP((x) => (x.height = v))} />
-              <NumField label="Depth" value={p.depth} min={150} max={900} onChange={(v) => setP((x) => (x.depth = v))} />
+              <NumField label="Depth" value={p.depth} min={panel ? 50 : 150} max={900} onChange={(v) => setP((x) => (x.depth = v))} />
             </div>
+            {!panel && (
+              <SelectField
+                label="Corner"
+                value={corner ? `blind-${p.corner!.blindSide}` : 'none'}
+                options={[
+                  { value: 'none', label: 'Not a corner cabinet' },
+                  { value: 'blind-left', label: 'Blind corner, blind left' },
+                  { value: 'blind-right', label: 'Blind corner, blind right' },
+                ]}
+                onChange={(v) =>
+                  setP((x) => {
+                    if (v === 'none') return void delete x.corner
+                    const side = v === 'blind-left' ? 'left' : 'right'
+                    // the blind part as deep as a return run of the same depth; one door on the open side
+                    x.corner = { type: 'blind', blindSide: side, blindWidth: x.corner?.blindWidth ?? Math.min(x.depth, x.width - 150), pullOut: x.corner?.pullOut ?? KITCHEN_DEFAULTS.pullOut, blindPanel: x.corner?.blindPanel ?? true }
+                    x.doors.count = x.doors.count === 0 ? 0 : 1
+                    x.doors.hingeSide = side === 'left' ? 'right' : 'left'
+                    x.drawers.count = 0
+                  })
+                }
+              />
+            )}
           </Section>
+          {(corner || panel) && (
+            <Section title={corner ? 'Blind corner' : panel === 'filler' ? 'Filler' : 'End panel'}>
+              <KitchenFields p={p} set={setP} lib={lib} />
+            </Section>
+          )}
+          {panel && (p.kind === 'base' || p.kind === 'tall') && (
+            <Section title="Toe kick" description={panel === 'filler' ? 'The strip starts above it.' : 'Sets the notch.'}>
+              <SwitchField label="Toe kick" checked={p.toeKick.enabled} onChange={(v) => setP((x) => (x.toeKick.enabled = v))} />
+              {p.toeKick.enabled && (
+                <div className="grid grid-cols-2 gap-2">
+                  <NumField label="Toe kick height" value={p.toeKick.height} min={0} max={250} onChange={(v) => setP((x) => (x.toeKick.height = v))} />
+                  <NumField label="Setback" value={p.toeKick.setback} min={0} max={150} onChange={(v) => setP((x) => (x.toeKick.setback = v))} />
+                </div>
+              )}
+            </Section>
+          )}
+          {panel && (
+            <Section title="Edgebanding">
+              <SelectField label="Visible edges" value={p.edgebands.door ?? NONE} options={bandOptions} onChange={(v) => setP((x) => (x.edgebands.door = v === NONE ? null : v))} hint="Never on a scribed edge." />
+            </Section>
+          )}
+          {!panel && (
+            <>
           <Section title="Materials">
             <SelectField label="Carcass" value={p.carcassMaterialId} options={matOptions(false)} onChange={(v) => setP((x) => (x.carcassMaterialId = v))} />
             <SelectField label="Back" value={p.backMaterialId} options={matOptions()} onChange={(v) => setP((x) => (x.backMaterialId = v))} />
@@ -256,14 +308,21 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               <SelectField
                 label="Doors"
                 value={String(p.doors.count) as '0' | '1' | '2'}
-                options={[
-                  { value: '0', label: 'None' },
-                  { value: '1', label: 'One' },
-                  { value: '2', label: 'Pair' },
-                ]}
+                options={
+                  corner
+                    ? [
+                        { value: '0', label: 'None' },
+                        { value: '1', label: 'One' },
+                      ]
+                    : [
+                        { value: '0', label: 'None' },
+                        { value: '1', label: 'One' },
+                        { value: '2', label: 'Pair' },
+                      ]
+                }
                 onChange={(v) => setP((x) => (x.doors.count = Number(v) as 0 | 1 | 2))}
               />
-              {p.doors.count === 1 && (
+              {p.doors.count === 1 && !corner && (
                 <SelectField
                   label="Hinge side"
                   value={p.doors.hingeSide}
@@ -286,6 +345,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
             )}
             <p className="text-[11px] text-muted-foreground">Salice Silentia+ 110° soft-close. The 35 mm cup is bored K = 3 mm from the door edge, and the 3 mm plate screws go 37 mm back from the side's front edge, 32 mm apart.</p>
           </Section>
+          {!corner && (
           <Section title="Drawers" description="Blum TANDEM plus BLUMOTION. Stacked from the bottom; doors, if any, sit above them.">
             <div className="grid grid-cols-2 gap-2">
               <NumField label="Drawers" suffix="" value={p.drawers.count} min={0} max={6} onChange={(v) => setP((x) => (x.drawers.count = Math.round(v)))} />
@@ -314,11 +374,14 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               <NumField label="Drawer front height" value={p.drawers.frontHeight} min={80} max={400} onChange={(v) => setP((x) => (x.drawers.frontHeight = v))} hint="All-drawer cabinets split the opening equally instead." />
             )}
           </Section>
+)}
           <Section title="Edgebanding">
             <SelectField label="Carcass front edges" value={p.edgebands.carcassFront ?? NONE} options={bandOptions} onChange={(v) => setP((x) => (x.edgebands.carcassFront = v === NONE ? null : v))} />
             <SelectField label="Shelf front" value={p.edgebands.shelfFront ?? NONE} options={bandOptions} onChange={(v) => setP((x) => (x.edgebands.shelfFront = v === NONE ? null : v))} />
             <SelectField label="Doors (all edges)" value={p.edgebands.door ?? NONE} options={bandOptions} onChange={(v) => setP((x) => (x.edgebands.door = v === NONE ? null : v))} />
           </Section>
+            </>
+          )}
         </aside>
 
         <div className="order-1 flex min-h-0 min-w-0 flex-1 flex-col lg:order-2">

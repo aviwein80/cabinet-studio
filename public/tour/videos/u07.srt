@@ -1,0 +1,43 @@
+1
+00:00:03,401 --> 00:00:24,055
+Priya Patel changed her mind: the vanity is now natural oak, not white. Change the job's materials.
+
+2
+00:00:24,055 --> 00:00:43,266
+Before: everything is white melamine. Note the sheet list.
+
+3
+00:00:43,266 --> 00:00:49,516
+Materials are set per cabinet. Open the sink cabinet, B1.
+
+4
+00:00:49,516 --> 00:00:58,552
+Carcass and doors: PB18-OAK, the natural oak melamine with grain.
+
+5
+00:00:58,552 --> 00:01:12,313
+The edgebanding follows: oak ABS on the carcass front edges and all door edges.
+
+6
+00:01:12,313 --> 00:01:34,394
+Same for the drawer bank, B2: oak carcass, oak drawer fronts, oak edges.
+
+7
+00:01:34,394 --> 00:01:43,738
+The drawer boxes stay white: 16 mm white board, the side thickness TANDEM slides are made for.
+
+8
+00:01:43,738 --> 00:01:56,039
+The cut list regroups by material: oak parts, the white drawer boxes and the backs.
+
+9
+00:01:56,039 --> 00:02:00,694
+The edgeband totals switch to the oak tape.
+
+10
+00:02:00,694 --> 00:02:08,201
+Nesting re-runs on its own: oak sheets now, with the grain kept along each part.
+
+11
+00:02:08,201 --> 00:02:11,404
+A change of finish on a whole job takes a minute, and the cut list, nesting and labels all follow.

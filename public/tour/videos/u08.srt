@@ -1,0 +1,51 @@
+1
+00:00:03,401 --> 00:00:11,084
+A walk-in order: Dan Kim needs two 15" x 30" shaker doors. Doors are made on the Custom parts page.
+
+2
+00:00:11,084 --> 00:00:21,676
+Shaker 70 style, in paint-grade MDF.
+
+3
+00:00:21,676 --> 00:00:34,382
+Size from the old door: 15" wide, 30" high. Two of them.
+
+4
+00:00:34,382 --> 00:00:37,201
+Hinges on the left, to match the old door, on the Salice cup pattern.
+
+5
+00:00:37,201 --> 00:00:43,446
+A pull with 128 mm centres, near the top as on a base door.
+
+6
+00:00:43,446 --> 00:00:47,961
+Add door: it becomes a custom part with its machining already set up.
+
+7
+00:00:47,961 --> 00:00:59,029
+Open it: panel recess, hinge cups, pull holes and the cut-out are all there.
+
+8
+00:00:59,029 --> 00:01:15,761
+Now the job: New job, J2066, Kim replacement doors.
+
+9
+00:01:15,761 --> 00:01:23,588
+No cabinets this time. On the job's Custom parts tab, add the door from the part library.
+
+10
+00:01:23,588 --> 00:01:28,769
+Nesting places both doors on an MDF sheet, and the rest is kept as an offcut.
+
+11
+00:01:28,769 --> 00:01:34,165
+Labels: each door gets one, like any cabinet part.
+
+12
+00:01:34,165 --> 00:01:38,997
+Export check: with custom-part output off, only the cut-out would go out, not the recess, cups or holes.
+
+13
+00:01:38,997 --> 00:01:42,253
+Simulate in woodWOP before switching that on under Machine & tools. The doors are nested and labelled.

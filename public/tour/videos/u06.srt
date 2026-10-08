@@ -1,0 +1,47 @@
+1
+00:00:03,401 --> 00:00:09,607
+Mia Novak wants a price for her L-shaped kitchen. The job is built; now cost it.
+
+2
+00:00:09,607 --> 00:00:14,440
+Area and cost has no money in it yet: each board shows "price (not set)".
+
+3
+00:00:14,440 --> 00:00:20,533
+Prices live in the Library, on each material. Open Library, then Materials.
+
+4
+00:00:20,533 --> 00:00:30,406
+White melamine carcass board: $2.85 per square foot (example prices).
+
+5
+00:00:30,406 --> 00:00:39,435
+MDF: $1.95 per square foot...
+
+6
+00:00:39,435 --> 00:00:48,792
+...and the 1/4" HDF backs: $0.85.
+
+7
+00:00:48,792 --> 00:00:59,756
+Back to the job: the nesting now prices every sheet, by its full area.
+
+8
+00:00:59,756 --> 00:01:03,076
+The job line totals all six sheets: parts, kept offcuts, scrap, and the cost.
+
+9
+00:01:03,076 --> 00:01:06,626
+Sheet 3, the one with the L parts: its own share of the cost.
+
+10
+00:01:06,626 --> 00:01:19,689
+For the quote, the Output tab has Areas and costs CSV: per sheet and per part.
+
+11
+00:01:19,689 --> 00:01:29,799
+BOM CSV is the order list: sheets, edgeband metres, Salice hinges and plates, TANDEM slides.
+
+12
+00:01:29,799 --> 00:01:33,001
+Board cost comes from the app. Edgeband, hardware and labour are priced from the BOM by hand.

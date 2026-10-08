@@ -20,6 +20,7 @@ import { useFacePick } from './facePick'
 import { TaskProgress } from './ModelImportDialog'
 import { addSurfaceModel, loadModelMesh, MODEL_LAYER, saveModelMesh } from './modelData'
 import { loadModelSolid, saveSolid } from './solidData'
+import { enterApplies } from '@/components/enterApplies'
 
 const TYPES: { value: FaceType; label: string }[] = [
   { value: 'flat', label: 'Flat faces' },
@@ -317,7 +318,7 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
             <Button size="xs" variant="secondary" disabled={picked.length !== 2} onClick={() => void fromFaces({ k: 'fillet', a: picked[0], b: picked[1], r: fillet, tol: 0.01 }, `Fillet R${fillet}`)} title="Round the edge between two flat faces">
               Fillet
             </Button>
-            <Input aria-label="Fillet radius" className="h-6 w-12 px-1 text-[11px]" defaultValue={fillet} onBlur={(e) => Number(e.target.value) > 0 && setFillet(Number(e.target.value))} />
+            <Input aria-label="Fillet radius" className="h-6 w-12 px-1 text-[11px]" defaultValue={fillet} onKeyDown={enterApplies} onBlur={(e) => Number(e.target.value) > 0 && setFillet(Number(e.target.value))} />
           </div>
         </>
       )}

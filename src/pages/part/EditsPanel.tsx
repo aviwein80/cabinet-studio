@@ -15,6 +15,7 @@ import type { PathPick } from './OpsPanel'
 import { useOpCfg } from './opConfigure'
 import { cutDefaultsOf } from '@/core/confirm'
 import { useStore } from '@/app/store'
+import { enterApplies } from '@/components/enterApplies'
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -93,7 +94,7 @@ export function ManualFields({ op, part, sel, onChange, pathPick, setPathPick }:
                   <td className="px-1.5">{s.k === 'arc' ? (s.ccw ? 'Arc ↺' : 'Arc ↻') : s.k === 'feed' ? 'Feed' : 'Rapid'}</td>
                   {(['x', 'y', 'z'] as const).map((k) => (
                     <td key={k} className="px-1">
-                      <input className="w-16 rounded bg-white/5 px-1 py-0.5 tabular-nums outline-none focus:bg-white/10" defaultValue={num(s[k])} onBlur={(e) => Number.isFinite(Number(e.target.value)) && Number(e.target.value) !== s[k] && setStep(i, { [k]: Number(e.target.value) })} />
+                      <input className="w-16 rounded bg-white/5 px-1 py-0.5 tabular-nums outline-none focus:bg-white/10" defaultValue={num(s[k])} onKeyDown={enterApplies} onBlur={(e) => Number.isFinite(Number(e.target.value)) && Number(e.target.value) !== s[k] && setStep(i, { [k]: Number(e.target.value) })} />
                     </td>
                   ))}
                   <td>
@@ -252,6 +253,7 @@ export function EditsGroup({ op, part, machine, tp, sel, onChange }: { op: CamOp
                           disabled={locked}
                           className="w-16 rounded bg-white/5 px-1 py-0.5 tabular-nums outline-none focus:bg-white/10 disabled:opacity-50"
                           defaultValue={num(ze?.z ?? m.z)}
+                          onKeyDown={enterApplies}
                           onBlur={(ev) => {
                             const v = Number(ev.target.value)
                             if (!Number.isFinite(v)) return
@@ -268,6 +270,7 @@ export function EditsGroup({ op, part, machine, tp, sel, onChange }: { op: CamOp
                             disabled={locked}
                             className="w-12 rounded bg-white/5 px-1 py-0.5 tabular-nums outline-none focus:bg-white/10 disabled:opacity-50"
                             defaultValue={String(fe?.percent ?? 100)}
+                            onKeyDown={enterApplies}
                             onBlur={(ev) => {
                               const v = Number(ev.target.value)
                               if (Number.isFinite(v) && v > 0 && v !== (fe?.percent ?? 100)) editFeed(i, v)

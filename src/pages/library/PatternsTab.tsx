@@ -18,7 +18,7 @@ import { loadSpecSource, readyProvider, SPEC_ACCEPT } from '@/app/specSource'
 import { patternIssues, patternsOf, withdrawPattern } from '@/core/hardware/patterns'
 import { aiDrafter, approveHardwareDraft, HW_CATEGORIES, type HoleCites, type HoleKey, ITEM_FIELDS, itemIssues } from '@/core/spec/hardwareSpec'
 import type { Hardware, HardwareCategory, UnitSystem } from '@/core/types'
-import { formatLength } from '@/core/units'
+import { formatLength, toolSize } from '@/core/units'
 import { LenInput } from '@/components/LenInput'
 import { CiteChip, type MarkedCite, SourceViewer } from '@/components/SourceViewer'
 import { cn } from '@/lib/utils'
@@ -228,7 +228,7 @@ export function PatternsTab() {
                   </div>
                 </td>
                 <td className="px-3 py-1.5 text-xs text-muted-foreground tabular-nums">
-                  {[...new Set(p.holes.map((h) => `Ø${formatLength(h.diameter, units)} × ${formatLength(h.depth, units)}`))].join(', ')}
+                  {[...new Set(p.holes.map((h) => `Ø${toolSize(h.diameter, units)} × ${toolSize(h.depth, units)}`))].join(', ')}
                 </td>
                 <td className="px-3 py-1.5">
                   <StatusBadge p={p} />
@@ -392,7 +392,7 @@ function ReviewDialog({
                       {HOLE_KEYS.map((k) => (
                         <td key={k} className="px-2 py-1">
                           <div className="flex flex-col items-start gap-0.5">
-                            {editable ? <LenInput label={`Hole ${i + 1} ${k}`} value={h[k]} units={units} onChange={(v) => hole(i, { [k]: v })} /> : <span className="tabular-nums">{formatLength(h[k], units)}</span>}
+                            {editable ? <LenInput label={`Hole ${i + 1} ${k}`} value={h[k]} units={units} onChange={(v) => hole(i, { [k]: v })} /> : <span className="tabular-nums">{k === 'diameter' || k === 'depth' ? toolSize(h[k], units) : formatLength(h[k], units)}</span>}
                             {chip(`h${i}.${k}`, cites[i]?.[k])}
                           </div>
                         </td>

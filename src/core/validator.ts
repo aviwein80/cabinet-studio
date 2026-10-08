@@ -7,6 +7,7 @@ import { GOUGE_TOL } from '@/cam/multiaxis/check'
 import { boxOf, type Seg, toPoints } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
+import { formatInches, sizeText } from './units'
 import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type Paths64 } from 'clipper2-ts'
 import { cutoutTool, drillFits, drillToleranceOf, placementTransform, type JobNest, type SheetProgram } from './machining'
 import type { Placement } from './nesting'
@@ -48,6 +49,12 @@ export function validateJob(
   const issues: Issue[] = []
   const byUid = new Map(instances.map((i) => [i.uid, i]))
   const add = (i: Issue) => issues.push(i)
+  // Kitchen-2: sizes and positions in the shop unit (inches to 1/16 in an inch shop); machining
+  // values (depths, thicknesses, tool sizes, tolerances, clearances) stay exact in millimetres
+  const inch = settings.units === 'in'
+  const dim = (mm: number) => (inch ? formatInches(mm) : fmt(mm))
+  const size = (mm: number) => sizeText(mm, settings.units)
+  const pair = (a: number, b: number) => (inch ? `${formatInches(a)} x ${formatInches(b)}` : `${fmt(a)} x ${fmt(b)} mm`)
 
   const shopItems = machineUnconfirmed(machine)
   if (machine.placeholder)
@@ -74,7 +81,7 @@ export function validateJob(
     add({ severity: 'error', code: 'TOOL_MISSING', message: `Cut-out router T${machine.cutoutToolNumber} is not in the tool table.` })
 
   if (settings.nesting.edgeTrim < (cutter?.diameter ?? 0) / 2)
-    add({ severity: 'warning', code: 'TRIM_SMALL', message: `Edge trim ${settings.nesting.edgeTrim} mm is less than the cut-out tool radius.` })
+    add({ severity: 'warning', code: 'TRIM_SMALL', message: `Edge trim ${size(settings.nesting.edgeTrim)} is less than the cut-out tool radius.` })
 
   if (machine.throughDepth > machine.spoilboardAllowance + EPS)
     add({
@@ -103,7 +110,7 @@ export function validateJob(
       for (const c of checkSheet(sh, byUid, { minGap: cutoutTool(machine)?.diameter ?? 0, spacing: nest.spacing, trim: settings.nesting.edgeTrim, grain: !!mat?.grain }))
         if (c.kind === 'spacing' && c.other && !seen.has([c.uid, c.other].sort().join())) {
           seen.add([c.uid, c.other].sort().join())
-          add({ severity: 'warning', code: 'NEST_SPACING', sheet: sh.index, partNo: byUid.get(c.uid)?.no, partUid: c.uid, message: `Parts #${byUid.get(c.uid)?.no} and #${byUid.get(c.other)?.no} are closer than the nesting spacing of ${fmt(nest.spacing)} mm (the cut-out tool still fits).` })
+          add({ severity: 'warning', code: 'NEST_SPACING', sheet: sh.index, partNo: byUid.get(c.uid)?.no, partUid: c.uid, message: `Parts #${byUid.get(c.uid)?.no} and #${byUid.get(c.other)?.no} are closer than the nesting spacing of ${size(nest.spacing)} (the cut-out tool still fits).` })
         }
     }
   }
@@ -151,7 +158,7 @@ export function validateJob(
         severity: 'error',
         code: 'OFF_TABLE',
         sheet: sheetNo,
-        message: `Sheet ${fmt(sh.sheetLength)} x ${fmt(sh.sheetWidth)} mm is larger than the machine table ${fmt(model.table.length)} x ${fmt(model.table.width)} mm.`,
+        message: `Sheet ${pair(sh.sheetLength, sh.sheetWidth)} is larger than the machine table ${pair(model.table.length, model.table.width)}.`,
       })
 
     // Placement checks: inside sheet, spacing, grain, thickness.
@@ -172,7 +179,7 @@ export function validateJob(
           ...ref,
           severity: 'warning',
           code: 'SMALL_PART',
-          message: `Part #${inst.no} (${fmt(pl.dx)} x ${fmt(pl.dy)}) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).`,
+          message: `Part #${inst.no} (${dim(pl.dx)} x ${dim(pl.dy)}) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).`,
         })
     }
     const spacing = cutter?.diameter ?? 0
@@ -219,7 +226,7 @@ export function validateJob(
           if (!op.tool)
             add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no vertical drill D${fmt(op.diameter)} (±${fmt(drillToleranceOf(machine))} mm) reaching ${fmt(op.depth)} mm in the tool table.` })
           if (!inSheet(op.x, op.y) || !inFootprint(op.partUid, op.x, op.y))
-            add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${label}: hole at X${fmt(op.x)} Y${fmt(op.y)} is outside its part.` })
+            add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${label}: hole at X${dim(op.x)} Y${dim(op.y)} is outside its part.` })
           if (op.through && op.depth > maxZ + EPS)
             add({ ...ref, severity: 'error', code: 'DEPTH', message: `${label}: through hole ${fmt(op.depth)} mm exceeds ${fmt(maxZ)} mm (thickness + spoilboard allowance).` })
           if (!op.through && op.depth >= T - EPS)
@@ -317,7 +324,7 @@ export function validateJob(
       const { plan, written, diameter } = prog.shared
       const r = diameter / 2
       const pct = plan.separateLength > 0 ? Math.round((1 - plan.planLength / plan.separateLength) * 1000) / 10 : 0
-      const m = (mm: number) => `${(mm / 1000).toFixed(1)} m`
+      const m = (mm: number) => (inch ? `${(mm / 304.8).toFixed(1)} ft` : `${(mm / 1000).toFixed(1)} m`)
       add({
         severity: 'info',
         code: 'SHARED_LINES',
@@ -427,7 +434,7 @@ export function validateJob(
           if (!h.tool) add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no vertical drill D${fmt(h.diameter)} reaching ${fmt(h.depth)} mm in the tool table.` })
           if (h.depth > T + machine.spoilboardAllowance + EPS) add({ ...ref, severity: 'error', code: 'DEPTH_SPOILBOARD', message: `${label}: ${fmt(h.depth)} mm goes ${fmt(h.depth - T)} mm into the spoilboard.` })
           const p = back(h)
-          if (!inFootprint(h.partUid, p.x, p.y)) add({ ...ref, severity: 'error', code: 'FLIP_OUTSIDE', message: `${label} at X${fmt(h.x)} Y${fmt(h.y)} on side 1 lands outside its part once the sheet is turned over.` })
+          if (!inFootprint(h.partUid, p.x, p.y)) add({ ...ref, severity: 'error', code: 'FLIP_OUTSIDE', message: `${label} at X${dim(h.x)} Y${dim(h.y)} on side 1 lands outside its part once the sheet is turned over.` })
         }
         for (const c of side1.ops) {
           if (c.kind !== 'contour' || !c.reference) continue

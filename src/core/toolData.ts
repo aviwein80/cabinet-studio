@@ -11,7 +11,7 @@ import { confirmKey, type ToolPart } from './confirm'
 import { effectiveGauge, effectiveHolder } from './machineModel'
 import type { FormPoint, MachineProfile, Tool, ToolShape, ToolType } from './types'
 import { formProblems } from '@/cam/tools/form'
-import { formatLength, parseLength } from './units'
+import { parseLength, toolSize } from './units'
 import type { UnitSystem } from './types'
 
 export type ToolFieldKind = 'num' | 'len' | 'text' | 'type' | 'shape' | 'bool' | 'holder' | 'aggregate' | 'form'
@@ -70,11 +70,15 @@ export const GRID_FIELDS = TOOL_FIELDS.filter((f) => f.grid)
 
 const fmt = (n: number) => String(Math.round(n * 10000) / 10000)
 
-/** A tool's value as text in a cell (lengths in the shop unit). */
+/**
+ * A tool's value as text in a cell. Lengths in an inch shop: an exact inch fraction, else exact
+ * millimetres with "mm" (Kitchen-2: a 6 mm drill read 1/4"); typing a bare number still means the
+ * shop unit.
+ */
 export function cellText(t: Tool, f: ToolField, units: UnitSystem, m?: Pick<MachineProfile, 'holders' | 'aggregates'>): string {
   const v = t[f.key]
   if (v === undefined || v === null || v === '') return ''
-  if (f.kind === 'len') return formatLength(v as number, units)
+  if (f.kind === 'len') return toolSize(v as number, units)
   if (f.kind === 'num') return fmt(v as number)
   if (f.kind === 'bool') return v ? 'yes' : 'no'
   if (f.kind === 'holder') return m?.holders?.find((h) => h.id === v)?.name ?? String(v)

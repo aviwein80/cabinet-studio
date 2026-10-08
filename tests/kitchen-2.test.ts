@@ -635,3 +635,101 @@ describe('Kitchen-2: the old sample is untouched', () => {
     expect(placementOf(cabs[3], laid)).toEqual(laid.bc)
   })
 })
+
+describe('Kitchen-2 C: Polish-1 leftovers', () => {
+  it('8: export-check sizes follow the inch switch (SMALL_PART, off-table sheets, construction sizes); mm stays as it was', async () => {
+    const { sampleJob } = await import('../src/core/sample')
+    const base = { ...sampleJob(), createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }
+    const mm = runJob(base, data())
+    expect(mm.issues.find((i) => i.code === 'SMALL_PART' && i.partNo === 22)!.message).toBe('Part #22 (764 x 100) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).')
+    const inches = runJob(base, data((d) => (d.settings.units = 'in')))
+    expect(inches.issues.find((i) => i.code === 'SMALL_PART' && i.partNo === 22)!.message).toBe('Part #22 (30-1/16" x 3-15/16") is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).')
+    // a sheet bigger than the machine table
+    const big = (units: 'mm' | 'in') =>
+      runJob(
+        base,
+        data((d) => {
+          d.settings.units = units
+          for (const m of d.library.materials) {
+            m.sheetLength = 6000
+            m.sheetWidth = 2400
+          }
+        }),
+      ).issues.find((i) => i.code === 'OFF_TABLE')!.message
+    expect(big('mm')).toMatch(/^Sheet 6000 x 2400 mm is larger than the machine table \d+(\.\d+)? x \d+(\.\d+)? mm\.$/)
+    expect(big('in')).toMatch(/^Sheet 236-1\/4" x 94-1\/2" is larger than the machine table [\d-/]+" x [\d-/]+"\.$/)
+    // sizes in construction warnings; machining values (depths, thicknesses) stay in mm
+    const shallow = job([cabinet('tpl-base-drawers', (p) => (p.depth = 450))])
+    const w = (units: 'mm' | 'in') => runJob(shallow, data((d) => (d.settings.units = units))).issues.filter((i) => i.code === 'CONSTRUCTION').map((i) => i.message)
+    expect(w('mm')).toContain('B1 Base cabinet, 3 drawers: Cabinet depth 450 mm is under the 457 mm minimum for a 15 in TANDEM runner.')
+    expect(w('in')).toContain('B1 Base cabinet, 3 drawers: Cabinet depth 17-11/16" is under the 18" minimum for a 15 in TANDEM runner.')
+  })
+
+  it('9: the nesting header gives trim and spacing in the shop unit', async () => {
+    const { trimSpacingText, sizeText } = await import('../src/core/units')
+    expect(trimSpacingText(10, 14, 'mm')).toBe('Trim 10 · spacing 14 mm')
+    expect(trimSpacingText(10, 14, 'in')).toBe('Trim 3/8" · spacing 9/16"')
+    expect(sizeText(14, 'mm')).toBe('14 mm')
+    expect(sizeText(14, 'in')).toBe('9/16"')
+  })
+
+  it('10: metric tool sizes stay exact in inch mode (6 mm, not 1/4"); exact inch tools read as fractions; both read back', async () => {
+    const { toolSize, exactInches, parseLength } = await import('../src/core/units')
+    const { cellText, parseCell, GRID_FIELDS } = await import('../src/core/toolData')
+    expect(toolSize(6, 'in')).toBe('6 mm')
+    expect(toolSize(35, 'in')).toBe('35 mm')
+    expect(toolSize(13.5, 'in')).toBe('13.5 mm')
+    expect(toolSize(12.7, 'in')).toBe('1/2"')
+    expect(toolSize(3.175, 'in')).toBe('1/8"')
+    expect(toolSize(6.35, 'in')).toBe('1/4"')
+    expect(toolSize(25.4, 'in')).toBe('1"')
+    expect(toolSize(6, 'mm')).toBe('6')
+    expect(exactInches(7.938)).toBe('5/16"') // a 5/16 in hole, stored to 0.001 mm
+    expect(exactInches(7.95)).toBeNull()
+    for (const v of [6, 35, 13.5, 12.7, 3.175, 0.5, 42, 9.525]) expect(parseLength(toolSize(v, 'in'), 'in')).toBeCloseTo(v, 9)
+    const d = defaultAppData()
+    const t205 = d.machine.tools.find((t) => t.number === 205)!
+    const dia = GRID_FIELDS.find((f) => f.key === 'diameter')!
+    expect(cellText(t205, dia, 'in')).toBe('6 mm')
+    expect(cellText(t205, dia, 'mm')).toBe('6')
+    expect(parseCell('6 mm', dia, 'in')).toEqual({ value: 6 })
+    // a bare number still means the shop unit, as before
+    expect(parseCell('1/2', dia, 'in')).toEqual({ value: 12.7 })
+  })
+
+  it('11: Enter applies a plain field as Tab does, and every field that applies on leaving also applies on Enter', async () => {
+    const { enterApplies } = await import('../src/components/enterApplies')
+    let blurred = 0
+    let prevented = 0
+    const ev = (key: string) => ({ key, preventDefault: () => prevented++, currentTarget: { blur: () => blurred++ } }) as unknown as Parameters<typeof enterApplies>[0]
+    enterApplies(ev('a'))
+    enterApplies(ev('Tab'))
+    expect([blurred, prevented]).toEqual([0, 0])
+    enterApplies(ev('Enter'))
+    expect([blurred, prevented]).toEqual([1, 1])
+    // every <input>/<Input> in the app that applies on blur also handles Enter
+    const fs = await import('node:fs')
+    const path = await import('node:path')
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name)
+        if (e.isDirectory()) walk(p)
+        else if (p.endsWith('.tsx')) files.push(p)
+      }
+    }
+    walk(path.resolve(__dirname, '../src'))
+    const missing: string[] = []
+    for (const f of files) {
+      const src = fs.readFileSync(f, 'utf8')
+      for (let at = src.indexOf('onBlur='); at >= 0; at = src.indexOf('onBlur=', at + 1)) {
+        const start = Math.max(src.lastIndexOf('<input', at), src.lastIndexOf('<Input', at))
+        if (start < 0) continue
+        const end = src.indexOf('/>', at)
+        if (!src.slice(start, end).includes('onKeyDown')) missing.push(`${path.relative(path.resolve(__dirname, '..'), f)}:${src.slice(0, at).split('\n').length}`)
+      }
+    }
+    expect(missing).toEqual([])
+    expect(files.length).toBeGreaterThan(50)
+  })
+})

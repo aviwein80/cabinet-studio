@@ -38,7 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cutListCsv } from '@/core/cutlist'
 import { jobRemnants, updateOffcutStock } from '@/core/offcuts'
-import { formatDims, formatLength } from '@/core/units'
+import { formatDims, formatLength, trimSpacingText } from '@/core/units'
 import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
 import type { AppData, CabinetTemplate, Job } from '@/core/types'
@@ -471,7 +471,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               {mat?.name} · {formatLength(sh.sheetLength, data.settings.units)} × {formatLength(sh.sheetWidth, data.settings.units)} × {formatLength(sh.thickness, data.settings.units)}
             </span>
             <span className="text-muted-foreground">
-              Trim {data.settings.nesting.edgeTrim} · spacing {out.nest.spacing} mm
+              {trimSpacingText(data.settings.nesting.edgeTrim, out.nest.spacing, data.settings.units)}
             </span>
             {matNest && <span className="text-muted-foreground">{matNest.engine === 'shape' ? 'True-shape nest' : 'Rectangular nest'}</span>}
             {matNest && matNest.splitKits.length > 0 && <span className="text-amber-700">Kits on more than one sheet: {matNest.splitKits.join(', ')}</span>}

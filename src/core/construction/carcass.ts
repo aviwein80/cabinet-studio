@@ -1,7 +1,8 @@
 import { EPS, X, Y, Z, neg, r3, rectPolygon } from '../geometry'
 import { PLATE_ID, hingeCode, plateBoring, slideBoring, SLIDE_IDS } from '../hardware/resolve'
 import { BLUM, hingeHeights, selectTandem } from '../hardware/specs'
-import type { CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, Vec2 } from '../types'
+import type { CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, UnitSystem, Vec2 } from '../types'
+import { formatInches } from '../units'
 import { box, materialThickness, PartBuilder } from './builder'
 import { generatePanel } from './panels'
 
@@ -35,10 +36,15 @@ function jointPositions(y0: number, y1: number) {
   return ys.map(r3)
 }
 
-export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware?: Record<string, HardwarePin> }): GeneratedCabinet {
+/**
+ * `units`: sizes in the warnings (cabinet depth, drawer box, door width...) are written in the shop
+ * unit (Kitchen-2); machining values (dado and groove depths, board thicknesses) stay in mm.
+ */
+export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware?: Record<string, HardwarePin> }, units: UnitSystem = 'mm'): GeneratedCabinet {
   // Kitchen-2: fillers and end panels are not carcasses
-  if (p.panel) return generatePanel(p, lib)
+  if (p.panel) return generatePanel(p, lib, units)
   const warnings: string[] = []
+  const S = (mm: number) => (units === 'in' ? formatInches(mm) : `${mm} mm`)
   const hardware = new Map<string, number>()
   const addHw = (code: string, n: number) => n > 0 && hardware.set(code, (hardware.get(code) ?? 0) + n)
 
@@ -247,11 +253,11 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
       frontH = (frontSpan - 80 - drawerCount * g) / drawerCount
       warnings.push('Drawer fronts were shortened so a door still fits above them.')
     }
-    if (frontH < 60) warnings.push('Drawer fronts are under 60 mm tall.')
+    if (frontH < 60) warnings.push(`Drawer fronts are under ${S(60)} tall.`)
     const { slide } = selectTandem(D, p.drawers?.slide ?? 'auto')
     const slideId = SLIDE_IDS[slide.part]
     const runner = slideBoring(lib, slide, slideId ? pin?.hardware?.[slideId] : undefined)
-    if (D + 0.01 < runner.minCabinetDepth) warnings.push(`Cabinet depth ${D} mm is under the ${runner.minCabinetDepth} mm minimum for a ${slide.inches} in TANDEM runner.`)
+    if (D + 0.01 < runner.minCabinetDepth) warnings.push(`Cabinet depth ${S(D)} is under the ${S(runner.minCabinetDepth)} minimum for a ${slide.inches} in TANDEM runner.`)
     // Polish-1: the box (sides, subfront, back) is its own material when one is chosen; absent =
     // the carcass board, as before. The TANDEM side limit is checked against what is really used.
     const boxMat = p.drawers.boxMaterialId ? lib.materials.find((m) => m.id === p.drawers.boxMaterialId) : undefined
@@ -268,7 +274,7 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
     const insideW = r3(openingW - BLUM.insideWidthDeduction)
     const sideGap = r3((openingW - (insideW + 2 * sideT)) / 2)
     const boxDepth = Math.min(runner.length, r3(backFrontY - BLUM.runnerSetback))
-    if (boxDepth < runner.length - 0.1) warnings.push(`Drawer box shortened to ${boxDepth} mm to clear the back.`)
+    if (boxDepth < runner.length - 0.1) warnings.push(`Drawer box shortened to ${S(boxDepth)} to clear the back.`)
     const bottomT = Math.min(Tb, 16)
 
     for (let i = 0; i < drawerCount; i++) {
@@ -313,7 +319,7 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
   }
 
   // ---- doors with Salice cups and 3 mm plates ---------------------------------------------
-  const blindSpan = blind ? blindSpans(p, blind, warnings) : null
+  const blindSpan = blind ? blindSpans(p, blind, warnings, units) : null
   if (blindSpan?.panel) {
     // Kitchen-2: the finished panel over the blind part, as tall as the door; the return run butts against it
     const bp = new PartBuilder('blind-panel', 'Blind panel', 'blind-panel', p.doorMaterialId, box([blindSpan.panel.x0, -Td, frontZ0], [blindSpan.panel.x1, 0, frontZ1]), Z, Y, 'length')
@@ -365,17 +371,18 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
  * Kitchen-2: the face of a blind corner, in cabinet X. The door covers the open part and is hinged
  * on the open side (its plate goes in that side panel); the blind panel covers the blind part.
  */
-export function blindSpans(p: CarcassParams, c: NonNullable<CarcassParams['corner']>, warnings: string[] = []) {
+export function blindSpans(p: CarcassParams, c: NonNullable<CarcassParams['corner']>, warnings: string[] = [], units: UnitSystem = 'mm') {
+  const S = (mm: number) => (units === 'in' ? formatInches(mm) : `${r3(mm)} mm`)
   const W = p.width
   const g = p.doors.gap
   const bw = c.blindWidth
   const doorW = W - bw - g
   if (bw <= 0 || bw >= W) {
-    warnings.push(`Blind width ${r3(bw)} mm must be more than 0 and less than the cabinet width ${r3(W)} mm.`)
+    warnings.push(`Blind width ${S(bw)} must be more than 0 and less than the cabinet width ${S(W)}.`)
     return { door: null, panel: null, doorWidth: 0 }
   }
   if (p.doors.count === 2) warnings.push('A blind corner has one door; the pair is fitted as one door.')
-  if (p.doors.count > 0 && doorW < 150) warnings.push(`The door is only ${r3(doorW)} mm wide; widen the cabinet or narrow the blind part.`)
+  if (p.doors.count > 0 && doorW < 150) warnings.push(`The door is only ${S(doorW)} wide; widen the cabinet or narrow the blind part.`)
   const left = c.blindSide === 'left'
   const door = p.doors.count > 0 && doorW > 20 ? (left ? { x0: bw + g / 2, x1: W - g / 2, hinge: 'right' as const } : { x0: g / 2, x1: W - bw - g / 2, hinge: 'left' as const }) : null
   const panel = c.blindPanel ? (left ? { x0: 0, x1: bw - g / 2 } : { x0: W - bw + g / 2, x1: W }) : null
@@ -389,8 +396,8 @@ function toLocalBox(b: PartBuilder) {
 }
 
 /** Generate a cabinet instance and apply its per-part overrides. */
-export function buildCabinet(cab: CabinetInstance, lib: Library): GeneratedCabinet {
-  const g = generateCarcass(cab.params, lib, cab.pin)
+export function buildCabinet(cab: CabinetInstance, lib: Library, units: UnitSystem = 'mm'): GeneratedCabinet {
+  const g = generateCarcass(cab.params, lib, cab.pin, units)
   const parts: Part[] = []
   for (const part of g.parts) {
     const ov = cab.overrides[part.key]

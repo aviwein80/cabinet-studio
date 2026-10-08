@@ -16,6 +16,7 @@ import { Cancelled } from '@/core/cancel'
 import type { UnitSystem } from '@/core/types'
 import { TaskProgress } from './ModelImportDialog'
 import { addSurfaceModel } from './modelData'
+import { enterApplies } from '@/components/enterApplies'
 
 const EDGES: Layer = { id: 'model-edges', name: 'Model edges', color: '#f472b6', visible: true, locked: false }
 const TOL = 0.01
@@ -154,7 +155,7 @@ export function SurfacesPanel({ part, sel, units, onChange }: { part: CamPart; s
         </Button>
         about X <LenInput label="Axis X" value={centre.x} units={units} onChange={(v) => Number.isFinite(v) && setCentre({ ...centre, x: v })} />
         Y <LenInput label="Axis Y" value={centre.y} units={units} onChange={(v) => Number.isFinite(v) && setCentre({ ...centre, y: v })} />
-        <Input aria-label="Revolve angle" className="h-6 w-12 px-1 text-[11px]" defaultValue={angle} onBlur={(e) => Number(e.target.value) > 0 && setAngle(Math.min(360, Number(e.target.value)))} />°
+        <Input aria-label="Revolve angle" className="h-6 w-12 px-1 text-[11px]" defaultValue={angle} onKeyDown={enterApplies} onBlur={(e) => Number(e.target.value) > 0 && setAngle(Math.min(360, Number(e.target.value)))} />°
       </div>
       {busy && <TaskProgress fraction={busy.fraction} note={busy.note} onCancel={() => busy.abort.abort()} />}
       <div className="flex items-center gap-1.5 border-t border-white/10 pt-2">

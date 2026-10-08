@@ -93,7 +93,7 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
   const hw = new Map<string, number>()
   let no = 0
   for (const cab of job.cabinets) {
-    const g = buildCabinet(cab, lib)
+    const g = buildCabinet(cab, lib, settings.units)
     for (const w of g.warnings) warnings.push(`${cab.number} ${cab.name}: ${w}`)
     for (let copy = 0; copy < Math.max(1, cab.qty); copy++) {
       for (const h of g.hardware) hw.set(h.hardwareCode, (hw.get(h.hardwareCode) ?? 0) + h.qty)

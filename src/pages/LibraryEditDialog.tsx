@@ -10,6 +10,7 @@ import { formatLength, parseLength } from '@/core/units'
 import type { EdgeBand, Hardware, HardwareCategory, Material } from '@/core/types'
 import { featuresOf } from '@/core/features'
 import { MaterialCostFields } from './library/MaterialCostFields'
+import { enterApplies } from '@/components/enterApplies'
 
 type Row = Hardware | Material | EdgeBand
 
@@ -182,6 +183,7 @@ function HolesField({ value, onChange }: { value: number[]; onChange: (v: number
         className="h-8"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={enterApplies}
         onBlur={() => {
           const nums = text.split(',').map((s) => s.trim()).filter(Boolean).map((s) => parseLength(s, units))
           if (nums.length > 0 && nums.every((n) => n !== null)) onChange(nums as number[])

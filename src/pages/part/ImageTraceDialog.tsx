@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { formatLength, parseLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { contourPath } from './hit'
+import { enterApplies } from '@/components/enterApplies'
 
 const MAX_PIXELS = 12_000_000
 
@@ -130,7 +131,7 @@ export function ImageTraceDialog({ part, units, onClose, onInsert }: { part: Cam
             {num('Fit tolerance (px)', opt.fitTolerance, (fitTolerance) => setOpt({ ...opt, fitTolerance }), 0.1, 0.05, 5)}
             <label className="col-span-2 flex flex-col gap-1 text-stone-400">
               Width on the part
-              <input aria-label="Width on the part" defaultValue={formatLength(width, units)} key={`${width}${units}`} onBlur={(e) => { const v = parseLength(e.target.value, units); if (v && v > 0) setWidth(v) }} className="h-7 rounded border border-white/10 bg-black/30 px-1.5 text-stone-100" />
+              <input aria-label="Width on the part" defaultValue={formatLength(width, units)} key={`${width}${units}`} onKeyDown={enterApplies} onBlur={(e) => { const v = parseLength(e.target.value, units); if (v && v > 0) setWidth(v) }} className="h-7 rounded border border-white/10 bg-black/30 px-1.5 text-stone-100" />
             </label>
             <label className="col-span-2 flex flex-col gap-1 text-stone-400">
               Layer

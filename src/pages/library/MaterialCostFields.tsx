@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { kgPerM2, materialUnconfirmed, ratePerM2 } from '@/core/areas'
 import { useStore } from '@/app/store'
 import type { Material, MaterialCost } from '@/core/types'
+import { enterApplies } from '@/components/enterApplies'
 
 /** m² in one ft². Prices are stored per m²; in inch mode they are typed and shown per ft². */
 const M2_PER_FT2 = 0.09290304
@@ -23,6 +24,7 @@ function OptNumInput({ value, onChange, placeholder }: { value: number | undefin
       value={text}
       placeholder={placeholder}
       onChange={(e) => setText(e.target.value)}
+      onKeyDown={enterApplies}
       onBlur={() => {
         const t = text.trim().replace(',', '.')
         if (!t) return onChange(undefined)

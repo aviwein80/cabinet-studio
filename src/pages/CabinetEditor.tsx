@@ -48,7 +48,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   const built = useMemo(() => {
     if (!cab || !data) return null
     try {
-      return { all: generateCarcass(cab.params, data.library, cab.pin).parts, final: buildCabinet(cab, data.library), error: null }
+      return { all: generateCarcass(cab.params, data.library, cab.pin).parts, final: buildCabinet(cab, data.library, data.settings.units), error: null }
     } catch (e) {
       return { all: [], final: null, error: e instanceof Error ? e.message : String(e) }
     }

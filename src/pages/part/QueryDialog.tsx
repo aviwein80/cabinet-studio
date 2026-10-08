@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { formatLength, parseLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { loadModelSolid } from './solidData'
+import { enterApplies } from '@/components/enterApplies'
 
 const OPS: { value: QueryOp; label: string; kinds: string[] }[] = [
   { value: '=', label: 'is', kinds: ['text', 'number', 'length', 'bool'] },
@@ -170,7 +171,7 @@ export function QueryDialog({ part, units, onClose, onChange, onSelect }: { part
                     </select>
                   ) : (
                     <>
-                      <input aria-label={`Value ${i + 1}`} list={opts ? `opts-${i}` : undefined} defaultValue={show(t, t.value)} key={`${t.field}${t.op}`} onBlur={(e) => setTest(i, { value: read(t, e.target.value) })} className="h-7 w-32 rounded border border-white/10 bg-black/30 px-1.5" />
+                      <input aria-label={`Value ${i + 1}`} list={opts ? `opts-${i}` : undefined} defaultValue={show(t, t.value)} key={`${t.field}${t.op}`} onKeyDown={enterApplies} onBlur={(e) => setTest(i, { value: read(t, e.target.value) })} className="h-7 w-32 rounded border border-white/10 bg-black/30 px-1.5" />
                       {opts && (
                         <datalist id={`opts-${i}`}>
                           {opts.map((o) => (
@@ -181,7 +182,7 @@ export function QueryDialog({ part, units, onClose, onChange, onSelect }: { part
                       {t.op === 'between' && (
                         <>
                           and
-                          <input aria-label={`Upper value ${i + 1}`} defaultValue={show(t, t.value2)} onBlur={(e) => setTest(i, { value2: Number(read(t, e.target.value)) })} className="h-7 w-24 rounded border border-white/10 bg-black/30 px-1.5" />
+                          <input aria-label={`Upper value ${i + 1}`} defaultValue={show(t, t.value2)} onKeyDown={enterApplies} onBlur={(e) => setTest(i, { value2: Number(read(t, e.target.value)) })} className="h-7 w-24 rounded border border-white/10 bg-black/30 px-1.5" />
                         </>
                       )}
                     </>

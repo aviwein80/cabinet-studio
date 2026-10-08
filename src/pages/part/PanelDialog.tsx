@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { formatLength, parseLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { ShapePreview } from './ShapePreview'
+import { enterApplies } from '@/components/enterApplies'
 
 export function PanelDialog({ part, sel, units, sheet, onClose, onMake }: { part: CamPart; sel: string[]; units: UnitSystem; sheet: { length: number; width: number }; onClose: () => void; onMake: (parts: CamPart[]) => void }) {
   const [opt, setOpt] = useState({ length: sheet.length, width: sheet.width, overlap: 50 })
@@ -26,6 +27,7 @@ export function PanelDialog({ part, sel, units, sheet, onClose, onMake }: { part
         aria-label={label}
         defaultValue={formatLength(opt[k], units)}
         key={`${k}${opt[k]}${units}`}
+        onKeyDown={enterApplies}
         onBlur={(e) => {
           const v = parseLength(e.target.value, units)
           if (v !== null && v > 0) setOpt({ ...opt, [k]: v })

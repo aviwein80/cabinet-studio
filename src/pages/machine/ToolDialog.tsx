@@ -116,22 +116,23 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
           )}
           <div className="grid grid-cols-3 gap-2 rounded-md" data-cfg={`tool:${tool.id}:data`}>
             <NumField label="Tool no." suffix="" value={tool.number} min={1} onChange={(v) => update((t) => (t.number = Math.round(v)), `tool:${tool.id}:data`)} />
-            <NumField label="Diameter" value={tool.diameter} min={0.1} onChange={(v) => update((t) => (t.diameter = v), `tool:${tool.id}:data`)} />
-            <NumField label="Max depth" value={tool.maxDepth} min={0} onChange={(v) => update((t) => (t.maxDepth = v), `tool:${tool.id}:data`)} />
+            <NumField tool label="Diameter" value={tool.diameter} min={0.1} onChange={(v) => update((t) => (t.diameter = v), `tool:${tool.id}:data`)} />
+            <NumField tool label="Max depth" value={tool.maxDepth} min={0} onChange={(v) => update((t) => (t.maxDepth = v), `tool:${tool.id}:data`)} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <SelectField label="Cutting shape" value={tool.shape ?? 'flat'} options={SHAPES} onChange={(v) => update((t) => (t.shape = v))} />
-            {tool.shape === 'bull' && <NumField label="Corner radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
+            {tool.shape === 'bull' && <NumField tool label="Corner radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
             {tool.shape === 'v' && <NumField label="Included angle" suffix="°" value={opt(tool.angle)} min={0} max={180} onChange={set('angle')} />}
-            {tool.shape === 'barrel' && <NumField label="Tip radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
-            {tool.shape === 'barrel' && <NumField label="Side arc radius" value={opt(tool.barrelRadius)} min={0} step={5} onChange={(v) => update((t) => (v > 0 ? (t.barrelRadius = v) : delete t.barrelRadius), v > 0 ? `tool:${tool.id}:data` : undefined)} hint="Larger than half the diameter" />}
+            {tool.shape === 'barrel' && <NumField tool label="Tip radius" value={opt(tool.cornerRadius)} min={0} max={tool.diameter / 2} step={0.5} onChange={set('cornerRadius')} />}
+            {tool.shape === 'barrel' && <NumField tool label="Side arc radius" value={opt(tool.barrelRadius)} min={0} step={5} onChange={(v) => update((t) => (v > 0 ? (t.barrelRadius = v) : delete t.barrelRadius), v > 0 ? `tool:${tool.id}:data` : undefined)} hint="Larger than half the diameter" />}
           </div>
           {tool.shape === 'form' && <FormOutlineField tool={tool} onChange={(form) => update((t) => (t.form = form), `tool:${tool.id}:data`)} />}
           {(tool.shape === 'barrel' || tool.shape === 'form') && <OutlinePreview tool={tool} />}
           {tool.type === 'saw' && (
             <div className="grid grid-cols-2 gap-2">
-              <NumField label="Kerf" value={opt(tool.kerf)} min={0} step={0.1} onChange={set('kerf')} hint="Width of the cut; 0 = 4 mm" />
+              <NumField tool label="Kerf" value={opt(tool.kerf)} min={0} step={0.1} onChange={set('kerf')} hint="Width of the cut; 0 = 4 mm" />
               <NumField
+                tool
                 label="Blade Ø"
                 value={opt(tool.bladeDiameter)}
                 min={0}
@@ -149,14 +150,15 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
           )}
           <div className="grid grid-cols-3 gap-2 rounded-md" data-cfg={`tool:${tool.id}:lengths`}>
             <NumField
+              tool
               label={tool.shape === 'lollipop' || tool.shape === 'thread' ? 'Neck Ø' : 'Shank Ø'}
               value={opt(tool.shankDiameter)}
               min={0}
               onChange={set('shankDiameter')}
               hint={tool.shape === 'lollipop' ? 'Narrower than the ball: how far the ball reaches under an overhang' : tool.shape === 'thread' ? 'Behind the tooth: it must pass the thread without touching it' : 'Above the flutes'}
             />
-            <NumField label="Flute length" value={opt(tool.fluteLength)} min={0} onChange={set('fluteLength')} hint="Cutting length" />
-            <NumField label="Stick-out" value={opt(tool.gaugeLength)} min={0} onChange={set('gaugeLength')} hint="Tip to holder face" />
+            <NumField tool label="Flute length" value={opt(tool.fluteLength)} min={0} onChange={set('fluteLength')} hint="Cutting length" />
+            <NumField tool label="Stick-out" value={opt(tool.gaugeLength)} min={0} onChange={set('gaugeLength')} hint="Tip to holder face" />
           </div>
           {(tool.type === 'router' || tool.type === 'saw') && (
             <div className="rounded-md" data-cfg={`tool:${tool.id}:feeds`}>
@@ -168,7 +170,7 @@ export function ToolDialog({ tool, machine, onClose, update }: { tool: Tool; mac
                 <NumField label="Spindle" suffix="rpm" value={opt(tool.rpm)} min={0} step={500} onChange={set('rpm')} />
                 <NumField label="Feed" suffix="mm/min" value={opt(tool.feed)} min={0} step={100} onChange={set('feed')} />
                 <NumField label="Plunge" suffix="mm/min" value={opt(tool.plungeFeed)} min={0} step={100} onChange={set('plungeFeed')} />
-                <NumField label="Step-down" value={opt(tool.stepdown)} min={0} onChange={set('stepdown')} />
+                <NumField tool label="Step-down" value={opt(tool.stepdown)} min={0} onChange={set('stepdown')} />
               </div>
             </div>
           )}

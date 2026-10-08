@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { formatLength, parseLength } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { ShapePreview } from './ShapePreview'
+import { enterApplies } from '@/components/enterApplies'
 
 function Len({ label, value, units, onChange, deg }: { label: string; value: number; units: UnitSystem; onChange: (v: number) => void; deg?: boolean }) {
   return (
@@ -26,6 +27,7 @@ function Len({ label, value, units, onChange, deg }: { label: string; value: num
         aria-label={label}
         defaultValue={deg ? String(value) : formatLength(value, units)}
         key={`${value}${units}`}
+        onKeyDown={enterApplies}
         onBlur={(e) => {
           const v = deg ? Number(e.target.value) : parseLength(e.target.value, units)
           if (v !== null && Number.isFinite(v)) onChange(v)

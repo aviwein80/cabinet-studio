@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { machineUnconfirmed } from '@/core/confirm'
 import { machineModelOf } from '@/core/machineModel'
 import type { Aggregate, MachineProfile } from '@/core/types'
+import { enterApplies } from '@/components/enterApplies'
 
 export function AggregatesSection({ machine, updateMachine }: { machine: MachineProfile; updateMachine: (fn: (m: MachineProfile) => void) => void }) {
   const list = machine.aggregates ?? []
@@ -88,6 +89,7 @@ export function AggregatesSection({ machine, updateMachine }: { machine: Machine
                     aria-label="Allowed angles"
                     className="h-8"
                     defaultValue={a.angles.list.join(', ')}
+                    onKeyDown={enterApplies}
                     onBlur={(e) => {
                       const list = e.target.value.split(/[,;\s]+/).map(Number).filter((n) => Number.isFinite(n))
                       if (list.length) upd(a.id, (x) => (x.angles = { mode: 'list', list }))

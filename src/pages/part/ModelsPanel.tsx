@@ -25,6 +25,7 @@ import { SurfacesPanel } from './SurfacesPanel'
 import { DevelopPanel } from './DevelopPanel'
 import { RotaryPanel } from './RotaryPanel'
 import { TiltedPlanesPanel } from './TiltedPlanesPanel'
+import { enterApplies } from '@/components/enterApplies'
 
 const LAYERS: Record<'sections' | 'outline' | 'edges', Layer> = {
   sections: { id: 'model-sections', name: 'Model sections', color: '#34d399', visible: true, locked: false },
@@ -242,8 +243,8 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
           )}
           <span>Turn / scale</span>
           <div className="flex items-center gap-1.5">
-            <Input aria-label="Turn about Z in degrees" className="h-7 w-14 px-1.5 text-xs" defaultValue={place.rotZ} key={`r${place.rotZ}`} onBlur={(e) => Number.isFinite(Number(e.target.value)) && setModel((m) => ({ ...m, place: { ...m.place, rotZ: Number(e.target.value) } }))} />°
-            <Input aria-label="Scale factor" className="h-7 w-14 px-1.5 text-xs" defaultValue={place.scale} key={`s${place.scale}`} onBlur={(e) => Number(e.target.value) > 0 && setModel((m) => ({ ...m, place: { ...m.place, scale: Number(e.target.value) } }))} />×
+            <Input aria-label="Turn about Z in degrees" className="h-7 w-14 px-1.5 text-xs" defaultValue={place.rotZ} key={`r${place.rotZ}`} onKeyDown={enterApplies} onBlur={(e) => Number.isFinite(Number(e.target.value)) && setModel((m) => ({ ...m, place: { ...m.place, rotZ: Number(e.target.value) } }))} />°
+            <Input aria-label="Scale factor" className="h-7 w-14 px-1.5 text-xs" defaultValue={place.scale} key={`s${place.scale}`} onKeyDown={enterApplies} onBlur={(e) => Number(e.target.value) > 0 && setModel((m) => ({ ...m, place: { ...m.place, scale: Number(e.target.value) } }))} />×
             <label className="ml-1 flex items-center gap-1">
               <Switch checked={place.mirror} onCheckedChange={(v) => setModel((m) => ({ ...m, place: { ...m.place, mirror: v } }))} aria-label="Mirror" /> Mirror
             </label>
@@ -315,7 +316,7 @@ function ModelCard({ part, model, units, onChange }: { part: CamPart; model: Mod
           {simp.mode === 'tolerance' ? (
             <LenInput label="Simplify tolerance" value={simp.value} units={units} onChange={(v) => Number.isFinite(v) && v > 0 && setSimp({ ...simp, value: v })} />
           ) : (
-            <Input aria-label="Percent of facets to keep" className="h-7 w-14 px-1.5 text-xs" defaultValue={simp.value} onBlur={(e) => Number(e.target.value) > 0 && setSimp({ ...simp, value: Math.min(100, Number(e.target.value)) })} />
+            <Input aria-label="Percent of facets to keep" className="h-7 w-14 px-1.5 text-xs" defaultValue={simp.value} onKeyDown={enterApplies} onBlur={(e) => Number(e.target.value) > 0 && setSimp({ ...simp, value: Math.min(100, Number(e.target.value)) })} />
           )}
           <Button size="xs" variant="secondary" onClick={() => void simplify()}>
             Simplify

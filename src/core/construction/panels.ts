@@ -1,5 +1,6 @@
 import { X, Y, Z, neg, r3 } from '../geometry'
-import type { CarcassParams, EndPanelParams, FillerParams, Library } from '../types'
+import type { CarcassParams, EndPanelParams, FillerParams, Library, UnitSystem } from '../types'
+import { formatInches } from '../units'
 import { box, materialThickness, PartBuilder } from './builder'
 import type { GeneratedCabinet } from './carcass'
 
@@ -8,14 +9,15 @@ import type { GeneratedCabinet } from './carcass'
  * the run, Y from the cabinet front into the room's wall, Z up). The strip and the panel stand in the
  * door plane, Y from minus the door thickness to 0, so they line up with the doors beside them.
  */
-export function generatePanel(p: CarcassParams, lib: Library): GeneratedCabinet {
+export function generatePanel(p: CarcassParams, lib: Library, units: UnitSystem = 'mm'): GeneratedCabinet {
   const warnings: string[] = []
   const panel = p.panel!
-  const parts = panel.type === 'filler' ? fillerParts(p, panel, lib, warnings) : endPanelParts(p, panel, lib, warnings)
+  const S = (mm: number) => (units === 'in' ? formatInches(mm) : `${r3(mm)} mm`)
+  const parts = panel.type === 'filler' ? fillerParts(p, panel, lib, warnings, S) : endPanelParts(p, panel, lib, warnings)
   return { parts: parts.map((b) => b.part), hardware: [], warnings }
 }
 
-function fillerParts(p: CarcassParams, f: FillerParams, lib: Library, warnings: string[]) {
+function fillerParts(p: CarcassParams, f: FillerParams, lib: Library, warnings: string[], S: (mm: number) => string) {
   const W = p.width
   const H = p.height
   const Tf = materialThickness(lib, p.doorMaterialId, warnings, 18)
@@ -48,9 +50,9 @@ function fillerParts(p: CarcassParams, f: FillerParams, lib: Library, warnings: 
   const rd = Math.max(0, f.returnDepth)
   if (rd > 0) {
     const sides = f.returnSide === 'both' ? (['left', 'right'] as const) : ([f.returnSide] as const)
-    if (f.returnSide === 'both' && W < 2 * T + 1) warnings.push(`The filler is too narrow (${r3(W)} mm) for a return on both sides; one return is fitted.`)
+    if (f.returnSide === 'both' && W < 2 * T + 1) warnings.push(`The filler is too narrow (${S(W)}) for a return on both sides; one return is fitted.`)
     const fitted = f.returnSide === 'both' && W < 2 * T + 1 ? (['left'] as const) : sides
-    if (W < T) warnings.push(`The filler is narrower (${r3(W)} mm) than its return board (${T} mm).`)
+    if (W < T) warnings.push(`The filler is narrower (${S(W)}) than its return board (${T} mm).`)
     for (const side of fitted) {
       const rx0 = side === 'left' ? 0 : Math.max(0, W - T)
       const key = fitted.length === 1 ? 'filler-return' : `filler-return-${side === 'left' ? 'l' : 'r'}`

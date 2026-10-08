@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { formatLength, parseLength } from '@/core/units'
+import { formatLength, parseLength, toolSize } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +33,7 @@ export function NumField({
   cfg,
   badge,
   metric,
+  tool,
 }: {
   label: string
   value: number
@@ -47,10 +48,13 @@ export function NumField({
   badge?: ReactNode
   /** Polish-1: a small length always shown in millimetres (a tolerance), even in an inch shop; "in" still typed in works. */
   metric?: boolean
+  /** Kitchen-2: a tool size: in an inch shop an exact inch fraction, else exact millimetres ("6 mm", not 1/4"); steps in mm. */
+  tool?: boolean
 }) {
   const units: UnitSystem = useStore((s) => (suffix === 'mm' && !metric ? (s.data?.settings.units ?? 'mm') : 'mm'))
   const length = suffix === 'mm'
-  const shown = length ? formatLength(value, units) : String(value)
+  const shown = length ? (tool ? toolSize(value, units) : formatLength(value, units)) : String(value)
+  const inchSteps = units === 'in' && !tool
   const [text, setText] = useState(shown)
   const id = useId()
   useEffect(() => setText(shown), [shown])
@@ -77,9 +81,9 @@ export function NumField({
             if (e.key === 'Enter') commit()
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
               e.preventDefault()
-              const n = (Number.isFinite(inUnit) ? inUnit : value) + (e.key === 'ArrowUp' ? (units === 'in' ? 25.4 / 16 : step) : units === 'in' ? -25.4 / 16 : -step)
+              const n = (Number.isFinite(inUnit) ? inUnit : value) + (e.key === 'ArrowUp' ? (inchSteps ? 25.4 / 16 : step) : inchSteps ? -25.4 / 16 : -step)
               const c = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n))
-              setText(length ? formatLength(c, units) : String(c))
+              setText(length ? (tool ? toolSize(c, units) : formatLength(c, units)) : String(c))
               onChange(c)
             }
           }}

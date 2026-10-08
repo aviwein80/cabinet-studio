@@ -100,3 +100,43 @@ export function sizedName(name: string, widthMm: number, units: UnitSystem) {
 export function offcutSize(length: number, width: number, units: UnitSystem) {
   return units === 'in' ? formatDims([length, width], 'in') : `${Math.round(length)} × ${Math.round(width)}`
 }
+
+/** Kitchen-2: the length as an exact inch fraction (to 1/64 in), or null when it is not one (6 mm). */
+export function exactInches(mm: number): string | null {
+  const k = Math.round(toInches(Math.abs(mm)) * 64)
+  if (k === 0 || Math.abs((k / 64) * MM_PER_IN - Math.abs(mm)) > 0.0005) return null
+  const whole = Math.floor(k / 64)
+  let n = k - whole * 64
+  let d = 64
+  while (n > 0 && n % 2 === 0) {
+    n /= 2
+    d /= 2
+  }
+  const sign = mm < 0 ? '-' : ''
+  if (n === 0) return `${sign}${whole}"`
+  return whole > 0 ? `${sign}${whole}-${n}/${d}"` : `${sign}${n}/${d}"`
+}
+
+/**
+ * Kitchen-2: a tool or drill size (diameter, depth, stick-out). Metric tools stay exact in an inch
+ * shop: a 6 mm drill reads "6 mm", not 1/4"; a size that is an exact inch fraction reads as one
+ * (12.7 reads 1/2"). Either text carries its unit, so it reads back to the same millimetres.
+ */
+export function toolSize(mm: number, units: UnitSystem) {
+  if (units === 'mm') return fmt(mm)
+  return exactInches(mm) ?? `${fmt(mm)} mm`
+}
+
+/**
+ * Kitchen-2: a size or position in a message (part and sheet sizes, positions, spacing, trim): inches
+ * to 1/16 in an inch shop, "<n> mm" otherwise. Machining values (depths, thicknesses, tool sizes,
+ * tolerances, clearances) stay exact in millimetres in both.
+ */
+export function sizeText(mm: number, units: UnitSystem) {
+  return units === 'in' ? formatInches(mm) : `${fmt(mm)} mm`
+}
+
+/** Kitchen-2: the nesting header's trim and part spacing, in the shop unit (it always said mm). */
+export function trimSpacingText(trim: number, spacing: number, units: UnitSystem) {
+  return units === 'in' ? `Trim ${formatInches(trim)} · spacing ${formatInches(spacing)}` : `Trim ${trim} · spacing ${spacing} mm`
+}

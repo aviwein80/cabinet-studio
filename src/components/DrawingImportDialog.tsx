@@ -15,6 +15,7 @@ import { featuresOf } from '@/core/features'
 import type { Material, UnitSystem } from '@/core/types'
 import { formatLength } from '@/core/units'
 import { fmt } from '@/core/geometry'
+import { enterApplies } from '@/components/enterApplies'
 
 interface Loaded {
   name: string
@@ -188,6 +189,7 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
                 value={outlineLayer}
                 placeholder={preview?.layers[0] ?? 'Largest closed shape'}
                 onChange={(e) => setOutlineLayer(e.target.value)}
+                onKeyDown={enterApplies}
                 onBlur={() => update(opts, outlineLayer, thickness)}
                 list="import-layers"
               />

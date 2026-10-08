@@ -253,6 +253,11 @@ export interface CarcassParams {
     frontHeight: number
     /** 'auto' picks 15 / 18 / 21 in from the cabinet depth using Blum's table. */
     slide: 'auto' | 15 | 18 | 21
+    /**
+     * Drawer-box sides, subfront and back (Polish-1). Absent = the carcass board. Blum TANDEM takes
+     * sides up to 16 mm, so an 18 mm carcass board is warned about.
+     */
+    boxMaterialId?: string
   }
 }
 
@@ -407,6 +412,11 @@ export interface Tool {
   gaugeLength?: number
   /** Holder from `MachineProfile.holders`. Absent = the shop's default holder (`defaultHolderId`). */
   holderId?: string
+  /**
+   * Invented tool (Polish-1: the 6 mm drill for TANDEM runner holes): keeps its Configure badge,
+   * even in a real tool table, until its number, diameter and depth are confirmed.
+   */
+  placeholder?: boolean
   /** Aggregate (angle head or rotating aggregate) this tool sits in, from `MachineProfile.aggregates` (TOOL-04). */
   aggregateId?: string
   /** Barrel cutters (TOOL-07): radius of the arc that forms the side, mm (larger than half the diameter). */
@@ -578,6 +588,11 @@ export interface MachineProfile {
   mat: 'HOMAG' | 'WEEKE'
   /** How vertical drills are addressed in BohrVert: by diameter (DU, machine picks spindle) or tool number (TNO). */
   drillAddressing: 'diameter' | 'tool-number'
+  /**
+   * Drill matching tolerance in mm (Polish-1): a hole takes the nearest drill within this much of
+   * its diameter, and the drill's own diameter is written. Absent = 0.1. Never matched outside it.
+   */
+  drillTolerance?: number
   hasHorizontalDrillUnit: boolean
   /** Grooves as router pockets (<112 Tasche>) or saw grooves (<109 Nuten>). */
   grooveMethod: 'router-pocket' | 'saw'

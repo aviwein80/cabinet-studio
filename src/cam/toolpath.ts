@@ -6,6 +6,8 @@
  *    geometry with radius correction, drilling macros, rectangular pockets, saw grooves).
  */
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
+import { drillFits, drillToleranceOf, findDrill } from '@/core/machining'
+import { fmt as fmtMm } from '@/core/geometry'
 import { driveSource, entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
 import { cutFloor, planSawCuts, type SawCut } from './more25d/saw'
 import { betweenCurves, type Chain3, smooth3, zWave } from './more25d/curves'
@@ -157,6 +159,11 @@ export interface Toolpath {
    * and the export checker refuses the job while it is enabled. Absent = written as its intents.
    */
   noOutput?: string
+  /**
+   * Drilling (Polish-1): each hole diameter and the drill matched to it (`fits` = within the
+   * machine's drill tolerance). Shown in the operation editor.
+   */
+  drills?: { hole: number; face: FaceId; tool: number; diameter: number; fits: boolean }[]
   /** Saw cuts (2D-11): the blade and each cut, for drawing the blade and its run-out. */
   saw?: { r: number; kerf: number; tilt: number; runout: number; placeholderBlade: boolean; cuts: SawCut[] }
   /** Depths were measured from a faced top this far below face 1 (2D-16). */
@@ -1121,9 +1128,18 @@ function genDrill(op: DrillOp, ctx: GenContext, tp: Toolpath, b: Builder) {
     const face = list[0].face
     const d = list[0].d
     const type = face === 1 || face === 6 ? 'drill-vertical' : 'drill-horizontal'
-    const tool = op.toolId ? (machine.tools.find((t) => t.id === op.toolId) ?? null) : (resolveTool(op, machine, { diameter: d }) ?? machine.tools.find((t) => t.type === type && Math.abs(t.diameter - d) < 0.01) ?? null)
+    // Polish-1: the nearest drill within the machine's tolerance (exact first); never outside it
+    const tool = op.toolId ? (machine.tools.find((t) => t.id === op.toolId) ?? null) : (resolveTool(op, machine, { diameter: d }) ?? findDrill(machine, d, 0, type))
     const vertical = face === 1 || face === 6
-    if (!tool) tp.warnings.push(`No ${vertical ? 'vertical' : 'horizontal'} drill D${d} in the tool table.`)
+    const tol = drillToleranceOf(machine)
+    if (!tool) tp.warnings.push(`No ${vertical ? 'vertical' : 'horizontal'} drill D${d} within ±${fmtMm(tol)} mm in the tool table.`)
+    else if (Math.abs(tool.diameter - d) >= 0.0005) {
+      const diff = tool.diameter - d
+      const off = `${diff > 0 ? '+' : ''}${fmtMm(diff)} mm`
+      if (drillFits(machine, tool.diameter, d)) tp.warnings.push(`D${d} holes are drilled with T${tool.number} (D${tool.diameter}, ${off}, within the ±${fmtMm(tol)} mm drill tolerance); the program asks for D${tool.diameter}.`)
+      else tp.warnings.push(`T${tool.number} (D${tool.diameter}) is ${off} off the D${d} holes, outside the ±${fmtMm(tol)} mm drill tolerance: the export is refused until a drill within it is picked.`)
+    }
+    if (tool) (tp.drills ??= []).push({ hole: d, face, tool: tool.number, diameter: tool.diameter, fits: drillFits(machine, tool.diameter, d) })
     if (face === 6) {
       tp.warnings.push(`${list.length} hole(s) on face 6 (underside) go into a separate program run after the part is turned over end for end.`)
       for (const h of list) {

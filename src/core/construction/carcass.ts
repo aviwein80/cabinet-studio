@@ -417,9 +417,18 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
     const slideId = SLIDE_IDS[slide.part]
     const runner = slideBoring(lib, slide, slideId ? pin?.hardware?.[slideId] : undefined)
     if (D + 0.01 < runner.minCabinetDepth) warnings.push(`Cabinet depth ${D} mm is under the ${runner.minCabinetDepth} mm minimum for a ${slide.inches} in TANDEM runner.`)
-    const sideT = T
-    if (T > BLUM.maxSideThickness)
-      warnings.push(`Blum TANDEM allows drawer sides up to ${BLUM.maxSideThickness} mm (5/8 in). These sides are the ${T} mm carcass board, so check the runner before building the box.`)
+    // Polish-1: the box (sides, subfront, back) is its own material when one is chosen; absent =
+    // the carcass board, as before. The TANDEM side limit is checked against what is really used.
+    const boxMat = p.drawers.boxMaterialId ? lib.materials.find((m) => m.id === p.drawers.boxMaterialId) : undefined
+    if (p.drawers.boxMaterialId && !boxMat) warnings.push(`Drawer-box material ${p.drawers.boxMaterialId} is not in the library; the boxes use the carcass board.`)
+    const boxM = boxMat ? boxMat.id : cm
+    const sideT = boxMat ? boxMat.thickness : T
+    if (sideT > BLUM.maxSideThickness + 0.01)
+      warnings.push(
+        boxMat
+          ? `Blum TANDEM allows drawer sides up to ${BLUM.maxSideThickness} mm (5/8 in). These sides are the ${sideT} mm drawer-box board (${boxMat.code}); choose a drawer-box material of ${BLUM.maxSideThickness} mm or less.`
+          : `Blum TANDEM allows drawer sides up to ${BLUM.maxSideThickness} mm (5/8 in). These sides are the ${sideT} mm carcass board; choose a drawer-box material of ${BLUM.maxSideThickness} mm or less (Drawers > Box material).`,
+      )
     const openingW = W - 2 * T
     const insideW = r3(openingW - BLUM.insideWidthDeduction)
     const sideGap = r3((openingW - (insideW + 2 * sideT)) / 2)
@@ -440,10 +449,10 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
       const sideH = r3(Math.max(50, frontH - BLUM.bottomClearance - BLUM.topClearance))
       const xL = r3(T + sideGap)
       const y1 = boxDepth
-      const left = new PartBuilder(`drawer-${n}-side-l`, `Drawer ${n} left side`, 'drawer', cm, box([xL, 0, boxZ0], [xL + sideT, y1, boxZ0 + sideH]), Y, X, 'length')
-      const right = new PartBuilder(`drawer-${n}-side-r`, `Drawer ${n} right side`, 'drawer', cm, box([xL + sideT + insideW, 0, boxZ0], [xL + 2 * sideT + insideW, y1, boxZ0 + sideH]), Y, neg(X), 'length')
-      const sub = new PartBuilder(`drawer-${n}-subfront`, `Drawer ${n} subfront`, 'drawer', cm, box([xL + sideT, 0, boxZ0], [xL + sideT + insideW, sideT, boxZ0 + sideH]), X, Y, 'length')
-      const back = new PartBuilder(`drawer-${n}-back`, `Drawer ${n} back`, 'drawer', cm, box([xL + sideT, y1 - sideT, boxZ0], [xL + sideT + insideW, y1, boxZ0 + sideH]), X, neg(Y), 'length')
+      const left = new PartBuilder(`drawer-${n}-side-l`, `Drawer ${n} left side`, 'drawer', boxM, box([xL, 0, boxZ0], [xL + sideT, y1, boxZ0 + sideH]), Y, X, 'length')
+      const right = new PartBuilder(`drawer-${n}-side-r`, `Drawer ${n} right side`, 'drawer', boxM, box([xL + sideT + insideW, 0, boxZ0], [xL + 2 * sideT + insideW, y1, boxZ0 + sideH]), Y, neg(X), 'length')
+      const sub = new PartBuilder(`drawer-${n}-subfront`, `Drawer ${n} subfront`, 'drawer', boxM, box([xL + sideT, 0, boxZ0], [xL + sideT + insideW, sideT, boxZ0 + sideH]), X, Y, 'length')
+      const back = new PartBuilder(`drawer-${n}-back`, `Drawer ${n} back`, 'drawer', boxM, box([xL + sideT, y1 - sideT, boxZ0], [xL + sideT + insideW, y1, boxZ0 + sideH]), X, neg(Y), 'length')
       const botZ = boxZ0 + BLUM.bottomRecess
       const bottomPanel = new PartBuilder(
         `drawer-${n}-bottom`,

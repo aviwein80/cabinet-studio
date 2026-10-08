@@ -227,7 +227,7 @@ describe('Sliding-door spec, end to end with a mocked model', () => {
     expect(paths.every((t) => t.moves.length > 0)).toBe(true)
     expect(paths.find((t) => t.name === 'Decor dado')?.tool?.diameter).toBe(6)
     // the placeholder tool table has no 16 mm drill; the checker says so instead of guessing
-    expect(paths[0].warnings).toContain('No vertical drill D16 in the tool table.')
+    expect(paths[0].warnings).toContain('No vertical drill D16 within ±0.1 mm in the tool table.')
 
     const ok = job(part, true)
     const out = runJob(ok.job, ok.data)

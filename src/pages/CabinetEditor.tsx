@@ -301,6 +301,15 @@ export function CabinetEditorPage({ target }: { target: Target }) {
                 onChange={(v) => setP((x) => (x.drawers.slide = v === 'auto' ? 'auto' : (Number(v) as 15 | 18 | 21)))}
               />
             </div>
+            {p.drawers.count > 0 && (
+              <SelectField
+                label="Box material"
+                value={p.drawers.boxMaterialId ?? NONE}
+                options={[{ value: NONE, label: 'Same as carcass' }, ...lib.materials.filter((m) => m.thickness > 10).map((m) => ({ value: m.id, label: `${m.code} · ${m.name}${m.thickness > 16.01 ? ' (too thick for TANDEM)' : ''}` }))]}
+                onChange={(v) => setP((x) => (x.drawers.boxMaterialId = v === NONE ? undefined : v))}
+                hint="Sides, subfront and back. Blum TANDEM takes sides up to 16 mm (5/8 in)."
+              />
+            )}
             {p.doors.count > 0 && p.drawers.count > 0 && (
               <NumField label="Drawer front height" value={p.drawers.frontHeight} min={80} max={400} onChange={(v) => setP((x) => (x.drawers.frontHeight = v))} hint="All-drawer cabinets split the opening equally instead." />
             )}

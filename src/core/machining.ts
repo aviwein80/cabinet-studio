@@ -354,8 +354,32 @@ export function sheetProgramName(job: Job, sheetIndex: number, materialCode: str
   return `${safeName(job.number)}_S${String(sheetIndex).padStart(2, '0')}_${safeName(materialCode)}`
 }
 
+/** Default drill matching tolerance (Polish-1): a hole takes a drill within ±0.1 mm of its diameter. */
+export const DRILL_TOLERANCE = 0.1
+
+/** The machine's drill matching tolerance in mm (absent = `DRILL_TOLERANCE`; never below 0.01, the old exact match). */
+export function drillToleranceOf(machine: Pick<MachineProfile, 'drillTolerance'>) {
+  const t = machine.drillTolerance
+  return Math.max(0.01, t !== undefined && Number.isFinite(t) && t >= 0 ? t : DRILL_TOLERANCE)
+}
+
+/** Whether a drill of diameter `tool` may drill a hole of diameter `hole` under the machine's tolerance. */
+export function drillFits(machine: Pick<MachineProfile, 'drillTolerance'>, tool: number, hole: number) {
+  const d = Math.abs(tool - hole)
+  return d < 0.01 || d <= drillToleranceOf(machine) + 1e-9
+}
+
+/**
+ * The drill for a hole: an exact diameter first (within 0.01 mm, as before Polish-1, in tool-table
+ * order), else the nearest diameter within the machine's tolerance (Polish-1). Never outside it.
+ */
 export function findDrill(machine: MachineProfile, diameter: number, depth: number, type: 'drill-vertical' | 'drill-horizontal') {
-  return machine.tools.find((t) => t.type === type && Math.abs(t.diameter - diameter) < 0.01 && t.maxDepth + 1e-9 >= depth) ?? null
+  const reach = machine.tools.filter((t) => t.type === type && t.maxDepth + 1e-9 >= depth)
+  const exact = reach.find((t) => Math.abs(t.diameter - diameter) < 0.01)
+  if (exact) return exact
+  let best: (typeof reach)[number] | null = null
+  for (const t of reach) if (drillFits(machine, t.diameter, diameter) && (!best || Math.abs(t.diameter - diameter) < Math.abs(best.diameter - diameter) - 1e-12)) best = t
+  return best
 }
 
 export function findPocketTool(machine: MachineProfile, width: number, depth: number) {

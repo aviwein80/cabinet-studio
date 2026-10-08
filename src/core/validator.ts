@@ -8,7 +8,7 @@ import { boxOf, type Seg, toPoints } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
 import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type Paths64 } from 'clipper2-ts'
-import { cutoutTool, placementTransform, type JobNest, type SheetProgram } from './machining'
+import { cutoutTool, drillFits, drillToleranceOf, placementTransform, type JobNest, type SheetProgram } from './machining'
 import type { Placement } from './nesting'
 import { machineModelOf } from './machineModel'
 import { featuresOf } from './features'
@@ -114,6 +114,38 @@ export function validateJob(
     const sheetNo = sh.index
     const maxZ = T + machine.spoilboardAllowance
     const trim = settings.nesting.edgeTrim
+
+    // Polish-1: a hole drilled with a drill of another diameter. Within the machine's tolerance it
+    // is said once per sheet (which drill was matched); outside it the export is refused.
+    const tol = drillToleranceOf(machine)
+    const nearest = new Map<string, { hole: number; tool: { number: number; diameter: number }; count: number; parts: Set<number> }>()
+    for (const op of prog.ops) {
+      if ((op.kind !== 'vdrill' && op.kind !== 'hdrill') || !op.tool || Math.abs(op.tool.diameter - op.diameter) < 0.0005) continue
+      const ref = { sheet: sheetNo, partNo: op.partNo, partUid: op.partUid }
+      if (!drillFits(machine, op.tool.diameter, op.diameter)) {
+        add({
+          ...ref,
+          severity: 'error',
+          code: 'DRILL_TOLERANCE',
+          message: `#${op.partNo} ${op.purpose}: T${op.tool.number} (D${fmt(op.tool.diameter)}) is ${fmt(Math.abs(op.tool.diameter - op.diameter))} mm off the D${fmt(op.diameter)} hole, outside the ±${fmt(tol)} mm drill tolerance (Machine & tools). Pick a drill within the tolerance, or change the hole.`,
+        })
+        continue
+      }
+      const k = `${op.diameter}:${op.tool.number}`
+      const n = nearest.get(k) ?? { hole: op.diameter, tool: op.tool, count: 0, parts: new Set<number>() }
+      n.count++
+      n.parts.add(op.partNo)
+      nearest.set(k, n)
+    }
+    for (const n of nearest.values()) {
+      const diff = n.tool.diameter - n.hole
+      add({
+        severity: 'info',
+        code: 'DRILL_MATCHED',
+        sheet: sheetNo,
+        message: `${n.count} D${fmt(n.hole)} hole(s) on part(s) ${[...n.parts].sort((a, b) => a - b).map((p) => '#' + p).join(', ')} are drilled with T${n.tool.number} (D${fmt(n.tool.diameter)}, ${diff > 0 ? '+' : ''}${fmt(diff)} mm, within the ±${fmt(tol)} mm drill tolerance). The program asks for D${fmt(n.tool.diameter)}.`,
+      })
+    }
     if (sh.sheetLength > model.table.length + EPS || sh.sheetWidth > model.table.width + EPS)
       add({
         severity: 'error',
@@ -185,7 +217,7 @@ export function validateJob(
       switch (op.kind) {
         case 'vdrill': {
           if (!op.tool)
-            add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no vertical drill D${fmt(op.diameter)} reaching ${fmt(op.depth)} mm in the tool table.` })
+            add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no vertical drill D${fmt(op.diameter)} (±${fmt(drillToleranceOf(machine))} mm) reaching ${fmt(op.depth)} mm in the tool table.` })
           if (!inSheet(op.x, op.y) || !inFootprint(op.partUid, op.x, op.y))
             add({ ...ref, severity: 'error', code: 'OP_OUTSIDE', message: `${label}: hole at X${fmt(op.x)} Y${fmt(op.y)} is outside its part.` })
           if (op.through && op.depth > maxZ + EPS)
@@ -198,7 +230,7 @@ export function validateJob(
         }
         case 'hdrill':
           if (!op.tool)
-            add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no horizontal drill D${fmt(op.diameter)} in the tool table.` })
+            add({ ...ref, severity: 'error', code: 'TOOL_MISSING', message: `${label}: no horizontal drill D${fmt(op.diameter)} (±${fmt(drillToleranceOf(machine))} mm) in the tool table.` })
           break
         case 'pocket': {
           if (!op.tool)

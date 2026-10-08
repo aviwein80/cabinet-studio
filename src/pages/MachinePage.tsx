@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { NumField, Section, SelectField, SwitchField, TextField } from '@/components/fields'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { nestSettingsOf, partSpacing } from '@/core/machining'
+import { drillToleranceOf, nestSettingsOf, partSpacing } from '@/core/machining'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 import { MachineModelSection } from './machine/MachineModelSection'
@@ -255,6 +255,16 @@ export function MachinePage() {
                   { value: 'tool-number', label: 'By tool number (TNO)' },
                 ]}
                 onChange={(v) => updateMachine((x) => (x.drillAddressing = v))}
+              />
+              <NumField
+                label="Drill matching tolerance"
+                value={drillToleranceOf(m)}
+                min={0.01}
+                max={1}
+                step={0.01}
+                cfg="machine:drillTolerance"
+                onChange={(v) => updateMachine((x) => (x.drillTolerance = v))}
+                hint="A hole takes the nearest drill within this much of its diameter (a 5/16 in hole, 7.938 mm, takes an 8 mm drill at 0.1 mm), and the program asks for that drill's diameter. Never matched outside it; the export checker says which drill was matched."
               />
               <SwitchField
                 label="Horizontal drill unit fitted"

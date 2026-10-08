@@ -51,6 +51,22 @@ export class Lines {
   }
 }
 
+/**
+ * The diameter written for a hole (Polish-1): the matched drill's own diameter, so the machine is
+ * asked for a drill it has (a 7.938 mm hole matched to an 8 mm drill writes DU=8). The same as the
+ * hole's whenever the drill matches exactly, so such programs are unchanged. The export checker
+ * refuses a drill outside the machine's matching tolerance (`DRILL_TOLERANCE`).
+ */
+export function drilledDiameter(op: { diameter: number; tool: { diameter: number } | null }) {
+  return op.tool && Math.abs(op.tool.diameter - op.diameter) >= 0.0005 ? op.tool.diameter : op.diameter
+}
+
+/** "D8", or "D7.938 drilled D8" when the drill differs from the hole. */
+function drillNote(op: { diameter: number; tool: { diameter: number } | null }) {
+  const d = drilledDiameter(op)
+  return d === op.diameter ? `D${fmt(op.diameter)}` : `D${fmt(op.diameter)} drilled D${fmt(d)}`
+}
+
 export function writeVDrill(w: Lines, op: VDrill, machine: MachineProfile) {
   w.line('<102 \\BohrVert\\')
   w.kv('XA', op.x)
@@ -58,7 +74,7 @@ export function writeVDrill(w: Lines, op: VDrill, machine: MachineProfile) {
   w.kv('BM', op.through ? 'LSL' : 'LS')
   w.kv('TI', op.depth)
   if (machine.drillAddressing === 'tool-number' && op.tool) w.kv('TNO', op.tool.number)
-  else w.kv('DU', op.diameter)
+  else w.kv('DU', drilledDiameter(op))
   w.kv('AN', 1)
   w.kv('MI', 0)
   w.kv('S_', 2)
@@ -67,7 +83,7 @@ export function writeVDrill(w: Lines, op: VDrill, machine: MachineProfile) {
   w.kv('F_', 'STANDARD')
   w.kv('KO', '00')
   w.kv('KAT', 'Bohren vertikal')
-  w.kv('MNM', mprText(`P${op.partNo} ${op.purpose} D${fmt(op.diameter)}`))
+  w.kv('MNM', mprText(`P${op.partNo} ${op.purpose} ${drillNote(op)}`))
 }
 
 export function writeHDrill(w: Lines, op: HDrill, machine: MachineProfile) {
@@ -76,7 +92,7 @@ export function writeHDrill(w: Lines, op: HDrill, machine: MachineProfile) {
   w.kv('YA', op.y)
   w.kv('ZA', op.z)
   if (machine.drillAddressing === 'tool-number' && op.tool) w.kv('TNO', op.tool.number)
-  else w.kv('DU', op.diameter)
+  else w.kv('DU', drilledDiameter(op))
   w.kv('TI', op.depth)
   w.kv('BM', op.dir)
   w.kv('BM2', 'STD')
@@ -86,7 +102,7 @@ export function writeHDrill(w: Lines, op: HDrill, machine: MachineProfile) {
   w.kv('F_', 'STANDARD')
   w.kv('KO', '00')
   w.kv('KAT', 'Bohren horizontal')
-  w.kv('MNM', mprText(`P${op.partNo} ${op.purpose} D${fmt(op.diameter)}`))
+  w.kv('MNM', mprText(`P${op.partNo} ${op.purpose} ${drillNote(op)}`))
 }
 
 function writePocket(w: Lines, op: Pocket) {

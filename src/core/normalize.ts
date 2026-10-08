@@ -1,5 +1,5 @@
 import { migratePart } from '@/cam/doc'
-import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_MACHINE } from './defaults'
+import { defaultAppData, fillHardwareSpecs, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE } from './defaults'
 import { DEFAULT_FEATURES } from './features'
 import { DEFAULT_ROOM } from './room'
 import type { AppData, CarcassParams, MachineProfile } from './types'
@@ -18,9 +18,13 @@ function withParams(p: CarcassParams): CarcassParams {
  */
 function refreshPlaceholderTools(m: MachineProfile): MachineProfile {
   if (!m.placeholder) return m
+  // Polish-1: a placeholder table saved before the 6 mm drill gets it, unless it has a 6 mm
+  // vertical drill or a tool numbered 205 already
+  const add6 = !m.tools.some((t) => t.number === PLACEHOLDER_DRILL_6.number || (t.type === 'drill-vertical' && Math.abs(t.diameter - 6) < 0.01))
+  const tools = add6 ? [...m.tools, { ...PLACEHOLDER_DRILL_6 }] : m.tools
   return {
     ...m,
-    tools: m.tools.map((t) => {
+    tools: tools.map((t) => {
       const p = PLACEHOLDER_MACHINE.tools.find((x) => x.id === t.id)
       if (!p || t.gaugeLength !== undefined || p.gaugeLength === undefined || p.number !== t.number || p.diameter !== t.diameter || p.maxDepth !== t.maxDepth) return t
       return { ...t, gaugeLength: p.gaugeLength }

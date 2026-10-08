@@ -1,4 +1,5 @@
 import type {
+  Tool,
   AppData,
   CabinetTemplate,
   CarcassParams,
@@ -16,6 +17,8 @@ export const DEFAULT_MATERIALS: Material[] = [
   { id: 'mat-pb18-white', code: 'PB18-WHT', name: 'Melamine PB 18 white', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#f1f0ec' },
   { id: 'mat-pb18-oak', code: 'PB18-OAK', name: 'Melamine PB 18 natural oak (grain)', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: true, color: '#c9a77c' },
   { id: 'mat-mdf18', code: 'MDF18', name: 'MDF 18 raw (paint grade)', thickness: 18, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#b9a48a' },
+  // Polish-1: drawer boxes. Blum TANDEM takes sides up to 16 mm, so the 18 mm boards do not suit
+  { id: 'mat-pb16-white', code: 'PB16-WHT', name: 'Melamine PB 16 white (drawer boxes)', thickness: 16, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#f3f2ee' },
   { id: 'mat-hdf6-white', code: 'HDF6-WHT', name: 'HDF 6 white back', thickness: 6, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#e9e7e2' },
 ]
 
@@ -131,7 +134,7 @@ export const BUILTIN_TEMPLATES: CabinetTemplate[] = [
       ...clone(BASE_PARAMS),
       doors: { ...BASE_PARAMS.doors, count: 0 },
       shelves: { ...BASE_PARAMS.shelves, count: 0 },
-      drawers: { count: 3, frontHeight: 152.4, slide: 'auto' },
+      drawers: { count: 3, frontHeight: 152.4, slide: 'auto', boxMaterialId: 'mat-pb16-white' },
     },
     builtIn: true,
   },
@@ -169,6 +172,9 @@ export const PLACEHOLDER_AGGREGATE: Aggregate = {
   placeholder: true,
 }
 
+/** Polish-1: a 6 mm vertical drill for Blum TANDEM runner holes. Invented number and depth (placeholder). */
+export const PLACEHOLDER_DRILL_6: Tool = { id: 't205', number: 205, type: 'drill-vertical', name: 'Drill 6 mm, TANDEM runner holes (placeholder)', diameter: 6, maxDepth: 35, placeholder: true }
+
 export const PLACEHOLDER_MACHINE: MachineProfile = {
   name: 'HOMAG CENTATEQ N-200 (placeholder tools)',
   model: 'CENTATEQ N-200',
@@ -192,6 +198,8 @@ export const PLACEHOLDER_MACHINE: MachineProfile = {
     { id: 't202', number: 202, type: 'drill-vertical', name: 'Dowel drill 7 mm', diameter: 7, maxDepth: 35 },
     { id: 't203', number: 203, type: 'drill-vertical', name: 'Dowel drill 8 mm', diameter: 8, maxDepth: 35 },
     { id: 't204', number: 204, type: 'drill-vertical', name: 'Hinge boring bit 35 mm', diameter: 35, maxDepth: 15 },
+    // Polish-1: Blum TANDEM runner screw holes are 6 mm; invented number and depth, badged until confirmed
+    PLACEHOLDER_DRILL_6,
     { id: 't140', number: 140, type: 'saw', name: 'Grooving saw 4 mm kerf', diameter: 4, maxDepth: 15 },
     // 3D tools: invented shapes and lengths for development only.
     { id: 't105', number: 105, type: 'router', name: 'Ball-nose 6 mm (placeholder)', diameter: 6, maxDepth: 25, shape: 'ball', centreCutting: true, shankDiameter: 6, fluteLength: 25, gaugeLength: 50, holderId: 'h-placeholder' },

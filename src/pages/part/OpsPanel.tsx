@@ -515,6 +515,16 @@ function OpEditor({
             options={[1, 2, 3, 4, 5, 6].map((f) => ({ value: String(f), label: ['Top (1)', 'Front edge (2)', 'Right edge (3)', 'Back edge (4)', 'Left edge (5)', 'Underside (6)'][f - 1] }))}
             onChange={(v) => set('face', Number(v) as FaceId)}
           />}
+          {op.kind === 'drill' && tp?.drills && tp.drills.length > 0 && (
+            <ul className="col-span-2 flex flex-col gap-0.5 text-[11px]" data-testid="drill-matches">
+              {tp.drills.map((d) => (
+                <li key={`${d.face}:${d.hole}`} className={d.fits ? 'text-stone-400' : 'text-red-300'}>
+                  Ø{d.hole} holes → T{d.tool} Ø{d.diameter}
+                  {Math.abs(d.diameter - d.hole) >= 0.0005 ? ` (${d.diameter > d.hole ? '+' : ''}${Math.round((d.diameter - d.hole) * 1000) / 1000} mm${d.fits ? ', within tolerance' : ', outside the tolerance: export refused'})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
         </Group>
       )}
 

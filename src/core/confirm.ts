@@ -256,7 +256,7 @@ export function toolUnconfirmed(m: MachineProfile, t: Tool): Unconfirmed[] {
   const lolly = t.shape === 'lollipop'
   // M3.5 (TOOL-07): a barrel's side arc and tip, a form tool's outline, are part of its data
   const shapeData = t.shape === 'barrel' ? `, side R${fmt(t.barrelRadius ?? 0)}, tip R${fmt(t.cornerRadius ?? 0)}` : t.shape === 'form' ? `, outline of ${t.form?.length ?? 0} points` : ''
-  add('data', lolly ? 'number, ball Ø and depth' : t.shape === 'barrel' ? 'number, Ø, side and tip radii, depth' : t.shape === 'form' ? 'number, Ø, outline and depth' : 'number, diameter and depth', `${lolly ? 'ball ' : ''}Ø${fmt(t.diameter)}${shapeData}, ${fmt(t.maxDepth)} deep`, m.placeholder || lolly)
+  add('data', lolly ? 'number, ball Ø and depth' : t.shape === 'barrel' ? 'number, Ø, side and tip radii, depth' : t.shape === 'form' ? 'number, Ø, outline and depth' : 'number, diameter and depth', `${lolly ? 'ball ' : ''}Ø${fmt(t.diameter)}${shapeData}, ${fmt(t.maxDepth)} deep`, m.placeholder || lolly || !!t.placeholder)
   if (t.type === 'saw') add('blade', 'blade diameter', t.bladeDiameter ? `Ø${fmt(t.bladeDiameter)} mm` : 'Ø200 mm (assumed)', m.placeholder || !t.bladeDiameter)
   if (hasLengths(m, t)) {
     // no stick-out given: the shortest possible (the flute length) is assumed, so checks err safe

@@ -1,0 +1,63 @@
+1
+00:00:03,405 --> 00:00:21,083
+A bathroom vanity for Priya Patel: a 48" alcove, built from two kitchen presets.
+
+2
+00:00:21,083 --> 00:00:27,921
+Start with the 36" sink base for the basin...
+
+3
+00:00:27,921 --> 00:00:34,803
+...and the 18" 3-drawer base for a drawer bank beside it.
+
+4
+00:00:34,803 --> 00:00:53,783
+The alcove is 48" between the walls. Set the room in the Room tab.
+
+5
+00:00:53,783 --> 00:00:56,433
+Kitchen sizes don't fit: 36" + 18" is 54", 6" too wide. Click the sink base to resize it.
+
+6
+00:00:56,433 --> 00:01:04,926
+Vanity sizes: 30" wide, 31-1/2" high for a comfort-height top, 21" deep.
+
+7
+00:01:04,926 --> 00:01:13,166
+The drawer bank gets the same height and depth.
+
+8
+00:01:13,166 --> 00:01:17,907
+Arrange again: 30" + 18" fills the 48" alcove exactly, wall to wall.
+
+9
+00:01:17,907 --> 00:01:22,231
+Elevation: both boxes at 31-1/2", the basin cabinet on the left, drawers on the right.
+
+10
+00:01:22,231 --> 00:01:34,907
+And in 3D.
+
+11
+00:01:34,907 --> 00:01:40,082
+The Cut list: every part resized to the vanity, with edgebanding per edge.
+
+12
+00:01:40,082 --> 00:01:46,745
+Hardware: Blum TANDEM 18 in slides for the drawers, Salice hinges on 3 mm plates for the doors.
+
+13
+00:01:46,745 --> 00:01:54,511
+Nesting: a small job like this goes on just a few 5 x 12 ft sheets.
+
+14
+00:01:54,511 --> 00:01:57,935
+The leftover board is shown as an offcut you can keep in stock for the next job.
+
+15
+00:01:57,935 --> 00:02:06,423
+On the Output tab the labels and sheet maps are ready. Machine output switches stay off.
+
+16
+00:02:06,423 --> 00:02:09,424
+A custom-size vanity from kitchen presets, sized to the alcove in under two minutes.

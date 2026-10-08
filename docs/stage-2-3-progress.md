@@ -3671,11 +3671,166 @@ each L on its own rectangle, the three cleats #41, #121, #123).
    edgebander needs (larger radii are cut as short straight segments until one arc is checked in
    woodWOP, decision 18).
 
+## Polish-2: fixes from recording the "Real jobs" video tour
+
+A bug-fix round, not a milestone of the spec: 26 items found while recording the tour on `e1f82ee`.
+Each was reproduced first (in a test, the browser preview, or frames of the tour videos on the
+`video-tour` branch, read only); the jobs of the tour are rebuilt the way the app builds them in
+`tests/polish-2-jobs.ts`. Every real fix has a test in `tests/polish-2.test.ts`. Baseline before the
+round: head `e1f82ee`, 1142 tests (1141 + 1 skipped), 17 lint warnings, typecheck and build clean;
+the 90 s timing test took 81.0 s alone (102 s inside the full suite, where it fails under load as
+recorded before). After: see "Test-suite note (Polish-2)".
+
+### A. Inch mode shows inches everywhere (mm mode unchanged)
+
+| # | Found | Fix | Test |
+|---|---|---|---|
+| 1 | The job's inside corner radius of L parts was a millimetre-only field; the nesting part detail and label said "Inside corner R6 mm" | The field, its Configure badge text and hint, the part's own R in the cabinet editor, and the part note (nesting panel, PDF/ZPL labels) are in the shop unit. Thin lengths use the new `fineLength`: an exact fraction when it is one, else decimal inches to 0.001 (6 mm reads 0.236", never rounded to 1/4") | `1` |
+| 2 | Cut list edgeband totals in metres; heading "incl. 50 mm overhang per edge" | Totals in feet (to 0.1 ft) and the heading in inches (`1-15/16"`) in an inch shop (`runLength`, `EDGEBAND_OVERHANG`); the pre-mill note above the table too | `2` |
+| 3 | BOM CSV sheet sizes "3658x1524" | In an inch shop "144 x 60 in" (no quote marks to escape in a CSV) and edgeband in feet; a millimetre shop's file is byte-identical | `3` |
+| 4 | Material dialog "Area (per m²)" beside "$ per ft²" | "Area (per ft²)" in an inch shop (`costByOptions`); the weight note per ft² too | `4` |
+| 5 | A 1 mm edgeband read 1/16" (1.59 mm) | The library's edgeband T column and the edit dialog's Thickness use `fineLength`: 0.039", 0.016" | `5` |
+| 6 (?) | Add hole range text, Library CSV units, drill tolerance, the sign program's DU | Already fixed in Polish-1 (range text in the shop unit, "Sizes in" on import, `drillTolerance` and `DRILL_MATCHED`, `DU=8` for a 5/16 in hole on T203; Polish-1 tests 3, 7, 8-9). Still found: the dialog's Diameter and Depth rounded to 1/16 (an 8 mm hole read 5/16"): now exact like tool sizes ("8 mm", or an exact fraction) | `6` |
+
+The Machine page's drill tolerance, extra spacing and pre-mill stay in mm (Polish-1 decision: tolerances
+and clearances exact in mm).
+
+### B. The room
+
+- **7 Tall cabinet missing from the back-wall elevation.** The laundry's 24" tall cabinet in the
+  back-left corner of a 72" deep room: its back edge landed 2e-13 mm off the back wall (float), while it
+  was exactly on the left wall, so it was drawn on the left wall's elevation. Plan and 3D use other
+  tests. `cabinetOnWall` now compares the gaps to 0.01 mm, so the documented corner tie (back wall
+  first) holds. Test `7`.
+- **8 Doors drawn after Doors: None. Not reproduced.** Set from the Room tab or the cabinet editor,
+  the elevation draws no doors (browser, both ways). The tour video u05 shows the same: at 1:06 the
+  Doors list is still open with W2's doors drawn; by 1:10 W2 is drawn without doors. A test records
+  that a cabinet with no doors has no door in its elevation (`8`).
+- **9 A width change needed Arrange.** In the vanity (u03) the 18" drawer base was returned on the left
+  wall because 36" + 18" did not fit the 48" alcove; narrowing the sink base to 30" moved nothing (the
+  drawer base is not in its run), and Arrange had to be pressed again. Now, while the room is as Arrange
+  (or Fill gap) left it (every placed cabinet where Arrange puts it), a change of size keeps it that way:
+  the neighbour push runs as before, then every placed cabinet is put where Arrange now puts it. The
+  size change of a cabinet without a placement of its own (one added after Arrange) does the same. A
+  room with a cabinet moved by hand gets the push only, as before (`pushNeighbours`). Tests `9` (three).
+- **10 A filler typed to the shown gap still ran past the wall.** u10: the Ortiz back wall re-measured
+  at 119" leaves a 32.8 mm gap, shown as 1-5/16" (33.34 mm); typed, that filler stood 0.54 mm past the
+  wall, over the 0.5 mm check. In an inch shop the check now allows the rounding of a size shown to
+  1/16" (1/32", 0.79 mm, `pastWallTolerance`); 1-3/8" is still flagged, and a millimetre shop keeps
+  0.5 mm. Overlaps keep 0.5 mm. Test `10`.
+- **11 Re-arrange put an oversize filler past the wall.** The room's warning now offers "Shrink F1 to
+  1-5/16" to fit": the filler keeps its edge against the run and is cut back at the wall (either end,
+  any wall; not offered when it would be under 3 mm or stands past a wall across its run)
+  (`fillersPastWall`, `shrinkToFit`). Test `11`.
+- **12 Elevation labels overlapping (?)** Still found: the numbers of narrow neighbours drawn above
+  them (an end panel and the filler beside it) ran together ("E2F1" in u02, "E21" in u10). They are
+  stacked in rows now (`narrowLabelRows`); the labels inside wider boxes were already fitted (Polish-1).
+  Test `12`.
+
+### C. Job editing
+
+- **13** The job card counts drawers: "3 drawers" (was "0 doors · 0 shelf"); counts of none are left out
+  ("2 doors · 1 shelf", "1 drawer · 1 door · 1 shelf") (`contentsLabel`). Test `13`.
+- **14** Typing in the job's Notes worked the whole job out again on every key (0.64 s a key on the
+  63-part Ortiz kitchen, measured in node). The screen now works the job out only when something the
+  output depends on changes: the job without its notes and save time, and the library, machine and
+  settings (`outputKey`, 0.1 ms; `runJob` reads nothing else). Test `14`.
+- **15** Owner decision: drawer boxes default to a 16 mm drawer board. A cabinet with no box material
+  of its own now uses the library's drawer-box board (`drawerBoard`: PB16-WHT, else the placeholder,
+  else another 16 mm board), the carcass board only when the library has none (and then the TANDEM
+  warning says what to do, as before). This includes cabinets saved before and templates such as the
+  tour's "Base 18" 3-drawer": their drawer box sides, subfront and back move from the 18 mm carcass
+  board to the 16 mm board (and onto its own sheet). A library with no 16 mm board gets "DRAWER-16 Drawer
+  box board 16 mm (placeholder)" when loaded, with a Configure badge (cabinet editor's Box material,
+  the material's edit dialog) until confirmed or saved as the shop's own board. Polish-1 test 11 had one
+  expectation for the old default (no box material = 18 mm carcass board); it now checks the new
+  default, and the old warning in a library without a 16 mm board. Tests `15` (two).
+
+### D. Nesting and output
+
+- **16 Three pantries on 8 sheets.** Not the nester: 8 is the fewest possible. A 5 x 12 ft sheet takes
+  an 84" part only along its length and never two end to end, so each sheet holds its 84" parts side
+  by side across its 60" width; two 24"-wide parts (sides, end panels) leave no room for an 11-13/16"
+  door, so eight wide parts and six doors need 6 PB18 sheets, and the three 84" backs 2 HDF sheets. An
+  exhaustive check in the test, independent of the nester, confirms no fewer sheets can hold them.
+  Before and after: 8 sheets (6 PB18 + 2 HDF6). The low sheets (23 % is the last two doors) are the
+  price of the 84" parts. Test `16`.
+- **17 "Laid out by hand" on an automatic sheet (?)** Still found: saving the layout editor stored every
+  sheet, and every stored sheet said "laid out by hand", including sheets left as the nester laid them
+  out (a custom part's sheet too). A sheet saved unchanged is now marked automatic (`SavedSheet.auto`,
+  `markUntouched`); layouts saved before keep saying "laid out by hand". The export check runs on the
+  saved layout exactly as before. Test `17`.
+
+### E. Custom parts and CAM
+
+- **18** The door dialog's previews draw the door standing, as it hangs seen from the front (hinge edge
+  on the left): a 15" x 30" door is taller than wide (`PartThumb upright`, `thumbFrame`). The part
+  itself still lies with its height along X, as cut. Test `18`.
+- **19** The hinge-cup operation's triangle was not a tool problem: the 35 mm bit (T204) is matched
+  exactly. It was the note that face-6 holes go into a second program run after the door is turned
+  over. That note is now an info line (blue, info mark), not a warning (`Toolpath.notes`); the export
+  check lists it exactly as before. Test `19`.
+- **20, 21 (?)** Already fixed in Polish-1: a new part's starting outline follows Length/Width
+  (`resizePart`), pockets added on the Operations panel keep unpicked shapes inside as islands (Polish-1
+  tests 17, 19).
+- **22 (?)** Polish-1 flags a cut-out ahead of other machining. Now the default order is inside work
+  first: an operation added on the Operations panel (or duplicated, or made from a relief or from picked
+  solid faces) goes before the part's cut-out; a new cut-out goes last; "Sort by tool" keeps the cut-out
+  last (`withNewOp`). Parts already made keep their order, so no golden changed. Test `22`.
+- **23, 24, 25 (?)** Already fixed in Polish-1, checked in the browser: the Import drawing dialog fits a
+  1440 x 900 window with Create part in view (its top at 773 px); the DXF label reads "DRILL_12 → Drill,
+  1/2" (12 mm) deep from the layer name"; the simulator lists relief roughing while it is calculated,
+  shows its running state, and the relief size fields apply on Enter (Polish-1 tests 20-24).
+
+### F. Settings
+
+- **26 (?)** Already fixed in Polish-1: with no key saved, the built-in reader reads "In use until a key
+  is saved" and the chosen provider "Chosen · no key, offline reader in use".
+
+### Goldens and output
+
+Stage 1 MPR goldens (`tests/mpr.test.ts`), the custom-part goldens and `npm run sample` are
+byte-identical (no file under `examples/` or `tests/golden/` changed). Item 6's DU was already right
+(Polish-1), and item 22 changes only where new operations go, not existing parts. The sample job has
+no drawers, so item 15 does not touch it; jobs with drawers get their boxes on the 16 mm board.
+
+### Test-suite note (Polish-2)
+
+After: 1166 tests (1165 + 1 skipped; 24 new in `tests/polish-2.test.ts`), 17 lint warnings,
+typecheck and build clean. In the final full run every test passed except the 90 s timing test, at
+95.5 s with the whole suite running beside it (102 s in the baseline run before any change); run on
+its own with nothing else running it passed in 77.3 s (81.0 s before). The limit is unchanged.
+
+### Polish-2 screenshots
+
+In `docs/screenshots/polish-2/` (browser preview, inch mode, the tour's jobs from
+`tests/polish-2-jobs.ts`; each under 300 KB):
+
+`01-laundry-back-elevation-tall-cabinet` (T1 on the back wall), `02a-vanity-36-drawer-base-returned`,
+`02b-vanity-30-drawer-base-back-on-wall` (no Arrange pressed), `03-ortiz-119-filler-past-wall-shrink-offered`,
+`04-ortiz-119-filler-typed-1-5-16-fits` (no warning after Arrange), `05-ortiz-elevation-e2-f1-labels-stacked`,
+`06-job-cabinets-radius-inches-drawer-count` (0.236", "3 drawers"), `07-nesting-l-part-inside-corner-inches`
+("Inside corner R0.236""), `08-cut-list-edgeband-feet` ("157.1 ft", "incl. 1-15/16" overhang"),
+`09-drawer-box-default-16mm-board`, `10-library-edgeband-thickness-decimal-inches`, `11-material-cost-area-per-ft2`,
+`12-door-dialog-15x30-standing`, `13-hinge-cups-note-not-warning`, `14-new-pocket-goes-before-cut-out`,
+`15-pantry-8-sheets`, `16a-sheet-edited-by-hand`, `16b-other-sheet-nested-automatically`,
+`17-check-import-drawing-1440x900`, `18-check-settings-reader-no-key`.
+
+### Limits recorded (Polish-2)
+
+- The plan view still runs the numbers of narrow neighbours together (E2 and F1 at the end of a run);
+  item 12 was about the elevation.
+- Other machining values still round to 1/16 in an inch shop on some screens (the part designer's drill
+  depth: 13.5 mm reads 9/16"; material thicknesses, 18 mm reads 11/16"). Not in this list.
+- The cut list CSV stays in millimetres (a file for the saw and edgebander, not shown).
+- A size change re-arranges only a room exactly as Arrange left it; once a cabinet is moved by hand,
+  only the neighbour push applies (a returned cabinet does not come back round the corner by itself).
+
 ## Next run
 
-- Stage 3, Polish-1, Kitchen-2, Kitchen-3 and Kitchen-3c are complete. Next is the owner's call: the
-  Kitchen-3c decisions above (interlocking L parts, cleat size, corner radius), diagonal corners, the
-  shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
+- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c and Polish-2 are complete. Next is the owner's
+  call: the Kitchen-3c decisions above (interlocking L parts, cleat size, corner radius), diagonal
+  corners, the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
 
 ## Run log
 
@@ -3759,3 +3914,6 @@ each L on its own rectangle, the three cleats #41, #121, #123).
   See `git log`.
 - **Run 24 (Kitchen-3c)**: the owner's answers on Kitchen-3: corner cleats under the L shelves, the
   inside corner radius setting, L parts nested on their rectangles; screenshots, docs. See `git log`.
+- **Run 25 (Polish-2)**: 26 items from recording the "Real jobs" tour: inch mode, the room, job
+  editing, nesting badges, custom parts; tests and the tour's jobs as fixtures; screenshots, this file.
+  See `git log`.

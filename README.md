@@ -52,12 +52,18 @@ tool table, are paused.
      a back on each wall; two doors, one on each leg, each hinged at the end of its leg with the
      usual Salice cups and 3 mm plates (no folding hinge). At the inside corner one door runs
      through in front of the other's end and opens first; you choose which. Typing a door width
-     sets its leg. US presets: 36" x 36" base and 24" x 24" wall.
+     sets its leg. US presets: 36" x 36" base and 24" x 24" wall. Each L shelf gets a corner cleat
+     under its back corner (a cut part, labelled "fix on site"; sizes badged until confirmed; a
+     switch per cabinet, on by default).
    - **L-shaped parts**: a part can be an L (a rectangle with one corner cut away). Its two inside
      edges are called L3 and W3 and are banded like the outer four: the cut outline moves them in
      by the band, the cut list and its CSV get Edge L3 and Edge W3 columns (only when a job has L
      parts), labels draw the L with its banded edges, nesting and the MPR cut follow the L, and
      the edgeband total measures each edge along the outline. Rectangular parts are unchanged.
+     The inside corner is rounded as cut: a radius per job (Cabinets tab) or per part, by default
+     the cut-out tool's (badged until confirmed). The cut outline, label and sheet map show it; the
+     MPR cuts a corner no rounder than the tool sharp (the tool leaves its radius) and a larger one
+     along the arc. L parts nest on their whole rectangle.
    - Diagonal (45°) corner cabinets are not built yet (see ROADMAP.md).
 3. **Per-job customisation**: each cabinet in a job is a copy of its template. You can change any
    parameter, exclude parts, change the edgeband on any edge, or add custom holes. A 3D view

@@ -59,8 +59,11 @@ Progress, tests and limits: `docs/stage-2-3-progress.md`, "Kitchen-3".
 - **Still deferred:** diagonal (45°) corner cabinets (parts at 45°, angled plates or a stile); the
   folding pie-cut hinge (the owner chose two separate doors); blind-panel boring (no standard
   pattern exists: it stays fixed from inside on site).
-- Open questions for the owner: see "Kitchen-3 decisions needed" in the progress file (how the
-  doors meet at the inside corner, and how the L shelves are supported at the corner).
+- Kitchen-3c (the owner's answers): doors kept as built; a corner cleat under each L shelf (fix on
+  site, badged sizes, a switch per cabinet); the inside corner radius of L parts as a setting per
+  job and per part (the cutter's radius by default, badged); blind panels stay unbored.
+- Open questions for the owner: see "Kitchen-3c decisions needed" in the progress file (letting L
+  parts interlock on the sheet, the cleat's real size, the corner radius).
 
 ## Custom-part Stage 2 and 3 (both complete)
 

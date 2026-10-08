@@ -113,10 +113,11 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | Polish-1 Bug-fix round from the owner's video walkthrough (24 items) | **Done** (October 2026) | See "Polish-1" below. Stage 1 goldens, CAM goldens and `npm run sample` byte-identical; every output switch still off. |
 | Kitchen-2 Blind corners, fillers, end panels, Fill gap, US presets, Polish-1 leftovers | **Done** (October 2026) | See "Kitchen-2" below. Goldens and `npm run sample` byte-identical. |
 | Kitchen-3 L-shaped parts, pie-cut corner base and wall, blind corner on either wall | **Done** (October 2026) | See "Kitchen-3" below. Goldens and `npm run sample` byte-identical; every output switch still off. |
+| Kitchen-3c Owner's answers: corner cleats under the L shelves, inside corner radius setting | **Done** (October 2026) | See "Kitchen-3c" below. Goldens and `npm run sample` byte-identical; every output switch still off. |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped), 1076 after Polish-1 (1075 + 1 skipped), 1107 after Kitchen-2 (1106 + 1 skipped), 1132 after Kitchen-3 (1131 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped), 1076 after Polish-1 (1075 + 1 skipped), 1107 after Kitchen-2 (1106 + 1 skipped), 1132 after Kitchen-3 (1131 + 1 skipped), 1142 after Kitchen-3c (1141 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -222,6 +223,14 @@ files present; fixed in M2.8e, back to 17.)
     side; (4) the arrange order stays left wall, corner, back wall; (5) the perf test stays as it is.
     Also: let a blind corner arrange onto either wall, and add blind-panel boring if a standard
     pattern exists (none does; see "Kitchen-3").
+
+26. With the Kitchen-3c go-ahead, on the Kitchen-3 report: (1) the pie-cut doors stay as built (one runs
+    in front of the other's end, chosen per cabinet); (2) L shelves get option (b): a corner cleat under
+    each shelf's back corner, a cut-list part fixed on site, its sizes Configure-badged placeholders,
+    with a per-cabinet switch (on by default), shown in 3D and on its label; (3) the inside corner
+    radius of L parts becomes a setting, per job and per part, the cut-out tool's radius by default,
+    badged until confirmed, followed by the cut outline, MPR, label and nesting; (4) blind panels: no
+    boring, fixed from inside on site.
 
 ## Open questions for the owner
 
@@ -3552,11 +3561,121 @@ wall cabinets), `08-l-kitchen-3d`, `09-l-kitchen-back-elevation` (B3 and W3 faci
 4. **Blind panel fixing.** No standard boring exists, so none is added; if the shop fixes blind
    panels a particular way (connector bolts, hinge plates, screws through the side), say so.
 
+## Kitchen-3c: the owner's answers on Kitchen-3 (cleats, inside corner radius)
+
+A small round on decision 26. Baseline before it: head `8d897db`, 1132 tests (1131 + 1 skipped), 17
+lint warnings; the 90 s timing test took 60.7 s alone (89.8 s inside the full suite). After: 1142
+tests (1141 + 1 skipped; 10 new in `tests/kitchen-3c.test.ts`), 17 lint warnings, typecheck and
+build clean.
+
+### Decisions 26.1 and 26.4
+
+The pie-cut doors stay as built; blind panels keep no boring (fixed from inside on site). Nothing
+changed.
+
+### Corner cleats under the L shelves (decision 26.2)
+
+- Each L shelf of a pie-cut gets a **corner cleat** (`cleat-1`, `cleat-2`..., "Shelf 1 corner cleat",
+  role `cleat`): a block in the carcass board, on edge against the back-wall back from the side-wall
+  back's face, its top at the shelf's underside, so the shelf's back corner rests on it. It is a cut
+  part like any other (cut list, nesting, MPR cut-out, label) and carries "Fix on site under shelf 1's
+  back corner" on its label (`Part.onSite`). It is drawn in the 3D view with the cabinet (and moves
+  with the shelves when exploded).
+- **Sizes**: length 6" along the back, height 2" under the shelf, both placeholders
+  (`KITCHEN_DEFAULTS.cleatLength`, `cleatHeight`) with Configure badges ("Kitchen defaults") until the
+  shop confirms them or types its own; never part of the export check.
+- **Switch**: "Corner cleats under the shelves" per cabinet (`PieCutParams.cleats`), on by default
+  (the presets have it on; a pie-cut saved before this round has no setting and gets them too). Off:
+  no cleats, no badges.
+- A cleat taller than the room above the bottom (or the shelf below) is left out with a warning; one
+  longer than the shelf's back edge is cut to it with a warning.
+- No screws are added to the hardware list (how it is fixed on site is the shop's own).
+
+### Inside corner radius of L parts (decision 26.3)
+
+- **As cut**: the radius is the one the machine cuts at the L's inside corner (`roundInnerCorner`
+  rounds the cut outline: a quarter circle from L3 to W3, centred in the cut-away corner, so the part
+  keeps the corner's material; straight segments within 0.01 mm of the arc).
+- **Where it is set**: per job on the Cabinets tab ("Inside corner radius of L parts (as cut)", shown
+  in mm, only on a job with a pie-cut; `Job.lCornerRadius`), and per part in the cabinet editor's
+  parts table ("R" beside L3 / W3, blank = the job's; `PartOverride.cornerRadius`).
+- **Default**: the cut-out tool's radius (6 mm with the placeholder T101), what the router leaves at
+  that corner anyway. While the job uses it unchanged and the shop has not confirmed it, the field
+  carries a Configure badge (`lCornerUnconfirmed`, key `kitchen:lCornerRadius`).
+- **What follows it**: the cut outline (`PartInstance.outline`): sheet map, label drawing, label
+  placement, the overlap check and the part's area; the label also says "Inside corner R25 mm"; the
+  **MPR**: a radius no more than the cut-out tool's (+0.05 mm) is cut as the sharp L, as before (the
+  tool leaves its own radius; a rounded corner tighter than the tool cannot be compensated); a larger
+  radius is cut round, as straight segments along the arc (no native arcs: their direction in our MPR
+  is still unconfirmed, decision 18). A radius under the tool's is cut at the tool's radius and the
+  export check warns (`L_CORNER_RADIUS`). The 3D view and the edgeband totals still use the sharp
+  corner (a few millimetres).
+- **Nesting**: an L part now nests on its whole cut rectangle (nothing is put in its cut-away corner).
+  Found on the way: with true-shape nesting, the rounded corners changed the nest so that two L parts
+  interlocked, and the groove run-out check (`OP_HITS_NEIGHBOUR`), which tests a groove's run-out
+  against every neighbour's **rectangle**, flagged the bottom's back-groove run-out landing in the
+  top's empty corner. The check is unchanged (decision 1 below); nesting the L parts on their
+  rectangles keeps it exact as written. Kitchen-3b's nest only passed because those parts did not
+  happen to interlock.
+
+### Acceptance
+
+- **Cleats** (tests `Kitchen-3c: corner cleats`): position and size against the shelf, the backs and
+  every other part (no overlap); two on the wall cabinet; mirror image for back-right; switch off;
+  a pie-cut saved before; badges (shown, gone once changed or confirmed, not while off or without
+  shelves); cut list rows, nesting, the label note, the 3D parts; warnings for a cleat that does not
+  fit.
+- **Radius** (tests `Kitchen-3c: the inside corner radius`): the rounding geometry (every arc point
+  at the radius from its centre, the fillet's area, either winding, unchanged when r <= 0 or not an
+  L); the default (all seven L parts at 6 mm, MPR contour sharp with 8 points as before, the label
+  note, the L parts' rectangles kept clear on the sheets); a 25 mm job radius and a 40 mm part
+  override (MPR contour points on the arc at the radius from the centre, no sharp corner, label
+  notes); 3 mm (cut sharp, a warning on each L part, no error); the badge (default only, gone once
+  set or confirmed, only on a job with L parts); a job without L parts: no rounding, the same
+  outlines as before.
+- **Goldens**: Stage 1 MPR goldens, the custom-part goldens and `npm run sample` are byte-identical
+  (no file under `examples/` or `tests/golden/` changed).
+- **Kitchen-3 tests**: one expectation extended: the base pie-cut's parts list now includes
+  `cleat-1`.
+
+### Kitchen-3c screenshots
+
+In `docs/screenshots/kitchen-3/` (browser preview, inch mode, the K3 kitchen of Kitchen-3 reloaded):
+`21-job-inside-corner-radius-badge` (6 mm, Configure / Mark as confirmed), `22-pie-cut-corner-cleat-badges-3d`
+(the switch, length and height with badges, the cleat selected (orange) under the shelf in 3D),
+`23-parts-cleat-and-bottom-radius-40` (the bottom's own R 40, the top and shelf on the job's, the cleat
+row), `24-cut-list-corner-cleats`, `25-label-corner-cleat` (its label: "Fix on site under shelf 1's back
+corner"; too small for a 100 x 70 label, so it goes on the back face like any small part),
+`26-label-l-bottom-radius-40` ("Inside corner R40 mm"; at label scale the banded L3 / W3 lines hide
+the 40 mm rounding), `27-sheet-map-rounded-l` (sheet 4: the bottom's R 40 and the top's R 25 corners,
+each L on its own rectangle, the three cleats #41, #121, #123).
+
+### Limits recorded (Kitchen-3c)
+
+- The cleat sits where the shelf was built; a shelf moved to other pin holes needs the cleat moved
+  on site.
+- The rounded corner is not drawn in the 3D view, and the edgeband totals measure the inside edges
+  to the sharp corner.
+- L parts no longer interlock on the sheet (decision 1 below).
+
+### Kitchen-3c decisions needed
+
+1. **Let L parts interlock on the sheet?** Today they nest on their whole rectangle. Interlocking
+   saves board (two 24" L's share a rectangle), but needs the groove run-out check to test the
+   neighbour's true outline instead of its rectangle: it would still catch every run-out that reaches
+   another part's material, and stop flagging run-outs that land in an empty cut-away corner.
+   Recommendation: yes, with that change and a test for both cases; until then, rectangles.
+2. **Cleat size and fixing**: 6" x 2" in the carcass board are placeholders; confirm or give the
+   shop's (and whether screws should go on the hardware list).
+3. **Inside corner radius**: confirm the cutter's radius as the default, or give the radius the shop's
+   edgebander needs (larger radii are cut as short straight segments until one arc is checked in
+   woodWOP, decision 18).
+
 ## Next run
 
-- Stage 3, Polish-1, Kitchen-2 and Kitchen-3 are complete. Next is the owner's call: the Kitchen-3
-  decisions above (door meeting, shelf support, inside corner), diagonal corners, the shop facts in
-  "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
+- Stage 3, Polish-1, Kitchen-2, Kitchen-3 and Kitchen-3c are complete. Next is the owner's call: the
+  Kitchen-3c decisions above (interlocking L parts, cleat size, corner radius), diagonal corners, the
+  shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
 
 ## Run log
 
@@ -3638,3 +3757,5 @@ wall cabinets), `08-l-kitchen-3d`, `09-l-kitchen-back-elevation` (B3 and W3 faci
 - **Run 23 (Kitchen-3)**: L-shaped parts, the pie-cut corner base and wall, the room round it, a blind
   corner on either wall (`1e5c8a6`); screenshots, the deeper-cabinet fix, the see-through plan, docs.
   See `git log`.
+- **Run 24 (Kitchen-3c)**: the owner's answers on Kitchen-3: corner cleats under the L shelves, the
+  inside corner radius setting, L parts nested on their rectangles; screenshots, docs. See `git log`.

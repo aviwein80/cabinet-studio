@@ -15,7 +15,7 @@ import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/construction/carcass'
 import { TemplateJobsButton } from '@/pages/LibraryEditDialog'
-import { formatLength } from '@/core/units'
+import { formatLength, sizedName } from '@/core/units'
 import type { CabinetInstance, CarcassParams, DrillOp, EdgeKey, Library, Part, PartOverride, UnitSystem } from '@/core/types'
 import { EDGE_KEYS } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -362,7 +362,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
       <SaveTemplateDialog
         open={saveOpen}
         onOpenChange={setSaveOpen}
-        defaultName={`${cab.name} ${p.width}`}
+        defaultName={sizedName(cab.name, p.width, data.settings.units)}
         onSave={(name, desc) => {
           const id = saveTemplate(name, desc, p)
           toast.success(`Template "${name}" saved to library`, { action: { label: 'Open', onClick: () => go({ page: 'template', templateId: id }) } })
@@ -547,6 +547,8 @@ function SaveTemplateDialog({ open, onOpenChange, defaultName, onSave }: { open:
 }
 
 function AddHoleDialog({ part, onClose, onAdd }: { part: Part | null; onClose: () => void; onAdd: (op: DrillOp) => void }) {
+  const units = useStore((s) => s.data?.settings.units ?? 'mm')
+  const L = (n: number | undefined) => (n === undefined ? '' : formatLength(n, units))
   const [h, setH] = useState({ x: 100, y: 50, diameter: 8, depth: 12, through: false })
   const op: DrillOp | null = part ? { kind: 'drill', id: `custom-${nanoid(6)}`, x: h.x, y: h.y, diameter: h.diameter, depth: h.through ? part.thickness : h.depth, through: h.through, purpose: 'custom' } : null
   const inside = part && op ? isOpInsidePart(part, op) : true
@@ -557,7 +559,7 @@ function AddHoleDialog({ part, onClose, onAdd }: { part: Part | null; onClose: (
         <DialogHeader>
           <DialogTitle>Add hole to {part?.name}</DialogTitle>
           <DialogDescription>
-            Finished-size coordinates on the face-up side: x along the length (0–{part?.length}), y across the width (0–{part?.width}).
+            Finished-size coordinates on the face-up side: x along the length (0–{L(part?.length)}), y across the width (0–{L(part?.width)}).
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
@@ -570,7 +572,7 @@ function AddHoleDialog({ part, onClose, onAdd }: { part: Part | null; onClose: (
           </div>
         </div>
         {!inside && <p className="text-xs text-red-700">The hole centre is outside the part.</p>}
-        {tooDeep && <p className="text-xs text-red-700">Depth must be less than the {part?.thickness} mm thickness, or mark it as a through hole.</p>}
+        {tooDeep && <p className="text-xs text-red-700">Depth must be less than the {L(part?.thickness)} thickness, or mark it as a through hole.</p>}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel

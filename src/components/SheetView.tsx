@@ -1,6 +1,8 @@
 import type { PartInstance } from '@/core/cutlist'
 import { placementTransform, type SheetProgram } from '@/core/machining'
 import type { LabelSpot } from '@/core/labels/placement'
+import type { UnitSystem } from '@/core/types'
+import { offcutSize } from '@/core/units'
 
 const PALETTE = ['#dbeafe', '#dcfce7', '#fef3c7', '#fce7f3', '#e0e7ff', '#ccfbf1', '#fee2e2', '#ede9fe', '#ecfccb', '#ffedd5']
 
@@ -15,6 +17,7 @@ export function SheetView({
   highlightUids,
   cutPaths,
   groups,
+  units = 'mm',
 }: {
   program: SheetProgram
   instances: Map<string, PartInstance>
@@ -28,6 +31,8 @@ export function SheetView({
   cutPaths?: { pts: { x: number; y: number }[]; closed: boolean }[]
   /** Bridged groups (M2.8): the path round each group and its bridges. */
   groups?: { outer: { x: number; y: number }[]; holes: { x: number; y: number }[][]; bridges: { x0: number; y0: number; x1: number; y1: number }[] }[]
+  /** The shop's units for the offcut sizes. */
+  units?: UnitSystem
 }) {
   const s = program.sheet
   const cabinets = [...new Set(s.placements.map((p) => instances.get(p.uid)?.cabinetId ?? ''))]
@@ -148,7 +153,7 @@ export function SheetView({
       })}
       {(s.remnants ?? []).map((r, i) => (
         <text key={`remt${i}`} x={r.x + r.length / 2} y={s.sheetWidth - (r.y + r.width / 2)} textAnchor="middle" fontSize={fontBase * 0.9} fill="#15803d" fontWeight={600} pointerEvents="none" fontFamily="Geist Variable, sans-serif">
-          Offcut {Math.round(r.length)} × {Math.round(r.width)}
+          Offcut {offcutSize(r.length, r.width, units)}
         </text>
       ))}
       <text x={130} y={s.sheetWidth + 30} fontSize={fontBase * 0.8} fill="#dc2626" fontFamily="Geist Variable, sans-serif">
@@ -160,3 +165,4 @@ export function SheetView({
     </svg>
   )
 }
+

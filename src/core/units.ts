@@ -43,9 +43,16 @@ export function lengthSuffix(units: UnitSystem) {
 /**
  * Parse a length typed by the user back to millimetres.
  * Inches accept 23.25, 23-1/4, 23 1/4 and 1/2, with an optional trailing quote.
+ * An explicit unit wins over the shop's units in either mode: "6 mm", "6mm", '1/2"', "1/2 in".
  */
 export function parseLength(text: string, units: UnitSystem): number | null {
-  const s = text.trim().replace(/["″]/g, '').replace(',', '.')
+  let s = text.trim().replace(',', '.')
+  const suffix = s.match(/^(.*?)\s*(mm|in|inch|inches|["″])$/i)
+  if (suffix) {
+    s = suffix[1].trim()
+    units = suffix[2].toLowerCase() === 'mm' ? 'mm' : 'in'
+  }
+  s = s.replace(/["″]/g, '')
   if (!s) return null
   if (units === 'mm') {
     const n = Number(s)
@@ -69,4 +76,27 @@ export function parseLength(text: string, units: UnitSystem): number | null {
   }
   const n = Number(s)
   return Number.isFinite(n) ? toMm(n) : null
+}
+
+/**
+ * Sizes for cards and panels in the shop's units, rounded for reading: millimetres to 0.1, inches
+ * to the nearest 1/16. Joined with " × " (600 × 876.3 × 590.6, or 23-5/8" × 34-1/2" × 23-1/4").
+ */
+export function formatDims(values: number[], units: UnitSystem) {
+  return values.map((v) => (units === 'in' ? formatInches(v) : fmt(Math.round(v * 10) / 10))).join(' × ')
+}
+
+/**
+ * A name with the width in the shop's units on the end ("Sink base 36"", "Sink base 900"). A size
+ * the name already ends with (36", 36 in, 800, 800 mm, 23-1/4") is replaced, not repeated.
+ */
+export function sizedName(name: string, widthMm: number, units: UnitSystem) {
+  const base = name.trim().replace(/\s+-?\d+(?:[.,]\d+)?(?:[\s-]+\d+\/\d+)?\s*(?:mm|in|["″])?$/i, '').trim()
+  const size = units === 'in' ? formatInches(widthMm) : fmt(Math.round(widthMm))
+  return base ? `${base} ${size}` : size
+}
+
+/** Offcut size as written on the sheet map: whole millimetres, or inches to 1/16. */
+export function offcutSize(length: number, width: number, units: UnitSystem) {
+  return units === 'in' ? formatDims([length, width], 'in') : `${Math.round(length)} × ${Math.round(width)}`
 }

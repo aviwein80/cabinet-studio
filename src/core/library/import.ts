@@ -14,7 +14,9 @@ import type {
   Material,
   Tool,
   ToolType,
+  UnitSystem,
 } from '../types'
+import { parseLength } from '../units'
 
 export type ImportKind = 'materials' | 'edgebands' | 'hardware' | 'templates' | 'tools'
 
@@ -24,6 +26,11 @@ export interface ImportResult<T> {
   added: number
   updated: number
   errors: string[]
+  /**
+   * How sizes were read (Polish-1): the file's own `units` column, or the unit chosen for the
+   * import (mm by default, as before). Absent for kinds with no sizes (hardware).
+   */
+  units?: { default: UnitSystem; column: boolean; rows: { mm: number; in: number } }
 }
 
 export type Row = Record<string, unknown>
@@ -53,6 +60,7 @@ const ALIASES: Record<string, string[]> = {
   bottomJoint: ['bottomjoint', 'bottom'],
   backType: ['backtype', 'backconstruction'],
   description: ['description', 'notes'],
+  units: ['units', 'unit', 'unitsystem'],
 }
 
 function get(row: Row, key: string, ...extra: string[]): unknown {
@@ -69,6 +77,28 @@ function num(v: unknown): number | null {
   if (v === undefined || v === null || v === '') return null
   const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.').trim())
   return Number.isFinite(n) ? n : null
+}
+
+/** A row's units: its own `units` cell (mm, in, inch, ") or the import's unit. */
+function rowUnits(row: Row, fallback: UnitSystem): UnitSystem {
+  const u = str(get(row, 'units')).toLowerCase()
+  if (u === 'mm' || u === 'millimetres' || u === 'millimeters' || u === 'metric') return 'mm'
+  if (u === 'in' || u === 'inch' || u === 'inches' || u === '"' || u === 'imperial') return 'in'
+  return fallback
+}
+
+/** A size cell in millimetres. Numbers are in the row's units; text may carry its own (6 mm, 23-1/4"). */
+function len(v: unknown, units: UnitSystem): number | null {
+  if (v === undefined || v === null || v === '') return null
+  if (typeof v === 'number') return Number.isFinite(v) ? (units === 'in' ? v * 25.4 : v) : null
+  return parseLength(String(v), units)
+}
+
+function unitsSummary(rows: Row[], fallback: UnitSystem): NonNullable<ImportResult<unknown>['units']> {
+  const column = rows.some((r) => str(get(r, 'units')) !== '')
+  const counts = { mm: 0, in: 0 }
+  for (const r of rows) counts[rowUnits(r, fallback)]++
+  return { default: fallback, column, rows: counts }
 }
 
 function bool(v: unknown) {
@@ -132,14 +162,15 @@ function upsert<T extends { id: string; code?: string }>(existing: T[], incoming
   return { items: out, added, updated }
 }
 
-export function importMaterials(rows: Row[], existing: Material[]): ImportResult<Material> {
+export function importMaterials(rows: Row[], existing: Material[], units: UnitSystem = 'mm'): ImportResult<Material> {
   const errors: string[] = []
   const incoming: Material[] = []
   rows.forEach((r, i) => {
     const code = str(get(r, 'code'))
-    const thickness = num(get(r, 'thickness'))
-    const L = num(get(r, 'sheetLength'))
-    const W = num(get(r, 'sheetWidth'))
+    const u = rowUnits(r, units)
+    const thickness = len(get(r, 'thickness'), u)
+    const L = len(get(r, 'sheetLength'), u)
+    const W = len(get(r, 'sheetWidth'), u)
     if (!code) return errors.push(`Row ${i + 2}: missing code`)
     if (!thickness || thickness <= 0) return errors.push(`Row ${i + 2} (${code}): invalid thickness`)
     if (!L || !W) return errors.push(`Row ${i + 2} (${code}): invalid sheet size`)
@@ -154,15 +185,16 @@ export function importMaterials(rows: Row[], existing: Material[]): ImportResult
       color: /^#?[0-9a-f]{6}$/i.test(str(get(r, 'color'))) ? '#' + str(get(r, 'color')).replace('#', '') : '#d8d2c4',
     })
   })
-  return { kind: 'materials', ...upsert(existing, incoming, (m) => m.code), errors }
+  return { kind: 'materials', ...upsert(existing, incoming, (m) => m.code), errors, units: unitsSummary(rows, units) }
 }
 
-export function importEdgebands(rows: Row[], existing: EdgeBand[]): ImportResult<EdgeBand> {
+export function importEdgebands(rows: Row[], existing: EdgeBand[], units: UnitSystem = 'mm'): ImportResult<EdgeBand> {
   const errors: string[] = []
   const incoming: EdgeBand[] = []
   rows.forEach((r, i) => {
     const code = str(get(r, 'code'))
-    const t = num(get(r, 'thickness'))
+    const u = rowUnits(r, units)
+    const t = len(get(r, 'thickness'), u)
     if (!code) return errors.push(`Row ${i + 2}: missing code`)
     if (t === null || t < 0 || t > 5) return errors.push(`Row ${i + 2} (${code}): invalid thickness`)
     incoming.push({
@@ -170,11 +202,11 @@ export function importEdgebands(rows: Row[], existing: EdgeBand[]): ImportResult
       code,
       name: str(get(r, 'name')) || code,
       thickness: t,
-      width: num(get(r, 'width', 'sheetwidth')) ?? 22,
+      width: len(get(r, 'width', 'sheetwidth'), u) ?? 22,
       color: /^#?[0-9a-f]{6}$/i.test(str(get(r, 'color'))) ? '#' + str(get(r, 'color')).replace('#', '') : '#eeeeee',
     })
   })
-  return { kind: 'edgebands', ...upsert(existing, incoming, (m) => m.code), errors }
+  return { kind: 'edgebands', ...upsert(existing, incoming, (m) => m.code), errors, units: unitsSummary(rows, units) }
 }
 
 const HW_CATS: HardwareCategory[] = ['shelf-pin', 'hinge', 'mounting-plate', 'connector', 'dowel', 'screw', 'leg', 'slide', 'handle', 'other']
@@ -204,12 +236,13 @@ const TOOL_TYPES: Record<string, ToolType> = {
   saw: 'saw',
 }
 
-export function importTools(rows: Row[], existing: Tool[]): ImportResult<Tool> {
+export function importTools(rows: Row[], existing: Tool[], units: UnitSystem = 'mm'): ImportResult<Tool> {
   const errors: string[] = []
   const incoming: Tool[] = []
   rows.forEach((r, i) => {
     const n = num(get(r, 'number'))
-    const dia = num(get(r, 'diameter'))
+    const u = rowUnits(r, units)
+    const dia = len(get(r, 'diameter'), u)
     const type = TOOL_TYPES[str(get(r, 'category', 'type')).toLowerCase()]
     if (n === null) return errors.push(`Row ${i + 2}: missing tool number`)
     if (!dia || dia <= 0) return errors.push(`Row ${i + 2} (T${n}): invalid diameter`)
@@ -220,14 +253,14 @@ export function importTools(rows: Row[], existing: Tool[]): ImportResult<Tool> {
       type,
       name: str(get(r, 'name')) || `T${n}`,
       diameter: dia,
-      maxDepth: num(get(r, 'maxDepth')) ?? 30,
+      maxDepth: len(get(r, 'maxDepth'), u) ?? 30,
     })
   })
   const res = upsert(existing, incoming, (t) => String(t.number))
-  return { kind: 'tools', ...res, errors }
+  return { kind: 'tools', ...res, errors, units: unitsSummary(rows, units) }
 }
 
-export function importTemplates(rows: Row[], existing: CabinetTemplate[], lib: Library): ImportResult<CabinetTemplate> {
+export function importTemplates(rows: Row[], existing: CabinetTemplate[], lib: Library, units: UnitSystem = 'mm'): ImportResult<CabinetTemplate> {
   const errors: string[] = []
   const incoming: CabinetTemplate[] = []
   const matByCode = (code: string) => lib.materials.find((m) => m.code.toLowerCase() === code.toLowerCase())
@@ -243,9 +276,10 @@ export function importTemplates(rows: Row[], existing: CabinetTemplate[], lib: L
       params.top = 'full'
       params.height = 2100
     }
-    const w = num(get(r, 'width'))
-    const h = num(get(r, 'height'))
-    const dpt = num(get(r, 'depth'))
+    const u = rowUnits(r, units)
+    const w = len(get(r, 'width'), u)
+    const h = len(get(r, 'height'), u)
+    const dpt = len(get(r, 'depth'), u)
     if (w) params.width = w
     if (h) params.height = h
     if (dpt) params.depth = dpt
@@ -289,7 +323,7 @@ export function importTemplates(rows: Row[], existing: CabinetTemplate[], lib: L
       params,
     })
   })
-  return { kind: 'templates', ...upsert(existing, incoming, (t) => t.name), errors }
+  return { kind: 'templates', ...upsert(existing, incoming, (t) => t.name), errors, units: unitsSummary(rows, units) }
 }
 
 /** Full library bundle (exported from the app) - merged by code / name. */

@@ -19,7 +19,7 @@ import {
   type ImportResult,
   type Row,
 } from '@/core/library/import'
-import type { AppData } from '@/core/types'
+import type { AppData, UnitSystem } from '@/core/types'
 
 const KIND_LABEL: Record<ImportKind, string> = {
   materials: 'Sheet materials',
@@ -37,19 +37,27 @@ const COLUMNS: Record<ImportKind, string> = {
   tools: 'number, type (router, drill-vertical, drill-horizontal, saw), name, diameter, maxDepth',
 }
 
-function run(kind: ImportKind, rows: Row[], d: AppData): ImportResult<unknown> {
+function run(kind: ImportKind, rows: Row[], d: AppData, units: UnitSystem): ImportResult<unknown> {
   switch (kind) {
     case 'materials':
-      return importMaterials(rows, d.library.materials)
+      return importMaterials(rows, d.library.materials, units)
     case 'edgebands':
-      return importEdgebands(rows, d.library.edgebands)
+      return importEdgebands(rows, d.library.edgebands, units)
     case 'hardware':
       return importHardware(rows, d.library.hardware)
     case 'templates':
-      return importTemplates(rows, d.library.templates, d.library)
+      return importTemplates(rows, d.library.templates, d.library, units)
     case 'tools':
-      return importTools(rows, profileOf(d, useStore.getState().machineEdit).tools)
+      return importTools(rows, profileOf(d, useStore.getState().machineEdit).tools, units)
   }
+}
+
+/** The import preview's line on how sizes were read (Polish-1). */
+function unitsNote(u: NonNullable<ImportResult<unknown>['units']>) {
+  const name = (x: UnitSystem) => (x === 'in' ? 'inches' : 'millimetres')
+  if (!u.column) return `Sizes read in ${name(u.default)} (no "units" column in the file). Choose inches above, add a "units" column (mm or in), or write the unit in a cell (6 mm, 23-1/4").`
+  const parts = [u.rows.mm && `${u.rows.mm} row${u.rows.mm === 1 ? '' : 's'} in millimetres`, u.rows.in && `${u.rows.in} row${u.rows.in === 1 ? '' : 's'} in inches`].filter(Boolean)
+  return `Sizes read from the file's "units" column: ${parts.join(', ')}. Rows with an empty units cell use ${name(u.default)}.`
 }
 
 export function ImportDialog({ open, onOpenChange, kinds, onApplied }: { open: boolean; onOpenChange: (o: boolean) => void; kinds: ImportKind[]; onApplied?: (k: ImportKind) => void }) {
@@ -57,10 +65,12 @@ export function ImportDialog({ open, onOpenChange, kinds, onApplied }: { open: b
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<{ name: string; rows: Row[] } | null>(null)
   const [kind, setKind] = useState<ImportKind>(kinds[0])
+  // mm by default, as before Polish-1; a "units" column in the file wins row by row
+  const [units, setUnits] = useState<UnitSystem>('mm')
   const [err, setErr] = useState<string | null>(null)
   if (!data) return null
 
-  const result = file ? run(kind, file.rows, data) : null
+  const result = file ? run(kind, file.rows, data, units) : null
   const reset = () => {
     setFile(null)
     setErr(null)
@@ -131,8 +141,20 @@ export function ImportDialog({ open, onOpenChange, kinds, onApplied }: { open: b
                 {file.name} · {file.rows.length} rows
               </span>
             )}
+            <div className="ml-auto flex items-center gap-2 text-xs">
+              Sizes in
+              <Select value={units} onValueChange={(v) => setUnits(v as UnitSystem)}>
+                <SelectTrigger size="sm" className="w-32" aria-label="Sizes in">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mm">Millimetres</SelectItem>
+                  <SelectItem value="in">Inches</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {kinds.length > 1 && (
-              <div className="ml-auto flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-2 text-xs">
                 Import as
                 <Select value={kind} onValueChange={(v) => setKind(v as ImportKind)}>
                   <SelectTrigger size="sm" className="w-44">
@@ -151,6 +173,7 @@ export function ImportDialog({ open, onOpenChange, kinds, onApplied }: { open: b
           </div>
           <p className="rounded-md bg-muted px-3 py-2 font-mono text-[11px] text-muted-foreground">
             {KIND_LABEL[kind]} columns: {COLUMNS[kind]}
+            {kind !== 'hardware' && ', units (mm or in, optional)'}
           </p>
           {err && <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{err}</p>}
           {file && result && (
@@ -160,6 +183,11 @@ export function ImportDialog({ open, onOpenChange, kinds, onApplied }: { open: b
                 <span className="font-medium text-sky-700">{result.updated} updated</span>
                 {result.errors.length > 0 && <span className="font-medium text-red-700">{result.errors.length} rows skipped</span>}
               </div>
+              {result.units && (
+                <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] text-sky-900" data-testid="import-units">
+                  {unitsNote(result.units)}
+                </p>
+              )}
               {result.errors.length > 0 && (
                 <ul className="max-h-24 overflow-auto rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-800">
                   {result.errors.map((e, i) => (

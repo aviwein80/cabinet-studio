@@ -20,6 +20,7 @@ import { OffcutsTab } from './library/OffcutsTab'
 import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
 import { useConfigureTarget } from '@/components/configureFocus'
+import { formatDims } from '@/core/units'
 
 const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'handle', 'other']
 
@@ -67,6 +68,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
   })
   if (!data) return null
   const lib = data.library
+  const units = data.settings.units
 
   const setField =
     <K extends 'materials' | 'edgebands' | 'hardware'>(kind: K) =>
@@ -164,7 +166,7 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
                         )}
                       </div>
                       <div className="font-mono text-xs">
-                        {t.params.width} × {t.params.height} × {t.params.depth}
+                        {formatDims([t.params.width, t.params.height, t.params.depth], units)}
                       </div>
                       <div className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{t.description || `${t.params.kind} cabinet`}</div>
                     </div>

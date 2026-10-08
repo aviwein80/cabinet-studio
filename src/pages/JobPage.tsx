@@ -37,7 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cutListCsv } from '@/core/cutlist'
 import { jobRemnants, updateOffcutStock } from '@/core/offcuts'
-import { formatLength } from '@/core/units'
+import { formatDims, formatLength } from '@/core/units'
 import { mprFiles, type JobOutput } from '@/core/pipeline'
 import { countBySeverity, type Issue } from '@/core/validator'
 import type { AppData, Job } from '@/core/types'
@@ -262,7 +262,7 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                 <div className="min-w-0">
                   <div className="text-sm font-medium">{t.name}</div>
                   <div className="font-mono text-xs">
-                    {t.params.width} × {t.params.height} × {t.params.depth}
+                    {formatDims([t.params.width, t.params.height, t.params.depth], data.settings.units)}
                   </div>
                   <div className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{t.description}</div>
                 </div>
@@ -544,6 +544,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               spots={out.spots.get(sh.index) ?? []}
               showLabels={showLabels}
               showOps={showOps}
+              units={data.settings.units}
               selectedUid={selected}
               onSelect={setSelected}
               {...(prog.shared && showPlan ? { cutPaths: prog.shared.plan.paths } : {})}
@@ -564,11 +565,11 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
                   <dt className="text-muted-foreground">Cut size</dt>
                   <dd className="font-mono">
-                    {sel.cutLength} × {sel.cutWidth}
+                    {formatDims([sel.cutLength, sel.cutWidth], data.settings.units)}
                   </dd>
                   <dt className="text-muted-foreground">Finished</dt>
                   <dd className="font-mono">
-                    {sel.part.length} × {sel.part.width}
+                    {formatDims([sel.part.length, sel.part.width], data.settings.units)}
                   </dd>
                   <dt className="text-muted-foreground">Edges</dt>
                   <dd className="font-mono">{selLabel.edgeDiagram}</dd>

@@ -1,0 +1,63 @@
+1
+00:00:03,401 --> 00:00:19,030
+A pantry wall for the Brooks family: three 24" tall pantries between two tall end panels.
+
+2
+00:00:19,030 --> 00:00:27,241
+First a tall end panel for the left end...
+
+3
+00:00:27,241 --> 00:00:52,421
+...then the Tall 24" x 84" pantry preset, three times...
+
+4
+00:00:52,421 --> 00:01:05,401
+...and a second end panel for the right end.
+
+5
+00:01:05,401 --> 00:01:28,000
+The wall is 76" wide. Set the room, then Arrange.
+
+6
+00:01:28,000 --> 00:01:43,068
+Arranged along the back wall, end panel to end panel. Plan view shows the fit.
+
+7
+00:01:43,068 --> 00:01:50,375
+The run is a little short of the wall. This time, split the gap: a filler at each end.
+
+8
+00:01:50,375 --> 00:01:52,979
+Now the run is centred on the wall, with two equal fillers scribed to the walls.
+
+9
+00:01:52,979 --> 00:01:57,437
+Elevation: all three pantries and the end panels top out at 84".
+
+10
+00:01:57,437 --> 00:02:03,606
+Open a pantry to set it up for food storage: more shelves.
+
+11
+00:02:03,606 --> 00:02:09,915
+Five adjustable shelves on the 32 mm system rows, instead of the preset's count.
+
+12
+00:02:09,915 --> 00:02:17,386
+Its doors hang on Salice hinges with 3 mm plates; the hinge boring is set here.
+
+13
+00:02:17,386 --> 00:02:26,005
+Cut list: the tall sides, the shelves, the end panels and the two fillers.
+
+14
+00:02:26,005 --> 00:02:33,734
+Nesting: every part on 5 x 12 ft sheets, one material per sheet. Sheet 2 holds the backs.
+
+15
+00:02:33,734 --> 00:02:39,752
+Labels and sheet maps are ready on the Output tab. Machine output switches stay off.
+
+16
+00:02:39,752 --> 00:02:42,754
+A floor-to-84" pantry wall, centred on its wall with a filler at each end.

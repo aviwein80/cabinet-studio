@@ -156,6 +156,9 @@ export const KITCHEN_DEFAULTS = {
   scribe: inch(0.5),
   /** How far a proud end panel stands past the door faces. */
   proud: inch(0.25),
+  /** Kitchen-3c: the corner cleat under an L shelf: its length along the back, and its height. */
+  cleatLength: inch(6),
+  cleatHeight: inch(2),
 }
 
 /** US base cabinet: 34-1/2 in high, 24 in deep, on a 4 in toe kick set back 3 in. */
@@ -199,17 +202,17 @@ export const KITCHEN_PRESETS: CabinetTemplate[] = [
   {
     id: 'tpl-us-pie-base-36',
     name: 'Pie-cut corner base 36" x 36"',
-    description: 'L-shaped corner base: 36" along each wall, 24" deep, full L top, one L shelf, two doors (one on each leg) each hinged at its own end on Salice cups and 3 mm plates. Fills the back-left corner when the room is arranged; choose the corner in the editor.',
+    description: 'L-shaped corner base: 36" along each wall, 24" deep, full L top, one L shelf with a corner cleat under its back corner, two doors (one on each leg) each hinged at its own end on Salice cups and 3 mm plates. Fills the back-left corner when the room is arranged; choose the corner in the editor.',
     generator: 'carcass',
-    params: { ...clone(US_BASE), depth: inch(36), top: 'full', doors: { ...BASE_PARAMS.doors, count: 2 }, corner: { type: 'pie-cut', side: 'left', legDepth: inch(24), cornerDoor: 'back' } },
+    params: { ...clone(US_BASE), depth: inch(36), top: 'full', doors: { ...BASE_PARAMS.doors, count: 2 }, corner: { type: 'pie-cut', side: 'left', legDepth: inch(24), cornerDoor: 'back', cleats: true, cleatLength: KITCHEN_DEFAULTS.cleatLength, cleatHeight: KITCHEN_DEFAULTS.cleatHeight } },
     builtIn: true,
   },
   {
     id: 'tpl-us-pie-wall-24',
     name: 'Pie-cut corner wall 24" x 24"',
-    description: 'L-shaped corner wall cabinet: 24" along each wall, 12" deep, 30" high, two L shelves, two doors each hinged at its own end. Fills the back-left corner when the room is arranged.',
+    description: 'L-shaped corner wall cabinet: 24" along each wall, 12" deep, 30" high, two L shelves with corner cleats, two doors each hinged at its own end. Fills the back-left corner when the room is arranged.',
     generator: 'carcass',
-    params: { ...clone(US_WALL), width: inch(24), depth: inch(24), doors: { ...BASE_PARAMS.doors, count: 2 }, corner: { type: 'pie-cut', side: 'left', legDepth: inch(12), cornerDoor: 'back' } },
+    params: { ...clone(US_WALL), width: inch(24), depth: inch(24), doors: { ...BASE_PARAMS.doors, count: 2 }, corner: { type: 'pie-cut', side: 'left', legDepth: inch(12), cornerDoor: 'back', cleats: true, cleatLength: KITCHEN_DEFAULTS.cleatLength, cleatHeight: KITCHEN_DEFAULTS.cleatHeight } },
     builtIn: true,
   },
   {

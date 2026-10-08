@@ -99,3 +99,33 @@ export function onPart(p: Shape & Pick<Part, 'shape'>, pt: Vec2) {
   const inCutY = c.nL3 > 0 ? pt.y > c.inner.y + EPS : pt.y < c.inner.y - EPS
   return !(inCutX && inCutY)
 }
+
+/**
+ * Kitchen-3c: an L outline with its inside corner rounded to radius `r` (as cut): the inside corner is
+ * replaced by a quarter circle that meets L3 and W3 (centre in the cut-away corner, so the part keeps
+ * the material a router leaves there), as straight segments no more than `tol` from the true arc.
+ * `r` is kept under the shorter inside edge. Any other outline, or `r` <= 0, comes back unchanged.
+ */
+export function roundInnerCorner(p: Shape, r: number, tol = 0.01): Vec2[] {
+  const o = p.outline ?? []
+  const c = r > 0 ? lCorner(p) : null
+  if (!c) return o
+  const i = o.findIndex((v) => near(v.x, c.inner.x) && near(v.y, c.inner.y))
+  const prev = o[(i + o.length - 1) % o.length]
+  const next = o[(i + 1) % o.length]
+  const reach = Math.min(Math.hypot(prev.x - c.inner.x, prev.y - c.inner.y), Math.hypot(next.x - c.inner.x, next.y - c.inner.y))
+  const rr = Math.min(r, reach - 0.01)
+  if (!(rr > 0)) return o
+  // centre in the cut-away corner; from the point on W3 (t = 0) to the point on L3 (t = 90°)
+  const cx = c.inner.x + rr * c.nW3
+  const cy = c.inner.y + rr * c.nL3
+  const n = Math.max(2, Math.ceil(Math.PI / 2 / (2 * Math.acos(Math.max(-1, 1 - Math.min(tol, rr) / rr)))))
+  const arc: Vec2[] = []
+  for (let k = 0; k <= n; k++) {
+    const t = (Math.PI / 2) * (k / n)
+    arc.push({ x: Math.round((cx - rr * c.nW3 * Math.cos(t)) * 1000) / 1000 + 0, y: Math.round((cy - rr * c.nL3 * Math.sin(t)) * 1000) / 1000 + 0 })
+  }
+  // the outline reaches the corner along W3 (same x) or along L3 (same y)
+  const fromW3 = near(prev.x, c.inner.x)
+  return [...o.slice(0, i), ...(fromW3 ? arc : arc.reverse()), ...o.slice(i + 1)]
+}

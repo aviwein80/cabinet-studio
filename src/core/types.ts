@@ -180,8 +180,11 @@ export interface PartFrame {
   n: Vec3
 }
 
-/** Kitchen-2: `blind-panel` (the finished panel over a blind corner's blind part), `filler`, `end-panel`. */
-export type PartRole = 'side' | 'bottom' | 'top' | 'rail' | 'back' | 'shelf' | 'door' | 'drawer' | 'toekick' | 'custom' | 'blind-panel' | 'filler' | 'end-panel'
+/**
+ * Kitchen-2: `blind-panel` (the finished panel over a blind corner's blind part), `filler`, `end-panel`.
+ * Kitchen-3c: `cleat` (a block fixed on site under an L shelf's back corner).
+ */
+export type PartRole = 'side' | 'bottom' | 'top' | 'rail' | 'back' | 'shelf' | 'door' | 'drawer' | 'toekick' | 'custom' | 'blind-panel' | 'filler' | 'end-panel' | 'cleat'
 
 export interface Part {
   key: string
@@ -210,6 +213,13 @@ export interface Part {
    * inside edges are never banded).
    */
   shape?: 'L'
+  /**
+   * Kitchen-3c: an L part's inside corner radius as cut (set per part in the cabinet editor). Absent =
+   * the job's (`Job.lCornerRadius`), else the cut-out tool's radius.
+   */
+  cornerRadius?: number
+  /** Kitchen-3c: what to do with the part on site, printed on its label (e.g. a cleat to fix). */
+  onSite?: string
 }
 
 export interface HardwareLine {
@@ -334,6 +344,14 @@ export interface PieCutParams {
    * The other stops the door gap short of its face.
    */
   cornerDoor: 'back' | 'side'
+  /**
+   * Kitchen-3c: a corner cleat under each L shelf's back corner (cut with the job, fixed on site), so
+   * the corner does not hang. Absent = on.
+   */
+  cleats?: boolean
+  /** Cleat length along the back-wall back, and its height under the shelf. Absent = the placeholders in `KITCHEN_DEFAULTS`. */
+  cleatLength?: number
+  cleatHeight?: number
 }
 
 export type CornerParams = BlindCornerParams | PieCutParams
@@ -395,6 +413,8 @@ export interface PartOverride {
   edges?: Edges
   extraOps?: Operation[]
   materialId?: string
+  /** Kitchen-3c: an L part's inside corner radius as cut, instead of the job's. */
+  cornerRadius?: number
 }
 
 export interface CabinetTemplate {
@@ -434,6 +454,11 @@ export interface Job {
   camParts?: CamPart[]
   /** Sheet layout edited by hand (M2.8, NST-09). Absent = the automatic nest. */
   nestEdit?: SavedNest
+  /**
+   * Kitchen-3c: the inside corner radius of this job's L-shaped parts, as cut. Absent = the cut-out
+   * tool's radius (what the router leaves anyway), a placeholder until the shop confirms it.
+   */
+  lCornerRadius?: number
   /**
    * Programs edited by hand (M2.10, PST-04), by file name: the edited text and the hash of the
    * generated program it was made on. When the job changes the generated program, the edit is out

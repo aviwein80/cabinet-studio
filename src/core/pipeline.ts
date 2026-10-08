@@ -5,11 +5,12 @@ import { cutList, edgeCode, edgeDiagram, edgebandUsage, expandJob, type PartInst
 import { placeLabels, type LabelSpot } from './labels/placement'
 import { needsUnderside, sideOneProgram, sideTwoNote } from './flipSide'
 import { applySavedNest } from './manualNest'
-import { bridgesOn, buildAllPrograms, flipSheetsOn, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
+import { bridgesOn, buildAllPrograms, cutoutTool, flipSheetsOn, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
 import type { AppData, EdgeCodes, Job } from './types'
 import { formatLength } from './units'
+import { fmt } from './geometry'
 import { multiAxisIssues, positionalIssues, rotaryIssues, validateJob, type Issue } from './validator'
 
 export interface LabelRecord {
@@ -60,7 +61,9 @@ export interface JobOutput {
  */
 export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelCheck; paths3d?: ReadonlyMap<string, Toolpath> } = {}): JobOutput {
   const { library: lib, machine, settings } = data
-  const expanded = expandJob(job, lib, settings)
+  // Kitchen-3c: the cut-out tool's radius is the default inside corner radius of L parts
+  const cutter = cutoutTool(machine)
+  const expanded = expandJob(job, lib, settings, { cutterRadius: cutter ? cutter.diameter / 2 : 0 })
   const flip = flipSheetsOn(settings)
   const nestOpts = flip ? { underside: (i: PartInstance) => needsUnderside(i, machine) } : {}
   // M2.8 manual nesting: a layout edited by hand (or loaded from a nest list) is used as saved;
@@ -119,6 +122,9 @@ export function runJob(job: Job, data: AppData, opts: { isCancelled?: CancelChec
       // Kitchen-2: a scribe allowance is cut on and trimmed to the wall on site
       const sc = inst.part.scribe
       if (sc) notes.push(`Scribe ${formatLength(sc.amount, settings.units)}${settings.units === 'mm' ? ' mm' : ''} on ${sc.edge}: trim to the wall`)
+      // Kitchen-3c: a part fixed on site (a corner cleat) says where; an L part its inside corner radius as cut
+      if (inst.part.onSite) notes.push(inst.part.onSite)
+      if (inst.lCut && inst.lCut.radius > 0) notes.push(`Inside corner R${fmt(inst.lCut.radius)} mm`)
       const spot = sheetSpots.find((s) => s.uid === pl.uid)!
       if (!spot.fits) notes.push('Label does not fit: apply to back face')
       labels.push({

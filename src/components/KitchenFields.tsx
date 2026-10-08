@@ -9,6 +9,7 @@ import { NumField, SelectField, SwitchField } from '@/components/fields'
 import { kitchenUnconfirmed, type KitchenValueKey } from '@/core/confirm'
 import { blindSpans } from '@/core/construction/carcass'
 import { pieLegForDoor, pieSpans } from '@/core/construction/pieCut'
+import { KITCHEN_DEFAULTS } from '@/core/defaults'
 import { formatLength } from '@/core/units'
 import type { CarcassParams, Library } from '@/core/types'
 
@@ -113,6 +114,18 @@ export function KitchenFields({ p, set, lib }: { p: CarcassParams; set: (fn: (p:
             hint="Changes the side-wall leg."
           />
         </div>
+        <SwitchField
+          label="Corner cleats under the shelves"
+          checked={c.cleats !== false}
+          onChange={(v) => pie((q) => (q.cleats = v))}
+          hint="A block in the carcass board under each L shelf's back corner, cut with the job and fixed on site."
+        />
+        {c.cleats !== false && p.shelves.count > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            <NumField label="Cleat length" value={c.cleatLength ?? KITCHEN_DEFAULTS.cleatLength} min={20} max={600} onChange={(v) => pie((q) => (q.cleatLength = v))} cfg={cfg('cleatLength')} badge={badge('cleatLength')} hint="Along the back wall, from the corner." />
+            <NumField label="Cleat height" value={c.cleatHeight ?? KITCHEN_DEFAULTS.cleatHeight} min={10} max={200} onChange={(v) => pie((q) => (q.cleatHeight = v))} cfg={cfg('cleatHeight')} badge={badge('cleatHeight')} hint="Under the shelf." />
+          </div>
+        )}
         <SelectField
           label="At the inside corner"
           value={c.cornerDoor}

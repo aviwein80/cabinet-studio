@@ -8,6 +8,7 @@ import { Viewer3D } from '@/components/Viewer3D'
 import { useConfigureTarget } from '@/components/configureFocus'
 import { KitchenFields } from '@/components/KitchenFields'
 import { NONE, NumField, Section, SelectField, SwitchField, TextField } from '@/components/fields'
+import { LenInput } from '@/components/LenInput'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -84,7 +85,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
     const next = clone(cab)
     const o = next.overrides[key] ?? {}
     fn(o)
-    if (!o.exclude && !o.edges && !o.extraOps?.length && !o.materialId) delete next.overrides[key]
+    if (!o.exclude && !o.edges && !o.extraOps?.length && !o.materialId && o.cornerRadius === undefined) delete next.overrides[key]
     else next.overrides[key] = o
     commit(next)
   }
@@ -556,6 +557,13 @@ function PartsTable({
                       onChange={(v) => setOverride(raw.key, (o) => (o.edges = { ...(o.edges ?? {}), [k]: v }))}
                     />
                   ))}
+                  {/* Kitchen-3c: this L part's own inside corner radius (as cut, mm); blank = the job's */}
+                  {part.shape === 'L' && editable && (
+                    <span className="ml-1 flex items-center gap-0.5 text-[10px] text-muted-foreground" title="Inside corner radius as cut, in mm. Blank: the job's.">
+                      R
+                      <LenInput label={`${part.name} inside corner radius`} units="mm" value={ov?.cornerRadius ?? NaN} optional placeholder="job" className="h-6 w-12" onChange={(v) => setOverride(raw.key, (o) => (o.cornerRadius = Number.isFinite(v) && v >= 0 ? v : undefined))} />
+                    </span>
+                  )}
                 </div>
               </TableCell>
               <TableCell className="text-right text-xs tabular-nums">

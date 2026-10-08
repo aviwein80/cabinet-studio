@@ -173,6 +173,14 @@ export function validateJob(
       const mat = lib.materials.find((m) => m.id === sh.materialId)
       if (mat?.grain && !inst.canRotate && pl.rotated)
         add({ ...ref, severity: 'error', code: 'GRAIN', message: `Grain-locked part #${inst.no} was rotated.` })
+      // Kitchen-3c: an L part's inside corner set tighter than the cut-out tool can cut
+      if (inst.lCut && cutter && inst.lCut.radius < cutter.diameter / 2 - 0.001)
+        add({
+          ...ref,
+          severity: 'warning',
+          code: 'L_CORNER_RADIUS',
+          message: `Part #${inst.no}: the inside corner radius ${fmt(inst.lCut.radius)} mm is under the cut-out tool's ${fmt(cutter.diameter / 2)} mm; the corner is cut at the tool's radius.`,
+        })
       const minSide = Math.min(pl.dx, pl.dy)
       if (minSide < SMALL_PART_MIN_SIDE || pl.dx * pl.dy < SMALL_PART_MIN_AREA)
         add({

@@ -1,6 +1,7 @@
 import { X, Y, Z, neg, r3, type Box3 } from '../geometry'
 import { PLATE_ID, hingeCode, plateBoring } from '../hardware/resolve'
 import { hingeHeights } from '../hardware/specs'
+import { KITCHEN_DEFAULTS } from '../defaults'
 import type { CarcassParams, HardwarePin, Library, PieCutParams, UnitSystem, Vec2, Vec3 } from '../types'
 import { formatInches } from '../units'
 import { box, materialThickness, PartBuilder } from './builder'
@@ -88,7 +89,8 @@ export function pieLegForDoor(p: Pick<CarcassParams, 'doors'>, c: PieCutParams, 
  * and an L top (always a full top), banded on their two inside edges; a back on each wall (the side
  * wall's butts against the back wall's face); L shelves on 32 mm pins in the end sides, banded on their
  * inside edges; toe-kick boards along both fronts when the cabinets have them; two doors, each hinged
- * at its own end on Salice cups and 3 mm plates in that end side.
+ * at its own end on Salice cups and 3 mm plates in that end side. Kitchen-3c: a corner cleat under each
+ * L shelf's back corner, cut with the job and fixed on site (on unless switched off).
  */
 export function generatePieCut(p: CarcassParams, lib: Library, pin?: { hardware?: Record<string, HardwarePin> }, units: UnitSystem = 'mm'): GeneratedCabinet {
   const c = p.corner as PieCutParams
@@ -273,6 +275,22 @@ export function generatePieCut(p: CarcassParams, lib: Library, pin?: { hardware?
     sh.bandInside(neg(Y), p.edgebands.shelfFront)
     sh.bandInside(MV(X), p.edgebands.shelfFront)
     parts.push(sh)
+    // Kitchen-3c: a cleat in the carcass board under the shelf's back corner, on edge against the
+    // back-wall back from the side-wall back's face, its top at the shelf's underside; fixed on site
+    if (c.cleats !== false) {
+      const len = Math.max(1, c.cleatLength ?? KITCHEN_DEFAULTS.cleatLength)
+      const h = Math.max(1, c.cleatHeight ?? KITCHEN_DEFAULTS.cleatHeight)
+      const zTop = z - T / 2
+      const floor = i === 0 ? interiorLo : interiorLo + ((interiorHi - interiorLo) * i) / (shelfCount + 1) + T / 2
+      const reach = W - T - sc - backFrontX
+      if (zTop - h < floor - 0.01) warnings.push(`The corner cleat under shelf ${i + 1} (${S(h)} high) does not fit above the ${i === 0 ? 'bottom' : `shelf below`}; it is left out.`)
+      else {
+        if (len > reach) warnings.push(`The corner cleat (${S(len)}) is longer than shelf ${i + 1}'s back edge; it is cut to ${S(reach)}.`)
+        const cl = new PartBuilder(`cleat-${i + 1}`, `Shelf ${i + 1} corner cleat`, 'cleat', cm, MB([backFrontX, backFrontY - T, zTop - h], [backFrontX + Math.min(len, reach), backFrontY, zTop]), X, neg(Y), 'length')
+        cl.part.onSite = `Fix on site under shelf ${i + 1}'s back corner`
+        parts.push(cl)
+      }
+    }
   }
   if (p.shelfPins.enabled && shelfCount > 0) addHw(HW.shelfPin, shelfCount * 4)
   if (shelfCount > 0 && gridZ.length === 0) warnings.push('No room for shelf-pin holes between bottom and top.')

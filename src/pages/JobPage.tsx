@@ -1,4 +1,7 @@
-import { ConfigureBadge } from '@/components/Configure'
+import { ConfigureBadge, ValueBadges } from '@/components/Configure'
+import { useConfigureTarget } from '@/components/configureFocus'
+import { lCornerUnconfirmed } from '@/core/confirm'
+import { cutoutTool } from '@/core/machining'
 import {
   ArrowLeft,
   CircleAlert,
@@ -163,6 +166,10 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
   const { go, addCabinet, duplicateCabinet, removeCabinet } = useStore()
   const [adding, setAdding] = useState(false)
   const matName = (id: string) => data.library.materials.find((m) => m.id === id)?.code ?? '—'
+  // Kitchen-3c: the inside corner radius of the job's L parts (pie-cut bottoms, tops and shelves)
+  useConfigureTarget(['kitchen'])
+  const hasL = job.cabinets.some((c) => c.params.corner?.type === 'pie-cut' && !c.params.panel)
+  const cutterR = (cutoutTool(data.machine)?.diameter ?? 0) / 2
 
   return (
     <div className="flex flex-col gap-5">
@@ -174,6 +181,20 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
           <Label className="mb-1.5 block text-xs text-muted-foreground">Notes</Label>
           <Textarea rows={2} value={job.notes} placeholder="Site notes, delivery, colour confirmations..." onChange={(e) => setJob((j) => (j.notes = e.target.value))} />
         </div>
+        {hasL && (
+          <NumField
+            metric
+            label="Inside corner radius of L parts (as cut)"
+            value={job.lCornerRadius ?? cutterR}
+            min={0}
+            max={150}
+            step={0.5}
+            onChange={(v) => setJob((j) => (j.lCornerRadius = v))}
+            cfg="kitchen:lCornerRadius"
+            badge={<ValueBadges item={lCornerUnconfirmed(job, data.machine, cutterR)[0]} />}
+            hint={`Pie-cut bottoms, tops and shelves. Default: the cut-out tool's radius (${cutterR} mm), what it leaves anyway; larger lets one band wrap round the corner. A part can have its own in the cabinet editor.`}
+          />
+        )}
       </div>
 
       <div className="flex items-center justify-between">
@@ -206,7 +227,7 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                       ? `${kindLabel(c.params)} · ${matName(c.params.doorMaterialId)}`
                       : `${c.params.corner ? `${kindLabel(c.params)} · ` : ''}${matName(c.params.carcassMaterialId)} · ${c.params.doors.count} door${c.params.doors.count === 1 ? '' : 's'} · ${c.params.shelves.count} shelf`}
                   </div>
-                  {Object.values(c.overrides).some((o) => o.exclude || o.edges || o.extraOps?.length || o.materialId) && (
+                  {Object.values(c.overrides).some((o) => o.exclude || o.edges || o.extraOps?.length || o.materialId || o.cornerRadius !== undefined) && (
                     <Badge variant="outline" className="mt-1.5 text-[10px]">
                       Customised parts
                     </Badge>

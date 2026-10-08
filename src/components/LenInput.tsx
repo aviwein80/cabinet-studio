@@ -5,7 +5,7 @@ import { formatLength, parseLength } from '@/core/units'
 import { cn } from '@/lib/utils'
 
 /** Length cell in the shop's units. Empty means “not given” (NaN) and is shown as required. */
-export function LenInput({ value, units, onChange, label, plain, optional, className }: { value: number; units: UnitSystem; onChange: (v: number) => void; label: string; plain?: boolean; optional?: boolean; className?: string }) {
+export function LenInput({ value, units, onChange, label, plain, optional, className, placeholder }: { value: number; units: UnitSystem; onChange: (v: number) => void; label: string; plain?: boolean; optional?: boolean; className?: string; placeholder?: string }) {
   const shown = Number.isFinite(value) ? (plain ? String(value) : formatLength(value, units)) : ''
   const [text, setText] = useState(shown)
   const [last, setLast] = useState(shown)
@@ -21,7 +21,7 @@ export function LenInput({ value, units, onChange, label, plain, optional, class
       inputMode="decimal"
       value={text}
       aria-invalid={(!optional && !Number.isFinite(value)) || (text.trim() !== '' && parsed === null)}
-      placeholder={optional ? 'none' : 'needed'}
+      placeholder={placeholder ?? (optional ? 'none' : 'needed')}
       onChange={(e) => setText(e.target.value)}
       onBlur={() => onChange(parsed ?? NaN)}
       // Polish-1: Enter applies the value too (not only Tab or leaving the field)

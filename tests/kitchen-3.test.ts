@@ -250,7 +250,8 @@ describe('Kitchen-3 B: the pie-cut corner base and wall', () => {
     const p = pieBase()
     const g = generateCarcass(p, lib)
     expect(g.warnings).toEqual([])
-    expect(g.parts.map((x) => x.key)).toEqual(['side-back', 'side-return', 'bottom', 'top', 'back', 'back-side', 'shelf-1', 'door-back', 'door-side'])
+    // (Kitchen-3c: with the corner cleat under the shelf)
+    expect(g.parts.map((x) => x.key)).toEqual(['side-back', 'side-return', 'bottom', 'top', 'back', 'back-side', 'shelf-1', 'cleat-1', 'door-back', 'door-side'])
     const f = pieFootprint(p, pieOf(p))
     for (const k of ['bottom', 'top', 'shelf-1']) {
       const lp = part(g.parts, k)

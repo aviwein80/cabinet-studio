@@ -141,7 +141,9 @@ export function nestPartOf(i: PartInstance, ns: ReturnType<typeof nestSettingsOf
     length: i.cutLength,
     width: i.cutWidth,
     canRotate: i.canRotate,
-    ...(i.outline.length >= 3 ? { outline: i.outline } : {}),
+    // Kitchen-3c: an L part nests on its whole cut rectangle, so nothing is put in its cut-away corner:
+    // the groove run-out check keeps every other part's rectangle clear of a groove's run-out
+    ...(i.outline.length >= 3 && !i.lCut ? { outline: i.outline } : {}),
     ...(ns.nestInApertures && i.holes?.length ? { holes: i.holes } : {}),
     shape: i.cam ? `cam-${i.cam.id}-${i.cam.updatedAt}` : undefined,
     ...(i.priority ? { priority: i.priority } : {}),
@@ -593,7 +595,10 @@ export function buildSheetProgram(
         }
       }
     }
-    let poly = inst.outline.map((p) => pt(p.x, p.y))
+    // Kitchen-3c: an L part's inside corner no rounder than the cut-out tool: cut it sharp and the tool
+    // leaves its own radius there (a rounded corner tighter than the tool cannot be compensated)
+    const sharpCorner = inst.lCut && inst.lCut.radius <= (cutter ? cutter.diameter / 2 : 0) + 0.05
+    let poly = (sharpCorner ? inst.lCut!.sharp : inst.outline).map((p) => pt(p.x, p.y))
     const cw = machine.contour.direction === 'climb-cw'
     const area = polygonArea(poly)
     if ((cw && area > 0) || (!cw && area < 0)) poly = [...poly].reverse()

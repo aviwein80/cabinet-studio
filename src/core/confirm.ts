@@ -14,7 +14,7 @@ import { fixtureTypesOf, PLACEHOLDER_FIXTURE_TYPES } from '@/cam/fixtures/fixtur
 import { bodiesInvented, bodiesOf } from '@/cam/machine/model'
 import type { Fixture, FixtureShape } from '@/cam/types'
 import { KITCHEN_DEFAULTS } from './defaults'
-import type { CarcassParams, MachineProfile, Tool } from './types'
+import type { CarcassParams, Job, MachineProfile, Tool } from './types'
 
 /** Machine-model facts tracked one by one. */
 export const MODEL_FACTS = ['table', 'travel', 'toolChange', 'safeZ', 'spoilboard', 'saw', 'aggregate'] as const
@@ -144,13 +144,20 @@ export type ConfigTarget =
   | { kind: 'fixture'; partId: string; jobId?: string; fixtureId: string }
   | { kind: 'kitchen'; key: KitchenValueKey }
 
-/** Kitchen-2: corner, filler and end-panel values that are placeholders until the shop confirms them. */
-export type KitchenValueKey = keyof typeof KITCHEN_DEFAULTS
+/**
+ * Kitchen-2: corner, filler and end-panel values that are placeholders until the shop confirms them.
+ * Kitchen-3c: the corner cleat's sizes, and the inside corner radius of L parts (`lCornerRadius`: its
+ * placeholder is the cut-out tool's radius, so it is not in `KITCHEN_DEFAULTS`).
+ */
+export type KitchenValueKey = keyof typeof KITCHEN_DEFAULTS | 'lCornerRadius'
 export const KITCHEN_VALUE_LABEL: Record<KitchenValueKey, string> = {
   pullOut: 'Blind corner pull-out from the side wall',
   fillerReturn: 'Filler return depth',
   scribe: 'Scribe allowance',
   proud: 'End panel standing proud of the doors',
+  cleatLength: 'Corner cleat under an L shelf: length',
+  cleatHeight: 'Corner cleat under an L shelf: height',
+  lCornerRadius: 'Inside corner radius of L-shaped parts (as cut)',
 }
 
 /** Nesting values (M2.8) that are placeholders until the shop confirms them. */
@@ -201,12 +208,17 @@ export const keyOf = (t: ConfigTarget): string => {
  */
 export function kitchenUnconfirmed(p: CarcassParams, m: Pick<MachineProfile, 'confirmed'>, fmtLen: (mm: number) => string = (mm) => `${fmt(mm)} mm`): Unconfirmed[] {
   const out: Unconfirmed[] = []
-  const check = (key: KitchenValueKey, value: number | undefined) => {
+  const check = (key: keyof typeof KITCHEN_DEFAULTS, value: number | undefined) => {
     if (value === undefined || Math.abs(value - KITCHEN_DEFAULTS[key]) > 0.001) return
     const target: ConfigTarget = { kind: 'kitchen', key }
     if (!isConfirmed(m, keyOf(target))) out.push({ key: keyOf(target), label: KITCHEN_VALUE_LABEL[key], value: fmtLen(value), group: 'Kitchen defaults', target })
   }
   if (p.corner?.type === 'blind' && !p.panel) check('pullOut', p.corner.pullOut)
+  // Kitchen-3c: the corner cleats' sizes, while the pie-cut has cleats and shelves to put them under
+  if (p.corner?.type === 'pie-cut' && !p.panel && p.corner.cleats !== false && p.shelves.count > 0) {
+    check('cleatLength', p.corner.cleatLength ?? KITCHEN_DEFAULTS.cleatLength)
+    check('cleatHeight', p.corner.cleatHeight ?? KITCHEN_DEFAULTS.cleatHeight)
+  }
   if (p.panel?.type === 'filler') {
     if (p.panel.returnDepth > 0) check('fillerReturn', p.panel.returnDepth)
     if (p.panel.scribeSide !== 'none') check('scribe', p.panel.scribe)
@@ -216,6 +228,17 @@ export function kitchenUnconfirmed(p: CarcassParams, m: Pick<MachineProfile, 'co
     if (p.panel.front === 'proud') check('proud', p.panel.proud)
   }
   return out
+}
+
+/**
+ * Kitchen-3c: a job's inside corner radius of L parts, while it is the default (the cut-out tool's
+ * radius, `cutterRadius`) and the shop has not confirmed it; only for a job with L parts (a pie-cut).
+ */
+export function lCornerUnconfirmed(job: Pick<Job, 'cabinets' | 'lCornerRadius'>, m: Pick<MachineProfile, 'confirmed'>, cutterRadius: number): Unconfirmed[] {
+  if (job.lCornerRadius !== undefined || !job.cabinets.some((c) => c.params.corner?.type === 'pie-cut' && !c.params.panel)) return []
+  const target: ConfigTarget = { kind: 'kitchen', key: 'lCornerRadius' }
+  if (isConfirmed(m, keyOf(target))) return []
+  return [{ key: keyOf(target), label: KITCHEN_VALUE_LABEL.lCornerRadius, value: `${fmt(cutterRadius)} mm (the cut-out tool's radius)`, group: 'Kitchen defaults', target }]
 }
 
 export const isConfirmed = (m: Pick<MachineProfile, 'confirmed'>, key: string) => !!m.confirmed?.includes(key)

@@ -60,6 +60,7 @@ function explodeOffset(p: Part, amount: number): Vec3 {
     case 'drawer':
       return [0, -d * 1.4, 0]
     case 'shelf':
+    case 'cleat':
       return [0, -d * 0.5, 0]
     default:
       return [0, 0, 0]

@@ -410,6 +410,8 @@ export function buildCabinet(cab: CabinetInstance, lib: Library, units: UnitSyst
     if (ov?.edges) next.edges = { ...next.edges, ...ov.edges }
     if (ov?.extraOps) next.ops.push(...ov.extraOps)
     if (ov?.materialId) next.materialId = ov.materialId
+    // Kitchen-3c: an L part's own inside corner radius
+    if (ov?.cornerRadius !== undefined && next.shape === 'L') next.cornerRadius = ov.cornerRadius
     parts.push(next)
   }
   for (const key of Object.keys(cab.overrides)) {

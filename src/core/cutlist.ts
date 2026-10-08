@@ -5,7 +5,7 @@ import { hasMultiAxisWork } from '@/cam/multiaxis/engine'
 import type { CamPart } from '@/cam/types'
 import { buildCabinet, partOutline } from './construction/carcass'
 import { EPS, r3 } from './geometry'
-import { lCorner, lEdgeLengths } from './lpart'
+import { lCorner, lEdgeLengths, roundInnerCorner } from './lpart'
 import type { AnyEdgeKey, EdgeCodes, Job, Library, Operation, Part, ShopSettings, Vec2 } from './types'
 import { EDGE_KEYS, INSIDE_EDGE_KEYS } from './types'
 import { draftBlock } from './spec/draft'
@@ -36,6 +36,12 @@ export interface PartInstance {
   /** Nesting priority (higher first) and kit name. */
   priority?: number
   kit?: string
+  /**
+   * Kitchen-3c: an L part: its inside corner radius as cut, and its cut outline with the corner sharp
+   * (`outline` has the corner rounded). The MPR cuts the sharp corner when the radius is no more than
+   * the cut-out tool's (the tool leaves its own radius there), the rounded one when it is more.
+   */
+  lCut?: { radius: number; sharp: Vec2[] }
 }
 
 export interface CutListRow {
@@ -89,7 +95,11 @@ function shiftOps(ops: Operation[], dx: number, dy: number, L: number, W: number
   })
 }
 
-export function expandJob(job: Job, lib: Library, settings: ShopSettings): ExpandedJob {
+/**
+ * `cutterRadius` (Kitchen-3c): the cut-out tool's radius, the default inside corner radius of L parts
+ * (absent = 0, a sharp corner, as before).
+ */
+export function expandJob(job: Job, lib: Library, settings: ShopSettings, opts: { cutterRadius?: number } = {}): ExpandedJob {
   const instances: PartInstance[] = []
   const warnings: string[] = []
   const hw = new Map<string, number>()
@@ -121,6 +131,10 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
               x: Math.abs(p.x) < EPS ? 0 : Math.abs(p.x - part.length) < EPS ? Lc : r3(p.x + dW1),
               y: Math.abs(p.y) < EPS ? 0 : Math.abs(p.y - part.width) < EPS ? Wc : r3(p.y + dL1),
             }))
+        // Kitchen-3c: the inside corner rounded as cut: the part's own radius, else the job's, else the cutter's
+        const radius = lc ? (part.cornerRadius ?? job.lCornerRadius ?? opts.cutterRadius ?? 0) : 0
+        const lCut = lc ? { radius: r3(Math.max(0, radius)), sharp: outline } : undefined
+        const cutOutline = lc && radius > 0 ? roundInnerCorner({ length: Lc, width: Wc, outline }, radius) : outline
         const material = lib.materials.find((m) => m.id === part.materialId)
         if (!material) warnings.push(`${cab.number} ${part.name}: material ${part.materialId} missing from library.`)
         else if (Math.abs(material.thickness - part.thickness) > EPS)
@@ -138,8 +152,9 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
           cutLength: Lc,
           cutWidth: Wc,
           ops: shiftOps(part.ops, dW1, dL1, part.length, part.width, Lc, Wc),
-          outline,
+          outline: cutOutline,
           canRotate: !(material?.grain && part.grain === 'length'),
+          ...(lCut ? { lCut } : {}),
         })
       }
     }

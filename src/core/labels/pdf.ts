@@ -39,7 +39,7 @@ function cornerMark(doc: jsPDF, x: number, y: number, size: number, color: [numb
 }
 
 /** `shape`: a custom part's true outline, or (Kitchen-3, `l: true`) an L part's, its banded edges drawn thick along it. */
-function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem, shape?: { outline: Vec2[]; holes: Vec2[][]; L: number; W: number; l?: boolean }) {
+function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem, shape?: { outline: Vec2[]; holes: Vec2[][]; L: number; W: number; l?: boolean; sharp?: Vec2[] }) {
   const ratio = l.finished.w / l.finished.l
   let bw = w
   let bh = w * ratio
@@ -67,7 +67,8 @@ function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number
     for (const hole of shape.holes) draw(hole, 'FD')
   } else doc.rect(ox, oy, bw, bh, 'FD')
   doc.setLineWidth(1.4)
-  const segs = shape?.l ? lSegments({ length: shape.L, width: shape.W, outline: shape.outline }) : null
+  // (Kitchen-3c: the edges of an L are named on its sharp outline; the fill above has the corner rounded)
+  const segs = shape?.l ? lSegments({ length: shape.L, width: shape.W, outline: shape.sharp ?? shape.outline }) : null
   if (segs && shape) {
     // Kitchen-3: an L part: every banded edge along the outline, the inside edges L3 and W3 too
     for (const s of segs) {
@@ -219,8 +220,8 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   const inst = out.instances.find((i) => i.uid === l.uid)
   const shape = inst?.cam
     ? { outline: inst.outline, holes: inst.holes ?? [], L: inst.cutLength, W: inst.cutWidth }
-    : inst?.part.shape === 'L' && inst.outline.length === 6
-      ? { outline: inst.outline, holes: [], L: inst.cutLength, W: inst.cutWidth, l: true }
+    : inst?.lCut
+      ? { outline: inst.outline, holes: [], L: inst.cutLength, W: inst.cutWidth, l: true, sharp: inst.lCut.sharp }
       : undefined
   edgeDiagram(doc, l, 62, 13, 34, 20, units, shape)
   miniSheet(doc, out, l, 62, 35, 34, 14)

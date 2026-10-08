@@ -1,0 +1,51 @@
+1
+00:00:03,401 --> 00:00:12,522
+The Novak kitchen is sold. Hand it to the shop floor from the job's Output tab.
+
+2
+00:00:12,522 --> 00:00:15,700
+First, the export check: read it before anything is cut.
+
+3
+00:00:15,700 --> 00:00:20,782
+Placeholder tools and machine data: load the real N-200 values before running programs.
+
+4
+00:00:20,782 --> 00:00:26,296
+Small parts like the 2" x 6" corner cleat get a vacuum warning: hold them down or cut by hand.
+
+5
+00:00:26,296 --> 00:00:29,150
+Machine output switches stay off. The floor needs the paperwork.
+
+6
+00:00:29,150 --> 00:00:36,921
+Sheet maps PDF: one page per sheet, every part numbered where it sits.
+
+7
+00:00:36,921 --> 00:00:44,585
+The operator lays each map next to its sheet and checks the parts as they come off.
+
+8
+00:00:44,585 --> 00:00:52,378
+Labels PDF: a sheet header label, then one label per part in cut order.
+
+9
+00:00:52,378 --> 00:00:59,698
+Each label carries the job, cabinet, part, size, banded edges and a barcode.
+
+10
+00:00:59,698 --> 00:01:04,168
+Labels ZPL sends the same labels straight to a Zebra printer at the machine.
+
+11
+00:01:04,168 --> 00:01:19,917
+Cut list CSV for anything cut on the panel saw, and for the edgebander operator.
+
+12
+00:01:19,917 --> 00:01:24,533
+BOM CSV goes to purchasing: hinges, plates, slides and edgeband to have on hand.
+
+13
+00:01:24,533 --> 00:01:29,635
+Maps, labels, cut list and order list: the job is ready for the floor.

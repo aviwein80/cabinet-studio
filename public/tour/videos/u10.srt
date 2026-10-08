@@ -1,0 +1,47 @@
+1
+00:00:03,401 --> 00:00:07,679
+Re-measure before cutting: the Ortiz back wall is 119", not 121".
+
+2
+00:00:07,679 --> 00:00:13,135
+Record the revision in the job notes first.
+
+3
+00:00:13,135 --> 00:00:26,054
+On the Room tab, type the new width.
+
+4
+00:00:26,054 --> 00:00:30,732
+The app flags it straight away: the 3-5/16" filler F1 now runs past the wall.
+
+5
+00:00:30,732 --> 00:00:38,965
+The filler was cut to the old gap, so remove it: Cabinets tab, the bin on F1.
+
+6
+00:00:38,965 --> 00:00:46,741
+Back in the room, the run is now 1-5/16" short of the 119" wall, and the app measures it.
+
+7
+00:00:46,741 --> 00:00:52,135
+Fill gap makes a new filler of exactly that width.
+
+8
+00:00:52,135 --> 00:00:56,494
+The warning is gone: the run meets the 119" wall again. Nothing else had to change.
+
+9
+00:00:56,494 --> 00:01:02,049
+Elevation of the back wall, with the narrower filler at the right end.
+
+10
+00:01:02,049 --> 00:01:12,332
+The cut list picks up the new filler size...
+
+11
+00:01:12,332 --> 00:01:18,127
+...and nesting re-runs, so the labels and sheet maps match the revised job.
+
+12
+00:01:18,127 --> 00:01:22,329
+A site change caught before cutting: one number in the room, one new filler, done.

@@ -20,7 +20,7 @@ import {
   toRoom,
   WALL_ELEVATION,
 } from '../src/core/room'
-import type { AppData, CabinetInstance, CabinetPlacement, CarcassParams, DrillOp, Job, Part } from '../src/core/types'
+import type { AppData, BlindCornerParams, CabinetInstance, CabinetPlacement, CarcassParams, DrillOp, Job, Part } from '../src/core/types'
 import { formatInches, toMm } from '../src/core/units'
 import { cabinet, clone, data, job } from './helpers'
 
@@ -29,6 +29,8 @@ const room = DEFAULT_ROOM
 const inch = (n: number) => Math.round(n * 25.4 * 1000) / 1000
 const drills = (p: Part, purpose: string) => p.ops.filter((o): o is DrillOp => o.kind === 'drill' && o.purpose === purpose)
 const part = (parts: Part[], key: string) => parts.find((p) => p.key === key)!
+/** Kitchen-3: `corner` may also be a pie-cut; these tests are about blind corners. */
+const blindOf = (p: Pick<CarcassParams, 'corner'>) => p.corner as BlindCornerParams
 /** A part's extent in cabinet (or room) coordinates. */
 function extent(p: Part) {
   const c = [0, p.length].flatMap((x) => [0, p.width].flatMap((y) => [0, p.thickness].map((d) => toWorld(p.frame, x, y, d))))
@@ -123,7 +125,7 @@ describe('Kitchen-2 A1: blind corner cabinets', () => {
     const g = generateCarcass(p, lib)
     expect(g.warnings).toEqual([])
     const W = p.width
-    const bw = p.corner!.blindWidth
+    const bw = blindOf(p).blindWidth
     const gap = p.doors.gap
     // blind panel over the blind part, from the blind side to the door gap
     const bp = part(g.parts, 'blind-panel')
@@ -140,7 +142,7 @@ describe('Kitchen-2 A1: blind corner cabinets', () => {
     const de = extent(door)
     expect(de.lo[0]).toBeCloseTo(bw + gap / 2, 6)
     expect(de.hi[0]).toBeCloseTo(W - gap / 2, 6)
-    expect(blindSpans(p, p.corner!).doorWidth).toBeCloseTo(W - bw - gap, 6)
+    expect(blindSpans(p, blindOf(p)).doorWidth).toBeCloseTo(W - bw - gap, 6)
     expect(formatInches(W - bw - gap)).toBe('11-7/8"')
     expect(g.parts.filter((x) => x.role === 'door')).toHaveLength(1)
     // the cups are on the open (right) edge; the plate holes are in the right side only
@@ -161,11 +163,11 @@ describe('Kitchen-2 A1: blind corner cabinets', () => {
 
   it('blind right mirrors it: blind panel at the right, door hinged left, plates in the left side', () => {
     const p = clone(KITCHEN_PRESETS.find((x) => x.id === 'tpl-us-blind-base-36')!.params)
-    p.corner!.blindSide = 'right'
+    blindOf(p).blindSide = 'right'
     const g = generateCarcass(p, lib)
     const be = extent(part(g.parts, 'blind-panel'))
     expect(be.hi[0]).toBeCloseTo(p.width, 6)
-    expect(be.lo[0]).toBeCloseTo(p.width - p.corner!.blindWidth + p.doors.gap / 2, 6)
+    expect(be.lo[0]).toBeCloseTo(p.width - blindOf(p).blindWidth + p.doors.gap / 2, 6)
     const door = part(g.parts, 'door')
     for (const c of drills(door, 'hinge-cup')) expect(toWorld(door.frame, c.x, c.y)[0]).toBeCloseTo(p.doors.gap / 2 + p.doors.cupEdgeDistance, 3)
     const bare = generateCarcass({ ...p, shelves: { ...p.shelves, count: 0 } }, lib)
@@ -179,10 +181,10 @@ describe('Kitchen-2 A1: blind corner cabinets', () => {
     expect(g.warnings).toEqual([])
     expect(p.kind).toBe('wall')
     expect(g.parts.some((x) => x.key === 'top')).toBe(true)
-    expect(formatInches(blindSpans(p, p.corner!).doorWidth)).toBe('11-7/8"')
+    expect(formatInches(blindSpans(p, blindOf(p)).doorWidth)).toBe('11-7/8"')
     const q = clone(p)
     q.drawers.count = 2
-    q.corner!.blindWidth = p.width + 10
+    blindOf(q).blindWidth = p.width + 10
     const h = generateCarcass(q, lib)
     expect(h.warnings.some((w) => /Drawers are left out/.test(w))).toBe(true)
     expect(h.warnings.some((w) => /Blind width/.test(w))).toBe(true)
@@ -195,8 +197,8 @@ describe('Kitchen-2 A1: blind corner cabinets', () => {
     const blind = d.find((x) => x.kind === 'blind')!
     const door = d.find((x) => x.kind === 'door')!
     expect(blind.u0).toBe(0)
-    expect(blind.u1 * p.width).toBeCloseTo(p.corner!.blindWidth - p.doors.gap / 2, 6)
-    expect(door.u0 * p.width).toBeCloseTo(p.corner!.blindWidth + p.doors.gap / 2, 6)
+    expect(blind.u1 * p.width).toBeCloseTo(blindOf(p).blindWidth - p.doors.gap / 2, 6)
+    expect(door.u0 * p.width).toBeCloseTo(blindOf(p).blindWidth + p.doors.gap / 2, 6)
     expect(d.filter((x) => x.kind === 'drawer')).toHaveLength(0)
   })
 })
@@ -267,7 +269,7 @@ describe('Kitchen-2 A3: room, turned cabinets and the L-shaped kitchen', () => {
     // door edge 3 + 24 + 1.5 mm gap/2 from the left wall; return front 24" + its 18 mm drawer fronts
     expect(cl.clearance).toBeCloseTo(inch(3) + inch(24) + 1.5 - inch(24) - 18, 6)
     expect(cornerClearance(cabs, 'wc', room, place, lib)!.clearance).toBeCloseTo(inch(3) + inch(12) + 1.5 - inch(12) - 18, 6)
-    expect(bc.params.corner!.pullOut).toBe(KITCHEN_DEFAULTS.pullOut)
+    expect(blindOf(bc.params).pullOut).toBe(KITCHEN_DEFAULTS.pullOut)
   })
 
   it('no overlaps in 3D: every part of every cabinet, placed in the room, stays clear of every other cabinet', () => {
@@ -321,7 +323,7 @@ describe('Kitchen-2 A3: room, turned cabinets and the L-shaped kitchen', () => {
     const cabs = placed([
       us('tpl-base-2door', 'a', 'B1', 30),
       us('tpl-base-2door', 'b', 'B2', 30),
-      preset('tpl-us-blind-base-36', 'c', 'B3', (p) => (p.corner!.blindSide = 'right')),
+      preset('tpl-us-blind-base-36', 'c', 'B3', (p) => (blindOf(p).blindSide = 'right')),
       us('tpl-base-1door', 'd', 'B4', 18),
       us('tpl-base-1door', 'e', 'B5', 18),
     ])
@@ -357,7 +359,7 @@ describe('Kitchen-2 A3: the neighbour push follows the run round the corner', ()
     const cabs = placed(lKitchen())
     const bc = cabs.find((c) => c.id === 'bc')!
     const b4 = at(cabs, 'b4').x
-    bc.params.corner!.pullOut = inch(4)
+    blindOf(bc.params).pullOut = inch(4)
     const moved = pushNeighbours(cabs, 'bc', { width: bc.params.width, depth: bc.params.depth, pullOut: inch(3) }, room, lib)
     expect(at(cabs, 'bc').x).toBeCloseTo(inch(4), 6)
     expect(at(cabs, 'b4').x).toBeCloseTo(b4 + inch(1), 6)
@@ -396,7 +398,7 @@ describe('Kitchen-2 A3: the neighbour push follows the run round the corner', ()
   })
 
   it('with only a right corner, a back-run cabinet grows to the left', () => {
-    const cabs = placed([us('tpl-base-2door', 'a', 'B1', 30), us('tpl-base-2door', 'b', 'B2', 30), preset('tpl-us-blind-base-36', 'c', 'B3', (p) => (p.corner!.blindSide = 'right'))])
+    const cabs = placed([us('tpl-base-2door', 'a', 'B1', 30), us('tpl-base-2door', 'b', 'B2', 30), preset('tpl-us-blind-base-36', 'c', 'B3', (p) => (blindOf(p).blindSide = 'right'))])
     const right = at(cabs, 'b').x + inch(30)
     const a = at(cabs, 'a').x
     cabs.find((c) => c.id === 'b')!.params.width = inch(33)
@@ -580,6 +582,9 @@ describe('Kitchen-2 B7: US presets', () => {
     const want: Record<string, string[]> = {
       'tpl-us-blind-base-36': ['36"', '34-1/2"', '24"'],
       'tpl-us-blind-wall-24': ['24"', '30"', '12"'],
+      // Kitchen-3: the pie-cut corners (width = the back-wall leg, depth = the side-wall leg)
+      'tpl-us-pie-base-36': ['36"', '34-1/2"', '36"'],
+      'tpl-us-pie-wall-24': ['24"', '30"', '24"'],
       'tpl-us-filler-3': ['3"', '34-1/2"', '24"'],
       'tpl-us-filler-3-wall': ['3"', '30"', '12"'],
       'tpl-us-end-base': ['11/16"', '34-1/2"', '24"'],
@@ -620,7 +625,7 @@ describe('Kitchen-2 B7: US presets', () => {
     expect(kitchenUnconfirmed(filler, m).map((u) => u.key)).toEqual(['kitchen:fillerReturn'])
     expect(kitchenUnconfirmed(bc, { confirmed: ['kitchen:pullOut'] })).toEqual([])
     const own = clone(bc)
-    own.corner!.pullOut = inch(2)
+    blindOf(own).pullOut = inch(2)
     expect(kitchenUnconfirmed(own, m)).toEqual([])
     // never part of the export check
     const out = runJob(job(placed(lKitchen())), defaultAppData())

@@ -2,6 +2,7 @@ import JsBarcode from 'jsbarcode'
 import { jsPDF } from 'jspdf'
 import type { PartInstance } from '../cutlist'
 import { formatLength } from '../units'
+import { lSegments } from '../lpart'
 import { placementTransform, type SheetProgram } from '../machining'
 import type { JobOutput, LabelRecord } from '../pipeline'
 import type { Job, Library, UnitSystem, Vec2 } from '../types'
@@ -37,7 +38,8 @@ function cornerMark(doc: jsPDF, x: number, y: number, size: number, color: [numb
   doc.triangle(x, y, x + size, y, x, y + size, 'F')
 }
 
-function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem, shape?: { outline: Vec2[]; holes: Vec2[][]; L: number; W: number }) {
+/** `shape`: a custom part's true outline, or (Kitchen-3, `l: true`) an L part's, its banded edges drawn thick along it. */
+function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number, h: number, units: UnitSystem, shape?: { outline: Vec2[]; holes: Vec2[][]; L: number; W: number; l?: boolean }) {
   const ratio = l.finished.w / l.finished.l
   let bw = w
   let bh = w * ratio
@@ -65,11 +67,20 @@ function edgeDiagram(doc: jsPDF, l: LabelRecord, x: number, y: number, w: number
     for (const hole of shape.holes) draw(hole, 'FD')
   } else doc.rect(ox, oy, bw, bh, 'FD')
   doc.setLineWidth(1.4)
-  // Part frame on the label: local x to the right, local y up. L1 = bottom, L2 = top, W1 = left, W2 = right.
-  if (l.edges.L1) doc.line(ox, oy + bh, ox + bw, oy + bh)
-  if (l.edges.L2) doc.line(ox, oy, ox + bw, oy)
-  if (l.edges.W1) doc.line(ox, oy, ox, oy + bh)
-  if (l.edges.W2) doc.line(ox + bw, oy, ox + bw, oy + bh)
+  const segs = shape?.l ? lSegments({ length: shape.L, width: shape.W, outline: shape.outline }) : null
+  if (segs && shape) {
+    // Kitchen-3: an L part: every banded edge along the outline, the inside edges L3 and W3 too
+    for (const s of segs) {
+      if (!l.edges[s.key]) continue
+      doc.line(ox + (s.a.x / shape.L) * bw, oy + bh - (s.a.y / shape.W) * bh, ox + (s.b.x / shape.L) * bw, oy + bh - (s.b.y / shape.W) * bh)
+    }
+  } else {
+    // Part frame on the label: local x to the right, local y up. L1 = bottom, L2 = top, W1 = left, W2 = right.
+    if (l.edges.L1) doc.line(ox, oy + bh, ox + bw, oy + bh)
+    if (l.edges.L2) doc.line(ox, oy, ox + bw, oy)
+    if (l.edges.W1) doc.line(ox, oy, ox, oy + bh)
+    if (l.edges.W2) doc.line(ox + bw, oy, ox + bw, oy + bh)
+  }
   doc.setLineWidth(0.2)
   doc.setFontSize(6)
   doc.setFont('helvetica', 'normal')
@@ -198,7 +209,7 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.text(`finished size   cut ${formatLength(l.cut.l, units)} x ${formatLength(l.cut.w, units)}`, 4, 33.5)
   doc.setFontSize(8)
   doc.text(`${l.materialCode}  ${l.materialName}`.slice(0, 44), 4, 38.5)
-  const edgeText = (['L1', 'L2', 'W1', 'W2'] as const)
+  const edgeText = (['L1', 'L2', 'W1', 'W2', 'L3', 'W3'] as const)
     .filter((k) => l.edges[k])
     .map((k) => `${k} ${l.edges[k]}`)
     .join('  ')
@@ -206,7 +217,11 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.text(edgeText ? `Edges: ${edgeText}` : 'Edges: none', 4, 43)
 
   const inst = out.instances.find((i) => i.uid === l.uid)
-  const shape = inst?.cam ? { outline: inst.outline, holes: inst.holes ?? [], L: inst.cutLength, W: inst.cutWidth } : undefined
+  const shape = inst?.cam
+    ? { outline: inst.outline, holes: inst.holes ?? [], L: inst.cutLength, W: inst.cutWidth }
+    : inst?.part.shape === 'L' && inst.outline.length === 6
+      ? { outline: inst.outline, holes: [], L: inst.cutLength, W: inst.cutWidth, l: true }
+      : undefined
   edgeDiagram(doc, l, 62, 13, 34, 20, units, shape)
   miniSheet(doc, out, l, 62, 35, 34, 14)
 

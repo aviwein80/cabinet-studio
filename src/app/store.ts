@@ -241,7 +241,7 @@ export const useStore = create<State>((set, get) => {
           j.cabinets = j.cabinets.map((c) => (c.id === cab.id ? clone(cab) : c))
           // Polish-1: a wider (or narrower) placed cabinet moves its neighbours along the run;
           // Kitchen-2: so does a corner cabinet's depth or pull-out, round the corner
-          if (prev) pushNeighbours(j.cabinets, cab.id, { width: prev.width, depth: prev.depth, pullOut: prev.corner?.pullOut }, { ...DEFAULT_ROOM, ...(j.room ?? {}) }, d.library)
+          if (prev) pushNeighbours(j.cabinets, cab.id, { width: prev.width, depth: prev.depth, pullOut: prev.corner?.type === 'blind' ? prev.corner.pullOut : undefined }, { ...DEFAULT_ROOM, ...(j.room ?? {}) }, d.library)
         }),
       )
     },

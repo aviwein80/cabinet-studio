@@ -1,6 +1,7 @@
 import { blindSpans } from './construction/carcass'
-import { cornerSide, footprint } from './room'
-import type { CabinetInstance, CabinetPlacement, CarcassParams, Room } from './types'
+import { pieSpans } from './construction/pieCut'
+import { cornerSide, cornerWall, footprint, toRoom } from './room'
+import type { CabinetInstance, CabinetPlacement, CarcassParams, Library, PieCutParams, Room, Vec3 } from './types'
 
 export type WallId = 'back' | 'front' | 'left' | 'right'
 
@@ -49,8 +50,11 @@ export function wallLength(wall: WallId, room: Room) {
 }
 
 export interface FrontDivision {
-  /** Kitchen-2: `blind` the blind panel of a blind corner, `filler` a filler strip's face. */
-  kind: 'toe' | 'drawer' | 'door' | 'blind' | 'filler'
+  /**
+   * Kitchen-2: `blind` the blind panel of a blind corner, `filler` a filler strip's face. Kitchen-3:
+   * `leg` a pie-cut's other leg, seen end on.
+   */
+  kind: 'toe' | 'drawer' | 'door' | 'blind' | 'filler' | 'leg'
   /** Room Z. */
   z0: number
   z1: number
@@ -74,6 +78,8 @@ export function frontDivisions(p: CarcassParams, z: number): FrontDivision[] {
   const frontZ0 = p.kind === 'base' ? tk : g / 2
   const frontZ1 = p.kind === 'base' ? p.height - g : p.height - g / 2
   const span = frontZ1 - frontZ0
+  // Kitchen-3: a pie-cut's faces depend on the wall it is seen from (`elevationOf`)
+  if (p.corner?.type === 'pie-cut') return out
   // Kitchen-2: a blind corner's face: the blind panel and one door, no drawers
   if (p.corner?.type === 'blind') {
     const b = blindSpans(p, p.corner)
@@ -118,8 +124,79 @@ export interface ElevationCabinet {
   /**
    * Kitchen-2: a corner cabinet seen end on, from the side wall whose run butts against its face. It
    * stands in the corner on that wall too; it is moved from the back wall's elevation or the plan.
+   * Kitchen-3: and a blind corner on a side wall, seen end on from the back wall.
    */
   endView?: boolean
+  /**
+   * Kitchen-3: a pie-cut seen from the wall of its side leg: it faces you there too (its side-wall door,
+   * the back leg end on at the corner end); it is moved from the back wall's elevation or the plan.
+   */
+  secondWall?: boolean
+}
+
+/** Position of a room point along a wall's elevation, viewer's left to right. */
+function alongPoint(wall: WallId, p: Vec3, room: Room) {
+  if (wall === 'back') return p[0]
+  if (wall === 'front') return room.width - p[0]
+  if (wall === 'left') return p[1]
+  return room.depth - p[1]
+}
+
+/** The wall a room line lies on (within 40 mm), if any. */
+function wallOfLine(a: Vec3, b: Vec3, room: Room): WallId | null {
+  const on = (v: number, t: number) => Math.abs(v - t) <= ON_WALL
+  if (on(a[1], room.depth) && on(b[1], room.depth)) return 'back'
+  if (on(a[1], 0) && on(b[1], 0)) return 'front'
+  if (on(a[0], 0) && on(b[0], 0)) return 'left'
+  if (on(a[0], room.width) && on(b[0], room.width)) return 'right'
+  return null
+}
+
+/**
+ * Kitchen-3: a pie-cut in the elevation of `wall`: seen from the wall its back leg stands against, or
+ * from the wall of its side leg, or null. Facing you: that leg's door (and the toe kick under it), the
+ * other leg end on (hatched) at the corner end.
+ */
+function pieElevation(c: CabinetInstance, pl: CabinetPlacement, room: Room, wall: WallId, lib?: Library): ElevationCabinet | null {
+  const p = c.params
+  const pc = p.corner as PieCutParams
+  const W = p.width
+  const B = p.depth
+  const d = pc.legDepth
+  const right = pc.side === 'right'
+  const R = (x: number, y: number, z = 0) => toRoom(x, y, z, pl, W, B)
+  const backWall = wallOfLine(R(0, B), R(W, B), room)
+  const sideX = right ? W : 0
+  const sideWall = wallOfLine(R(sideX, 0), R(sideX, B), room)
+  const which = backWall === wall ? 'back' : sideWall === wall ? 'side' : null
+  if (!which) return null
+  const fp = footprint(W, B, pl)
+  const span = alongWall(wall, fp, room)
+  const u = (x: number, y: number) => (alongPoint(wall, R(x, y), room) - span.x) / span.w
+  const range = (a: [number, number], b: [number, number]) => {
+    const ua = u(a[0], a[1])
+    const ub = u(b[0], b[1])
+    return { u0: Math.min(ua, ub), u1: Math.max(ua, ub) }
+  }
+  const z = pl.z
+  const g = p.doors.gap
+  const tk = p.kind === 'base' && p.toeKick.enabled ? p.toeKick.height : 0
+  const dz0 = p.kind === 'base' ? tk : g / 2
+  const dz1 = p.kind === 'base' ? p.height - g : p.height - g / 2
+  const Td = lib?.materials.find((m) => m.id === p.doorMaterialId)?.thickness ?? 18
+  const sp = pieSpans(p, pc, Td)
+  const inner = right ? W - d : d
+  const divisions: FrontDivision[] = []
+  if (which === 'back') {
+    if (tk > 0) divisions.push({ kind: 'toe', z0: z, z1: z + tk, ...range([inner, B - d], [right ? 0 : W, B - d]) })
+    if (sp.back && dz1 - dz0 > 80) divisions.push({ kind: 'door', z0: z + dz0, z1: z + dz1, ...range([sp.back.x0, B - d], [sp.back.x1, B - d]) })
+    divisions.push({ kind: 'leg', z0: z, z1: z + p.height, ...range([right ? W - d : 0, B - d], [right ? W : d, B - d]) })
+  } else {
+    if (tk > 0) divisions.push({ kind: 'toe', z0: z, z1: z + tk, ...range([inner, 0], [inner, B - d]) })
+    if (sp.side && dz1 - dz0 > 80) divisions.push({ kind: 'door', z0: z + dz0, z1: z + dz1, ...range([inner, sp.side.y0], [inner, sp.side.y1]) })
+    divisions.push({ kind: 'leg', z0: z, z1: z + p.height, ...range([inner, B - d], [inner, B]) })
+  }
+  return { id: c.id, number: c.number, name: c.name, x: span.x, w: span.w, z, h: p.height, faces: true, divisions, kind: 'cabinet', ...(which === 'side' ? { secondWall: true } : {}) }
 }
 
 /**
@@ -127,10 +204,15 @@ export interface ElevationCabinet {
  * and shows end on in the side wall's elevation too (Kitchen-2), at the corner end, so both walls
  * show the corner taken.
  */
-export function elevationOf(cabinets: CabinetInstance[], room: Room, wall: WallId, place: (c: CabinetInstance) => CabinetPlacement): ElevationCabinet[] {
+export function elevationOf(cabinets: CabinetInstance[], room: Room, wall: WallId, place: (c: CabinetInstance) => CabinetPlacement, lib?: Library): ElevationCabinet[] {
   const items: ElevationCabinet[] = []
   for (const c of cabinets) {
     const pl = place(c)
+    if (c.params.corner?.type === 'pie-cut' && !c.params.panel) {
+      const item = pieElevation(c, pl, room, wall, lib)
+      if (item) items.push(item)
+      continue
+    }
     const fp = footprint(c.params.width, c.params.depth, pl)
     const kind = c.params.panel?.type ?? 'cabinet'
     const on = cabinetOnWall(fp, room)
@@ -142,9 +224,15 @@ export function elevationOf(cabinets: CabinetInstance[], room: Room, wall: WallI
     }
     // a corner cabinet in a back corner, seen from the side wall beside it
     const side = cornerSide(c.params)
-    if (side && side === wall && on === 'back' && pl.rotation === 0) {
+    if (side && side === wall && on === 'back' && pl.rotation === 0 && cornerWall(c.params) === 'back') {
       const gap = side === 'left' ? fp.x : room.width - (fp.x + fp.w)
       if (gap > c.params.width) continue
+      const span = alongWall(wall, fp, room)
+      items.push({ id: c.id, number: c.number, name: c.name, x: span.x, w: span.w, z: pl.z, h: c.params.height, faces: false, divisions: [], kind, endView: true })
+    }
+    // Kitchen-3: a blind corner on a side wall, its blind end in the back corner, seen from the back wall
+    if (side && wall === 'back' && on === side && cornerWall(c.params) === side && pl.rotation === (side === 'left' ? 270 : 90)) {
+      if (room.depth - (fp.y + fp.d) > c.params.depth) continue
       const span = alongWall(wall, fp, room)
       items.push({ id: c.id, number: c.number, name: c.name, x: span.x, w: span.w, z: pl.z, h: c.params.height, faces: false, divisions: [], kind, endView: true })
     }

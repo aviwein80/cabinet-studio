@@ -46,7 +46,19 @@ tool table, are paused.
    - **US presets** in inches: 36" blind base, 24" blind wall, 3" fillers (base and wall), base,
      wall and tall end panels. The invented values in them (pull-out 3", filler return 3", scribe
      1/2", proud 1/4") carry Configure badges until confirmed.
-   - L-shaped (pie-cut and diagonal) corner cabinets are not built yet (see ROADMAP.md).
+   - **Pie-cut (L-shaped) corner** base and wall cabinets (Kitchen-3): one leg along each wall,
+     each leg as long and as deep as you set; two end sides, an L-shaped bottom and top (always a
+     full top) and L shelves on 32 mm pins in the end sides, all banded on their two inside edges;
+     a back on each wall; two doors, one on each leg, each hinged at the end of its leg with the
+     usual Salice cups and 3 mm plates (no folding hinge). At the inside corner one door runs
+     through in front of the other's end and opens first; you choose which. Typing a door width
+     sets its leg. US presets: 36" x 36" base and 24" x 24" wall.
+   - **L-shaped parts**: a part can be an L (a rectangle with one corner cut away). Its two inside
+     edges are called L3 and W3 and are banded like the outer four: the cut outline moves them in
+     by the band, the cut list and its CSV get Edge L3 and Edge W3 columns (only when a job has L
+     parts), labels draw the L with its banded edges, nesting and the MPR cut follow the L, and
+     the edgeband total measures each edge along the outline. Rectangular parts are unchanged.
+   - Diagonal (45°) corner cabinets are not built yet (see ROADMAP.md).
 3. **Per-job customisation**: each cabinet in a job is a copy of its template. You can change any
    parameter, exclude parts, change the edgeband on any edge, or add custom holes. A 3D view
    (orbit, exploded view, holes shown) updates live. The **Room** tab places every cabinet in the
@@ -66,6 +78,15 @@ tool table, are paused.
    of a corner door, and when a run is short of its wall: **Fill gap** adds one filler, or splits
    it between both ends. Turned cabinets now keep their hand (a hinge or blind side on the left
    stays on the left), and the side walls' elevations read as seen from the room.
+   Kitchen-3: a **pie-cut** corner fills its corner (no pull-out): the side-wall run butts against
+   the end of its side leg, the back run starts at the end of its back leg, and a longer leg moves
+   the run beside it. The plan draws its L; both walls' elevations show it facing you (that leg's
+   door, the other leg end on); the 3D view draws L parts as Ls. Only its legs count as taken: the
+   square in front of them is kept clear for its doors, and the room says when a cabinet stands
+   there or when the cabinet beside one of its doors stands proud of that door. A **blind corner
+   can stand on either wall**: set "Stands on: the side wall" and Arrange turns it to face the
+   room on the left or right wall, its blind end in the back corner, with the back run butting
+   against its blind panel.
 4. **Millimetres or inches.** The sidebar switches the whole shop. Lengths are stored in
    millimetres. Inches display as fractions to the nearest 1/16 in (for example `23-1/4"`), and
    you can type a decimal or a fraction. Showing the same value again does not change the stored
@@ -855,7 +876,9 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   library/         CSV/XLSX/JSON import, and keep-or-update when a library edit hits existing jobs
   geometry.ts      frames, world<->part transforms, polygons
   construction/    parametric carcass generator -> parts with drilling/grooves in part coords;
-                   blind corners; panels.ts fillers and end panels; builder.ts the part builder
+                   blind corners; pieCut.ts pie-cut corners; panels.ts fillers and end panels;
+                   builder.ts the part builder (L parts too)
+  lpart.ts         L-shaped parts: the cut-away corner, edge names L3 / W3, edge lengths
   cutlist.ts       job expansion, part numbering/IDs, edgeband cut-size compensation, BOM
   nesting.ts       MaxRects nesting with grain/rotation/spacing/trim
   sheetCuts.ts     shared-line cutting and bridged groups (plans, measuring, independent checks)

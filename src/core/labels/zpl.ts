@@ -3,7 +3,8 @@
  * Sending ZPL straight to the printer keeps barcodes crisp and avoids driver scaling.
  */
 import { formatLength } from '../units'
-import type { UnitSystem } from '../types'
+import { lSegments } from '../lpart'
+import type { UnitSystem, Vec2 } from '../types'
 import type { JobOutput, LabelRecord } from '../pipeline'
 import { labelDims } from './placement'
 
@@ -13,7 +14,8 @@ const d = (mm: number) => Math.round(mm * DPMM)
 /** ZPL field data: strip control characters and the ^ ~ command prefixes. */
 const zText = (s: string) => s.replace(/[\^~\r\n]/g, ' ').replace(/[^\x20-\x7e]/g, '?')
 
-function labelZpl(l: LabelRecord, W: number, H: number, units: UnitSystem) {
+/** Kitchen-3: `lShape` is an L part's finished outline (length x width frame), drawn as an L. */
+function labelZpl(l: LabelRecord, W: number, H: number, units: UnitSystem, lShape?: { length: number; width: number; outline: Vec2[] }) {
   const z: string[] = []
   z.push('^XA', '^CI28', `^PW${d(W)}`, `^LL${d(H)}`, '^LH0,0')
   z.push(`^FO0,0^GB${d(W)},${d(11)},${d(11)}^FS`)
@@ -28,7 +30,7 @@ function labelZpl(l: LabelRecord, W: number, H: number, units: UnitSystem) {
   z.push(`^FO${d(4)},${d(24)}^A0N,${d(5.5)},${d(5)}^FD${formatLength(l.finished.l, units)} x ${formatLength(l.finished.w, units)} x ${formatLength(l.finished.t, units)}^FS`)
   z.push(`^FO${d(4)},${d(31)}^A0N,${d(2.8)},${d(2.4)}^FDfinished  cut ${formatLength(l.cut.l, units)} x ${formatLength(l.cut.w, units)}^FS`)
   z.push(`^FO${d(4)},${d(35.5)}^A0N,${d(3)},${d(2.6)}^FD${zText(`${l.materialCode} ${l.materialName}`).slice(0, 44)}^FS`)
-  const edges = (['L1', 'L2', 'W1', 'W2'] as const).filter((k) => l.edges[k]).map((k) => `${k} ${l.edges[k]}`).join('  ')
+  const edges = (['L1', 'L2', 'W1', 'W2', 'L3', 'W3'] as const).filter((k) => l.edges[k]).map((k) => `${k} ${l.edges[k]}`).join('  ')
   z.push(`^FO${d(4)},${d(40)}^A0N,${d(2.8)},${d(2.4)}^FD${zText(edges ? `Edges: ${edges}` : 'Edges: none')}^FS`)
 
   // Edge diagram: thin box, thick bars on banded edges.
@@ -36,11 +38,27 @@ function labelZpl(l: LabelRecord, W: number, H: number, units: UnitSystem) {
   const by = 14
   const bw = 30
   const bh = 16
-  z.push(`^FO${d(bx)},${d(by)}^GB${d(bw)},${d(bh)},2^FS`)
-  if (l.edges.L2) z.push(`^FO${d(bx)},${d(by)}^GB${d(bw)},${d(1.4)},${d(1.4)}^FS`)
-  if (l.edges.L1) z.push(`^FO${d(bx)},${d(by + bh - 1.4)}^GB${d(bw)},${d(1.4)},${d(1.4)}^FS`)
-  if (l.edges.W1) z.push(`^FO${d(bx)},${d(by)}^GB${d(1.4)},${d(bh)},${d(1.4)}^FS`)
-  if (l.edges.W2) z.push(`^FO${d(bx + bw - 1.4)},${d(by)}^GB${d(1.4)},${d(bh)},${d(1.4)}^FS`)
+  const segs = lShape ? lSegments(lShape) : null
+  if (segs && lShape) {
+    // Kitchen-3: an L part's outline, edge by edge, thick where banded (inside edges L3 and W3 too)
+    const map = (p: Vec2) => ({ x: bx + (p.x / lShape.length) * bw, y: by + bh - (p.y / lShape.width) * bh })
+    for (const s of segs) {
+      const a = map(s.a)
+      const b = map(s.b)
+      const t = l.edges[s.key] ? 1.4 : 0.25
+      // keep the line inside the part: a thick bar grows inwards from the edge
+      const x0 = Math.min(a.x, b.x) - (s.n.x > 0 ? t : 0)
+      const y0 = Math.min(a.y, b.y) - (s.n.y < 0 ? t : 0)
+      const horizontal = Math.abs(a.y - b.y) < 1e-9
+      z.push(`^FO${d(x0)},${d(y0)}^GB${d(horizontal ? Math.abs(b.x - a.x) : t)},${d(horizontal ? t : Math.abs(b.y - a.y))},${d(t)}^FS`)
+    }
+  } else {
+    z.push(`^FO${d(bx)},${d(by)}^GB${d(bw)},${d(bh)},2^FS`)
+    if (l.edges.L2) z.push(`^FO${d(bx)},${d(by)}^GB${d(bw)},${d(1.4)},${d(1.4)}^FS`)
+    if (l.edges.L1) z.push(`^FO${d(bx)},${d(by + bh - 1.4)}^GB${d(bw)},${d(1.4)},${d(1.4)}^FS`)
+    if (l.edges.W1) z.push(`^FO${d(bx)},${d(by)}^GB${d(1.4)},${d(bh)},${d(1.4)}^FS`)
+    if (l.edges.W2) z.push(`^FO${d(bx + bw - 1.4)},${d(by)}^GB${d(1.4)},${d(bh)},${d(1.4)}^FS`)
+  }
   if (l.grainLocked) z.push(`^FO${d(bx + 6)},${d(by + bh + 1.5)}^A0N,${d(2.6)},${d(2.3)}^FDGRAIN -->^FS`)
 
   z.push(`^FO${d(4)},${d(H - 20)}^BY2,3,${d(11)}^BCN,${d(11)},N,N,N^FD${zText(l.partId)}^FS`)
@@ -53,5 +71,13 @@ function labelZpl(l: LabelRecord, W: number, H: number, units: UnitSystem) {
 
 export function labelsZpl(out: JobOutput, size: '100x70' | '100x80', units: UnitSystem = 'mm') {
   const { w, h } = labelDims(size)
-  return out.labels.map((l) => labelZpl(l, w, h, units)).join('\r\n') + '\r\n'
+  const parts = new Map(out.instances.map((i) => [i.uid, i.part]))
+  return (
+    out.labels
+      .map((l) => {
+        const p = parts.get(l.uid)
+        return labelZpl(l, w, h, units, p?.shape === 'L' && p.outline ? { length: p.length, width: p.width, outline: p.outline } : undefined)
+      })
+      .join('\r\n') + '\r\n'
+  )
 }

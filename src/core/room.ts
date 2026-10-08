@@ -1,3 +1,4 @@
+import { pieFootprint } from './construction/pieCut'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Library, Room, Vec3 } from './types'
 
 /** 12 ft × 10 ft × 8 ft. Wall cabinets sit 54 in off the floor. */
@@ -89,10 +90,32 @@ const TOUCH = 0.5
 
 const boardThickness = (lib: Library | undefined, id: string) => lib?.materials.find((m) => m.id === id)?.thickness ?? 18
 
-/** The corner a corner cabinet belongs in: a blind-left one in the back-left corner, a blind-right one in the back-right. */
+/**
+ * The corner a corner cabinet belongs in ('left' = back-left, 'right' = back-right): a blind-left one
+ * on the back wall in the back-left corner, a blind-right one in the back-right. Kitchen-3: a blind
+ * corner set to stand on the side wall has its blind side in the corner, so blind right is the
+ * back-left corner (on the left wall) and blind left the back-right; a pie-cut fills its own corner.
+ */
 export function cornerSide(p: CarcassParams): 'left' | 'right' | null {
-  return !p.panel && p.corner?.type === 'blind' ? p.corner.blindSide : null
+  if (p.panel || !p.corner) return null
+  if (p.corner.type === 'pie-cut') return p.corner.side
+  if (p.corner.wall === 'side') return p.corner.blindSide === 'right' ? 'left' : 'right'
+  return p.corner.blindSide
 }
+
+/**
+ * Kitchen-3: the wall a corner cabinet stands on when the room is arranged: the back wall (a blind
+ * corner, as before, and a pie-cut, which stands on both and is placed from the back wall), or the
+ * side wall beside its corner (a blind corner set to 'side').
+ */
+export function cornerWall(p: CarcassParams): Segment | null {
+  const side = cornerSide(p)
+  if (!side) return null
+  return p.corner?.type === 'blind' && p.corner.wall === 'side' ? side : 'back'
+}
+
+/** A blind corner's pull-out clearance (0 for anything else). */
+const pullOf = (p: CarcassParams) => (p.corner?.type === 'blind' ? Math.max(0, p.corner.pullOut) : 0)
 
 /**
  * How far the cabinet's front stands out in front of its box (its footprint stops at the carcass
@@ -102,12 +125,12 @@ export function frontThickness(p: CarcassParams, lib?: Library) {
   const t = boardThickness(lib, p.doorMaterialId)
   if (p.panel?.type === 'filler') return t
   if (p.panel?.type === 'end-panel') return t + (p.panel.front === 'proud' ? Math.max(0, p.panel.proud) : 0)
-  return p.doors.count > 0 || (p.drawers?.count ?? 0) > 0 || p.corner?.blindPanel ? t : 0
+  return p.doors.count > 0 || (p.drawers?.count ?? 0) > 0 || (p.corner?.type === 'blind' && p.corner.blindPanel) ? t : 0
 }
 
-/** What a run on the side wall butts against: the face of the corner cabinet's blind panel, or its box. */
+/** What a run butts against: the face of a blind corner's blind panel, or its box (and a pie-cut's leg end). */
 function blindFace(p: CarcassParams, lib?: Library) {
-  return p.corner?.blindPanel ? boardThickness(lib, p.doorMaterialId) : 0
+  return p.corner?.type === 'blind' && p.corner.blindPanel ? boardThickness(lib, p.doorMaterialId) : 0
 }
 
 /** The wall a placed cabinet stands against, facing into the room (back, left or right), or null. */
@@ -120,6 +143,12 @@ export function segmentOf(c: Item, pl: CabinetPlacement, room: Room): Segment | 
 }
 
 const levelOf = (p: CarcassParams) => (p.kind === 'wall' ? 'wall' : 'floor')
+
+/** Kitchen-3: a corner cabinet standing in its corner, on the wall it is arranged on (turned to face the room). */
+function inCorner(c: Item, pl: CabinetPlacement, room: Room) {
+  const wall = cornerWall(c.params)
+  return !!wall && segmentOf(c, pl, room) === wall
+}
 
 /** Push `start` forward past any blocked span the length `len` would overlap. */
 function clearForward(start: number, len: number, blocked: Span[]) {
@@ -204,17 +233,33 @@ function arrangeCornerRun(run: Item[], room: Room, z: number, lib: Library | und
   let rightTop = room.depth
   if (iL >= 0) {
     const c = run[iL]
-    const pull = Math.max(0, c.params.corner?.pullOut ?? 0)
-    out[c.id] = back(c, pull)
-    backStart = pull + c.params.width
-    leftTop = room.depth - c.params.depth - blindFace(c.params, lib)
+    const pull = pullOf(c.params)
+    const { width: W, depth: D } = c.params
+    if (cornerWall(c.params) === 'left') {
+      // Kitchen-3: a blind corner on the left wall, its blind end in the corner; the back run butts against its face
+      out[c.id] = { x: 0, y: room.depth - pull - W, rotation: 270, z }
+      backStart = D + blindFace(c.params, lib)
+      leftTop = room.depth - pull - W
+    } else {
+      // on the back wall (a pie-cut fills the corner: no pull-out, the left run butts against its side leg's end)
+      out[c.id] = back(c, pull)
+      backStart = pull + W
+      leftTop = room.depth - D - blindFace(c.params, lib)
+    }
   }
   if (iR >= 0) {
     const c = run[iR]
-    const pull = Math.max(0, c.params.corner?.pullOut ?? 0)
-    out[c.id] = back(c, room.width - pull - c.params.width)
-    backEnd = room.width - pull - c.params.width
-    rightTop = room.depth - c.params.depth - blindFace(c.params, lib)
+    const pull = pullOf(c.params)
+    const { width: W, depth: D } = c.params
+    if (cornerWall(c.params) === 'right') {
+      out[c.id] = { x: room.width - D, y: room.depth - pull - W, rotation: 90, z }
+      backEnd = room.width - D - blindFace(c.params, lib)
+      rightTop = room.depth - pull - W
+    } else {
+      out[c.id] = back(c, room.width - pull - W)
+      backEnd = room.width - pull - W
+      rightTop = room.depth - D - blindFace(c.params, lib)
+    }
   }
 
   if (iL >= 0 || iR < 0) {
@@ -297,6 +342,31 @@ function boxOf(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement): Box {
   return { ...fp, z0: pl.z, z1: pl.z + c.params.height }
 }
 
+/** A cabinet-local rectangle (X, Y) as a room box. */
+function roomRect(r: { x0: number; x1: number; y0: number; y1: number }, c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement): Box {
+  const a = toRoom(r.x0, r.y0, 0, pl, c.params.width, c.params.depth)
+  const b = toRoom(r.x1, r.y1, 0, pl, c.params.width, c.params.depth)
+  return { x: Math.min(a[0], b[0]), y: Math.min(a[1], b[1]), w: Math.abs(b[0] - a[0]), d: Math.abs(b[1] - a[1]), z0: pl.z, z1: pl.z + c.params.height }
+}
+
+/**
+ * Kitchen-3: what a cabinet's box really covers seen from above: its footprint, or a pie-cut's two
+ * legs (the square in front of them is open floor, where its doors swing).
+ */
+export function planBoxes(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement): Box[] {
+  if (c.params.corner?.type !== 'pie-cut' || c.params.panel) return [boxOf(c, pl)]
+  const f = pieFootprint(c.params, c.params.corner)
+  return [roomRect(f.backLeg, c, pl), roomRect({ ...f.sideLeg, y1: f.backLeg.y0 }, c, pl)]
+}
+
+/** Kitchen-3: the open square in front of a pie-cut's legs, in the room. */
+export function pieOpening(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement): Box | null {
+  if (c.params.corner?.type !== 'pie-cut' || c.params.panel) return null
+  return roomRect(pieFootprint(c.params, c.params.corner).opening, c, pl)
+}
+
+const overlap3 = (a: Box, b: Box) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > TOUCH && Math.min(a.y + a.d, b.y + b.d) - Math.max(a.y, b.y) > TOUCH && zOverlap(a, b)
+
 const zOverlap = (a: Box, b: Box) => Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0) > TOUCH
 
 type Placed = { c: CabinetInstance; pl: CabinetPlacement; b: Box }
@@ -332,9 +402,9 @@ function chainPush(cands: Placed[], along: 'x' | 'y', dir: 1 | -1, oldEdge: numb
   return moved
 }
 
-/** Corner cabinets standing in the back corners, at the height of `box`. */
+/** Corner cabinets standing in the back corners (on the back wall or, Kitchen-3, the side wall), at the height of `box`. */
 function cornersAt(placed: Placed[], room: Room, box: Box) {
-  const at = (side: 'left' | 'right') => placed.find((o) => cornerSide(o.c.params) === side && segmentOf(o.c, o.pl, room) === 'back' && zOverlap(o.b, box))
+  const at = (side: 'left' | 'right') => placed.find((o) => cornerSide(o.c.params) === side && inCorner(o.c, o.pl, room) && zOverlap(o.b, box))
   return { left: at('left'), right: at('right') }
 }
 
@@ -355,14 +425,14 @@ export function pushNeighbours(cabinets: CabinetInstance[], id: string, old: num
   const prev = typeof old === 'number' ? { width: old } : old
   const oldW = prev.width ?? cab.params.width
   const oldD = prev.depth ?? cab.params.depth
-  const pullNow = cab.params.corner?.pullOut ?? 0
+  const pullNow = cab.params.corner?.type === 'blind' ? cab.params.corner.pullOut : 0
   const oldPull = prev.pullOut ?? pullNow
   const dW = cab.params.width - oldW
   const dD = cab.params.depth - oldD
   const dP = pullNow - oldPull
   if (Math.abs(dW) < 1e-9 && Math.abs(dD) < 1e-9 && Math.abs(dP) < 1e-9) return []
   const before = cabinets.map((c) =>
-    c.id === id ? { ...c, params: { ...c.params, width: oldW, depth: oldD, ...(c.params.corner ? { corner: { ...c.params.corner, pullOut: oldPull } } : {}) } } : c,
+    c.id === id ? { ...c, params: { ...c.params, width: oldW, depth: oldD, ...(c.params.corner?.type === 'blind' ? { corner: { ...c.params.corner, pullOut: oldPull } } : {}) } } : c,
   )
   const arranged = arrangeCabinets(before, room, lib)
   const pl = cab.placement
@@ -370,8 +440,32 @@ export function pushNeighbours(cabinets: CabinetInstance[], id: string, old: num
   const others: Placed[] = cabinets.filter((c) => c.id !== id).map((c) => ({ c, pl: placementOf(c, arranged), b: boxOf(c, placementOf(c, arranged)) }))
   const moved: string[] = []
   const side = cornerSide(cab.params)
+  // Kitchen-3: which wall it stands on is judged at its old size (a deeper corner is not off its wall yet)
+  const was = before.find((c) => c.id === id)!
 
-  if (side && pl.rotation === 0 && segmentOf(cab, pl, room) === 'back') {
+  const wall = cornerWall(cab.params)
+  if (side && wall && wall !== 'back' && segmentOf(was, pl, room) === wall) {
+    // Kitchen-3: a blind corner on the side wall, its blind end in the back corner. Wider, or pulled
+    // further out, moves its open end towards the front, and the side run in front of it; deeper
+    // moves the back run butted against its face.
+    const face = blindFace(cab.params, lib)
+    const y = pl.y - dW - dP
+    const sideRun = others.filter((o) => segmentOf(o.c, o.pl, room) === wall && zOverlap(o.b, me) && o.b.y + o.b.d <= pl.y + TOUCH)
+    moved.push(...chainPush(sideRun, 'y', -1, pl.y, y))
+    const backRun = others.filter((o) => segmentOf(o.c, o.pl, room) === 'back' && zOverlap(o.b, me))
+    if (wall === 'left') {
+      if (Math.abs(dD) > 1e-9) moved.push(...chainPush(backRun.filter((o) => o.b.x >= me.x + me.w - TOUCH), 'x', 1, pl.x + oldD + face, pl.x + cab.params.depth + face))
+      cab.placement = { ...pl, y }
+    } else {
+      const x = pl.x - dD
+      if (Math.abs(dD) > 1e-9) moved.push(...chainPush(backRun.filter((o) => o.b.x + o.b.w <= me.x + TOUCH), 'x', -1, pl.x - face, x - face))
+      cab.placement = { ...pl, x, y }
+    }
+    return moved
+  }
+
+  // a corner cabinet on the back wall (a blind corner, or a pie-cut: no pull-out, no blind panel)
+  if (side && pl.rotation === 0 && segmentOf(was, pl, room) === 'back') {
     // the back run beside the corner cabinet
     const backRun = others.filter((o) => !turned(o.pl.rotation) && zOverlap(o.b, me) && Math.min(o.b.y + o.b.d, me.y + me.d) - Math.max(o.b.y, me.y) > TOUCH)
     let x = pl.x
@@ -422,14 +516,32 @@ export function pushNeighbours(cabinets: CabinetInstance[], id: string, old: num
 export function cornerClearance(cabinets: CabinetInstance[], id: string, room: Room, place: (c: CabinetInstance) => CabinetPlacement, lib?: Library) {
   const cab = cabinets.find((c) => c.id === id)
   const side = cab ? cornerSide(cab.params) : null
-  if (!cab || !side || !cab.params.corner) return null
+  if (!cab || !side || cab.params.corner?.type !== 'blind') return null
   const pl = place(cab)
-  if (pl.rotation !== 0 || segmentOf(cab, pl, room) !== 'back') return null
   const me = boxOf(cab, pl)
-  const face = pl.y - blindFace(cab.params, lib)
   const g = cab.params.doors.gap
   const bw = cab.params.corner.blindWidth
   let best: { id: string; clearance: number; off: number } | null = null
+  const wall = cornerWall(cab.params)
+  if (wall !== 'back') {
+    // Kitchen-3: on the side wall, its blind end at the back: the back run butts against its face, and
+    // its door's edge is the blind width (and half the gap) in front of its back end
+    if (segmentOf(cab, pl, room) !== wall) return null
+    const face = wall === 'left' ? me.x + me.w + blindFace(cab.params, lib) : me.x - blindFace(cab.params, lib)
+    const doorEdge = pl.y + cab.params.width - bw - g / 2
+    for (const o of cabinets) {
+      if (o.id === id) continue
+      const opl = place(o)
+      if (segmentOf(o, opl, room) !== 'back') continue
+      const b = boxOf(o, opl)
+      const off = Math.abs((wall === 'left' ? b.x : b.x + b.w) - face)
+      if (!zOverlap(b, me) || off > ON_WALL || (best && off >= best.off)) continue
+      best = { id: o.id, clearance: b.y - frontThickness(o.params, lib) - doorEdge, off }
+    }
+    return best && { id: best.id, clearance: best.clearance }
+  }
+  if (pl.rotation !== 0 || segmentOf(cab, pl, room) !== 'back') return null
+  const face = pl.y - blindFace(cab.params, lib)
   for (const o of cabinets) {
     if (o.id === id) continue
     const opl = place(o)
@@ -444,29 +556,125 @@ export function cornerClearance(cabinets: CabinetInstance[], id: string, room: R
   return best && { id: best.id, clearance: best.clearance }
 }
 
+/** Room point into a cabinet's own X, Y (the inverse of `toRoom`, seen from above). */
+function toCabinet(x: number, y: number, pl: CabinetPlacement, width: number, depth: number): [number, number] {
+  const dx = x - pl.x
+  const dy = y - pl.y
+  switch (pl.rotation) {
+    case 0:
+      return [dx, dy]
+    case 90:
+      return [width - dy, dx]
+    case 180:
+      return [width - dx, depth - dy]
+    case 270:
+      return [dy, depth - dx]
+  }
+}
+
+export interface PieDoorClearance {
+  /** The cabinet beside the door's hinge end. */
+  id: string
+  /** How far its front (door faces) stands behind this door's face; negative = proud of it, so the door cannot swing open. */
+  clearance: number
+}
+
+/**
+ * Kitchen-3: the room a pie-cut's two doors have at their hinge ends. Each door is hinged at the end
+ * of its leg, beside the first cabinet of the run there; that cabinet's front must not stand proud of
+ * the door's face (as with any two doors side by side, they then clear each other). Null for a door
+ * with no cabinet beside it (within 40 mm), or when the cabinet has no doors.
+ */
+export function pieClearance(cabinets: CabinetInstance[], id: string, place: (c: CabinetInstance) => CabinetPlacement, lib?: Library) {
+  const cab = cabinets.find((c) => c.id === id)
+  if (!cab || cab.params.corner?.type !== 'pie-cut' || cab.params.panel || cab.params.doors.count === 0) return null
+  const p = cab.params
+  const c = p.corner as Extract<CarcassParams['corner'], { type: 'pie-cut' }>
+  const pl = place(cab)
+  const me = boxOf(cab, pl)
+  const W = p.width
+  const B = p.depth
+  const d = c.legDepth
+  const Td = boardThickness(lib, p.doorMaterialId)
+  const right = c.side === 'right'
+  let back: (PieDoorClearance & { off: number }) | null = null
+  let side: (PieDoorClearance & { off: number }) | null = null
+  for (const o of cabinets) {
+    if (o.id === id) continue
+    const opl = place(o)
+    const ob = boxOf(o, opl)
+    if (!zOverlap(ob, me)) continue
+    const corners = [toCabinet(ob.x, ob.y, pl, W, B), toCabinet(ob.x + ob.w, ob.y + ob.d, pl, W, B)]
+    const x0 = Math.min(corners[0][0], corners[1][0])
+    const x1 = Math.max(corners[0][0], corners[1][0])
+    const y0 = Math.min(corners[0][1], corners[1][1])
+    const y1 = Math.max(corners[0][1], corners[1][1])
+    // its front plane (door faces), in this cabinet's X, Y
+    const ft = frontThickness(o.params, lib)
+    const fa = toRoom(0, -ft, 0, opl, o.params.width, o.params.depth)
+    const fb = toRoom(o.params.width, -ft, 0, opl, o.params.width, o.params.depth)
+    const la = toCabinet(fa[0], fa[1], pl, W, B)
+    const lb = toCabinet(fb[0], fb[1], pl, W, B)
+    // beside the back-wall door's hinge end: past the end of the back leg, alongside it, facing the same way
+    const offBack = right ? -x1 : x0 - W
+    if (offBack > -TOUCH && offBack <= ON_WALL && Math.min(y1, B) - Math.max(y0, B - d) > TOUCH && Math.abs(la[1] - lb[1]) < 1e-6 && (!back || offBack < back.off))
+      back = { id: o.id, clearance: la[1] - (B - d - Td), off: offBack }
+    // beside the side-wall door's hinge end: in front of the end of the side leg
+    const sx0 = right ? W - d : 0
+    const sx1 = right ? W : d
+    const offSide = -y1
+    if (offSide > -TOUCH && offSide <= ON_WALL && Math.min(x1, sx1) - Math.max(x0, sx0) > TOUCH && Math.abs(la[0] - lb[0]) < 1e-6 && (!side || offSide < side.off))
+      side = { id: o.id, clearance: right ? la[0] - (W - d - Td) : d + Td - la[0], off: offSide }
+  }
+  const strip = (v: (PieDoorClearance & { off: number }) | null) => v && { id: v.id, clearance: Math.round(v.clearance * 1000) / 1000 + 0 }
+  return { back: strip(back), side: strip(side) }
+}
+
+export type RoomBlock = {
+  corner: string
+  by: string
+  clearance: number
+  /**
+   * 'blind': a return's doors stand in front of a blind corner's door; 'opening': a cabinet stands in
+   * the open square in front of a pie-cut (its doors swing there); 'door': a cabinet beside a pie-cut
+   * door's hinge end stands proud of the door (Kitchen-3).
+   */
+  kind: 'blind' | 'opening' | 'door'
+}
+
 /**
  * Polish-1: what in the room needs attention: cabinets whose boxes overlap (pairs of ids), and
  * cabinets that run past a wall. Kitchen-2: blind corner doors that the return's doors stand in
- * front of. Shown in the room so an overlap is never silent.
+ * front of. Kitchen-3: a pie-cut covers only its L (the square in front of it is open floor, kept
+ * clear for its doors), and a cabinet beside one of its doors must not stand proud of it. Shown in
+ * the room so an overlap is never silent.
  */
 export function roomProblems(cabinets: CabinetInstance[], room: Room, place: (c: CabinetInstance) => CabinetPlacement, lib?: Library) {
-  const boxes = cabinets.map((c) => ({ c, b: boxOf(c, place(c)) }))
+  const boxes = cabinets.map((c) => ({ c, b: boxOf(c, place(c)), plan: planBoxes(c, place(c)) }))
   const overlaps: [string, string][] = []
   for (let i = 0; i < boxes.length; i++)
     for (let j = i + 1; j < boxes.length; j++) {
-      const a = boxes[i].b
-      const b = boxes[j].b
-      const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
-      const oy = Math.min(a.y + a.d, b.y + b.d) - Math.max(a.y, b.y)
-      const oz = Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0)
-      if (ox > TOUCH && oy > TOUCH && oz > TOUCH) overlaps.push([boxes[i].c.id, boxes[j].c.id])
+      if (boxes[i].plan.some((a) => boxes[j].plan.some((b) => overlap3(a, b)))) overlaps.push([boxes[i].c.id, boxes[j].c.id])
     }
   const outside = boxes.filter(({ b }) => b.x < -TOUCH || b.y < -TOUCH || b.x + b.w > room.width + TOUCH || b.y + b.d > room.depth + TOUCH).map(({ c }) => c.id)
-  const blocked: { corner: string; by: string; clearance: number }[] = []
+  const blocked: RoomBlock[] = []
   for (const c of cabinets) {
     if (!cornerSide(c.params)) continue
+    if (c.params.corner?.type === 'pie-cut') {
+      const opening = pieOpening(c, place(c))!
+      for (const o of boxes) {
+        if (o.c.id === c.id) continue
+        const hit = o.plan.filter((b) => overlap3(b, opening))
+        if (!hit.length) continue
+        const depth = Math.max(...hit.map((b) => Math.min(Math.min(b.x + b.w, opening.x + opening.w) - Math.max(b.x, opening.x), Math.min(b.y + b.d, opening.y + opening.d) - Math.max(b.y, opening.y))))
+        blocked.push({ corner: c.id, by: o.c.id, clearance: -depth, kind: 'opening' })
+      }
+      const pc = pieClearance(cabinets, c.id, place, lib)
+      for (const v of [pc?.back, pc?.side]) if (v && v.clearance < -TOUCH && !blocked.some((x) => x.corner === c.id && x.by === v.id)) blocked.push({ corner: c.id, by: v.id, clearance: v.clearance, kind: 'door' })
+      continue
+    }
     const cl = cornerClearance(cabinets, c.id, room, place, lib)
-    if (cl && cl.clearance < -TOUCH) blocked.push({ corner: c.id, by: cl.id, clearance: cl.clearance })
+    if (cl && cl.clearance < -TOUCH) blocked.push({ corner: c.id, by: cl.id, clearance: cl.clearance, kind: 'blind' })
   }
   return { overlaps, outside, blocked }
 }
@@ -506,9 +714,11 @@ export function runGaps(cabinets: CabinetInstance[], room: Room, place: (c: Cabi
   const gaps: RunGap[] = []
   for (const level of ['floor', 'wall'] as const) {
     const onLevel = placed.filter((o) => levelOf(o.c.params) === level)
-    const corner = (side: 'left' | 'right') => onLevel.find((o) => cornerSide(o.c.params) === side && segmentOf(o.c, o.pl, room) === 'back')
+    // Kitchen-3: a corner cabinet in its corner, on the back wall or the side wall
+    const corner = (side: 'left' | 'right') => onLevel.find((o) => cornerSide(o.c.params) === side && inCorner(o.c, o.pl, room))
     const L = corner('left')
     const R = corner('right')
+    const onSide = (o: typeof L) => !!o && cornerWall(o.c.params) !== 'back'
     for (const wall of ['back', 'left', 'right'] as const) {
       const items = onLevel.filter((o) => segmentOf(o.c, o.pl, room) === wall && !cornerSide(o.c.params))
       if (!items.length) continue
@@ -520,20 +730,22 @@ export function runGaps(cabinets: CabinetInstance[], room: Room, place: (c: Cabi
       let startIsWall = true
       let endIsWall = true
       if (wall === 'back') {
+        // from a left corner's side (or, on the side wall, its blind panel's face) to a right corner
         if (L) {
-          startBound = L.b.x + L.b.w
+          startBound = L.b.x + L.b.w + (onSide(L) ? blindFace(L.c.params, lib) : 0)
           startIsWall = false
         }
         endBound = room.width
         if (R) {
-          endBound = R.b.x
+          endBound = R.b.x - (onSide(R) ? blindFace(R.c.params, lib) : 0)
           endIsWall = false
         }
         anchor = L ? 'start' : R ? 'end' : 'start'
       } else {
+        // to the corner cabinet's face (on the back wall) or its open end (on the side wall, a pie-cut's leg end)
         const C = wall === 'left' ? L : R
         if (!C) continue
-        endBound = C.pl.y - blindFace(C.c.params, lib)
+        endBound = C.b.y - (onSide(C) ? 0 : blindFace(C.c.params, lib))
         endIsWall = false
         anchor = 'end'
       }

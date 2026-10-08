@@ -1,5 +1,6 @@
 import type { PointerEvent } from 'react'
 import { blindSpans } from '@/core/construction/carcass'
+import { pieFootprint } from '@/core/construction/pieCut'
 import { footprint, toRoom } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, Room, UnitSystem } from '@/core/types'
@@ -65,6 +66,32 @@ export function PlanView({
           const pl = place(c)
           const fp = footprint(c.params.width, c.params.depth, pl)
           const on = c.id === selected
+          // Kitchen-3: a pie-cut is drawn as its L, a thick front along each leg (its doors)
+          if (c.params.corner?.type === 'pie-cut' && !c.params.panel) {
+            const { width: W, depth: D } = c.params
+            const f = pieFootprint(c.params, c.params.corner)
+            const R = (x: number, y: number) => toRoom(x, y, 0, pl, W, D)
+            const pts = f.outline.map((v) => R(v.x, v.y))
+            const end = c.params.corner.side === 'right' ? 0 : W
+            const fronts = [
+              [R(f.inner.x, f.inner.y), R(end, f.inner.y)],
+              [R(f.inner.x, f.inner.y), R(f.inner.x, 0)],
+            ]
+            const mid = R((f.sideLeg.x0 + f.sideLeg.x1) / 2, (f.backLeg.y0 + f.backLeg.y1) / 2)
+            const legs = `${formatLength(W, units)} × ${formatLength(D, units)}`
+            return (
+              <g key={c.id} className="cursor-grab" onPointerDown={(e) => onDown(e, c.id)}>
+                <polygon points={pts.map((q) => `${q[0]},${q[1]}`).join(' ')} fill={PLAN_FILL[c.params.kind]} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
+                {c.params.doors.count > 0 && fronts.map(([a, b], i) => <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={on ? '#b45309' : '#1c1917'} strokeWidth={stroke * 5} />)}
+                <text x={mid[0]} y={mid[1]} textAnchor="middle" dominantBaseline="middle" fontSize={fitSize(c.number, font, c.params.corner.legDepth * 0.9)} fill="#1c1917" transform={upright(mid[1])}>
+                  {c.number}
+                </text>
+                <text x={mid[0]} y={mid[1] - font} textAnchor="middle" fontSize={fitSize(legs, font * 0.6, c.params.corner.legDepth * 0.95)} fill="#57534e" transform={upright(mid[1] - font)}>
+                  {legs}
+                </text>
+              </g>
+            )
+          }
           const front = frontOf(c, pl)
           const tick = Math.min(fp.w, fp.d) * 0.18
           const panel = c.params.panel?.type
@@ -73,9 +100,10 @@ export function PlanView({
           const labelX = (front.x1 + front.x2) / 2 - front.ix * tick * 1.3
           const labelY = (front.y1 + front.y2) / 2 - front.iy * tick * 1.3
           // Kitchen-2: a blind corner's blind part is drawn thin and dashed along its front
-          const blind = c.params.corner?.type === 'blind' && !panel ? blindSpans(c.params, c.params.corner) : null
+          const bc = c.params.corner?.type === 'blind' && !panel ? c.params.corner : null
+          const blind = bc ? blindSpans(c.params, bc) : null
           const at = (u: number) => ({ x: front.x1 + (front.x2 - front.x1) * u, y: front.y1 + (front.y2 - front.y1) * u })
-          const bu = blind ? (c.params.corner!.blindSide === 'left' ? [0, c.params.corner!.blindWidth / c.params.width] : [1 - c.params.corner!.blindWidth / c.params.width, 1]) : null
+          const bu = blind && bc ? (bc.blindSide === 'left' ? [0, bc.blindWidth / c.params.width] : [1 - bc.blindWidth / c.params.width, 1]) : null
           const fill = panel ? PLAN_FILL[panel] : PLAN_FILL[c.params.kind]
           return (
             <g key={c.id} className="cursor-grab" onPointerDown={(e) => onDown(e, c.id)}>
@@ -109,7 +137,7 @@ export function PlanView({
   )
 }
 
-const FILL = { toe: '#d6d3d1', drawer: '#fde68a', door: '#f5f5f4', blind: '#e7e5e4', filler: '#ecfccb' }
+const FILL = { toe: '#d6d3d1', drawer: '#fde68a', door: '#f5f5f4', blind: '#e7e5e4', filler: '#ecfccb', leg: 'url(#corner-hatch)' }
 const BOX_FILL = { cabinet: '#fafaf9', filler: '#fafaf9', 'end-panel': '#d6d3d1' }
 
 export function ElevationView({

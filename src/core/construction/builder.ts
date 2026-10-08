@@ -1,5 +1,6 @@
 import { EPS, frameFromBox, neg, r3, toLocal, vecEq, type Box3 } from '../geometry'
-import type { DrillOp, EdgeKey, GrooveOp, HDrillDir, HDrillOp, Library, OpPurpose, Part, PartRole, Vec2, Vec3 } from '../types'
+import { lCorner, onPart } from '../lpart'
+import type { DrillOp, EdgeKey, GrooveOp, HDrillDir, HDrillOp, InsideEdgeKey, Library, OpPurpose, Part, PartRole, Vec2, Vec3 } from '../types'
 
 /** Builds one flat part from a world-space box: holes, grooves, edgebands and corner notches given in world coordinates. */
 export class PartBuilder {
@@ -28,6 +29,8 @@ export class PartBuilder {
   }
 
   private inside(x: number, y: number) {
+    // Kitchen-3: an L part has nothing to drill in its cut-away corner
+    if (this.part.shape === 'L') return onPart(this.part, { x, y })
     return x >= -EPS && y >= -EPS && x <= this.part.length + EPS && y <= this.part.width + EPS
   }
 
@@ -114,6 +117,32 @@ export class PartBuilder {
   bandAll(bandId: string | null) {
     if (!bandId) return
     for (const k of ['L1', 'L2', 'W1', 'W2'] as EdgeKey[]) this.part.edges[k] = bandId
+  }
+
+  /**
+   * Kitchen-3: cut a rectangular corner (world box) away to make an L-shaped part, whose two inside
+   * edges along the cut (L3, W3) can then be banded with `bandInside`.
+   */
+  lShape(box: Box3) {
+    this.notch(box)
+    this.part.shape = 'L'
+  }
+
+  /** Kitchen-3: the inside edge of an L part whose outward normal (into the cut) points along world direction `dir`. */
+  insideEdgeOf(dir: Vec3): InsideEdgeKey | null {
+    const c = this.part.shape === 'L' ? lCorner(this.part) : null
+    if (!c) return null
+    const f = this.part.frame
+    if (vecEq(dir, c.nL3 > 0 ? f.v : neg(f.v))) return 'L3'
+    if (vecEq(dir, c.nW3 > 0 ? f.u : neg(f.u))) return 'W3'
+    return null
+  }
+
+  /** Kitchen-3: band the inside edge of an L part facing world direction `dir`. */
+  bandInside(dir: Vec3, bandId: string | null) {
+    if (!bandId) return
+    const k = this.insideEdgeOf(dir)
+    if (k) this.part.edges[k] = bandId
   }
 
   /** Remove a corner notch (world box) from the outline. Only corner notches are supported. */

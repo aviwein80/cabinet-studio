@@ -1,6 +1,7 @@
 import { Edges, OrbitControls } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
+import { DoubleSide, ExtrudeGeometry, Matrix4, Shape, Vector2 } from 'three'
 import { toWorld } from '@/core/geometry'
 import type { Library, Part, Vec3 } from '@/core/types'
 import { refitCamera } from './viewerFit'
@@ -37,11 +38,14 @@ function partBox(p: Part) {
   return { min, max }
 }
 
-function explodeOffset(p: Part, amount: number, width: number): Vec3 {
+function explodeOffset(p: Part, amount: number): Vec3 {
   const d = amount
+  // sides, backs and doors move away from the cabinet, against their machined face (Kitchen-3: so a
+  // pie-cut's turned end side, side-wall back and side-wall door move the right way)
+  const out = (k: number): Vec3 => [-p.frame.n[0] * d * k + 0, -p.frame.n[1] * d * k + 0, -p.frame.n[2] * d * k + 0]
   switch (p.role) {
     case 'side':
-      return p.frame.origin[0] < width / 2 ? [-d, 0, 0] : [d, 0, 0]
+      return out(1)
     case 'bottom':
     case 'toekick':
       return [0, 0, -d * 0.6]
@@ -49,10 +53,11 @@ function explodeOffset(p: Part, amount: number, width: number): Vec3 {
     case 'rail':
       return [0, 0, d * 0.6]
     case 'back':
-      return [0, d, 0]
+      return out(1)
     case 'door':
-    case 'drawer':
     case 'blind-panel':
+      return out(1.4)
+    case 'drawer':
       return [0, -d * 1.4, 0]
     case 'shelf':
       return [0, -d * 0.5, 0]
@@ -64,6 +69,22 @@ function explodeOffset(p: Part, amount: number, width: number): Vec3 {
 /** Door, or a drawer front sitting in front of the cabinet face. Box parts stay solid. */
 function isFront(p: Part) {
   return p.role === 'door' || p.role === 'blind-panel' || (p.role === 'drawer' && /front/i.test(p.name))
+}
+
+/**
+ * Kitchen-3: a part with an outline (an L-shaped bottom, top or shelf; a side notched for the toe
+ * kick) drawn as its outline extruded through its thickness, in three.js coordinates.
+ */
+function outlineGeometry(part: Part, offset: Vec3) {
+  const g = new ExtrudeGeometry(new Shape(part.outline!.map((p) => new Vector2(p.x, p.y))), { depth: part.thickness, bevelEnabled: false })
+  const f = part.frame
+  // part (x, y, depth below the face) -> cabinet -> three.js
+  const a = T(f.u)
+  const b = T(f.v)
+  const c = T([-f.n[0], -f.n[1], -f.n[2]])
+  const t = T([f.origin[0] + offset[0], f.origin[1] + offset[1], f.origin[2] + offset[2]])
+  g.applyMatrix4(new Matrix4().set(a[0], b[0], c[0], t[0], a[1], b[1], c[1], t[1], a[2], b[2], c[2], t[2], 0, 0, 0, 1))
+  return g
 }
 
 function holeRotation(n: Vec3): [number, number, number] {
@@ -95,17 +116,22 @@ function PartMesh({
   const size: [number, number, number] = [Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]), Math.abs(b[2] - a[2])]
   const center: [number, number, number] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]
   const ops = showOps ? part.ops : []
+  const [ox, oy, oz] = offset
+  const shaped = useMemo(() => (part.outline && part.outline.length >= 3 ? outlineGeometry(part, [ox, oy, oz]) : null), [part, ox, oy, oz])
+  useEffect(() => () => shaped?.dispose(), [shaped])
   return (
     <group>
       <mesh
-        position={center}
+        position={shaped ? [0, 0, 0] : center}
+        geometry={shaped ?? undefined}
         onClick={(e) => {
           e.stopPropagation()
           onSelect?.(part.key)
         }}
       >
-        <boxGeometry args={size} />
+        {!shaped && <boxGeometry args={size} />}
         <meshStandardMaterial
+          {...(shaped ? { side: DoubleSide } : {})}
           color={selected ? '#f59e0b' : color}
           roughness={0.75}
           metalness={0}
@@ -199,7 +225,7 @@ export function Viewer3D({
               part={p}
               color={mat?.color ?? '#d8d2c4'}
               selected={selected === p.key}
-              offset={explodeOffset(p, explode, width)}
+              offset={explodeOffset(p, explode)}
               showOps={showOps}
               ghost={isFront(p) && !hideDoors && selected !== p.key && explode === 0}
               onSelect={onSelect ?? undefined}

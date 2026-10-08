@@ -5,8 +5,9 @@ import { hasMultiAxisWork } from '@/cam/multiaxis/engine'
 import type { CamPart } from '@/cam/types'
 import { buildCabinet, partOutline } from './construction/carcass'
 import { EPS, r3 } from './geometry'
-import type { EdgeKey, Job, Library, Operation, Part, ShopSettings, Vec2 } from './types'
-import { EDGE_KEYS } from './types'
+import { lCorner, lEdgeLengths } from './lpart'
+import type { AnyEdgeKey, EdgeCodes, Job, Library, Operation, Part, ShopSettings, Vec2 } from './types'
+import { EDGE_KEYS, INSIDE_EDGE_KEYS } from './types'
 import { draftBlock } from './spec/draft'
 
 /** One physical panel to be cut, in cut-size coordinates (after edgeband / pre-mill compensation). */
@@ -48,7 +49,8 @@ export interface CutListRow {
   cutWidth: number
   thickness: number
   qty: number
-  edges: Record<EdgeKey, string>
+  /** Kitchen-3: an L-shaped part also lists its inside edges L3 and W3. */
+  edges: EdgeCodes
   grain: string
 }
 
@@ -58,7 +60,7 @@ export interface ExpandedJob {
   warnings: string[]
 }
 
-function edgeDelta(part: Part, k: EdgeKey, lib: Library, premill: number) {
+function edgeDelta(part: Part, k: AnyEdgeKey, lib: Library, premill: number) {
   const id = part.edges[k]
   if (!id) return 0
   const band = lib.edgebands.find((e) => e.id === id)
@@ -106,10 +108,19 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
         const dL2 = edgeDelta(part, 'L2', lib, pm)
         const Lc = r3(part.length + dW1 + dW2)
         const Wc = r3(part.width + dL1 + dL2)
-        const outline = partOutline(part).map((p) => ({
-          x: Math.abs(p.x) < EPS ? 0 : Math.abs(p.x - part.length) < EPS ? Lc : r3(p.x + dW1),
-          y: Math.abs(p.y) < EPS ? 0 : Math.abs(p.y - part.width) < EPS ? Wc : r3(p.y + dL1),
-        }))
+        // Kitchen-3: an L part's inside edges move by their own band (and pre-mill) along their normals
+        const lc = part.shape === 'L' ? lCorner(part) : null
+        const dW3 = lc ? lc.nW3 * edgeDelta(part, 'W3', lib, pm) : 0
+        const dL3 = lc ? lc.nL3 * edgeDelta(part, 'L3', lib, pm) : 0
+        const outline = lc
+          ? partOutline(part).map((p) => ({
+              x: Math.abs(p.x) < EPS ? 0 : Math.abs(p.x - part.length) < EPS ? Lc : r3(p.x + dW1 + dW3),
+              y: Math.abs(p.y) < EPS ? 0 : Math.abs(p.y - part.width) < EPS ? Wc : r3(p.y + dL1 + dL3),
+            }))
+          : partOutline(part).map((p) => ({
+              x: Math.abs(p.x) < EPS ? 0 : Math.abs(p.x - part.length) < EPS ? Lc : r3(p.x + dW1),
+              y: Math.abs(p.y) < EPS ? 0 : Math.abs(p.y - part.width) < EPS ? Wc : r3(p.y + dL1),
+            }))
         const material = lib.materials.find((m) => m.id === part.materialId)
         if (!material) warnings.push(`${cab.number} ${part.name}: material ${part.materialId} missing from library.`)
         else if (Math.abs(material.thickness - part.thickness) > EPS)
@@ -207,18 +218,23 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings): Expan
   return { instances, hardware, warnings }
 }
 
+/** The edge keys a part has: the outer four, and L3 and W3 on an L-shaped part (Kitchen-3). */
+export function edgeKeysOf(part: Pick<Part, 'shape'>): AnyEdgeKey[] {
+  return part.shape === 'L' ? [...EDGE_KEYS, ...INSIDE_EDGE_KEYS] : EDGE_KEYS
+}
+
 export function edgeCode(part: Part, lib: Library) {
-  const out = {} as Record<EdgeKey, string>
-  for (const k of EDGE_KEYS) {
+  const out = {} as EdgeCodes
+  for (const k of edgeKeysOf(part)) {
     const id = part.edges[k]
     out[k] = id ? (lib.edgebands.find((e) => e.id === id)?.code ?? id) : ''
   }
   return out
 }
 
-/** Compact edge diagram like HOMAG's EdgeDiagram: 1 = banded, 0 = raw, order L1:L2:W1:W2. */
+/** Compact edge diagram like HOMAG's EdgeDiagram: 1 = banded, 0 = raw, order L1:L2:W1:W2 (then L3:W3 on an L part). */
 export function edgeDiagram(part: Part) {
-  return EDGE_KEYS.map((k) => (part.edges[k] ? '1' : '0')).join(':')
+  return edgeKeysOf(part).map((k) => (part.edges[k] ? '1' : '0')).join(':')
 }
 
 export function cutList(instances: PartInstance[], lib: Library): CutListRow[] {
@@ -226,7 +242,7 @@ export function cutList(instances: PartInstance[], lib: Library): CutListRow[] {
   for (const inst of instances) {
     const p = inst.part
     const edges = edgeCode(p, lib)
-    const key = [inst.materialId, p.name, inst.cutLength, inst.cutWidth, p.length, p.width, EDGE_KEYS.map((k) => edges[k]).join('|')].join('/')
+    const key = [inst.materialId, p.name, inst.cutLength, inst.cutWidth, p.length, p.width, edgeKeysOf(p).map((k) => edges[k]).join('|')].join('/')
     const existing = rows.get(key)
     if (existing) {
       existing.qty += 1
@@ -260,10 +276,12 @@ export function edgebandUsage(instances: PartInstance[], lib: Library, overhangP
   const totals = new Map<string, number>()
   for (const inst of instances) {
     const p = inst.part
-    for (const k of EDGE_KEYS) {
+    // Kitchen-3: an L part's edges are measured along its outline (two outer edges are stopped by the cut)
+    const lens = p.shape === 'L' ? lEdgeLengths(p) : null
+    for (const k of edgeKeysOf(p)) {
       const id = p.edges[k]
       if (!id) continue
-      const len = (k === 'L1' || k === 'L2' ? p.length : p.width) + overhangPerEdge
+      const len = (lens ? (lens[k] ?? 0) : k === 'L1' || k === 'L2' ? p.length : p.width) + overhangPerEdge
       totals.set(id, (totals.get(id) ?? 0) + len)
     }
   }
@@ -273,8 +291,13 @@ export function edgebandUsage(instances: PartInstance[], lib: Library, overhangP
   })
 }
 
+/**
+ * Kitchen-3: when the job has L-shaped parts, two more columns follow Edge W2: Edge L3 and Edge W3 (the
+ * inside edges; blank on rectangular parts). Without L parts the file is as before.
+ */
 export function cutListCsv(rows: CutListRow[]) {
-  const head = ['Material', 'Part', 'Cabinets', 'Qty', 'Cut L', 'Cut W', 'T', 'Finished L', 'Finished W', 'Edge L1', 'Edge L2', 'Edge W1', 'Edge W2', 'Grain']
+  const inside = rows.some((r) => r.edges.L3 !== undefined || r.edges.W3 !== undefined)
+  const head = ['Material', 'Part', 'Cabinets', 'Qty', 'Cut L', 'Cut W', 'T', 'Finished L', 'Finished W', 'Edge L1', 'Edge L2', 'Edge W1', 'Edge W2', ...(inside ? ['Edge L3', 'Edge W3'] : []), 'Grain']
   const esc = (v: string | number) => {
     const s = String(v)
     return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -282,7 +305,7 @@ export function cutListCsv(rows: CutListRow[]) {
   const lines = [head.join(',')]
   for (const r of rows)
     lines.push(
-      [r.materialCode, r.name, r.cabinets, r.qty, r.cutLength, r.cutWidth, r.thickness, r.finishedLength, r.finishedWidth, r.edges.L1, r.edges.L2, r.edges.W1, r.edges.W2, r.grain]
+      [r.materialCode, r.name, r.cabinets, r.qty, r.cutLength, r.cutWidth, r.thickness, r.finishedLength, r.finishedWidth, r.edges.L1, r.edges.L2, r.edges.W1, r.edges.W2, ...(inside ? [r.edges.L3 ?? '', r.edges.W3 ?? ''] : []), r.grain]
         .map(esc)
         .join(','),
     )

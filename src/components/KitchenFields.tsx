@@ -1,12 +1,14 @@
 /**
  * Kitchen-2: the settings of a blind corner, a filler or an end panel, shared by the cabinet editor
  * and the room's side panel. Values still at a built-in placeholder carry a Configure badge.
+ * Kitchen-3: and of a pie-cut corner.
  */
 import { useStore } from '@/app/store'
 import { ValueBadges } from '@/components/Configure'
 import { NumField, SelectField, SwitchField } from '@/components/fields'
 import { kitchenUnconfirmed, type KitchenValueKey } from '@/core/confirm'
 import { blindSpans } from '@/core/construction/carcass'
+import { pieLegForDoor, pieSpans } from '@/core/construction/pieCut'
 import { formatLength } from '@/core/units'
 import type { CarcassParams, Library } from '@/core/types'
 
@@ -23,6 +25,10 @@ export function KitchenFields({ p, set, lib }: { p: CarcassParams; set: (fn: (p:
   if (p.corner?.type === 'blind' && !p.panel) {
     const c = p.corner
     const spans = blindSpans(p, c)
+    const blind = (fn: (b: typeof c) => void) => set((x) => x.corner?.type === 'blind' && fn(x.corner))
+    const onSide = c.wall === 'side'
+    // which corner it fills: on the back wall, its blind side; on a side wall, the blind side is in the back corner
+    const corner = onSide ? (c.blindSide === 'right' ? 'left' : 'right') : c.blindSide
     return (
       <>
         <div className="grid grid-cols-2 gap-2">
@@ -35,25 +41,91 @@ export function KitchenFields({ p, set, lib }: { p: CarcassParams; set: (fn: (p:
             ]}
             onChange={(v) =>
               set((x) => {
-                x.corner!.blindSide = v
+                if (x.corner?.type !== 'blind') return
+                x.corner.blindSide = v
                 // the door hangs on the open side
                 x.doors.hingeSide = v === 'left' ? 'right' : 'left'
               })
             }
           />
-          <NumField label="Blind width" value={c.blindWidth} min={50} max={Math.max(60, p.width - 60)} onChange={(v) => set((x) => (x.corner!.blindWidth = v))} />
+          <SelectField
+            label="Stands on"
+            value={onSide ? 'side' : 'back'}
+            options={[
+              { value: 'back', label: 'The back wall' },
+              { value: 'side', label: 'The side wall' },
+            ]}
+            onChange={(v) => blind((b) => (v === 'side' ? (b.wall = 'side') : delete b.wall))}
+          />
+          <NumField label="Blind width" value={c.blindWidth} min={50} max={Math.max(60, p.width - 60)} onChange={(v) => blind((b) => (b.blindWidth = v))} />
           <NumField
             label="Door width"
             value={spans.doorWidth}
             min={100}
             max={1200}
-            onChange={(v) => set((x) => (x.width = Math.round((x.corner!.blindWidth + v + x.doors.gap) * 1000) / 1000))}
+            onChange={(v) => set((x) => x.corner?.type === 'blind' && (x.width = Math.round((x.corner.blindWidth + v + x.doors.gap) * 1000) / 1000))}
             hint="Changes the cabinet width; the blind part stays."
           />
-          <NumField label="Pull-out clearance" value={c.pullOut} min={0} max={300} onChange={(v) => set((x) => (x.corner!.pullOut = v))} cfg={cfg('pullOut')} badge={badge('pullOut')} hint="Off the side wall, when the room is arranged." />
+          <NumField label="Pull-out clearance" value={c.pullOut} min={0} max={300} onChange={(v) => blind((b) => (b.pullOut = v))} cfg={cfg('pullOut')} badge={badge('pullOut')} hint={onSide ? 'Off the back wall, when the room is arranged.' : 'Off the side wall, when the room is arranged.'} />
         </div>
-        <SwitchField label="Blind panel" checked={c.blindPanel} onChange={(v) => set((x) => (x.corner!.blindPanel = v))} hint="A finished panel in the door board over the blind part. The run on the side wall butts against it." />
-        <p className="text-[11px] text-muted-foreground">One door, hinged on the open side (Salice cups and 3 mm plates). In the room, put the corner cabinet after the side-wall cabinets and before the back-wall ones (blind left), or after the back-wall ones (blind right): Arrange turns the corner there.</p>
+        <SwitchField label="Blind panel" checked={c.blindPanel} onChange={(v) => blind((b) => (b.blindPanel = v))} hint={`A finished panel in the door board over the blind part. The run on the ${onSide ? 'back' : 'side'} wall butts against it.`} />
+        <p className="text-[11px] text-muted-foreground">
+          One door, hinged on the open side (Salice cups and 3 mm plates). {onSide ? `On the ${corner} wall, its blind end in the back-${corner} corner; the back-wall run butts against its face.` : `On the back wall, in the back-${corner} corner; the ${corner}-wall run butts against its face.`} In the job, list the left wall's cabinets, then the corner cabinets, then the back wall's (a right corner after them): Arrange turns the corner there.
+        </p>
+      </>
+    )
+  }
+
+  if (p.corner?.type === 'pie-cut' && !p.panel) {
+    const c = p.corner
+    const Td = lib.materials.find((m) => m.id === p.doorMaterialId)?.thickness ?? 18
+    const spans = pieSpans(p, c, Td)
+    const pie = (fn: (q: typeof c) => void) => set((x) => x.corner?.type === 'pie-cut' && fn(x.corner))
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2">
+          <SelectField
+            label="Corner"
+            value={c.side}
+            options={[
+              { value: 'left', label: 'Back-left' },
+              { value: 'right', label: 'Back-right' },
+            ]}
+            onChange={(v) => pie((q) => (q.side = v))}
+          />
+          <NumField label="Leg depth" value={c.legDepth} min={150} max={900} onChange={(v) => pie((q) => (q.legDepth = v))} hint="Both legs, front to wall." />
+          <NumField label="Back-wall leg" value={p.width} min={300} max={2400} onChange={(v) => set((x) => (x.width = v))} />
+          <NumField label="Side-wall leg" value={p.depth} min={300} max={2400} onChange={(v) => set((x) => (x.depth = v))} />
+          <NumField
+            label="Back-wall door"
+            value={spans.backWidth}
+            min={100}
+            max={1200}
+            onChange={(v) => set((x) => x.corner?.type === 'pie-cut' && (x.width = pieLegForDoor(x, x.corner, Td, 'back', v)))}
+            hint="Changes the back-wall leg."
+          />
+          <NumField
+            label="Side-wall door"
+            value={spans.sideWidth}
+            min={100}
+            max={1200}
+            onChange={(v) => set((x) => x.corner?.type === 'pie-cut' && (x.depth = pieLegForDoor(x, x.corner, Td, 'side', v)))}
+            hint="Changes the side-wall leg."
+          />
+        </div>
+        <SelectField
+          label="At the inside corner"
+          value={c.cornerDoor}
+          options={[
+            { value: 'back', label: 'The back-wall door runs through' },
+            { value: 'side', label: 'The side-wall door runs through' },
+          ]}
+          onChange={(v) => pie((q) => (q.cornerDoor = v))}
+          hint={`It covers the other door's end and opens first; the other stops ${formatLength(p.doors.gap, units)} short of it.`}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Two doors, each hinged at the end of its leg (Salice cups and 3 mm plates in that end side). The bottom, top and shelves are L-shaped, banded on their two inside edges. In the job, list the left wall&apos;s cabinets, then the corner, then the back wall&apos;s (a back-right corner after them): Arrange fills the corner and turns there.
+        </p>
       </>
     )
   }

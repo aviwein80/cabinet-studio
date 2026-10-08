@@ -33,7 +33,7 @@ Progress, tests and limits: `docs/stage-2-3-progress.md`, "Kitchen-2".
   (Arrange and the neighbour push); Fill gap; US presets in inches; the Polish-1 leftovers (sizes in
   export messages and the nesting header in inches, exact metric tool sizes, Enter applies every
   field). Turned cabinets were mirror images and the side-wall elevations were mirrored: both fixed.
-- **Deferred: L-shaped corner cabinets.** A pie-cut (90°) corner needs an L-shaped bottom, top and
+- **Deferred: L-shaped corner cabinets** (the pie-cut was built in Kitchen-3, below, with two separate doors). A pie-cut (90°) corner needs an L-shaped bottom, top and
   shelves whose two inside front edges are banded; the part model bands only the four edges of a
   rectangle, so the cut list, labels and edgeband compensation could not describe them. Its folding
   door also needs a pie-cut hinge whose boring is not in the hardware data. A diagonal (45°) corner
@@ -43,6 +43,24 @@ Progress, tests and limits: `docs/stage-2-3-progress.md`, "Kitchen-2".
 - Kitchen-2 placeholders with Configure badges until confirmed: blind pull-out 3", filler return
   3", scribe allowance 1/2", end panel proud 1/4". The US presets' 4" x 3" toe kick and 34-1/2" x
   24" bases follow the usual US sizes; the shop's own standards are still question 4 below.
+
+## Kitchen-3: pie-cut (L-shaped) corner cabinets (October 2026)
+
+Progress, tests and limits: `docs/stage-2-3-progress.md`, "Kitchen-3".
+
+- **Done:** L-shaped parts in the part model (inside edges L3 and W3, banded, compensated in the
+  cut outline, in the cut list, CSV, labels, nesting and the MPR cut; rectangular parts and every
+  golden unchanged); pie-cut corner base and wall cabinets (legs per wall, leg depth, two doors
+  each hinged at its own end on standard Salice cups and 3 mm plates, door widths that set the
+  legs); the room (Arrange fills the corner, the neighbour push follows each leg, Fill gap, plan,
+  3D, both elevations, an L-aware overlap check, the open square in front kept for the doors, and
+  the doors beside each pie-cut door); US presets 36" x 36" base and 24" x 24" wall; a blind corner
+  can now be arranged on either wall.
+- **Still deferred:** diagonal (45°) corner cabinets (parts at 45°, angled plates or a stile); the
+  folding pie-cut hinge (the owner chose two separate doors); blind-panel boring (no standard
+  pattern exists: it stays fixed from inside on site).
+- Open questions for the owner: see "Kitchen-3 decisions needed" in the progress file (how the
+  doors meet at the inside corner, and how the L shelves are supported at the corner).
 
 ## Custom-part Stage 2 and 3 (both complete)
 

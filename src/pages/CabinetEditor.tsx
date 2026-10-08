@@ -19,8 +19,8 @@ import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/constructi
 import { KITCHEN_DEFAULTS } from '@/core/defaults'
 import { TemplateJobsButton } from '@/pages/LibraryEditDialog'
 import { formatLength, sizedName } from '@/core/units'
-import type { CabinetInstance, CarcassParams, DrillOp, EdgeKey, Library, Part, PartOverride, UnitSystem } from '@/core/types'
-import { EDGE_KEYS } from '@/core/types'
+import type { AnyEdgeKey, CabinetInstance, CarcassParams, DrillOp, Library, Part, PartOverride, UnitSystem } from '@/core/types'
+import { EDGE_KEYS, INSIDE_EDGE_KEYS } from '@/core/types'
 import { cn } from '@/lib/utils'
 
 type Target = { kind: 'cabinet'; jobId: string; cabinetId: string } | { kind: 'template'; templateId: string }
@@ -100,8 +100,10 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   const finalParts = built.final?.parts ?? []
   const warnings = built.final?.warnings ?? []
   // Kitchen-2: fillers and end panels use few of the carcass settings; a blind corner has one door, no drawers
+  // Kitchen-3: a pie-cut has two doors (one on each leg), no drawers, always a full top
   const panel = p.panel?.type
-  const corner = p.corner?.type === 'blind' && !panel
+  const corner = !!p.corner && !panel
+  const pie = p.corner?.type === 'pie-cut' && !panel
 
   return (
     <div className="flex h-full flex-col">
@@ -163,25 +165,47 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               onChange={(v) => setP((x) => (x.kind = v))}
             />
             <div className="grid grid-cols-1 gap-2">
-              {panel !== 'end-panel' && <NumField label="Width" value={p.width} min={panel ? 3 : 150} max={1500} onChange={(v) => setP((x) => (x.width = v))} />}
+              {panel !== 'end-panel' && !pie && <NumField label="Width" value={p.width} min={panel ? 3 : 150} max={1500} onChange={(v) => setP((x) => (x.width = v))} />}
               <NumField label="Height" value={p.height} min={200} max={2700} onChange={(v) => setP((x) => (x.height = v))} />
-              <NumField label="Depth" value={p.depth} min={panel ? 50 : 150} max={900} onChange={(v) => setP((x) => (x.depth = v))} />
+              {!pie && <NumField label="Depth" value={p.depth} min={panel ? 50 : 150} max={900} onChange={(v) => setP((x) => (x.depth = v))} />}
             </div>
             {!panel && (
               <SelectField
                 label="Corner"
-                value={corner ? `blind-${p.corner!.blindSide}` : 'none'}
+                value={p.corner?.type === 'blind' ? `blind-${p.corner.blindSide}` : p.corner?.type === 'pie-cut' ? `pie-${p.corner.side}` : 'none'}
                 options={[
                   { value: 'none', label: 'Not a corner cabinet' },
                   { value: 'blind-left', label: 'Blind corner, blind left' },
                   { value: 'blind-right', label: 'Blind corner, blind right' },
+                  { value: 'pie-left', label: 'Pie-cut corner, back-left' },
+                  { value: 'pie-right', label: 'Pie-cut corner, back-right' },
                 ]}
                 onChange={(v) =>
                   setP((x) => {
-                    if (v === 'none') return void delete x.corner
+                    // Kitchen-3: a pie-cut keeps its leg depth as the cabinet depth when it stops being one
+                    const wasPie = x.corner?.type === 'pie-cut' ? x.corner : null
+                    if (v === 'none') {
+                      if (wasPie) x.depth = wasPie.legDepth
+                      return void delete x.corner
+                    }
+                    if (v.startsWith('pie-')) {
+                      const side = v === 'pie-left' ? 'left' : 'right'
+                      // the box it stands in: the leg along the back wall stays the width; the side leg as long; legs as deep as the cabinet was
+                      if (!wasPie) {
+                        const legDepth = x.depth
+                        x.depth = Math.max(x.width, legDepth + 300)
+                        x.corner = { type: 'pie-cut', side, legDepth, cornerDoor: 'back' }
+                      } else x.corner = { ...wasPie, side }
+                      x.top = 'full'
+                      x.doors.count = x.doors.count === 0 ? 0 : 2
+                      x.drawers.count = 0
+                      return
+                    }
                     const side = v === 'blind-left' ? 'left' : 'right'
+                    if (wasPie) x.depth = wasPie.legDepth
+                    const was = x.corner?.type === 'blind' ? x.corner : null
                     // the blind part as deep as a return run of the same depth; one door on the open side
-                    x.corner = { type: 'blind', blindSide: side, blindWidth: x.corner?.blindWidth ?? Math.min(x.depth, x.width - 150), pullOut: x.corner?.pullOut ?? KITCHEN_DEFAULTS.pullOut, blindPanel: x.corner?.blindPanel ?? true }
+                    x.corner = { type: 'blind', blindSide: side, blindWidth: was?.blindWidth ?? Math.min(x.depth, x.width - 150), pullOut: was?.pullOut ?? KITCHEN_DEFAULTS.pullOut, blindPanel: was?.blindPanel ?? true, ...(was?.wall ? { wall: was.wall } : {}) }
                     x.doors.count = x.doors.count === 0 ? 0 : 1
                     x.doors.hingeSide = side === 'left' ? 'right' : 'left'
                     x.drawers.count = 0
@@ -191,7 +215,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
             )}
           </Section>
           {(corner || panel) && (
-            <Section title={corner ? 'Blind corner' : panel === 'filler' ? 'Filler' : 'End panel'}>
+            <Section title={pie ? 'Pie-cut corner' : corner ? 'Blind corner' : panel === 'filler' ? 'Filler' : 'End panel'}>
               <KitchenFields p={p} set={setP} lib={lib} />
             </Section>
           )}
@@ -230,6 +254,9 @@ export function CabinetEditorPage({ target }: { target: Target }) {
                 )}
               </>
             )}
+            {pie ? (
+              <p className="text-[11px] text-muted-foreground">A full L-shaped top, banded on its inside edges.</p>
+            ) : (
             <div className="grid grid-cols-2 gap-2">
               <SelectField
                 label="Top"
@@ -242,6 +269,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
               />
               {p.top === 'rails' && <NumField label="Rail depth" value={p.railDepth} min={50} max={200} onChange={(v) => setP((x) => (x.railDepth = v))} />}
             </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <SelectField
                 label="Bottom joint"
@@ -307,9 +335,14 @@ export function CabinetEditorPage({ target }: { target: Target }) {
             <div className="grid grid-cols-2 gap-2">
               <SelectField
                 label="Doors"
-                value={String(p.doors.count) as '0' | '1' | '2'}
+                value={(pie ? (p.doors.count > 0 ? '2' : '0') : String(p.doors.count)) as '0' | '1' | '2'}
                 options={
-                  corner
+                  pie
+                    ? [
+                        { value: '0', label: 'None' },
+                        { value: '2', label: 'Two, one on each leg' },
+                      ]
+                    : corner
                     ? [
                         { value: '0', label: 'None' },
                         { value: '1', label: 'One' },
@@ -485,7 +518,7 @@ function PartsTable({
           <TableHead>Part</TableHead>
           <TableHead className="text-right">L × W × T</TableHead>
           <TableHead>Material</TableHead>
-          <TableHead>Edges (L1 L2 W1 W2)</TableHead>
+          <TableHead>Edges (L1 L2 W1 W2; L3 W3 inside an L)</TableHead>
           <TableHead className="text-right">Ops</TableHead>
           {editable && <TableHead className="w-10" />}
         </TableRow>
@@ -513,7 +546,7 @@ function PartsTable({
               <TableCell className="font-mono text-xs">{mat?.code ?? part.materialId}</TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <div className="flex gap-1">
-                  {EDGE_KEYS.map((k) => (
+                  {(part.shape === 'L' ? [...EDGE_KEYS, ...INSIDE_EDGE_KEYS] : EDGE_KEYS).map((k) => (
                     <EdgeToggle
                       key={k}
                       edge={k}
@@ -560,7 +593,7 @@ function PartsTable({
   )
 }
 
-function EdgeToggle({ edge, value, lib, disabled, onChange }: { edge: EdgeKey; value: string | null; lib: Library; disabled: boolean; onChange: (v: string | null) => void }) {
+function EdgeToggle({ edge, value, lib, disabled, onChange }: { edge: AnyEdgeKey; value: string | null; lib: Library; disabled: boolean; onChange: (v: string | null) => void }) {
   const band = lib.edgebands.find((e) => e.id === value)
   return (
     <Select value={value ?? NONE} disabled={disabled} onValueChange={(v) => onChange(v === NONE ? null : v)}>

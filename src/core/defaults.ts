@@ -197,6 +197,22 @@ export const KITCHEN_PRESETS: CabinetTemplate[] = [
     builtIn: true,
   },
   {
+    id: 'tpl-us-pie-base-36',
+    name: 'Pie-cut corner base 36" x 36"',
+    description: 'L-shaped corner base: 36" along each wall, 24" deep, full L top, one L shelf, two doors (one on each leg) each hinged at its own end on Salice cups and 3 mm plates. Fills the back-left corner when the room is arranged; choose the corner in the editor.',
+    generator: 'carcass',
+    params: { ...clone(US_BASE), depth: inch(36), top: 'full', doors: { ...BASE_PARAMS.doors, count: 2 }, corner: { type: 'pie-cut', side: 'left', legDepth: inch(24), cornerDoor: 'back' } },
+    builtIn: true,
+  },
+  {
+    id: 'tpl-us-pie-wall-24',
+    name: 'Pie-cut corner wall 24" x 24"',
+    description: 'L-shaped corner wall cabinet: 24" along each wall, 12" deep, 30" high, two L shelves, two doors each hinged at its own end. Fills the back-left corner when the room is arranged.',
+    generator: 'carcass',
+    params: { ...clone(US_WALL), width: inch(24), depth: inch(24), doors: { ...BASE_PARAMS.doors, count: 2 }, corner: { type: 'pie-cut', side: 'left', legDepth: inch(12), cornerDoor: 'back' } },
+    builtIn: true,
+  },
+  {
     id: 'tpl-us-filler-3',
     name: 'Filler 3", base',
     description: 'Filler strip in the door board, 34-1/2" high from the toe kick up, with a 3" return behind it. Scribe allowance 1/2" when set against a wall.',

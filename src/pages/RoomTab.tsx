@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { buildCabinet } from '@/core/construction/carcass'
 import { WALLS, elevationOf, placementFromElevation, type WallId } from '@/core/elevation'
 import { KITCHEN_PRESETS } from '@/core/defaults'
-import { arrangeCabinets, cornerClearance, fillGap, footprint, nextRotation, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type RunGap } from '@/core/room'
+import { arrangeCabinets, cornerClearance, fillGap, footprint, nextRotation, pieClearance, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type RoomBlock, type RunGap } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Part, Room } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -94,7 +94,7 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
     setJob((j) => {
       const c = j.cabinets.find((x) => x.id === id)
       if (!c) return
-      const old = { width: c.params.width, depth: c.params.depth, pullOut: c.params.corner?.pullOut }
+      const old = { width: c.params.width, depth: c.params.depth, pullOut: c.params.corner?.type === 'blind' ? c.params.corner.pullOut : undefined }
       fn(c.params)
       pushNeighbours(j.cabinets, c.id, old, j.room ?? room, lib)
     })
@@ -115,7 +115,7 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
   }, [job, data.library, arranged])
 
   const sel = job.cabinets.find((c) => c.id === selected) ?? null
-  const elev = elevationOf(job.cabinets, room, wall, place)
+  const elev = elevationOf(job.cabinets, room, wall, place, lib)
   // Polish-1: overlaps and cabinets past a wall are always shown, with a way to fix them
   // (Kitchen-2: and blind corner doors the return stands in front of, and runs short of their wall)
   const problems = roomProblems(job.cabinets, room, place, lib)
@@ -127,6 +127,13 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
       for (const c of j.cabinets) if (laid[c.id]) c.placement = laid[c.id]
     })
   const L = (mm: number) => formatLength(mm, units)
+  // Kitchen-2, Kitchen-3: what stands in the way of a corner cabinet's doors
+  const blockText = (b: RoomBlock) =>
+    b.kind === 'opening'
+      ? `${numberOf(b.by)} stands ${L(-b.clearance)} into the open corner in front of ${numberOf(b.corner)}: its doors swing there. `
+      : b.kind === 'door'
+        ? `${numberOf(b.by)} stands ${L(-b.clearance)} proud of ${numberOf(b.corner)}'s door beside it, which cannot open: make their depths match. `
+        : `${numberOf(b.by)} stands ${L(-b.clearance)} in front of ${numberOf(b.corner)}'s door: pull the corner cabinet further out or widen its blind part. `
   const fillerFor = (level: RunGap['level']) =>
     lib.templates.find((t) => t.params.panel?.type === 'filler' && (level === 'wall') === (t.params.kind === 'wall'))?.params ??
     lib.templates.find((t) => t.params.panel?.type === 'filler')?.params ??
@@ -189,8 +196,9 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
       hit.svg.setPointerCapture(e.pointerId)
     } else if (phase === 'move' && drag?.mode === 'elevation') {
       const c = job.cabinets.find((x) => x.id === drag.id)
-      // a corner cabinet seen end on from a side wall is moved from the back wall or the plan
-      if (!c || elev.find((x) => x.id === drag.id)?.endView) return
+      // a corner cabinet seen end on from a side wall (or a pie-cut seen from its side wall) is moved from the back wall or the plan
+      const item = elev.find((x) => x.id === drag.id)
+      if (!c || item?.endView || item?.secondWall) return
       const raw = placementFromElevation(place(c), c.params.width, c.params.depth, wall, along - drag.dx, z - drag.dy, room)
       setPlacement(c.id, snapTo(c, raw, snapOn && !e.altKey && !alt))
     } else if (phase === 'up') setDrag(null)
@@ -243,7 +251,7 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
             <span>
               {problems.overlaps.length > 0 && `${problems.overlaps.map(([a, b]) => `${numberOf(a)} and ${numberOf(b)}`).join(', ')} overlap. `}
               {problems.outside.length > 0 && `${problems.outside.map(numberOf).join(', ')} ${problems.outside.length === 1 ? 'runs' : 'run'} past a wall. `}
-              {problems.blocked.map((b) => `${numberOf(b.by)} stands ${L(-b.clearance)} in front of ${numberOf(b.corner)}'s door: pull the corner cabinet further out or widen its blind part. `).join('')}
+              {problems.blocked.map(blockText).join('')}
               Move them, or re-arrange the room.
             </span>
             <Button size="xs" variant="outline" onClick={rearrange}>
@@ -306,14 +314,26 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
               {kindLabel(sel.params) && <span className="mr-1 font-medium text-stone-700">{kindLabel(sel.params)} ·</span>}
               {formatLength(sel.params.width, units)} × {formatLength(sel.params.height, units)} × {formatLength(sel.params.depth, units)}
             </p>
-            {sel.params.panel?.type !== 'end-panel' && (
+            {sel.params.panel?.type !== 'end-panel' && sel.params.corner?.type !== 'pie-cut' && (
               // Polish-1: neighbours along the run move with it, so nothing overlaps
               <NumField label="Width" value={sel.params.width} min={sel.params.panel ? 3 : 100} max={2400} onChange={(v) => resize(sel.id, (p) => (p.width = v))} />
             )}
             <NumField label="Height" value={sel.params.height} min={200} max={2800} onChange={(v) => setParams(sel.id, (p) => (p.height = v))} />
-            <NumField label="Depth" value={sel.params.depth} min={100} max={900} onChange={(v) => resize(sel.id, (p) => (p.depth = v))} />
+            {/* Kitchen-3: a pie-cut's two legs are set with its corner fields below (they move the runs beside it) */}
+            {sel.params.corner?.type !== 'pie-cut' && <NumField label="Depth" value={sel.params.depth} min={100} max={900} onChange={(v) => resize(sel.id, (p) => (p.depth = v))} />}
             {(sel.params.panel || sel.params.corner) && <KitchenFields p={sel.params} set={(fn) => resize(sel.id, fn)} lib={lib} />}
-            {sel.params.corner &&
+            {sel.params.corner?.type === 'pie-cut' &&
+              (() => {
+                const pc = pieClearance(job.cabinets, sel.id, place, lib)
+                const line = (name: string, v: { id: string; clearance: number } | null | undefined) =>
+                  v ? (
+                    <p key={name} className={cn('text-xs', v.clearance < -0.5 ? 'text-red-700' : 'text-muted-foreground')}>
+                      {v.clearance < -0.5 ? `${numberOf(v.id)} stands ${L(-v.clearance)} proud of the ${name} door.` : `The ${name} door: ${numberOf(v.id)}'s front is ${L(v.clearance)} behind its face.`}
+                    </p>
+                  ) : null
+                return pc ? [line('back-wall', pc.back), line('side-wall', pc.side)] : null
+              })()}
+            {sel.params.corner?.type === 'blind' &&
               (() => {
                 const cl = cornerClearance(job.cabinets, sel.id, room, place, lib)
                 return cl ? (

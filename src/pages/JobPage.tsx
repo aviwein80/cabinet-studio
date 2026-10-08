@@ -329,7 +329,7 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Cut L × W ({u})</TableHead>
               <TableHead className="text-right">Finished L × W × T</TableHead>
-              <TableHead>Edges L1 / L2 / W1 / W2</TableHead>
+              <TableHead>Edges L1 / L2 / W1 / W2{out.cutList.some((r) => r.edges.L3 !== undefined) ? ' · inside L3 / W3' : ''}</TableHead>
               <TableHead>Grain</TableHead>
             </TableRow>
           </TableHeader>
@@ -346,7 +346,11 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
                 <TableCell className="text-right font-mono text-xs tabular-nums text-muted-foreground">
                   {L(r.finishedLength)} × {L(r.finishedWidth)} × {L(r.thickness)}
                 </TableCell>
-                <TableCell className="font-mono text-[11px]">{(['L1', 'L2', 'W1', 'W2'] as const).map((k) => r.edges[k] || '–').join(' / ')}</TableCell>
+                <TableCell className="font-mono text-[11px]">
+                  {(['L1', 'L2', 'W1', 'W2'] as const).map((k) => r.edges[k] || '–').join(' / ')}
+                  {/* Kitchen-3: an L-shaped part's inside edges */}
+                  {r.edges.L3 !== undefined && <span className="text-amber-800"> · L3 {r.edges.L3 || '–'} / W3 {r.edges.W3 || '–'}</span>}
+                </TableCell>
                 <TableCell>{r.grain}</TableCell>
               </TableRow>
             ))}
@@ -592,6 +596,9 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
                   </dd>
                   <dt className="text-muted-foreground">Edges</dt>
                   <dd className="font-mono">{selLabel.edgeDiagram}</dd>
+                  {/* Kitchen-3: the banded edges by name (an L part's inside edges are L3 and W3) */}
+                  <dt className="text-muted-foreground">Banded</dt>
+                  <dd className="font-mono text-[11px]">{(Object.entries(selLabel.edges) as [string, string][]).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}</dd>
                   <dt className="text-muted-foreground">Cut order</dt>
                   <dd>{selLabel.cutOrder}</dd>
                   <dt className="text-muted-foreground">Turned</dt>

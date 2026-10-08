@@ -1,10 +1,12 @@
 import { EPS, X, Y, Z, neg, r3, rectPolygon } from '../geometry'
 import { PLATE_ID, hingeCode, plateBoring, slideBoring, SLIDE_IDS } from '../hardware/resolve'
 import { BLUM, hingeHeights, selectTandem } from '../hardware/specs'
-import type { CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, UnitSystem, Vec2 } from '../types'
+import { onPart } from '../lpart'
+import type { BlindCornerParams, CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, UnitSystem, Vec2 } from '../types'
 import { formatInches } from '../units'
 import { box, materialThickness, PartBuilder } from './builder'
 import { generatePanel } from './panels'
+import { generatePieCut } from './pieCut'
 
 export interface GeneratedCabinet {
   parts: Part[]
@@ -28,7 +30,7 @@ export function hingeCount(doorHeight: number) {
 }
 
 /** Joint positions along a panel's depth for dowels / connectors. */
-function jointPositions(y0: number, y1: number) {
+export function jointPositions(y0: number, y1: number) {
   const depth = y1 - y0
   if (depth <= 150) return [y0 + depth / 2 - depth / 4, y0 + depth / 2 + depth / 4].map(r3)
   const ys = [y0 + 50, y1 - 50]
@@ -43,6 +45,8 @@ function jointPositions(y0: number, y1: number) {
 export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware?: Record<string, HardwarePin> }, units: UnitSystem = 'mm'): GeneratedCabinet {
   // Kitchen-2: fillers and end panels are not carcasses
   if (p.panel) return generatePanel(p, lib, units)
+  // Kitchen-3: a pie-cut corner is an L-shaped box of its own
+  if (p.corner?.type === 'pie-cut') return generatePieCut(p, lib, pin, units)
   const warnings: string[] = []
   const S = (mm: number) => (units === 'in' ? formatInches(mm) : `${mm} mm`)
   const hardware = new Map<string, number>()
@@ -371,7 +375,7 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
  * Kitchen-2: the face of a blind corner, in cabinet X. The door covers the open part and is hinged
  * on the open side (its plate goes in that side panel); the blind panel covers the blind part.
  */
-export function blindSpans(p: CarcassParams, c: NonNullable<CarcassParams['corner']>, warnings: string[] = [], units: UnitSystem = 'mm') {
+export function blindSpans(p: CarcassParams, c: BlindCornerParams, warnings: string[] = [], units: UnitSystem = 'mm') {
   const S = (mm: number) => (units === 'in' ? formatInches(mm) : `${r3(mm)} mm`)
   const W = p.width
   const g = p.doors.gap
@@ -421,7 +425,8 @@ export function partOutline(part: Part): Vec2[] {
 export function isOpInsidePart(part: Part, op: Operation) {
   const L = part.length
   const W = part.width
-  const inRange = (x: number, y: number) => x >= -EPS && x <= L + EPS && y >= -EPS && y <= W + EPS
+  // Kitchen-3: not in an L part's cut-away corner
+  const inRange = (x: number, y: number) => (part.shape === 'L' ? onPart(part, { x, y }) : x >= -EPS && x <= L + EPS && y >= -EPS && y <= W + EPS)
   if (op.kind === 'groove') return inRange(op.x1, op.y1) && inRange(op.x2, op.y2)
   return inRange(op.x, op.y)
 }

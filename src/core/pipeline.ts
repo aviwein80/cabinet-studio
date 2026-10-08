@@ -8,7 +8,7 @@ import { applySavedNest } from './manualNest'
 import { bridgesOn, buildAllPrograms, flipSheetsOn, nestJob, nestSettingsOf, sharedLinesOn, type JobNest, type SheetProgram } from './machining'
 import { featuresOf } from './features'
 import { writeSheetMpr } from './mpr/writer'
-import type { AppData, EdgeKey, Job } from './types'
+import type { AppData, EdgeCodes, Job } from './types'
 import { formatLength } from './units'
 import { multiAxisIssues, positionalIssues, rotaryIssues, validateJob, type Issue } from './validator'
 
@@ -25,7 +25,8 @@ export interface LabelRecord {
   cut: { l: number; w: number }
   materialCode: string
   materialName: string
-  edges: Record<EdgeKey, string>
+  /** Kitchen-3: an L-shaped part also has its inside edges L3 and W3. */
+  edges: EdgeCodes
   edgeDiagram: string
   grainLocked: boolean
   sheetIndex: number

@@ -106,7 +106,16 @@ export interface HardwarePin {
 /** L1: long edge at y = 0, L2: long edge at y = width, W1: short edge at x = 0, W2: short edge at x = length. */
 export type EdgeKey = 'L1' | 'L2' | 'W1' | 'W2'
 export const EDGE_KEYS: EdgeKey[] = ['L1', 'L2', 'W1', 'W2']
-export type Edges = Partial<Record<EdgeKey, string | null>>
+/**
+ * Kitchen-3: the two inside edges of an L-shaped part (`Part.shape === 'L'`), along the cut-away
+ * corner: L3 runs along the length (parallel to L1 and L2), W3 across it (parallel to W1 and W2).
+ */
+export type InsideEdgeKey = 'L3' | 'W3'
+export const INSIDE_EDGE_KEYS: InsideEdgeKey[] = ['L3', 'W3']
+export type AnyEdgeKey = EdgeKey | InsideEdgeKey
+export type Edges = Partial<Record<AnyEdgeKey, string | null>>
+/** Band codes per edge, '' = raw; an L-shaped part also lists its inside edges. */
+export type EdgeCodes = Record<EdgeKey, string> & Partial<Record<InsideEdgeKey, string>>
 
 export type OpPurpose =
   | 'shelf-pin'
@@ -194,6 +203,13 @@ export interface Part {
    * size already includes it; the label says which edge and how much.
    */
   scribe?: { edge: EdgeKey; amount: number }
+  /**
+   * Kitchen-3: an L-shaped part (a pie-cut corner's bottom, top or shelf). `outline` has six corners:
+   * the length x width rectangle with one corner cut away, and the two inside edges along the cut are
+   * L3 and W3 in `edges`, banded like the outer four. Absent = a rectangle (or a notched outline whose
+   * inside edges are never banded).
+   */
+  shape?: 'L'
 }
 
 export interface HardwareLine {
@@ -265,7 +281,11 @@ export interface CarcassParams {
      */
     boxMaterialId?: string
   }
-  /** Kitchen-2: a blind corner cabinet (base or wall). Absent = an ordinary cabinet. */
+  /**
+   * Kitchen-2: a blind corner cabinet (base or wall). Kitchen-3: or a pie-cut (L-shaped) corner, whose
+   * `width` is its leg along the back wall and `depth` its leg along the side wall (the box it stands in
+   * seen from above), each leg `corner.legDepth` deep. Absent = an ordinary cabinet.
+   */
   corner?: CornerParams
   /**
    * Kitchen-2: a filler strip or a finished end panel instead of a carcass. It is placed in the room
@@ -280,7 +300,7 @@ export interface CarcassParams {
  * wall; the return butts against the face of the blind part. One door covers the rest of the face,
  * hinged on the open side (Salice cups and 3 mm plates as on every cabinet).
  */
-export interface CornerParams {
+export interface BlindCornerParams {
   type: 'blind'
   blindSide: 'left' | 'right'
   /** The blind part of the face, from the blind-side edge. Door width = width - blind width - door gap. */
@@ -289,7 +309,34 @@ export interface CornerParams {
   pullOut: number
   /** A finished panel in the door material over the blind part of the face. */
   blindPanel: boolean
+  /**
+   * Kitchen-3: the wall it stands on when the room is arranged. 'back' (absent): on the back wall, the
+   * side-wall run butting against its face. 'side': on the side wall (turned to face the room), the
+   * back-wall run butting against its face; blind right then stands on the left wall, blind left on
+   * the right wall (its blind side in the back corner either way).
+   */
+  wall?: 'back' | 'side'
 }
+
+/**
+ * Kitchen-3: a pie-cut corner: an L-shaped box filling the corner, one leg along each wall, with an L
+ * bottom, top and shelves banded on their inside edges, a back on each wall and two doors, one on
+ * each leg, each hinged at its own end on Salice cups and 3 mm plates (no folding hinge).
+ */
+export interface PieCutParams {
+  type: 'pie-cut'
+  /** The corner it fills when the room is arranged: back-left ('left') or back-right ('right'). */
+  side: 'left' | 'right'
+  /** How deep each leg is, front to wall (the cabinet's `depth` is the leg along the side wall). */
+  legDepth: number
+  /**
+   * Which door runs to the inside corner, in front of the other door's end: that one opens first.
+   * The other stops the door gap short of its face.
+   */
+  cornerDoor: 'back' | 'side'
+}
+
+export type CornerParams = BlindCornerParams | PieCutParams
 
 /** Kitchen-2: a filler strip or a finished end panel. */
 export type PanelParams = FillerParams | EndPanelParams

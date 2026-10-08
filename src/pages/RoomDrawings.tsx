@@ -131,7 +131,7 @@ export function ElevationView({
               <text x={item.x + item.w / 2} y={item.z + item.h * 0.55} textAnchor="middle" fontSize={nameSize} fill="#1c1917" transform={upright(item.z + item.h * 0.55)}>
                 {nameText}
               </text>
-              <text x={item.x + item.w / 2} y={item.z + item.h - labels.width.size * 0.5} textAnchor="middle" fontSize={labels.width.size} fill="#57534e" transform={upright(item.z + item.h - labels.width.size * 0.5)}>
+              <text x={item.x + item.w / 2} y={item.z + item.h - labels.width.size * 1.1} textAnchor="middle" fontSize={labels.width.size} fill="#57534e" transform={upright(item.z + item.h - labels.width.size * 1.1)}>
                 {labels.width.text}
               </text>
               {labels.lines.map((l) => (

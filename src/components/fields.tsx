@@ -32,6 +32,7 @@ export function NumField({
   className,
   cfg,
   badge,
+  metric,
 }: {
   label: string
   value: number
@@ -44,8 +45,10 @@ export function NumField({
   className?: string
   cfg?: string
   badge?: ReactNode
+  /** Polish-1: a small length always shown in millimetres (a tolerance), even in an inch shop; "in" still typed in works. */
+  metric?: boolean
 }) {
-  const units: UnitSystem = useStore((s) => (suffix === 'mm' ? (s.data?.settings.units ?? 'mm') : 'mm'))
+  const units: UnitSystem = useStore((s) => (suffix === 'mm' && !metric ? (s.data?.settings.units ?? 'mm') : 'mm'))
   const length = suffix === 'mm'
   const shown = length ? formatLength(value, units) : String(value)
   const [text, setText] = useState(shown)

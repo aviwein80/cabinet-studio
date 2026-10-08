@@ -95,7 +95,7 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Polish-1: never taller than the window; the body scrolls and the footer stays in view */}
-      <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-3xl flex-col">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Import a drawing</DialogTitle>
           <DialogDescription>DXF from any CAD program, or vector PDF / Illustrator files. The largest closed shape becomes the part outline; each drawing layer is kept.</DialogDescription>
@@ -178,7 +178,7 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
               onChange={(v) => update({ ...opts, units: v })}
               hint={loaded?.kind === 'pdf' ? 'PDF pages are always read at true size.' : undefined}
             />
-            <NumField label="Join ends closer than" value={opts.joinTol} min={0} step={0.01} onChange={(v) => update({ ...opts, joinTol: v })} />
+            <NumField label="Join ends closer than" value={opts.joinTol} min={0} step={0.01} metric onChange={(v) => update({ ...opts, joinTol: v })} />
             <SwitchField label="Join only where tangent" checked={opts.tangentOnly} onChange={(v) => update({ ...opts, tangentOnly: v })} hint="Keeps pieces that meet at a sharp corner apart" />
             <SwitchField label="Combine straight runs and arcs" checked={opts.combine} onChange={(v) => update({ ...opts, combine: v })} hint="Collinear lines and pieces of one circle become single elements" />
             <div className="flex flex-col gap-1.5">

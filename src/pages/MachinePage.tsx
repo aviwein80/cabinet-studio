@@ -14,6 +14,7 @@ import { NumField, Section, SelectField, SwitchField, TextField } from '@/compon
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { drillToleranceOf, nestSettingsOf, partSpacing } from '@/core/machining'
+import { fmt } from '@/core/geometry'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 import { MachineModelSection } from './machine/MachineModelSection'
@@ -263,6 +264,7 @@ export function MachinePage() {
                 max={1}
                 step={0.01}
                 cfg="machine:drillTolerance"
+                metric
                 onChange={(v) => updateMachine((x) => (x.drillTolerance = v))}
                 hint="A hole takes the nearest drill within this much of its diameter (a 5/16 in hole, 7.938 mm, takes an 8 mm drill at 0.1 mm), and the program asks for that drill's diameter. Never matched outside it; the export checker says which drill was matched."
               />
@@ -532,7 +534,7 @@ export function MachinePage() {
             />
             )}
             <p className="text-[11px] text-muted-foreground">
-              Drills are matched by exact diameter and depth ≤ max depth. Pockets use the largest router that fits the groove width. Missing tools are reported as errors before export.
+              Drills are matched by diameter (exact first, else the nearest within the drill matching tolerance, ±{fmt(drillToleranceOf(m))} mm) and depth ≤ max depth. Pockets use the largest router that fits the groove width. Missing tools are reported as errors before export.
             </p>
           </div>
         </div>

@@ -110,10 +110,11 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.6d Pocket and facing toolpaths open over their first cut (owner decision 24.4) | **Done** (October 2026) | See below. Goldens explained; woodWOP output byte-identical. |
 | M3.6e Machine-part hits on the export: a warning while the machine's parts are invented, blocking once confirmed (owner decision 24.3) | **Done** (October 2026) | See below. Nothing new is written; no check weakened. |
 | M3.7 Out of scope recorded (2D-19, AM-14, ROB-01, LAT-01) | **Done** (October 2026) | Listed in `ROADMAP.md` ("Out of scope") with the reasons; nothing built. **Stage 3 complete.** |
+| Polish-1 Bug-fix round from the owner's video walkthrough (24 items) | **Done** (October 2026) | See "Polish-1" below. Stage 1 goldens, CAM goldens and `npm run sample` byte-identical; every output switch still off. |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped), 1076 after Polish-1 (1075 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -3044,11 +3045,137 @@ or a switch that stays off until then):
     toe kick, hinge and plate positions), edgebander pre-mill and band thicknesses, and the label
     printer and stock.
 
+## Polish-1: fixes from the owner's video walkthrough
+
+A bug-fix round, not a milestone of the spec. 24 items, each fixed; every testable one has a test in
+`tests/polish-1.test.ts` (22 tests). Baseline before the round: head `ec8b5d9`, 1054 tests (1053 + 1
+skipped), 17 lint warnings. After: 1076 (1075 + 1 skipped), 17 lint warnings, typecheck and build
+clean. The 90 s performance limit is unchanged.
+
+### Units and inch mode (items 1-7)
+
+| # | Fix | Where | Test |
+|---|---|---|---|
+| 1 | Library template cards show the shop unit, rounded for reading (`formatDims`: mm to 0.1, inches to 1/16) | `LibraryPage` | `1-3` |
+| 2 | Add cabinet dialog: same (no more `609.5999999999999`) | `JobPage` | `1-3` |
+| 3 | Nesting part panel cut and finished sizes; Add hole range and thickness text | `JobPage`, `CabinetEditor` | `1-3` |
+| 4 | Offcut labels on the sheet map (`offcutSize`: whole mm, or inches to 1/16) | `SheetView` | `4` |
+| 5 | "Save as template" pre-fills the name with the width in the shop unit, replacing a size the name already ends with (`sizedName`: `Sink base 36"`, not `Sink base 36" 914.4`) | `CabinetEditor` | `5` |
+| 6 | Every length field takes an explicit unit in either mode: `6 mm`, `6mm`, `1/2"`, `1/2 in`, `23-1/4 in` (`parseLength`) | all `NumField` / `LenInput` / tables | `6` |
+| 7 | Library CSV/XLSX import: "Sizes in" option (millimetres by default, as before) and an optional `units` column (mm / in per row); a cell may carry its own unit. The preview says how sizes were read. | `core/library/import.ts`, `ImportDialog` | `7` |
+
+### Drilling and output (items 8-11)
+
+- **8 Drill matching tolerance.** New machine setting `drillTolerance` (Machine & tools → Drilling,
+  shown in mm in both unit modes; absent = 0.1 mm). `findDrill` takes an exact diameter first (within
+  0.01 mm, in tool-table order, exactly as before), else the nearest drill within the tolerance;
+  never outside it. A 5/16 in hole (7.938 mm) now takes T203 (8 mm). The export checker says which
+  drill was matched (`DRILL_MATCHED`, info, once per sheet and pair) and the custom-part operation
+  editor lists each hole size and its drill. Outside the tolerance the hole is still refused
+  (`TOOL_MISSING`, now naming the tolerance).
+- **9 The MPR asks for the matched drill.** `BohrVert` / `BohrHoriz` write `DU=` the drill's own
+  diameter when it differs from the hole (the `MNM` comment reads `D7.938 drilled D8`). A drill the
+  user picks by hand outside the tolerance is warned on the toolpath and refused at export
+  (`DRILL_TOLERANCE`, error). **Goldens:** no change. Stage 1 goldens (`tests/mpr.test.ts`), the 20
+  CAM reference parts and `npm run sample` are byte-identical, because no reference part has a hole
+  whose drill differs from its diameter (only such a hole writes different bytes).
+- **10 Placeholder 6 mm drill.** T205 "Drill 6 mm, TANDEM runner holes (placeholder)", vertical,
+  35 mm deep, `placeholder: true`: a Configure badge on its number, diameter and depth, kept even
+  once the rest of the table is real, until confirmed. A placeholder table saved before gets it on
+  load (unless it already has a 6 mm vertical drill or a T205); a real table never does. The 6-8
+  TANDEM export errors are gone (test `10`).
+- **11 Drawer boxes.** New cabinet setting Drawers → Box material (`drawers.boxMaterialId`): sides,
+  subfront and back. The built-in "3 drawers" template uses a new library board "Melamine PB 16 white
+  (drawer boxes)" (16 mm), so the boxes meet Blum TANDEM's 16 mm side limit. Cabinets saved before
+  keep the carcass board (no silent change to their parts) and the warning now says what is used and
+  what to do ("These sides are the 18 mm carcass board; choose a drawer-box material of 16 mm or
+  less"). A chosen box board over 16 mm is warned by name. The sample job has no drawers: unchanged.
+
+### Cabinets and room (items 12-16)
+
+- **12** Widening (or narrowing) a placed cabinet moves the cabinets after it in the same run (same
+  turn, overlapping across the run and in height) that were butted against it or that it now
+  overlaps; a gap absorbs the change. Applies from the Room tab and the cabinet editor
+  (`pushNeighbours`). The room always shows overlaps and cabinets past a wall, with a
+  "Re-arrange along the back wall" button (`roomProblems`): never a silent overlap.
+- **13** Elevation labels are fitted inside each cabinet: the width at the top, the height and
+  "floor" height bottom right on one line when they fit, else stacked, shrunk if needed
+  (`elevationLabels`). 18 in and 19-1/2 in wall cabinets at 54 in no longer collide.
+- **14** The 3D view re-centres when the framed size changes, keeping its angle and scaling its
+  distance (`refitCamera`).
+- **15** "Laid out by hand" is per sheet (`NestedSheet.manual`); sheets the nester adds after a saved
+  layout say "nested automatically".
+- **16** Settings shows the reader really in use (`readerInUse`): a chosen provider without a saved
+  key reads "Chosen · no key, offline reader in use", and the built-in reader card says it is in use
+  until a key is saved.
+
+### Custom parts / CAM (items 17-24)
+
+- **17** On a part whose outline is still the starting rectangle (0, 0, length × width, four straight
+  sides), Length and Width resize it (same shape id, so operations on it keep it). A drawn outline
+  is never changed (`resizePart`).
+- **18** A through cut-out on the outline listed before other machining (not drilling, which always
+  runs first) is flagged on the Operations panel with "Move cut-out last", and in the export check
+  as a warning (`cutFreeEarly`, `moveCutOutsLast`).
+- **19** It was not intended. New toggle "Unpicked shapes inside stay standing" (`enclosedIslands`):
+  closed shapes inside a pocket that no operation uses are islands without being picked. On for
+  pockets added on the Operations panel; pockets made before (and by layer rules) keep their
+  behaviour, with a toolpath warning that names the unpicked shapes. Shapes another operation uses
+  (holes to drill, cut-outs) are never islands. CAM goldens unchanged.
+- **20** The Import drawing dialog was squeezed to the default narrow dialog width (`sm:max-w-sm`
+  overrode its `max-w-3xl`), which made it so tall. It now has its intended width, is never taller
+  than the window, scrolls its body and keeps Cancel / Create part in view.
+- **21** The recipe "Drill 13 mm" kept its own size in the import report while the depth came from
+  the layer name. The report now reads "DRILL_12 → Drill, 1/2" (12 mm) deep from the layer name";
+  the operation was always 12 mm deep (`recipeLabel`, `RuleReport.label`).
+- **22-23** The relief roughing was still being calculated in the background when the simulator
+  opened; it was left out, and the playhead stayed at 0:00 as the toolpaths arrived. The simulator
+  now lists operations still calculating (with progress) or without a toolpath (`pendingOps`), stays
+  at the end as background toolpaths arrive until the user moves the playhead, and shows a running
+  indicator ("Playing 16× · 3 % · operation", "End · 100 %").
+- **24** Length fields (`LenInput`, used by the relief dialog) apply on Enter as well as Tab/blur.
+  Checked in the browser: Enter on the relief length updated the width (proportions kept) with the
+  focus still in the field.
+
+Also fixed while taking the screenshots: small mm values in inch mode showed as `0"` (the drill
+tolerance and the import "Join ends closer than"); `NumField metric` keeps such a field in mm. The
+Machine page's note on drill matching describes the tolerance.
+
+### Polish-1 screenshots
+
+In `docs/screenshots/polish-1/` (browser preview, Playwright installed outside the project; demo job
+"Polish-1 demo" in inches: sink base 36", base 18", drawer base 24", wall 18" and 19-1/2" at 54", a
+5/16 in custom hole, and a custom "Sign blank"):
+
+`01-library-cards-inches` (template cards in inches), `02-add-cabinet-inches`,
+`03-nest-sheet1-by-hand-part-inches` (part panel in inches, the hand-laid sheet),
+`04-nest-sheet2-auto-offcut-inches` ("nested automatically", offcut label in inches),
+`05-output-drill-matched` (`DRILL_MATCHED`), `06-save-template-name-inches` (`Sink base 36"`),
+`07-add-hole-inches-mm-suffix` (range text in inches; "6 mm" typed and accepted),
+`08-drawer-box-material`, `09-elevation-labels-18-19half`, `10-widen-pushes-neighbours` (B1 36" → 42",
+B2 and B3 moved), `11-room-overlap-alert`, `12a`/`12b` (3D before and after widening 18" → 59"),
+`13-machine-drill-tolerance`, `14-tool-table-6mm-drill-badge`, `15-settings-reader-state`,
+`16-ops-cut-out-first-warning`, `17-pocket-unpicked-islands`, `18-drill-matched-t203`,
+`19-import-units-column`, `20-import-drawing-footer-drill12` (1440 × 900, footer in view, DRILL_12
+label), `21-new-part-length-resizes-outline`, `22-relief-dialog-enter-applies`,
+`23-relief-sim-calculating`, `24-relief-sim-both-ops-at-end`, `25-relief-sim-playing-indicator`.
+
+### Limits recorded (Polish-1)
+
+- Other screens still show some sizes in mm in inch mode: export-checker messages (e.g.
+  `SMALL_PART (421.2 x 99)`), the nesting header's "spacing 14 mm", and a few small values in inches
+  round to 1/16 (a 6 mm drill reads 1/4"; the simulator's cell size reads 0"). Not in this list;
+  candidates for a next polish round.
+- Pushing neighbours works along one straight run; a run that turns a corner is not followed round
+  it (the overlap notice then shows, with Re-arrange).
+- Only `LenInput` and `NumField` apply on Enter; a few plain inputs elsewhere (3D model placement,
+  surfaces) still apply on blur.
+
 ## Next run
 
-- Stage 3 is complete and nothing is left in the spec. What comes next is the owner's call: the
-  shop facts in "Stage 3 exit" (they unlock real output one switch at a time), Phase 0 in
-  `ROADMAP.md` (proving the output on the N-200), or any deferred item above.
+- Stage 3 and Polish-1 are complete. What comes next is the owner's call: the shop facts in
+  "Stage 3 exit" (they unlock real output one switch at a time), Phase 0 in `ROADMAP.md` (proving the
+  output on the N-200), the Polish-1 limits above, or any deferred item above.
 
 ## Run log
 
@@ -3121,3 +3248,7 @@ or a switch that stays off until then):
   confirmed (owner decision 24.3); screenshots (`36ac6d2`).
 - **Run 20 (M3.7)**: out-of-scope items recorded in ROADMAP.md; Stage 3 exit summary. **M3.7
   complete; Stage 3 complete.** See `git log`.
+- **Run 21 (Polish-1)**: 24 fixes from the owner's video walkthrough: units and inch mode
+  (`ee205b4`), drilling tolerance, matched drill diameter, 6 mm drill, drawer-box material
+  (`b0b4ce2`), room and cabinets (`06162e0`), custom parts and simulation (`49f9e1c`); screenshots,
+  docs. See `git log`.

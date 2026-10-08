@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, CheckCheck, Copy, Eye, EyeOff, Plus, Trash2, TriangleAlert, Wand2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { nanoid } from 'nanoid'
-import { makeEntity, opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
+import { cutFreeEarly, enclosedShapes, makeEntity, moveCutOutsLast, opInputHash, opState, partOutline, REST_SOURCE_KINDS, REST_SOURCE_KINDS_3D, type OpState } from '@/cam/doc'
 import type { P } from '@/cam/geom'
 import { isClimb, isoDepth } from '@/cam/more25d/thread'
 import { findDrill } from '@/core/machining'
@@ -144,6 +144,8 @@ export function OpsPanel({
   }
   const stale = part.ops.filter((o) => stateOf(o) === 'stale' || stateOf(o) === 'new')
   const current = part.ops.find((o) => o.id === selectedOp)
+  // Polish-1: a cut-out ahead of other machining frees the part before that machining runs
+  const early = cutFreeEarly(part)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -252,6 +254,16 @@ export function OpsPanel({
           </Button>
         )}
       </div>
+      {early.length > 0 && (
+        <div role="alert" className="flex items-start gap-2 border-b border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+          <span className="min-w-0 flex-1">
+            {early.map((e) => `“${e.cut.name}” cuts the part free before ${e.after.map((a) => `“${a.name}”`).join(', ')}`).join('; ')}. The part can move on the table once it is cut free. Drilling always runs first.
+          </span>
+          <Button size="sm" variant="outline" className="h-6 shrink-0 border-amber-400/40 bg-transparent px-2 text-[11px] text-amber-100 hover:bg-amber-500/20" onClick={() => setOps(moveCutOutsLast(part))}>
+            Move cut-out last
+          </Button>
+        </div>
+      )}
       <div className="max-h-[40%] shrink-0 overflow-auto border-b border-white/10">
         {part.ops.length === 0 && <div className="px-3 py-6 text-center text-xs text-stone-400">No operations yet. Select geometry and add a profile, pocket or drilling operation.</div>}
         {part.ops.map((op, i) => {
@@ -1177,7 +1189,15 @@ function StrategyFields({ op, part, onChange, sel = [], tool = null, onPart }: {
           )}
           <NumField label="Leave on wall" value={op.stockXY} onChange={(v) => onChange({ ...op, stockXY: v })} />
           <div className="col-span-2">
-            <SwitchField label="Keep islands" checked={op.islands} onChange={(v) => onChange({ ...op, islands: v })} hint="Closed shapes inside the pocket stay standing" />
+            <SwitchField label="Keep islands" checked={op.islands} onChange={(v) => onChange({ ...op, islands: v })} hint="Picked closed shapes inside the pocket stay standing" />
+            {op.islands && (
+              <SwitchField
+                label="Unpicked shapes inside stay standing"
+                checked={!!op.enclosedIslands}
+                onChange={(v) => onChange({ ...op, enclosedIslands: v })}
+                hint={`Closed shapes drawn inside the pocket that no operation uses are islands too${enclosedShapes(op, part).length ? ` (${enclosedShapes(op, part).length} here)` : ''}. Off: they are cut away.`}
+              />
+            )}
             {!adaptive && <SwitchField label="Finish pass on the wall" checked={op.finishPass} onChange={(v) => onChange({ ...op, finishPass: v })} />}
             {(adaptiveOn || op.rest) && (
               <SwitchField

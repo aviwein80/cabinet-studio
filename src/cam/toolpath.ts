@@ -8,7 +8,7 @@
 import type { HDrillDir, MachineProfile, Tool } from '@/core/types'
 import { drillFits, drillToleranceOf, findDrill } from '@/core/machining'
 import { fmt as fmtMm } from '@/core/geometry'
-import { driveSource, entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
+import { driveSource, enclosedShapes, entityContours, layerOf, opInputHash, partOutline, restSources, stockTopShift } from './doc'
 import { cutFloor, planSawCuts, type SawCut } from './more25d/saw'
 import { betweenCurves, type Chain3, smooth3, zWave } from './more25d/curves'
 import { applyEdits, movesHash } from './more25d/edits'
@@ -713,7 +713,11 @@ export function asRectangle(c: Contour): { cx: number; cy: number; len: number; 
 }
 
 function genPocket(op: PocketOp, ctx: GenContext, tp: Toolpath, b: Builder) {
-  const region = regionOf(op, ctx, op.islands)
+  let region = regionOf(op, ctx, op.islands)
+  // Polish-1: closed shapes inside the pocket that were not picked
+  const enclosed = op.islands ? enclosedShapes(op, ctx.part) : []
+  if (enclosed.length && op.enclosedIslands) region = normaliseWinding([...region, ...enclosed.map((x) => x.c)])
+  else if (enclosed.length) tp.warnings.push(`${enclosed.length} closed shape(s) inside the pocket are not picked, so the pocket cuts them away. Switch on "Unpicked shapes inside stay standing" to keep them as islands, or pick them.`)
   if (!region.length) {
     tp.warnings.push('Pocket needs at least one closed contour.')
     return

@@ -509,3 +509,21 @@ export function shadeHeightfield(hf: Heightfield, out: Uint8ClampedArray, opt: {
     }
   }
 }
+
+/**
+ * Polish-1: enabled operations that are not in the simulation (no moves yet), with why: still
+ * being calculated in the background (and how far), or no toolpath (its first warning). The
+ * simulator lists them so a relief's roughing never just goes missing while it is calculated.
+ */
+export function pendingOps(ops: { id: string; name: string; enabled: boolean }[], toolpaths: Toolpath[], busy?: Map<string, { fraction: number; note?: string }>): { id: string; name: string; why: string; calculating: boolean }[] {
+  const out: { id: string; name: string; why: string; calculating: boolean }[] = []
+  for (const op of ops) {
+    if (!op.enabled) continue
+    const tp = toolpaths.find((t) => t.opId === op.id)
+    if (tp?.moves.length) continue
+    const b = busy?.get(op.id)
+    if (b) out.push({ id: op.id, name: op.name, why: `still calculating (${Math.round(b.fraction * 100)} %${b.note ? `, ${b.note.toLowerCase()}` : ''}); it joins the simulation when ready`, calculating: true })
+    else out.push({ id: op.id, name: op.name, why: tp?.warnings[0] ?? 'no toolpath', calculating: false })
+  }
+  return out
+}

@@ -610,6 +610,13 @@ export interface PocketOp extends OpBase {
   angle: number
   direction: Direction
   islands: boolean
+  /**
+   * Polish-1: closed shapes lying inside the pocket that no operation uses stay standing as
+   * islands without being picked (with `islands` on). Pockets added on the Operations panel: on.
+   * Absent (pockets made before, or by rules and wizards) = off: such shapes are cut away, with a
+   * warning on the toolpath and the export check.
+   */
+  enclosedIslands?: boolean
   entry: 'plunge' | 'ramp' | 'helix'
   rampAngle: number
   /** Helix radius as a fraction of tool radius. */

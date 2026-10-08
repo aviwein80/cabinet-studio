@@ -460,7 +460,8 @@ export function newOpDefaults(kind: CamOp['kind'], m: MachineProfile, extra: Par
   const strategy = (extra as { strategy?: string }).strategy
   switch (kind) {
     case 'pocket':
-      return { stepover: d.pocketStepover } as Partial<CamOp>
+      // Polish-1: a new pocket leaves unpicked closed shapes inside it standing (islands)
+      return { stepover: d.pocketStepover, enclosedIslands: true } as Partial<CamOp>
     case 'face':
       return { stepover: d.faceStepover } as Partial<CamOp>
     case 'edge':

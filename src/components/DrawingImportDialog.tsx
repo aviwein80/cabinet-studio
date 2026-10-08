@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { featuresOf } from '@/core/features'
 import type { Material, UnitSystem } from '@/core/types'
 import { formatLength } from '@/core/units'
+import { fmt } from '@/core/geometry'
 
 interface Loaded {
   name: string
@@ -93,12 +94,13 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      {/* Polish-1: never taller than the window; the body scrolls and the footer stays in view */}
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-3xl flex-col">
         <DialogHeader>
           <DialogTitle>Import a drawing</DialogTitle>
           <DialogDescription>DXF from any CAD program, or vector PDF / Illustrator files. The largest closed shape becomes the part outline; each drawing layer is kept.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 md:grid-cols-[1fr_260px]">
+        <div className="-mx-1 grid min-h-0 flex-1 gap-4 overflow-y-auto px-1 md:grid-cols-[1fr_260px]" data-testid="drawing-import-body">
           <div className="flex min-h-64 flex-col gap-2">
             <button onClick={() => file.current?.click()} className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-stone-50 p-3 text-sm text-muted-foreground hover:bg-stone-100" aria-label="Choose a drawing file">
               {busy ? (
@@ -139,8 +141,8 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
                 <ul className="flex flex-col gap-0.5 text-muted-foreground">
                   {applied.report.map((r) => (
                     <li key={r.ruleId + r.layer}>
-                      <span className="font-mono text-foreground">{r.layer}</span> → {r.recipe}
-                      {r.depth !== undefined && ` at ${formatLength(r.depth, units)}`} ({r.shapes} shape{r.shapes === 1 ? '' : 's'})
+                      <span className="font-mono text-foreground">{r.layer}</span> → {r.label}
+                      {r.depth !== undefined && `, ${formatLength(r.depth, units)}${units === 'in' ? ` (${fmt(r.depth)} mm)` : ''} deep from the layer name`} ({r.shapes} shape{r.shapes === 1 ? '' : 's'})
                     </li>
                   ))}
                   {applied.unmatched.map((u) => (
@@ -220,7 +222,7 @@ export function DrawingImportDialog({ open, onOpenChange, units, materials, onIm
             )}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

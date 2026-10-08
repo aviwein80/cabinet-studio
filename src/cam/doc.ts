@@ -4,7 +4,8 @@
  */
 import { nanoid } from 'nanoid'
 import { strokeText } from './font'
-import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, polyline, pt, rect, transform, type Mat } from './geom'
+import { area, boxOf, circle, type Contour, fitPoints, type P, pointInContour, polyline, pt, rect, toPoints, transform, type Mat } from './geom'
+import { normaliseWinding } from './kernel'
 import { aggregateOf, effectiveGauge, effectiveHolder } from '@/core/machineModel'
 import type { MachineProfile, Tool } from '@/core/types'
 import type { CamOp, CamPart, Entity, FaceId, Geom, Layer } from './types'
@@ -207,6 +208,80 @@ export function partApertures(part: CamPart): Contour[] {
 }
 
 /** Fit the work volume to the outline and move everything so the outline starts at (0, 0). */
+/**
+ * Polish-1: closed shapes on the pocket's face that lie inside it (inside a picked boundary, not in
+ * a picked island) and that no operation uses: shapes drawn as islands but not picked. Shapes an
+ * operation uses (holes to drill, cut-outs) and construction shapes are left out.
+ */
+export function enclosedShapes(op: Pick<CamOp, 'geometry' | 'face'>, part: CamPart): { e: Entity; c: Contour }[] {
+  const picked = normaliseWinding(
+    op.geometry
+      .map((id) => part.entities.find((e) => e.id === id))
+      .filter((e): e is Entity => !!e && !layerOf(part, e.layer)?.construction)
+      .flatMap((e) => entityContours(e).filter((c) => c.closed)),
+  )
+  const outers = picked.filter((c) => area(c) > 0)
+  const holes = picked.filter((c) => area(c) < 0)
+  if (!outers.length) return []
+  const used = new Set(part.ops.flatMap((o) => o.geometry))
+  const outline = partOutline(part).entity?.id
+  const out: { e: Entity; c: Contour }[] = []
+  for (const e of part.entities) {
+    if (used.has(e.id) || e.id === outline || e.face !== op.face || layerOf(part, e.layer)?.construction) continue
+    for (const c of entityContours(e)) {
+      if (!c.closed) continue
+      const pts = toPoints(c, 0.5)
+      if (outers.some((o) => pts.every((q) => pointInContour(o, q))) && !holes.some((h) => pts.some((q) => pointInContour(h, q)))) out.push({ e, c })
+    }
+  }
+  return out
+}
+
+/**
+ * Polish-1: the cut-outs that free the part (an enabled profile through the panel along its
+ * outline, on face 1) while operations after them in the list still machine it. Drilling is left
+ * out: it is always written first, whatever the list order.
+ */
+export function cutFreeEarly(part: CamPart): { cut: CamOp; after: CamOp[] }[] {
+  const outline = partOutline(part).entity?.id
+  if (!outline) return []
+  const isCut = (o: CamOp) => o.enabled && o.kind === 'profile' && o.face === 1 && !o.tiltedPlane && o.geometry.includes(outline) && (o.levels.through || o.levels.depth >= part.thickness - 1e-9)
+  const out: { cut: CamOp; after: CamOp[] }[] = []
+  part.ops.forEach((o, i) => {
+    if (!isCut(o)) return
+    const after = part.ops.slice(i + 1).filter((x) => x.enabled && x.kind !== 'drill' && x.kind !== 'code' && !isCut(x))
+    if (after.length) out.push({ cut: o, after })
+  })
+  return out
+}
+
+/** Polish-1: the same operations with the cut-outs of `cutFreeEarly` moved to the end, in their order. */
+export function moveCutOutsLast(part: CamPart): CamOp[] {
+  const early = new Set(cutFreeEarly(part).map((e) => e.cut.id))
+  return [...part.ops.filter((o) => !early.has(o.id)), ...part.ops.filter((o) => early.has(o.id))]
+}
+
+/**
+ * Polish-1: change a part's length or width. While its outline is still the plain rectangle the
+ * size draws (corner at 0, 0, exactly the old length by the old width, four straight sides), the
+ * rectangle follows the new size (same shape id, so operations on it keep it). Any other outline
+ * is the user's drawing and is left as drawn.
+ */
+export function resizePart(part: CamPart, size: { length?: number; width?: number }): CamPart {
+  const length = size.length ?? part.length
+  const width = size.width ?? part.width
+  const next = { ...part, length, width }
+  const { entity } = partOutline(part)
+  if (!entity || entity.id !== part.outlineId || entity.g.t !== 'contour') return next
+  const c = entity.g.c
+  const close = (a: number, b: number) => Math.abs(a - b) < 1e-6
+  const corners = c.segs.map((s) => s.a)
+  const want = [pt(0, 0), pt(part.length, 0), pt(part.length, part.width), pt(0, part.width)]
+  const plain = c.closed && c.segs.length === 4 && c.segs.every((s) => s.k === 'L') && corners.every((q, i) => close(q.x, want[i].x) && close(q.y, want[i].y))
+  if (!plain) return next
+  return { ...next, entities: part.entities.map((e) => (e.id === entity.id ? { ...e, g: { t: 'contour', c: rect(0, 0, length, width) } } : e)) }
+}
+
 export function fitWorkVolume(part: CamPart): CamPart {
   const { contour } = partOutline(part)
   const b = boxOf([contour])
@@ -385,6 +460,11 @@ export function opInputHash(op: CamOp, part: CamPart, tool: unknown, machine?: O
   const { builtHash: _b, name: _n, note: _note, confirmed: _c, toolData: _t, ...params } = op
   const geo = op.geometry.map((id) => part.entities.find((e) => e.id === id) ?? id)
   const deps: unknown[] = [params, geo, tool, part.thickness]
+  // Polish-1: unpicked closed shapes inside a pocket (islands, or a warning); only when there are any
+  if (op.kind === 'pocket' && op.islands) {
+    const enclosed = enclosedShapes(op, part).map((x) => x.e)
+    if (enclosed.length) deps.push({ enclosed })
+  }
   // a facing before it re-set the stock top
   const top = stockTopShift(op, part)
   if (top) deps.push({ top })

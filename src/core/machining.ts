@@ -1,6 +1,7 @@
 import type { Seg } from '@/cam/geom'
 import { partCollisions } from '@/cam/collision/collision'
 import { machinePartHits } from '@/cam/machine/check'
+import { cutFreeEarly } from '@/cam/doc'
 import { partProgramOps } from '@/cam/mpr'
 import { generatePart, type Intent, isAdaptive, isFlatLayer, isMore25d, OPS_3D, pathKey, ROTARY_NO_MPR, type Toolpath } from '@/cam/toolpath'
 import type { CancelCheck } from './cancel'
@@ -480,7 +481,11 @@ export function buildSheetProgram(
         written: !!opts.camOutput,
         machiningOps: machining.length,
         backHoles,
-        warnings: paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)),
+        warnings: [
+          ...paths.flatMap((tp) => tp.warnings.map((w) => `${tp.name}: ${w}`)),
+          // Polish-1: a cut-out written before other machining frees the part first
+          ...cutFreeEarly(inst.cam).map((e) => `${e.cut.name}: cuts the part free before ${e.after.map((a) => a.name).join(', ')}. Move the cut-out last (Operations).`),
+        ],
         ...(ops3d ? { ops3d } : {}),
         ...(adaptiveOps ? { adaptiveOps } : {}),
         ...(flat.length ? { flat3d: flat.length, flat3dMissing, flat3dWritten: write3d && !flat3dMissing } : {}),

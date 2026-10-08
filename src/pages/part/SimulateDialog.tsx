@@ -2,13 +2,13 @@ import { UnconfirmedList } from '@/components/Configure'
 import { usedUnconfirmed } from '@/core/confirm'
 import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { ChevronLeft, ChevronRight, CirclePlay, Download, Pause, Play, SkipBack, SkipForward, TriangleAlert } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CirclePlay, Download, Loader2, Pause, Play, SkipBack, SkipForward, TriangleAlert } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import * as THREE from 'three'
 import { backend } from '@/app/backend'
 import { writeStl } from '@/cam/mesh/tools'
-import { buildTimeline, cellRect, cutSummary, positionAt, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
+import { buildTimeline, cellRect, cutSummary, positionAt, pendingOps, programOrder, shadeHeightfield, type SimTimeline } from '@/cam/sim'
 import { type StockMeshRange, stockMesh, stockMeshTops } from '@/cam/stock/heightfield'
 import type { HeightfieldStock } from '@/cam/stock/heightfield'
 import { DexelStock } from '@/cam/stock/dexel'
@@ -71,7 +71,7 @@ const KIND_LABEL: Record<CollisionKind, string> = { shank: 'shank', holder: 'hol
 
 const STOP_TEXT: Record<StopReason, string> = { end: 'End of program.', 'tool-change': 'Stopped at a tool change.', mark: 'Stopped at the chosen move.' }
 
-export function SimulateDialog({ open, onOpenChange, part, toolpaths, machine, units, color }: { open: boolean; onOpenChange: (o: boolean) => void; part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; units: UnitSystem; color?: string }) {
+export function SimulateDialog({ open, onOpenChange, part, toolpaths, machine, units, color, busy }: { open: boolean; onOpenChange: (o: boolean) => void; part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; units: UnitSystem; color?: string; busy?: Map<string, { fraction: number; note?: string }> }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="dark max-h-[96vh] overflow-y-auto border-white/10 bg-[#15171c] text-stone-100 sm:max-w-6xl">
@@ -81,13 +81,15 @@ export function SimulateDialog({ open, onOpenChange, part, toolpaths, machine, u
           </DialogTitle>
           <DialogDescription className="text-stone-400">Plays the toolpaths in program order: cutting moves, rapids, the tool and the material left behind. A check of our own toolpaths, not of the machine; simulate in woodWOP before cutting.</DialogDescription>
         </DialogHeader>
-        {open && <Simulator part={part} toolpaths={toolpaths} machine={machine} units={units} color={color} />}
+        {open && <Simulator part={part} toolpaths={toolpaths} machine={machine} units={units} color={color} busy={busy} />}
       </DialogContent>
     </Dialog>
   )
 }
 
-function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; units: UnitSystem; color?: string }) {
+function Simulator({ part, toolpaths, machine, units, color, busy }: { part: CamPart; toolpaths: Toolpath[]; machine: MachineProfile; units: UnitSystem; color?: string; busy?: Map<string, { fraction: number; note?: string }> }) {
+  // Polish-1: operations not in the simulation yet (3D still calculating, or no toolpath)
+  const pending = pendingOps(part.ops, toolpaths, busy)
   // M3.3: a turned part's rotary toolpaths play on its rotary stock (in the blank's unrolled frame)
   const rot = part.rotary && toolpaths.some((tp) => !!tp.rotary) ? part.rotary : null
   const flatLeft = rot ? toolpaths.filter((tp) => !tp.rotary && tp.moves.length).length : 0
@@ -119,6 +121,14 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   useLayoutEffect(() => {
     tRef.current = t
   }, [t])
+  // Polish-1: until the user moves the playhead, a flat part's simulation stays at the end as
+  // toolpaths calculated in the background arrive (it no longer sits at 0:00 on an empty stock)
+  const [touched, setTouched] = useState(false)
+  const [seenTotal, setSeenTotal] = useState(tl.total)
+  if (seenTotal !== tl.total) {
+    setSeenTotal(tl.total)
+    if (!touched && !rot && !tilt) setT(tl.total)
+  }
   // collision check: the whole program replayed in the background
   const [checked, setCheck] = useState<{ for: unknown; found: Collision[] | null; fraction: number; error?: string } | null>(null)
   const checkKey = useMemo(() => ({ toolpaths, machine, fixtures: part.fixtures }), [toolpaths, machine, part.fixtures])
@@ -252,7 +262,22 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   }, [playing, stock])
 
   if (!tl.segs.length)
-    return <p className="rounded-md border border-white/10 bg-white/5 p-6 text-center text-sm text-stone-400">No toolpaths to simulate. Add operations on the Machining tab.</p>
+    return (
+      <div className="rounded-md border border-white/10 bg-white/5 p-6 text-center text-sm text-stone-400">
+        {pending.length ? (
+          <ul className="flex flex-col items-center gap-1" data-testid="sim-pending">
+            {pending.map((p) => (
+              <li key={p.id} className="flex items-center gap-1.5">
+                {p.calculating && <Loader2 className="size-3.5 animate-spin" />}
+                {p.name}: {p.why}.
+              </li>
+            ))}
+          </ul>
+        ) : (
+          'No toolpaths to simulate. Add operations on the Machining tab.'
+        )}
+      </div>
+    )
 
   const pos = positionAt(tl, t)
   const cur = pos.seg >= 0 ? tl.segs[pos.seg] : null
@@ -261,11 +286,13 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
   const where = moveAt(tl, t)
 
   const play = () => {
+    setTouched(true)
     setStopped(null)
     if (t >= tl.total) setT(0)
     setPlaying((p) => !p)
   }
   const jump = (to: number) => {
+    setTouched(true)
     setPlaying(false)
     setStopped(null)
     setT(Math.max(0, Math.min(tl.total, to)))
@@ -286,6 +313,7 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
       return
     }
     if (play && end > t) {
+      setTouched(true)
       setMark(end)
       setStopped(null)
       setPlaying(true)
@@ -418,6 +446,11 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           <span className="w-24 text-right font-mono text-xs text-stone-300 tabular-nums">
             {clock(t)} / {clock(tl.total)}
           </span>
+          {/* Polish-1: a clear running indicator, with how far through the program it is */}
+          <span className={cn('flex items-center gap-1 font-mono text-[11px] tabular-nums', playing ? 'text-emerald-300' : 'text-stone-400')} data-testid="sim-progress">
+            {playing && <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />}
+            {playing ? `Playing ${speed}×` : t >= tl.total - 1e-9 ? 'End' : 'Paused'} · {tl.total > 0 ? Math.round((t / tl.total) * 100) : 0} %{op && t < tl.total - 1e-9 ? ` · ${op.name}` : ''}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-stone-300">
           <SpeedSelect label="Cutting" value={speed} options={SPEEDS} onChange={setSpeed} />
@@ -449,6 +482,16 @@ function Simulator({ part, toolpaths, machine, units, color }: { part: CamPart; 
           </span>
           {stopped && <span className="text-amber-200">{STOP_TEXT[stopped]}</span>}
         </div>
+        {pending.length > 0 && (
+          <ul className="flex flex-col gap-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-100" data-testid="sim-pending">
+            {pending.map((p) => (
+              <li key={p.id} className="flex items-center gap-1.5">
+                {p.calculating && <Loader2 className="size-3 animate-spin" />}
+                <span className="font-medium">{p.name}</span>: not in the simulation yet, {p.why}.
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex flex-wrap gap-x-5 gap-y-1 rounded-md bg-black/30 px-3 py-1.5 font-mono text-xs text-stone-300 tabular-nums">
           {rot ? (
             <>

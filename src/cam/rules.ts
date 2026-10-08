@@ -70,9 +70,20 @@ export interface RuleReport {
   ruleId: string
   layer: string
   recipe: string
+  /**
+   * Polish-1: what the layer gets, for the import report. With a depth from the layer name, the
+   * recipe's own default size is dropped ("Drill 13 mm" on DRILL_12 is "Drill", 12 mm deep), so
+   * the report never shows two different depths.
+   */
+  label: string
   shapes: number
   ops: number
   depth?: number
+}
+
+/** "Drill 13 mm" -> "Drill"; "Pocket 6 mm" -> "Pocket"; names without a trailing size are kept. */
+export function recipeLabel(recipe: string, depthFromName: boolean) {
+  return depthFromName ? recipe.replace(/\s+\d+(?:[.,]\d+)?\s*(?:mm|in|")\s*$/i, '').trim() || recipe : recipe
 }
 
 export interface ApplyResult {
@@ -131,7 +142,7 @@ export function applyRules(input: CamPart, set: LayerRuleSet, recipes: Recipe[])
         made.push({ op, rank: KIND_ORDER[op.kind], ruleOrder: r.order })
         count++
       }
-      report.push({ ruleId: r.id, layer, recipe: recipe.name, shapes: group.length, ops: count, ...(depth !== null ? { depth } : {}) })
+      report.push({ ruleId: r.id, layer, recipe: recipe.name, label: recipeLabel(recipe.name, depth !== null), shapes: group.length, ops: count, ...(depth !== null ? { depth } : {}) })
     }
   }
 

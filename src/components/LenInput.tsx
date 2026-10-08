@@ -24,6 +24,13 @@ export function LenInput({ value, units, onChange, label, plain, optional, class
       placeholder={optional ? 'none' : 'needed'}
       onChange={(e) => setText(e.target.value)}
       onBlur={() => onChange(parsed ?? NaN)}
+      // Polish-1: Enter applies the value too (not only Tab or leaving the field)
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          onChange(parsed ?? NaN)
+        }
+      }}
       className={cn('h-7 w-[4.5rem] px-1.5 text-xs tabular-nums', className)}
     />
   )

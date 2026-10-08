@@ -1,7 +1,7 @@
 import { Eye, EyeOff, Lock, Plus, Trash2, Unlock } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { moveToLayer, setArcRadius, toggleArc, insertNode, deleteNode, nodesOf } from '@/cam/cad'
-import { entityContours, fitWorkVolume, partOutline } from '@/cam/doc'
+import { entityContours, fitWorkVolume, partOutline, resizePart } from '@/cam/doc'
 import { evaluate, resolveVariables } from '@/cam/expr'
 import { area, boxOf, contourLength, radius } from '@/cam/geom'
 import type { CamPart, Entity, FaceId, Layer, LineType, StrokeFont } from '@/cam/types'
@@ -118,8 +118,8 @@ export function PropertiesPanel({
         <h4 className="mb-2 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">Part</h4>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
           <TextField className="col-span-2" label="Name" value={part.name} onChange={(v) => onChange({ ...part, name: v })} />
-          <NumField label="Length (X)" value={part.length} min={1} onChange={(v) => onChange({ ...part, length: v })} />
-          <NumField label="Width (Y)" value={part.width} min={1} onChange={(v) => onChange({ ...part, width: v })} />
+          <NumField label="Length (X)" value={part.length} min={1} onChange={(v) => onChange(resizePart(part, { length: v }))} />
+          <NumField label="Width (Y)" value={part.width} min={1} onChange={(v) => onChange(resizePart(part, { width: v }))} />
           <NumField label="Thickness" value={part.thickness} min={1} onChange={(v) => onChange({ ...part, thickness: v })} />
           <NumField label="Quantity" suffix="pcs" value={part.qty} min={1} onChange={(v) => onChange({ ...part, qty: Math.max(1, Math.round(v)) })} />
           <SelectField

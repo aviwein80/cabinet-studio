@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { makeEntity, newPart } from '../src/cam/doc'
+import { cutFreeEarly, enclosedShapes, makeEntity, moveCutOutsLast, newPart, resizePart } from '../src/cam/doc'
 import { pt, rect } from '../src/cam/geom'
+import { simpleMoves } from '../src/cam/moves'
+import { applyRules, BUILTIN_RECIPES, BUILTIN_RULESETS, recipeLabel } from '../src/cam/rules'
+import { pendingOps } from '../src/cam/sim'
+import type { PocketOp } from '../src/cam/types'
 import { writePartMpr } from '../src/cam/mpr'
 import { readMpr } from '../src/cam/mprRead'
 import { defaultOp } from '../src/cam/ops'
-import { generatePart } from '../src/cam/toolpath'
+import { generateOp, generatePart } from '../src/cam/toolpath'
 import { toolUnconfirmed } from '../src/core/confirm'
 import { generateCarcass } from '../src/core/construction/carcass'
 import { elevationLabels, labelWidth } from '../src/core/elevation'
@@ -321,5 +325,97 @@ describe('Polish-1 cabinets and room', () => {
     expect(readerInUse({ provider: 'anthropic' }, { anthropic: { saved: true } })).toBe('anthropic')
     expect(readerInUse({ provider: 'off' }, { anthropic: { saved: true } })).toBe('off')
     expect(readerInUse(undefined, { anthropic: { saved: true } })).toBe('anthropic')
+  })
+})
+
+describe('Polish-1 custom parts (CAM)', () => {
+  const m = clone(PLACEHOLDER_MACHINE)
+
+  it('17: changing the length or width of a new part resizes its starting rectangle; a drawn outline is kept', () => {
+    const p = newPart()
+    const wider = resizePart(resizePart(p, { length: 900 }), { width: 500 })
+    expect([wider.length, wider.width]).toEqual([900, 500])
+    const o = wider.entities.find((e) => e.id === p.outlineId)!
+    expect(o.g).toEqual({ t: 'contour', c: rect(0, 0, 900, 500) })
+    // the outline keeps its id, so an operation on it keeps working
+    expect(wider.outlineId).toBe(p.outlineId)
+    // a drawn (non-starting) outline is left alone
+    const drawn = { ...p, entities: [makeEntity({ t: 'contour', c: rect(10, 10, 300, 200) }, 'outline')] }
+    drawn.outlineId = drawn.entities[0].id
+    expect(resizePart(drawn, { length: 900 }).entities[0].g).toEqual(drawn.entities[0].g)
+  })
+
+  /** A 600 x 400 panel with a pocket round a drawn (unpicked) square, a hole, and the cut-out. */
+  function panel(order: 'cut-first' | 'cut-last') {
+    const p = newPart({ length: 600, width: 400, thickness: 19 })
+    const pocket = makeEntity({ t: 'contour', c: rect(100, 100, 200, 150) }, 'outline')
+    const island = makeEntity({ t: 'contour', c: rect(170, 145, 60, 60) }, 'outline')
+    const hole = makeEntity({ t: 'circle', c: pt(450, 200), r: 4 }, 'holes')
+    p.entities.push(pocket, island, hole)
+    const cut = defaultOp('profile', [p.outlineId!], { name: 'Cut out', levels: { safeZ: 20, rapidZ: 3, depth: 0, through: true, stockZ: 0, passDepth: 0 } } as never)
+    const pk = defaultOp('pocket', [pocket.id], { name: 'Pocket', levels: { safeZ: 20, rapidZ: 3, depth: 6, through: false, stockZ: 0, passDepth: 0 } } as never)
+    const dr = defaultOp('drill', [hole.id], { name: 'Drill' } as never)
+    p.ops = order === 'cut-first' ? [cut, pk, dr] : [dr, pk, cut]
+    return { p, pocket, island, cut, pk }
+  }
+
+  it('18: a cut-out ahead of a pocket is flagged and "Move cut-out last" fixes it; drilling never counts', () => {
+    const bad = panel('cut-first')
+    const early = cutFreeEarly(bad.p)
+    expect(early.map((e) => [e.cut.name, e.after.map((a) => a.name)])).toEqual([['Cut out', ['Pocket']]])
+    const fixed = { ...bad.p, ops: moveCutOutsLast(bad.p) }
+    expect(fixed.ops.map((o) => o.name)).toEqual(['Pocket', 'Drill', 'Cut out'])
+    expect(cutFreeEarly(fixed)).toEqual([])
+    expect(cutFreeEarly(panel('cut-last').p)).toEqual([])
+    // the export checker says so too
+    const d = data()
+    d.settings.features = { ...d.settings.features, camMprOutput: true } as typeof d.settings.features
+    const j: Job = { ...job([]), camParts: [{ ...bad.p, materialId: 'mat-mdf18' }] }
+    const w = runJob(j, d).issues.filter((i) => i.code === 'CAM_TOOLPATH' && /cuts the part free before Pocket/.test(i.message))
+    expect(w).toHaveLength(1)
+    expect(w[0].severity).toBe('warning')
+  })
+
+  it('19: a closed shape drawn inside a pocket stays standing when the toggle is on; off, it is cut with a warning', () => {
+    const { p, pk, island } = panel('cut-last')
+    expect(enclosedShapes(pk, p).map((x) => x.e.id)).toEqual([island.id])
+    const inIsland = (tp: ReturnType<typeof generateOp>) => [...simpleMoves(tp.moves)].some((mv) => mv.z < -0.01 && mv.x > 172 && mv.x < 228 && mv.y > 147 && mv.y < 203)
+    const off = generateOp({ ...pk, enclosedIslands: false } as PocketOp, { part: p, machine: m })
+    expect(off.warnings.join(' ')).toMatch(/1 closed shape\(s\) inside the pocket are not picked/)
+    expect(inIsland(off)).toBe(true)
+    const on = generateOp({ ...pk, enclosedIslands: true } as PocketOp, { part: p, machine: m })
+    expect(on.warnings.join(' ')).not.toMatch(/not picked/)
+    expect(inIsland(on)).toBe(false)
+    // a shape another operation uses (a hole to drill) is never an island
+    p.ops.push(defaultOp('drill', [island.id]))
+    expect(enclosedShapes(pk, p)).toEqual([])
+    // shapes every operation already uses are never islands, even inside a pocket on the outline
+    expect(enclosedShapes({ ...pk, geometry: [p.outlineId!] }, p)).toEqual([])
+  })
+
+  it('21: a DRILL_12 layer reports "Drill", 12 mm deep, not the recipe\'s 13 mm', () => {
+    expect(recipeLabel('Drill 13 mm', true)).toBe('Drill')
+    expect(recipeLabel('Drill 13 mm', false)).toBe('Drill 13 mm')
+    expect(recipeLabel('Pocket rough + finish wall', true)).toBe('Pocket rough + finish wall')
+    const p = newPart({ length: 300, width: 200, thickness: 19 })
+    p.layers.push({ id: 'l-d12', name: 'DRILL_12', color: '#f00', visible: true, locked: false } as never)
+    p.entities.push(makeEntity({ t: 'circle', c: pt(50, 50), r: 4 }, 'l-d12'))
+    const r = applyRules(p, BUILTIN_RULESETS[0], BUILTIN_RECIPES)
+    const row = r.report.find((x) => x.layer === 'DRILL_12')!
+    expect(row).toMatchObject({ recipe: 'Drill 13 mm', label: 'Drill', depth: 12 })
+    expect(r.part.ops.find((o) => o.kind === 'drill')!.levels.depth).toBe(12)
+  })
+
+  it('22: the simulator lists operations still calculating (relief roughing) instead of dropping them', () => {
+    const ops = [
+      { id: 'r', name: 'Relief roughing: Rose', enabled: true },
+      { id: 'f', name: 'Relief finishing: Rose', enabled: true },
+      { id: 'x', name: 'Off', enabled: false },
+    ]
+    const tp = (id: string, moves: number, warnings: string[] = []) => ({ opId: id, kind: 'rough3d', name: id, tool: null, feeds: { rpm: 0, feed: 0, plunge: 0 }, moves: Array.from({ length: moves }, () => ({ x: 0, y: 0, z: 0 })), intents: [], warnings, stats: { cut: 0, rapid: 0, minutes: 0 } }) as never
+    const pending = pendingOps(ops, [tp('r', 0, ['Calculating in the background…']), tp('f', 3)], new Map([['r', { fraction: 0.42, note: 'Roughing' }]]))
+    expect(pending).toEqual([{ id: 'r', name: 'Relief roughing: Rose', why: 'still calculating (42 %, roughing); it joins the simulation when ready', calculating: true }])
+    expect(pendingOps(ops, [tp('r', 0, ['No tool']), tp('f', 3)])).toEqual([{ id: 'r', name: 'Relief roughing: Rose', why: 'No tool', calculating: false }])
+    expect(pendingOps(ops, [tp('r', 2), tp('f', 3)])).toEqual([])
   })
 })

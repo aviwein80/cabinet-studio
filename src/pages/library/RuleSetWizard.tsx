@@ -176,8 +176,8 @@ export function RuleSetWizard({ open, onOpenChange, onCreated }: { open: boolean
               </p>
               {preview.report.map((r, i) => (
                 <p key={i} className="text-muted-foreground">
-                  {r.layer}: {r.shapes} shape{r.shapes === 1 ? '' : 's'} → {r.recipe}
-                  {r.depth !== undefined ? ` ${r.depth} mm` : ''}
+                  {r.layer}: {r.shapes} shape{r.shapes === 1 ? '' : 's'} → {r.label}
+                  {r.depth !== undefined ? `, ${r.depth} mm deep from the layer name` : ''}
                 </p>
               ))}
               {preview.unmatched.length > 0 && <p className="text-amber-800">No rule (not machined): {preview.unmatched.map((u) => `${u.layer} (${u.shapes})`).join(', ')}</p>}

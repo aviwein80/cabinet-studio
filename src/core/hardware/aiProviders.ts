@@ -69,6 +69,19 @@ export interface AiSettings {
  */
 export const DEFAULT_AI: AiSettings = { provider: "anthropic", models: {} };
 
+/**
+ * Polish-1: the reader drafts really go to. The chosen provider only when its key is saved on this
+ * computer; otherwise the built-in offline reader ("off"). `keys` unknown (still loading) counts as
+ * no key, so the screen never says a provider is in use before that is known.
+ */
+export function readerInUse(
+  s: AiSettings | undefined,
+  keys: Partial<Record<AiProviderId, { saved: boolean }>> | null | undefined,
+): AiProviderId | "off" {
+  const p = (s ?? DEFAULT_AI).provider;
+  return p !== "off" && keys?.[p]?.saved ? p : "off";
+}
+
 export const modelOf = (s: AiSettings | undefined, id: AiProviderId) =>
   s?.models?.[id]?.trim() || providerInfo(id).defaultModel;
 

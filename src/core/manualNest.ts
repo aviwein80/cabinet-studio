@@ -83,6 +83,7 @@ export function applySavedNest(saved: SavedNest, instances: PartInstance[], lib:
       utilization: Math.round((area / (s.sheetLength * s.sheetWidth)) * 1000) / 10,
       ...(s.offcutId ? { offcutId: s.offcutId } : {}),
       ...(s.flip ? { flip: { ...s.flip } } : {}),
+      manual: true,
       remnants: remnantsOf({ length: s.sheetLength, width: s.sheetWidth }, placements, { spacing: nestSpacing(machine, settings), offcutType: ns.offcutType, offcutMin: { length: ns.offcutMinLength, width: ns.offcutMinWidth } }),
     })
   }

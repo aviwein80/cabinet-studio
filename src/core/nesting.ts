@@ -71,6 +71,8 @@ export interface NestedSheet {
   remnants?: Remnant[]
   /** Flip-side sheet (M2.8): parts with underside work; the sheet as it comes and how it is turned. */
   flip?: FlipInfo
+  /** Laid out by hand (M2.8 manual nesting); absent = nested automatically (Polish-1: per sheet). */
+  manual?: boolean
 }
 
 export interface StockOffcut {

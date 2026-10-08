@@ -1,10 +1,30 @@
 import { Edges, OrbitControls } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
-import { useMemo } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { useEffect, useMemo, useRef } from 'react'
 import { toWorld } from '@/core/geometry'
 import type { Library, Part, Vec3 } from '@/core/types'
+import { refitCamera } from './viewerFit'
 
 const S = 0.001
+
+/** Polish-1: re-centre the camera when the framed size changes (the Canvas only reads `camera` once). */
+function Refit({ target, size }: { target: [number, number, number]; size: number }) {
+  const camera = useThree((st) => st.camera)
+  const controls = useThree((st) => st.controls) as unknown as { target: { set: (x: number, y: number, z: number) => void }; update: () => void } | null
+  const last = useRef<{ target: [number, number, number]; size: number } | null>(null)
+  const [tx, ty, tz] = target
+  useEffect(() => {
+    const prev = last.current
+    const next = { target: [tx, ty, tz] as [number, number, number], size }
+    last.current = next
+    if (!prev || (prev.size === size && prev.target.every((v, i) => v === next.target[i]))) return
+    const p = refitCamera([camera.position.x, camera.position.y, camera.position.z], prev, next)
+    camera.position.set(p[0], p[1], p[2])
+    controls?.target.set(tx, ty, tz)
+    controls?.update()
+  }, [camera, controls, tx, ty, tz, size])
+  return null
+}
 
 /** Cabinet coordinates (Z up, Y = depth) -> three.js (Y up, -Z = away from viewer). */
 const T = (p: Vec3): [number, number, number] => [p[0] * S, p[2] * S, -p[1] * S]
@@ -186,6 +206,7 @@ export function Viewer3D({
           )
         })}
       <OrbitControls target={target} makeDefault enableDamping={false} />
+      <Refit target={target} size={size} />
     </Canvas>
   )
 }

@@ -127,3 +127,31 @@ export function placementFromElevation(pl: CabinetPlacement, width: number, dept
   else next.y = alongX
   return next
 }
+
+/** Rough width of a label in the drawing's sans font: about 0.58 of the font size per character. */
+export const labelWidth = (text: string, size: number) => text.length * size * 0.58
+
+/** A font size no larger than `size` at which `text` fits in `room` (never below a third of `size`). */
+export function fitSize(text: string, size: number, room: number) {
+  const w = labelWidth(text, size)
+  return w <= room ? size : Math.max(size / 3, (size * room) / w)
+}
+
+/**
+ * Polish-1: the size labels in a cabinet's elevation box, kept inside the box so neighbours' labels
+ * never collide (18-19-1/2 in cabinets had "30" floor 54"" running into the next one). The width
+ * sits at the top; the height, and the height off the floor for raised cabinets, at the bottom
+ * right on one line when it fits, else stacked on two, each line shrunk to the box if needed.
+ * `y` is up from the bottom of the box.
+ */
+export function elevationLabels(item: Pick<ElevationCabinet, 'w' | 'h' | 'z'>, font: number, fmt: (mm: number) => string) {
+  const room = item.w * 0.92
+  const small = font * 0.7
+  const width = { text: fmt(item.w), size: fitSize(fmt(item.w), small, room) }
+  const h = fmt(item.h)
+  const floor = item.z > 1 ? `floor ${fmt(item.z)}` : ''
+  const one = floor ? `${h}  ${floor}` : h
+  const lines = labelWidth(one, small) <= room || !floor ? [one] : [h, floor]
+  const size = Math.min(...lines.map((l) => fitSize(l, small, room)))
+  return { width, size, lines: lines.map((text, i) => ({ text, y: size * (0.35 + (lines.length - 1 - i) * 1.15) })) }
+}

@@ -461,7 +461,8 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
           <div className="flex items-center gap-4">
             {additions && (
               <div className="flex items-center gap-1">
-                {job.nestEdit && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-900">laid out by hand</span>}
+                {job.nestEdit && sh.manual && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-900">laid out by hand</span>}
+                {job.nestEdit && !sh.manual && <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-700">nested automatically</span>}
                 <Button size="xs" variant="outline" onClick={() => setEditing(true)}>
                   <Pencil /> Edit layout
                 </Button>

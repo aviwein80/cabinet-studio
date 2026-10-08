@@ -6,7 +6,7 @@ import { MAIN_MACHINE, newMachineSetup, profileOf } from '@/core/machines'
 import { checkPassword } from '@/core/admin'
 import { sampleJob } from '@/core/sample'
 import { normalizeData } from '@/core/normalize'
-import { DEFAULT_ROOM } from '@/core/room'
+import { DEFAULT_ROOM, pushNeighbours } from '@/core/room'
 import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, MachineSetup, ShopSettings } from '@/core/types'
 import { draftBlock } from '@/core/spec/draft'
@@ -242,7 +242,10 @@ export const useStore = create<State>((set, get) => {
     updateCabinet(jobId, cab) {
       mutate((d) =>
         touchJob(d, jobId, (j) => {
+          const old = j.cabinets.find((c) => c.id === cab.id)?.params.width
           j.cabinets = j.cabinets.map((c) => (c.id === cab.id ? clone(cab) : c))
+          // Polish-1: a wider (or narrower) placed cabinet moves its neighbours along the run
+          if (old !== undefined && old !== cab.params.width) pushNeighbours(j.cabinets, cab.id, old, { ...DEFAULT_ROOM, ...(j.room ?? {}) })
         }),
       )
     },

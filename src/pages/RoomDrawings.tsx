@@ -2,7 +2,7 @@ import type { PointerEvent } from 'react'
 import { footprint } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, Room, UnitSystem } from '@/core/types'
-import { wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
+import { elevationLabels, fitSize, wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
 
 function upright(y: number) {
   return `translate(0 ${2 * y}) scale(1 -1)`
@@ -119,23 +119,26 @@ export function ElevationView({
         {items.map((item) => {
           const on = item.id === selected
           const inset = Math.min(item.w, item.h) * 0.02
+          const labels = elevationLabels(item, font, (mm) => formatLength(mm, units))
+          const nameText = `${item.number}${item.faces ? '' : ' back'}`
+          const nameSize = fitSize(nameText, font, item.w * 0.92)
           return (
             <g key={item.id} className="cursor-grab" onPointerDown={(e) => onDown(e, item.id)}>
               <rect x={item.x} y={item.z} width={item.w} height={item.h} fill={item.faces ? '#fafaf9' : '#d6d3d1'} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
               {item.divisions.map((div, i) => (
                 <rect key={i} x={item.x + div.u0 * item.w + inset} y={div.z0 + inset} width={Math.max(1, (div.u1 - div.u0) * item.w - 2 * inset)} height={Math.max(1, div.z1 - div.z0 - 2 * inset)} fill={FILL[div.kind]} stroke="#44403c" strokeWidth={stroke} />
               ))}
-              <text x={item.x + item.w / 2} y={item.z + item.h * 0.55} textAnchor="middle" fontSize={font} fill="#1c1917" transform={upright(item.z + item.h * 0.55)}>
-                {item.number}
-                {item.faces ? '' : ' back'}
+              <text x={item.x + item.w / 2} y={item.z + item.h * 0.55} textAnchor="middle" fontSize={nameSize} fill="#1c1917" transform={upright(item.z + item.h * 0.55)}>
+                {nameText}
               </text>
-              <text x={item.x + item.w / 2} y={item.z + item.h - font * 0.35} textAnchor="middle" fontSize={font * 0.7} fill="#57534e" transform={upright(item.z + item.h - font * 0.35)}>
-                {formatLength(item.w, units)}
+              <text x={item.x + item.w / 2} y={item.z + item.h - labels.width.size * 0.5} textAnchor="middle" fontSize={labels.width.size} fill="#57534e" transform={upright(item.z + item.h - labels.width.size * 0.5)}>
+                {labels.width.text}
               </text>
-              <text x={item.x + item.w - font * 0.2} y={item.z + font * 0.35} textAnchor="end" fontSize={font * 0.7} fill="#57534e" transform={upright(item.z + font * 0.35)}>
-                {formatLength(item.h, units)}
-                {item.z > 1 ? `  floor ${formatLength(item.z, units)}` : ''}
-              </text>
+              {labels.lines.map((l) => (
+                <text key={l.text} x={item.x + item.w - font * 0.15} y={item.z + l.y} textAnchor="end" fontSize={labels.size} fill="#57534e" transform={upright(item.z + l.y)}>
+                  {l.text}
+                </text>
+              ))}
             </g>
           )
         })}

@@ -26,6 +26,7 @@ import {
   type AiProviderInfo,
   DEFAULT_AI,
   modelOf,
+  readerInUse,
 } from "@/core/hardware/aiProviders";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,8 @@ export function SettingsPage() {
   const updateSettings = useStore((s) => s.updateSettings);
   const ai = data.settings.ai ?? DEFAULT_AI;
   const [keys, setKeys] = useState<AiKeyStatus | null>(null);
+  // Polish-1: what drafts really use (a chosen provider without a saved key falls back offline)
+  const inUse = readerInUse(ai, keys);
   useEffect(() => {
     void backend.ai.status().then(setKeys);
   }, []);
@@ -82,7 +85,11 @@ export function SettingsPage() {
               selected={ai.provider === "off"}
               onSelect={() => choose("off")}
               title="Built-in reader"
-              detail="Offline. Reads the PDF’s text only."
+              detail={
+                ai.provider !== "off" && inUse === "off"
+                  ? "In use until a key is saved. Offline, PDF text only."
+                  : "Offline. Reads the PDF’s text only."
+              }
             />
             {AI_PROVIDERS.map((p) => (
               <Choice
@@ -109,6 +116,7 @@ export function SettingsPage() {
                 key={p.id}
                 p={p}
                 active={ai.provider === p.id}
+                inUse={inUse === p.id}
                 model={ai.models?.[p.id] ?? ""}
                 effectiveModel={modelOf(ai, p.id)}
                 status={keys?.[p.id]}
@@ -177,6 +185,7 @@ function Choice({
 function ProviderCard({
   p,
   active,
+  inUse,
   model,
   effectiveModel,
   status,
@@ -185,6 +194,7 @@ function ProviderCard({
 }: {
   p: AiProviderInfo;
   active: boolean;
+  inUse: boolean;
   model: string;
   effectiveModel: string;
   status?: { saved: boolean; where: string };
@@ -229,7 +239,12 @@ function ProviderCard({
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          {p.label} {active && <Badge>In use</Badge>}
+          {p.label} {inUse && <Badge>In use</Badge>}
+          {active && !inUse && (
+            <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-300">
+              Chosen · no key, offline reader in use
+            </Badge>
+          )}
         </h3>
         <a
           href={p.keyUrl}

@@ -123,3 +123,86 @@ export function turned(rotation: CabinetPlacement['rotation']) {
 export const nextRotation = (r: CabinetPlacement['rotation']): CabinetPlacement['rotation'] => ((r + 90) % 360) as CabinetPlacement['rotation']
 
 export type { CarcassParams }
+
+type Box = { x: number; y: number; w: number; d: number; z0: number; z1: number }
+
+function boxOf(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement): Box {
+  const fp = footprint(c.params.width, c.params.depth, pl)
+  return { ...fp, z0: pl.z, z1: pl.z + c.params.height }
+}
+
+const TOUCH = 0.5
+
+/**
+ * Polish-1: a cabinet in the room changed width (from `oldWidth` to its current width). Its
+ * neighbours further along the same run (same turn, overlapping across the run and in height) that
+ * were butted against it, or that it now overlaps, move along by the change, one after another,
+ * so the run stays closed and nothing overlaps. Narrowing pulls the butted ones back. Only
+ * cabinets with a placement of their own are involved (an arranged layout reflows by itself).
+ * Returns the ids moved.
+ */
+export function pushNeighbours(cabinets: CabinetInstance[], id: string, oldWidth: number, room: Room): string[] {
+  const cab = cabinets.find((c) => c.id === id)
+  if (!cab?.placement || Math.abs(cab.params.width - oldWidth) < 1e-9) return []
+  const arranged = arrangeCabinets(
+    cabinets.map((c) => (c.id === id ? { ...c, params: { ...c.params, width: oldWidth } } : c)),
+    room,
+  )
+  const pl = cab.placement
+  const along = turned(pl.rotation) ? 'y' : 'x'
+  const across = along === 'x' ? 'y' : 'x'
+  const len = (b: Box) => (along === 'x' ? b.w : b.d)
+  const span = (b: Box) => (across === 'x' ? b.w : b.d)
+  const me = boxOf(cab, pl)
+  const run = cabinets
+    .filter((c) => c.id !== id)
+    .map((c) => ({ c, pl: placementOf(c, arranged) }))
+    .filter(({ c, pl: p }) => {
+      if (turned(p.rotation) !== turned(pl.rotation)) return false
+      const b = boxOf(c, p)
+      const crossOverlap = Math.min(b[across] + span(b), me[across] + span(me)) - Math.max(b[across], me[across]) > TOUCH
+      const zOverlap = Math.min(b.z1, me.z1) - Math.max(b.z0, me.z0) > TOUCH
+      return crossOverlap && zOverlap && b[along] > me[along] + TOUCH
+    })
+    .sort((a, b) => a.pl[along] - b.pl[along])
+  let endOld = me[along] + (oldWidth - cab.params.width) + len(me)
+  let endNew = me[along] + len(me)
+  const moved: string[] = []
+  for (const { c, pl: p } of run) {
+    const b = boxOf(c, p)
+    const start = b[along]
+    const butted = Math.abs(start - endOld) <= TOUCH
+    const overlapped = start < endNew - TOUCH
+    if (!butted && !overlapped) break
+    const shift = endNew - start
+    endOld = start + len(b)
+    if (Math.abs(shift) < 1e-9) {
+      endNew = endOld
+      continue
+    }
+    c.placement = { ...p, [along]: p[along] + shift }
+    endNew = start + shift + len(b)
+    moved.push(c.id)
+  }
+  return moved
+}
+
+/**
+ * Polish-1: what in the room needs attention: cabinets whose boxes overlap (pairs of ids), and
+ * cabinets that run past a wall. Shown in the room so an overlap is never silent.
+ */
+export function roomProblems(cabinets: CabinetInstance[], room: Room, place: (c: CabinetInstance) => CabinetPlacement) {
+  const boxes = cabinets.map((c) => ({ c, b: boxOf(c, place(c)) }))
+  const overlaps: [string, string][] = []
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i].b
+      const b = boxes[j].b
+      const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+      const oy = Math.min(a.y + a.d, b.y + b.d) - Math.max(a.y, b.y)
+      const oz = Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0)
+      if (ox > TOUCH && oy > TOUCH && oz > TOUCH) overlaps.push([boxes[i].c.id, boxes[j].c.id])
+    }
+  const outside = boxes.filter(({ b }) => b.x < -TOUCH || b.y < -TOUCH || b.x + b.w > room.width + TOUCH || b.y + b.d > room.depth + TOUCH).map(({ c }) => c.id)
+  return { overlaps, outside }
+}

@@ -7,11 +7,17 @@ import { defaultOp } from '../src/cam/ops'
 import { generatePart } from '../src/cam/toolpath'
 import { toolUnconfirmed } from '../src/core/confirm'
 import { generateCarcass } from '../src/core/construction/carcass'
+import { elevationLabels, labelWidth } from '../src/core/elevation'
+import { readerInUse } from '../src/core/hardware/aiProviders'
+import { layoutOf } from '../src/core/manualNest'
+import { arrangeCabinets, placementOf, pushNeighbours, roomProblems, DEFAULT_ROOM } from '../src/core/room'
+import { sampleJob } from '../src/core/sample'
+import { refitCamera } from '../src/components/viewerFit'
 import { defaultAppData, defaultLibrary, PLACEHOLDER_MACHINE } from '../src/core/defaults'
 import { DRILL_TOLERANCE, findDrill } from '../src/core/machining'
 import { normalizeData } from '../src/core/normalize'
 import { mprFiles, runJob } from '../src/core/pipeline'
-import type { AppData, Job } from '../src/core/types'
+import type { AppData, CabinetInstance, Job } from '../src/core/types'
 import { importEdgebands, importMaterials, importTemplates, importTools, parseCsv } from '../src/core/library/import'
 import { formatDims, offcutSize, parseLength, sizedName, toMm } from '../src/core/units'
 import { cabinet, clone, data, job } from './helpers'
@@ -219,5 +225,101 @@ describe('Polish-1 drilling and output', () => {
     // an 18 mm box material chosen on purpose is still warned about, by name
     const thick = cabinet('tpl-base-drawers', (p) => (p.drawers.boxMaterialId = 'mat-mdf18'))
     expect(generateCarcass(thick.params, lib).warnings.find((w) => /TANDEM/.test(w))).toMatch(/18 mm drawer-box board \(MDF18\)/)
+  })
+})
+
+describe('Polish-1 cabinets and room', () => {
+  /** B1 600, B2 450, B3 800 along the back wall, then W1 600 above; all placed (after "Arrange"). */
+  function arrangedRun() {
+    const cabs: CabinetInstance[] = [
+      cabinet('tpl-base-2door', () => {}, 'b1', 'B1'),
+      cabinet('tpl-base-1door', () => {}, 'b2', 'B2'),
+      cabinet('tpl-sink-base', () => {}, 'b3', 'B3'),
+      cabinet('tpl-wall-2door', () => {}, 'w1', 'W1'),
+    ]
+    const laid = arrangeCabinets(cabs, DEFAULT_ROOM)
+    for (const c of cabs) c.placement = laid[c.id]
+    return cabs
+  }
+  const at = (cabs: CabinetInstance[], id: string) => cabs.find((c) => c.id === id)!.placement!
+
+  it('12: widening a placed cabinet pushes its neighbours along the run; narrowing pulls them back; never overlaps', () => {
+    const cabs = arrangedRun()
+    expect(roomProblems(cabs, DEFAULT_ROOM, (c) => placementOf(c, {})).overlaps).toEqual([])
+    const b2 = cabs.find((c) => c.id === 'b2')!
+    b2.params.width = 600
+    expect(roomProblems(cabs, DEFAULT_ROOM, (c) => placementOf(c, {})).overlaps).toEqual([['b2', 'b3']])
+    expect(pushNeighbours(cabs, 'b2', 450, DEFAULT_ROOM)).toEqual(['b3'])
+    expect(at(cabs, 'b3').x).toBe(1200)
+    expect(at(cabs, 'b1').x).toBe(0)
+    // the wall cabinet above is another run (different height band): not moved
+    expect(at(cabs, 'w1').x).toBe(0)
+    expect(roomProblems(cabs, DEFAULT_ROOM, (c) => placementOf(c, {})).overlaps).toEqual([])
+    // narrowing keeps the run closed
+    b2.params.width = 400
+    pushNeighbours(cabs, 'b2', 600, DEFAULT_ROOM)
+    expect(at(cabs, 'b3').x).toBe(1000)
+    // a cabinet standing apart (gap) is left alone when there is room
+    at(cabs, 'b3').x = 1500
+    b2.params.width = 500
+    expect(pushNeighbours(cabs, 'b2', 400, DEFAULT_ROOM)).toEqual([])
+    expect(at(cabs, 'b3').x).toBe(1500)
+  })
+
+  it('12: an overlap or a cabinet past a wall is always reported', () => {
+    const cabs = arrangedRun()
+    at(cabs, 'b3').x = 3200
+    const p = roomProblems(cabs, DEFAULT_ROOM, (c) => placementOf(c, {}))
+    expect(p.outside).toEqual(['b3'])
+  })
+
+  it('13: elevation labels stay inside narrow cabinets (18 in, raised 54 in) instead of colliding', () => {
+    const font = 3657.6 / 36
+    const fmt = (mm: number) => formatDims([mm], 'in')
+    for (const w of [toMm(18), toMm(19.5)]) {
+      const item = { w, h: toMm(30), z: toMm(54) }
+      const l = elevationLabels(item, font, fmt)
+      expect(l.lines.map((x) => x.text)).toEqual(['30"', 'floor 54"'])
+      for (const line of l.lines) expect(labelWidth(line.text, l.size)).toBeLessThanOrEqual(item.w * 0.92 + 1e-9)
+      expect(labelWidth(l.width.text, l.width.size)).toBeLessThanOrEqual(item.w * 0.92 + 1e-9)
+      // stacked, not on top of each other
+      expect(l.lines[0].y - l.lines[1].y).toBeGreaterThanOrEqual(l.size)
+    }
+    // a wide cabinet keeps one line at the full size
+    const wide = elevationLabels({ w: toMm(36), h: toMm(30), z: toMm(54) }, font, fmt)
+    expect(wide.lines.map((x) => x.text)).toEqual(['30"  floor 54"'])
+    expect(wide.size).toBeCloseTo(font * 0.7, 9)
+  })
+
+  it('14: the 3D view re-centres on a size change, keeping its angle', () => {
+    const prev = { target: [0.225, 0.435, -0.28] as [number, number, number], size: 0.87 }
+    const cam: [number, number, number] = [prev.target[0] + 1, prev.target[1] + 0.5, prev.target[2] + 1.5]
+    const next = { target: [0.6, 0.435, -0.28] as [number, number, number], size: 1.2 }
+    const p = refitCamera(cam, prev, next)
+    const k = 1.2 / 0.87
+    expect(p[0] - next.target[0]).toBeCloseTo(1 * k, 9)
+    expect(p[1] - next.target[1]).toBeCloseTo(0.5 * k, 9)
+    expect(p[2] - next.target[2]).toBeCloseTo(1.5 * k, 9)
+  })
+
+  it('15: only sheets laid out by hand are marked so; sheets the nester added are not', () => {
+    const d = data()
+    const base: Job = { ...sampleJob(), id: 'j', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }
+    const auto = runJob(base, d)
+    expect(auto.nest.sheets.some((s) => s.manual)).toBe(false)
+    // keep only the first sheet's layout: the rest are nested automatically
+    const saved = { savedAt: '2026-10-06T09:00:00.000Z', sheets: layoutOf(auto.nest).slice(0, 1) }
+    const out = runJob({ ...base, nestEdit: saved }, d)
+    expect(out.nest.sheets.map((s) => !!s.manual)).toEqual([true, ...out.nest.sheets.slice(1).map(() => false)])
+    expect(out.nest.sheets.length).toBeGreaterThan(1)
+  })
+
+  it('16: the spec-sheet reader says what is really in use', () => {
+    expect(readerInUse({ provider: 'anthropic' }, null)).toBe('off')
+    expect(readerInUse({ provider: 'anthropic' }, {})).toBe('off')
+    expect(readerInUse({ provider: 'anthropic' }, { anthropic: { saved: false } })).toBe('off')
+    expect(readerInUse({ provider: 'anthropic' }, { anthropic: { saved: true } })).toBe('anthropic')
+    expect(readerInUse({ provider: 'off' }, { anthropic: { saved: true } })).toBe('off')
+    expect(readerInUse(undefined, { anthropic: { saved: true } })).toBe('anthropic')
   })
 })

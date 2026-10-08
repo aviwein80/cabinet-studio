@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { buildCabinet } from '@/core/construction/carcass'
 import { WALLS, elevationOf, placementFromElevation, type WallId } from '@/core/elevation'
-import { arrangeCabinets, footprint, nextRotation, placementOf, snapPlacement, toRoom } from '@/core/room'
+import { arrangeCabinets, footprint, nextRotation, placementOf, pushNeighbours, roomProblems, snapPlacement, toRoom } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Part, Room } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -100,6 +100,14 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
 
   const sel = job.cabinets.find((c) => c.id === selected) ?? null
   const elev = elevationOf(job.cabinets, room, wall, place)
+  // Polish-1: overlaps and cabinets past a wall are always shown, with a way to fix them
+  const problems = roomProblems(job.cabinets, room, place)
+  const numberOf = (id: string) => job.cabinets.find((c) => c.id === id)?.number ?? '?'
+  const rearrange = () =>
+    setJob((j) => {
+      const laid = arrangeCabinets(j.cabinets, j.room ?? room)
+      for (const c of j.cabinets) if (laid[c.id]) c.placement = laid[c.id]
+    })
 
   const targets = (id: string) =>
     job.cabinets.filter((o) => o.id !== id).map((o) => ({ ...footprint(o.params.width, o.params.depth, place(o)), z: place(o).z, h: o.params.height }))
@@ -195,19 +203,22 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
           <NumField label="Room width" value={room.width} min={600} max={12000} onChange={(v) => setRoom((r) => (r.width = v))} />
           <NumField label="Room depth" value={room.depth} min={600} max={12000} onChange={(v) => setRoom((r) => (r.depth = v))} />
           <NumField label="Wall height" value={room.height} min={1800} max={4000} onChange={(v) => setRoom((r) => (r.height = v))} />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              setJob((j) => {
-                const laid = arrangeCabinets(j.cabinets, j.room ?? room)
-                for (const c of j.cabinets) if (laid[c.id]) c.placement = laid[c.id]
-              })
-            }
-          >
+          <Button size="sm" variant="outline" onClick={rearrange}>
             Arrange along the back wall
           </Button>
         </div>
+        {(problems.overlaps.length > 0 || problems.outside.length > 0) && (
+          <div role="alert" className="flex flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+            <span>
+              {problems.overlaps.length > 0 && `${problems.overlaps.map(([a, b]) => `${numberOf(a)} and ${numberOf(b)}`).join(', ')} overlap. `}
+              {problems.outside.length > 0 && `${problems.outside.map(numberOf).join(', ')} ${problems.outside.length === 1 ? 'runs' : 'run'} past a wall. `}
+              Move them, or re-arrange the room.
+            </span>
+            <Button size="xs" variant="outline" onClick={rearrange}>
+              Re-arrange along the back wall
+            </Button>
+          </div>
+        )}
         <div className="relative min-h-0 flex-1 bg-[#f3f1ec]">
           {job.cabinets.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Add cabinets, then arrange them in the room.</div>
@@ -245,7 +256,22 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
             <p className="text-xs text-muted-foreground">
               {formatLength(sel.params.width, units)} × {formatLength(sel.params.height, units)} × {formatLength(sel.params.depth, units)}
             </p>
-            <NumField label="Width" value={sel.params.width} min={100} max={2400} onChange={(v) => setParams(sel.id, (p) => (p.width = v))} />
+            <NumField
+              label="Width"
+              value={sel.params.width}
+              min={100}
+              max={2400}
+              onChange={(v) =>
+                setJob((j) => {
+                  const c = j.cabinets.find((x) => x.id === sel.id)
+                  if (!c) return
+                  const old = c.params.width
+                  c.params.width = v
+                  // Polish-1: neighbours along the run move with it, so nothing overlaps
+                  pushNeighbours(j.cabinets, c.id, old, j.room ?? room)
+                })
+              }
+            />
             <NumField label="Height" value={sel.params.height} min={200} max={2800} onChange={(v) => setParams(sel.id, (p) => (p.height = v))} />
             <NumField label="Depth" value={sel.params.depth} min={100} max={900} onChange={(v) => setParams(sel.id, (p) => (p.depth = v))} />
             <SelectField

@@ -1,0 +1,95 @@
+1
+00:00:03,400 --> 00:00:19,254
+A real job: an L-shaped kitchen for Mia Novak, with a pie-cut corner. Click New job.
+
+2
+00:00:19,254 --> 00:00:31,171
+Add cabinets in walking order: the left wall first, from its front end to the corner.
+
+3
+00:00:31,171 --> 00:00:40,237
+Then the corner: the Pie-cut corner base preset is 36" along each wall.
+
+4
+00:00:40,237 --> 00:00:57,598
+Then the back wall, left to right: the 36" sink base, a 24" base and an 18" drawer base.
+
+5
+00:00:57,598 --> 00:01:00,563
+Six cabinets, B1 to B6. B3 is the pie-cut corner.
+
+6
+00:01:00,563 --> 00:01:13,348
+The room: 114" along the back wall, 108" down the left wall.
+
+7
+00:01:13,348 --> 00:01:22,179
+Arrange puts the pie-cut in the back-left corner and runs the other cabinets out from both legs.
+
+8
+00:01:22,179 --> 00:01:25,180
+The back run is exactly 114": 36 + 36 + 24 + 18. No gap, so no filler is needed.
+
+9
+00:01:25,180 --> 00:01:37,799
+In 3D, the L wraps the corner with one continuous countertop line.
+
+10
+00:01:37,799 --> 00:01:44,959
+Open the corner cabinet. Back on the Cabinets tab, click the pencil on B3.
+
+11
+00:01:44,959 --> 00:01:48,571
+Both legs are 36" long and 24" deep. Each leg has its own door, hung on Salice hinges.
+
+12
+00:01:48,571 --> 00:01:51,153
+Corner cleats are on: a small block under each L shelf's back corner, fixed on site.
+
+13
+00:01:51,153 --> 00:01:54,252
+The 6" x 2" cleat size has a Configure badge until the shop confirms it.
+
+14
+00:01:54,252 --> 00:01:58,919
+The parts table: bottom, top and shelf are L-shaped, banded on their inside edges L3 and W3.
+
+15
+00:01:58,919 --> 00:02:05,978
+The corner cleat is a part of its own, cut from the carcass board with the job.
+
+16
+00:02:05,978 --> 00:02:14,171
+The Cut list tab lists every part. The L parts carry their L3 / W3 banding.
+
+17
+00:02:14,171 --> 00:02:18,887
+Near the end: Shelf 1 corner cleat, 6" x 2", one for B3.
+
+18
+00:02:18,887 --> 00:02:22,622
+Nesting: the whole kitchen fits on six 5 x 12 ft sheets.
+
+19
+00:02:22,622 --> 00:02:30,467
+Sheet 3 holds the L bottom and top. Each L takes its full rectangle on the sheet.
+
+20
+00:02:30,467 --> 00:02:33,643
+The little part #41 next to them is the corner cleat.
+
+21
+00:02:33,643 --> 00:02:39,261
+Labels come from the Output tab. Machine output switches stay off: this is a preview.
+
+22
+00:02:39,261 --> 00:02:42,476
+The L bottom's label shows its L shape, the banded inside edges and its sheet.
+
+23
+00:02:42,476 --> 00:02:45,984
+The cleat gets its own label too, marked to fix on site.
+
+24
+00:02:45,984 --> 00:02:48,987
+Corner to labels in one job: next, a kitchen with a blind corner, fillers and end panels.

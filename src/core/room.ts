@@ -484,6 +484,13 @@ export function pushNeighbours(cabinets: CabinetInstance[], id: string, old: num
     return moved
   }
 
+  // Kitchen-3: a cabinet against the back or right wall that gets deeper (or shallower) keeps its back
+  // on the wall and its front comes forward (on the left wall the footprint already grows away from it)
+  if (Math.abs(dD) > 1e-9 && !side) {
+    const seg = segmentOf(was, pl, room)
+    if (seg === 'back') cab.placement = { ...cab.placement!, y: pl.y - dD }
+    if (seg === 'right') cab.placement = { ...cab.placement!, x: pl.x - dD }
+  }
   if (Math.abs(dW) < 1e-9) return moved
   const along = turned(pl.rotation) ? 'y' : 'x'
   const across = along === 'x' ? 'y' : 'x'
@@ -496,14 +503,14 @@ export function pushNeighbours(cabinets: CabinetInstance[], id: string, old: num
   })
   // which way the run grows: away from a corner cabinet that holds it
   const corners = cornersAt(others, room, me)
-  const seg = segmentOf(cab, pl, room)
+  const seg = segmentOf(was, pl, room)
   const dir: 1 | -1 = seg === 'back' ? (corners.left ? 1 : corners.right ? -1 : 1) : seg === 'left' ? (corners.left ? -1 : 1) : seg === 'right' ? (corners.right ? -1 : 1) : 1
   if (dir > 0) {
     moved.push(...chainPush(run.filter(({ b }) => b[along] > me[along] + TOUCH), along, 1, me[along] + len(me), me[along] + len(me) + dW))
   } else {
     const start = pl[along]
     moved.push(...chainPush(run.filter(({ b }) => b[along] + len(b) < me[along] + len(me) - TOUCH), along, -1, start, start - dW))
-    cab.placement = { ...pl, [along]: start - dW }
+    cab.placement = { ...cab.placement!, [along]: start - dW }
   }
   return moved
 }

@@ -536,6 +536,29 @@ describe('Kitchen-3 C: the room', () => {
     expect(roomProblems(cabs, room, place, lib).overlaps).toEqual([])
   })
 
+  it('a deeper cabinet against a wall keeps its back on the wall and its front comes forward (and the room says when that is proud of a pie-cut door)', () => {
+    const cabs = placed(pieKitchen())
+    const b4 = cabs.find((c) => c.id === 'b4')!
+    const y = at(cabs, 'b4').y
+    b4.params.depth = inch(25)
+    expect(pushNeighbours(cabs, 'b4', { width: b4.params.width, depth: inch(24) }, room, lib)).toEqual([])
+    expect(at(cabs, 'b4').y).toBeCloseTo(y - inch(1), 6)
+    expect(fpOf(cabs, 'b4').y + fpOf(cabs, 'b4').d).toBeCloseTo(room.depth, 6)
+    expect(roomProblems(cabs, room, place, lib)).toEqual({ overlaps: [], outside: [], blocked: [{ corner: 'pc', by: 'b4', clearance: -inch(1), kind: 'door' }] })
+    // on the left wall the box already grows away from the wall; on the right wall it is moved off it
+    const b1 = cabs.find((c) => c.id === 'b1')!
+    const x1 = at(cabs, 'b1').x
+    b1.params.depth = inch(26)
+    pushNeighbours(cabs, 'b1', { width: b1.params.width, depth: inch(24) }, room, lib)
+    expect(at(cabs, 'b1').x).toBe(x1)
+    const r = placed([preset('tpl-us-pie-base-36', 'c', 'B1', (p) => (pieOf(p).side = 'right')), us('tpl-base-1door', 'd', 'B2', 18)])
+    const d = r.find((c) => c.id === 'd')!
+    d.params.depth = inch(26)
+    pushNeighbours(r, 'd', { width: d.params.width, depth: inch(24) }, room, lib)
+    expect(fpOf(r, 'd').x + fpOf(r, 'd').w).toBeCloseTo(room.width, 6)
+    expect(pieClearance(r, 'c', place, lib)!.side).toEqual({ id: 'd', clearance: -inch(2) })
+  })
+
   it('Fill gap: the back run is held at the back leg and filled at the wall', () => {
     const cabs = placed(pieKitchen())
     const gaps = runGaps(cabs, room, place, lib)

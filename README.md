@@ -86,7 +86,8 @@ tool table, are paused.
    there or when the cabinet beside one of its doors stands proud of that door. A **blind corner
    can stand on either wall**: set "Stands on: the side wall" and Arrange turns it to face the
    room on the left or right wall, its blind end in the back corner, with the back run butting
-   against its blind panel.
+   against its blind panel. A cabinet against the back or right wall that gets deeper keeps its back on the wall,
+   and in the plan wall cabinets are drawn see-through over the bases.
 4. **Millimetres or inches.** The sidebar switches the whole shop. Lengths are stored in
    millimetres. Inches display as fractions to the nearest 1/16 in (for example `23-1/4"`), and
    you can type a decimal or a fraction. Showing the same value again does not change the stored

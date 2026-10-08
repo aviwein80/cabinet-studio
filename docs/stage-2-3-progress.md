@@ -111,10 +111,12 @@ cutting defaults). Instead of waiting, every such value stays visible and easy t
 | M3.6e Machine-part hits on the export: a warning while the machine's parts are invented, blocking once confirmed (owner decision 24.3) | **Done** (October 2026) | See below. Nothing new is written; no check weakened. |
 | M3.7 Out of scope recorded (2D-19, AM-14, ROB-01, LAT-01) | **Done** (October 2026) | Listed in `ROADMAP.md` ("Out of scope") with the reasons; nothing built. **Stage 3 complete.** |
 | Polish-1 Bug-fix round from the owner's video walkthrough (24 items) | **Done** (October 2026) | See "Polish-1" below. Stage 1 goldens, CAM goldens and `npm run sample` byte-identical; every output switch still off. |
+| Kitchen-2 Blind corners, fillers, end panels, Fill gap, US presets, Polish-1 leftovers | **Done** (October 2026) | See "Kitchen-2" below. Goldens and `npm run sample` byte-identical. |
+| Kitchen-3 L-shaped parts, pie-cut corner base and wall, blind corner on either wall | **Done** (October 2026) | See "Kitchen-3" below. Goldens and `npm run sample` byte-identical; every output switch still off. |
 
 Test count: 218 at the start of Stage 2 (217 passed + 1 skipped), 263 after M2.1, 296 after M2.2a
 (295 + 1 skipped), 325 after M2.2b (324 + 1 skipped), 347 after M2.2c (346 + 1 skipped), 363 after M2.3a (362 + 1 skipped), 378 after M2.3b (377 + 1 skipped), 405 after M2.3c (404 + 1
-skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped), 1076 after Polish-1 (1075 + 1 skipped).
+skipped), 407 after M2.4a (406 + 1 skipped), 418 after M2.4b (417 + 1 skipped), 427 after M2.4c (426 + 1 skipped), 447 after M2.4d (446 + 1 skipped), 460 after M2.5a (459 + 1 skipped), 470 after M2.5b (469 + 1 skipped), 482 after M2.5c (481 + 1 skipped), 492 after M2.5d (491 + 1 skipped), 517 after M2.6a (516 + 1 skipped), 541 after M2.6b (540 + 1 skipped), 558 after M2.6c (557 + 1 skipped), 567 after M2.6d (566 + 1 skipped), 577 after M2.6e (576 + 1 skipped), 596 after M2.7a (595 + 1 skipped), 611 after M2.7b (610 + 1 skipped), 622 after M2.7c (621 + 1 skipped), 627 after M2.7d (626 + 1 skipped), 635 after M2.8a (634 + 1 skipped), 646 after M2.8b (645 + 1 skipped), 654 after M2.8c (653 + 1 skipped), 661 after M2.8d (660 + 1 skipped), 669 after M2.8e (668 + 1 skipped), 677 after M2.9a (676 + 1 skipped), 684 after M2.9b (683 + 1 skipped), 695 after M2.9c (694 + 1 skipped), 704 after M2.9d (703 + 1 skipped), 727 after M2.10a (726 + 1 skipped), 736 after M2.10b (735 + 1 skipped), 744 after M2.10c (743 + 1 skipped), 749 after M2.10d (748 + 1 skipped), 771 after M2.11a (770 + 1 skipped), 774 after M2.11b (773 + 1 skipped), 801 after M3.1a (800 + 1 skipped), 819 after M3.1b (818 + 1 skipped), 834 after M3.1c (833 + 1 skipped), 845 after M3.1d (844 + 1 skipped), 864 after M3.1e (863 + 1 skipped), 865 after M3.1f (864 + 1 skipped), 871 after M3.1g items 1-2 (870 + 1 skipped), 883 after item 3 (882 + 1 skipped), 894 after items 4-5 (893 + 1 skipped), 923 after M3.2a-c (922 + 1 skipped), 935 after M3.2d-e (934 + 1 skipped), 955 after M3.3a (954 + 1 skipped), 960 after M3.3b (959 + 1 skipped), 961 after M3.3c (960 + 1 skipped), 974 after M3.4a (973 + 1 skipped), 978 after M3.4b (977 + 1 skipped), 979 after M3.4c (978 + 1 skipped), 1006 after M3.5a (1005 + 1 skipped), 1021 after M3.5b (1020 + 1 skipped), 1022 after M3.5c (1021 + 1 skipped), 1032 after M3.6a (1031 + 1 skipped), 1049 after M3.6b (1048 + 1 skipped), 1049 after M3.6c (1048 + 1 skipped), 1050 after M3.6d (1049 + 1 skipped), 1054 after M3.6e (1053 + 1 skipped), 1076 after Polish-1 (1075 + 1 skipped), 1107 after Kitchen-2 (1106 + 1 skipped), 1132 after Kitchen-3 (1131 + 1 skipped).
 Lint baseline: 17 warnings, all pre-existing (unchanged). (M2.8a-d went out with one extra
 warning in the new material price field, missed because the comparison list was taken with new
 files present; fixed in M2.8e, back to 17.)
@@ -212,6 +214,14 @@ files present; fixed in M2.8e, back to 17.)
     top: start with a proper approach over the first cut, update the affected goldens with a
     one-line reason each, woodWOP output byte-identical (M3.6d); (5) the deferred items stay
     listed and are closed only if M3.7 builds the same machinery.
+
+25. With the Kitchen-3 go-ahead, on the Kitchen-2 report: (1) build the pie-cut corner base and wall
+    now, with two separate doors on standard Salice hinges and 3 mm plates (no folding pie-cut
+    hinge); diagonal 45° corners stay deferred; (2) pull-out 3", filler return 3", scribe 1/2" and
+    proud 1/4" stay Configure-badged placeholders; (3) the blind corner door stays hinged on the open
+    side; (4) the arrange order stays left wall, corner, back wall; (5) the perf test stays as it is.
+    Also: let a blind corner arrange onto either wall, and add blind-panel boring if a standard
+    pattern exists (none does; see "Kitchen-3").
 
 ## Open questions for the owner
 
@@ -3346,11 +3356,207 @@ the wall-end filler then runs past the wall and the room says so), `15-tool-tabl
 5. **Perf test in the cloud container**: keep as is (passes alone), or run `tests/perf.test.ts` in
    a file of its own after the rest (the 90 s limit unchanged either way)?
 
+## Kitchen-3: pie-cut (L-shaped) corner cabinets
+
+A design round on the cabinet side, on the owner's Kitchen-2 answers (decision 25). Baseline before
+the round: head `273e8ee`, 1107 tests (1106 + 1 skipped), 17 lint warnings, typecheck and build clean.
+After: 1132 tests (1131 + 1 skipped; 25 new in `tests/kitchen-3.test.ts`), 17 lint warnings,
+typecheck and build clean. The 90 s performance limit is unchanged (see "Test-suite note" below).
+
+### A. L-shaped parts (the part model)
+
+- `Part.shape = 'L'`: the part's length x width rectangle with one rectangular corner cut away; the
+  `outline` has six corners (`PartBuilder.lShape(box)` cuts it from a world box, like a notch). The
+  outer edges keep their names (L1 at y = 0, L2 at y = width, W1 at x = 0, W2 at x = length; two of
+  them are shorter, stopped by the cut). The two **inside edges** along the cut are **L3** (along the
+  length) and **W3** (across), stored in `edges` like the others (`InsideEdgeKey`), and banded by world
+  direction with `bandInside(dir, band)`. `core/lpart.ts` finds the cut-away corner (`lCorner`), names
+  every edge with its outward normal (`lSegments`) and measures them (`lEdgeLengths`).
+- **Cut size** (`expandJob`): each inside edge moves along its normal by its pre-mill less its band,
+  exactly as an outer edge does; the outer frame is compensated as before. A 1 mm band on L3 and W3
+  moves the inside corner 1 mm into the part on both edges.
+- **Cut list**: an L part's row lists L3 and W3 (`EdgeCodes`); the screen shows "· inside L3 / W3"; the
+  CSV gets "Edge L3" and "Edge W3" columns after "Edge W2", **only when the job has L parts** (a job
+  without them writes the file byte-for-byte as before). The edge code is `L1:L2:W1:W2:L3:W3` on an L
+  part (`0:0:0:0:1:1` for a pie-cut bottom).
+- **Labels**: the PDF label draws the L (from the cut outline) with its banded edges thick, the
+  inside ones too; the ZPL label draws the L edge by edge (thick bars on banded edges); both list
+  "Edges: L3 ... W3 ...". The nesting part panel lists the banded edges by name ("Banded").
+- **Edgeband total**: an L part's edges are measured along its outline.
+- **Nesting and machining**: the cut outline is a true L, so true-shape nesting (on by default)
+  places and may interlock it, the validator checks overlaps on it, the sheet map draws it, and the
+  MPR cut-out follows its six corners (the inside corner keeps the cutter's radius, as on every
+  notch). With true-shape nesting off, an L takes its whole cut rectangle. Drilling in the cut-away
+  corner is skipped, and the custom-hole dialog refuses a hole there.
+- **3D**: every part with an outline is drawn extruded from it (L parts as Ls; sides now show their
+  toe-kick notch); exploding moves sides, backs and doors away from their machined face.
+- **Rectangular parts are untouched**: no `shape`, four edge keys, the same cut outline, edge code,
+  label and CSV (test `A: rectangular parts are untouched`); every golden is byte-identical.
+
+### B. Pie-cut corner base and wall
+
+`CornerParams` is now a union: the Kitchen-2 blind corner, or `{ type: 'pie-cut', side, legDepth,
+cornerDoor }` (`construction/pieCut.ts`). In cabinet coordinates the pie-cut stands in its box seen
+from above: `width` = the leg along the back wall, `depth` = the leg along the side wall, both legs
+`legDepth` deep; 'left' fills the back-left corner, 'right' is its mirror image.
+
+- **Parts**: two end sides (one at the end of each leg: front edge banded, notched for the toe kick,
+  dadoed for the bottom and top, grooved for the backs, 32 mm shelf-pin rows front and back); an **L
+  bottom** and an **L top** (always a full top: rails are warned about and not used), banded on their
+  two inside edges with the carcass front band; **L shelves** on the pins, banded on their inside
+  edges with the shelf band, set back by the shelf setback and clear of the end sides and backs; a
+  **back on each wall** (grooved, rabbeted or applied; the side-wall back butts against the back-wall
+  back's face, whose end sits in the side groove); toe-kick boards along both fronts when the
+  cabinets have them; butt joints with screws, dowels or confirmats at both end sides (edge holes
+  into the L panels' leg ends).
+- **Doors**: one on each leg, each **hinged at the end of its leg** on the standard Salice cup (in the
+  door, at its hinge edge) and the 3 mm plate (two screws, 37 mm back from that end side's front
+  edge, at each cup height on the 32 mm grid). At the inside corner the `cornerDoor` (default the
+  back-wall door) **runs through** in front of the other door's end, and the other stops the door gap
+  short of its face: closed, the corner shows one door edge and a gap like any pair of doors; the
+  through door opens first. Door widths with the preset: back-wall 11-15/16", side-wall 11-1/8".
+  Typing a door width sets its leg (`pieLegForDoor`). Drawers are left out with a warning; legs too
+  short for the leg depth build nothing and say why; a door under 150 mm is warned.
+- **US presets**: "Pie-cut corner base 36" x 36"" (24" deep legs, 34-1/2" high, 4" x 3" toe kick, one
+  L shelf) and "Pie-cut corner wall 24" x 24"" (12" deep legs, 30" high, two L shelves). A shop file
+  saved before gets them once (as for the Kitchen-2 presets). No new invented values: leg depths and
+  sizes are the usual US ones, so no new Configure badges.
+- **Editor**: Corner → "Pie-cut corner, back-left / back-right"; the Pie-cut corner section (which
+  corner, leg depth, both legs, both door widths, which door runs through); doors "None / Two, one on
+  each leg"; the parts table shows L3 and W3 on L parts.
+
+### C. The room
+
+- **Arrange** (job order = walking order, as before): a pie-cut fills its back corner with no
+  pull-out; the side-wall run butts against the end of its side leg, the back run starts at the end
+  of its back leg. Base and wall cabinets alike.
+- **Neighbour push**: a longer back leg moves the back run, a longer side leg the side run towards the
+  front; the corner never moves out of its corner. The wall a corner stands on is now judged at its
+  old size (a side leg 2" longer read as "off the back wall" before it was moved).
+- **Fill gap**: the back run is bounded by the back leg's end, the side run by the side leg's end.
+- **Overlaps are L-aware** (`planBoxes`): a pie-cut takes only its two legs. The open square in front
+  of them (`pieOpening`) is kept for its doors: a cabinet standing in it is reported ("stands ... into
+  the open corner in front of B3: its doors swing there").
+- **Door clearance** (`pieClearance`): each pie-cut door is hinged beside the first cabinet of the run
+  at its leg's end; that cabinet's front must not stand proud of the door's face. The side panel shows
+  both ("The back-wall door: B4's front is 0" behind its face"); a proud one is a room problem ("B4
+  stands 1" proud of B3's door beside it, which cannot open: make their depths match").
+- **Plan**: the L, with a thick front along each leg; wall cabinets are now drawn after the bases and
+  see-through, so a corner base shows under its wall cabinet (eases the Kitchen-2 plan limit).
+- **Elevations**: on the back wall it faces you (its back-wall door, toe kick under it, the side leg
+  hatched end on at the corner end); on the side wall too (its side-wall door, the back leg hatched at
+  the corner end). It is moved from the back wall's elevation or the plan.
+- **Also fixed**: a cabinet against the back or right wall that gets deeper keeps its back on the wall
+  and its front comes forward (it used to push its back through the wall).
+
+### D. A blind corner on either wall; blind-panel boring
+
+- **Stands on** (blind corner): "The back wall" (as before) or "The side wall" (`corner.wall = 'side'`).
+  On the side wall the cabinet is turned to face the room with its blind end in the back corner, the
+  pull-out off the back wall, and the back run butts against its blind panel: blind right stands on the
+  left wall (back-left corner), blind left on the right wall (`cornerSide`, `cornerWall`). Arrange, the
+  neighbour push (deeper moves the back run; wider or pulled further out moves its open end and the
+  side run towards the front), Fill gap (the back run from its blind panel's face), the corner-door
+  clearance (the back run's fronts against its door edge: 2-3/8" with the presets, as on the back
+  wall) and the elevations (facing on the side wall, end on at the corner end of the back wall) all
+  handle it.
+- **Blind-panel boring: none added.** There is no standard boring pattern for fixing a blind panel
+  (shops screw it from inside through the rail and bottom, use small blocks, or connectors); nothing
+  in the Salice or Blum data covers it. It stays fixed from inside on site, with no holes (test).
+
+### Acceptance
+
+- **An L-shaped kitchen with a pie-cut corner built from presets in the UI** (screenshots 01-12):
+  job K3, inch mode: left wall E1 end panel, B1 18", B2 24" drawers; B3 Pie-cut corner base 36" x 36";
+  back wall B4 30", B5 sink 36", B6 24" drawers, B7 15"; wall cabinets E2, W1 30", W2 18" on the left
+  wall, W3 Pie-cut corner wall 24" x 24", W4-W7 on the back wall. Each cabinet added from the Add
+  dialog, sizes typed in its editor, "Arrange along the back wall", then "Fill gap: one filler 3""
+  for the 3" left at the right wall. No overlap or other room notice remains. The same job through
+  the pipeline: 0 export errors, no construction warnings. The same kitchen in the tests (`C`): every
+  placement checked, `roomProblems` empty, no solid of any cabinet (L parts as their two legs) inside
+  another cabinet's, no overlap in either elevation, the pie-cut facing on both walls.
+- **Cut list, nesting and labels** (screenshots 13, 14, 19, 20; test `D`): the seven L parts (base
+  bottom, top, shelf; wall bottom, top, two shelves) with L3 and W3 banded (1 mm ABS on bottoms and
+  tops, 0.4 mm PVC on shelves) and no other band; the CSV's Edge L3 / Edge W3 columns; every part
+  nested exactly once; the label's L with its two thick inside edges and "Edges: L3 EB-WHT-1.0 W3
+  EB-WHT-1.0"; the MPR cut-out of the bottom with its six corners. With true-shape nesting off the L
+  parts nest on their rectangles, still with no errors.
+- **Tests** (`tests/kitchen-3.test.ts`, 25): L geometry (all four cut corners, edge names and
+  normals, lengths, on-part), the builder (cut, inside bands by direction, turned over, no holes in
+  the cut), cut-size compensation with pre-mill, rectangular parts unchanged; the pie-cut base (parts,
+  L parts in the legs, inside-edge positions, no part inside another except dados and grooves),
+  doors and hinge boring (both corner-door choices), mirror image, wall version, butt joints, applied
+  backs, toe-kick boards, warnings, presets; the room (arrange, 3D, elevations, back-right, push,
+  deeper cabinets, Fill gap, the opening and proud-door checks); cut list, labels, nesting, MPR; the
+  blind corner on the left and right walls (arrange, clearance, 3D, elevations, push, Fill gap) and
+  no blind-panel boring.
+- **Goldens**: Stage 1 MPR goldens (`tests/mpr.test.ts`), the 20 custom-part goldens and
+  `npm run sample` are byte-identical (no file under `examples/` or `tests/golden/` changed): no
+  existing part gains a shape or inside edge, and the CSV's new columns appear only with L parts.
+- **Kitchen-2 tests**: unchanged in what they check; type narrowing only (`corner` may now be a
+  pie-cut), and the closed table of US presets in `B7` extended with the two new presets (a stricter
+  check).
+
+### Test-suite note (Kitchen-3)
+
+One full run had `tests/perf.test.ts` "adaptive clearing per Z level" at 102 s against its 90 s limit
+while typecheck, lint and the golden tests ran beside it; run on its own it took 61.4 s and passed.
+The final full run, with nothing else running, passed every test (1131 + 1 skipped), that one in
+85.0 s. The limit is unchanged.
+
+### Kitchen-3 screenshots
+
+In `docs/screenshots/kitchen-3/` (browser preview, inch mode, the kitchen built through the UI as
+above; each under 300 KB):
+
+`01-add-dialog-pie-cut-presets` (the two presets under Corner cabinets), `02-job-cabinets-inches`,
+`03-pie-cut-base-editor` (pie-cut fields, door widths 11-15/16" and 11-1/8"), `04-pie-cut-base-exploded-l-parts`
+(fronts hidden: L bottom, shelf, top), `05-pie-cut-parts-l3-w3` (the parts table, L3 and W3 banded on the
+L parts), `06-arranged-plan-fill-gap-offered`, `07-l-kitchen-plan` (filled; the L under the see-through
+wall cabinets), `08-l-kitchen-3d`, `09-l-kitchen-back-elevation` (B3 and W3 facing, side legs hatched),
+`10-l-kitchen-left-elevation` (B3 and W3 facing with their side-wall doors, back legs hatched),
+`11-pie-cut-selected-door-clearances`, `12-deeper-neighbour-proud-of-pie-door` (B4 at 25"),
+`13-cut-list-l3-w3`, `14-nesting-l-parts-banded-l3-w3` (three L parts on sheet 4, "Banded L3 ..., W3 ..."),
+`15-blind-corner-stands-on-side-wall-editor`, `16-blind-corner-on-left-wall-plan`,
+`17-blind-corner-end-on-back-elevation`, `18-blind-corner-facing-left-elevation` (job K3B),
+`19-label-l-bottom` (the label PDF page of B3's bottom), `20-sheet-map-l-parts` (its sheet map page).
+
+### Limits recorded (Kitchen-3)
+
+- Diagonal (45°) corners: still deferred (parts at 45°, angled plates or a stile).
+- A pie-cut's two legs have one depth; different depths per leg are not built. It always has a full
+  L top.
+- The L shelves rest on pins in the two end sides only; the shelf's corner (about 33" from either
+  support on the base preset) has no support (decision 2 below).
+- The inside corner of every L part keeps the cut-out tool's radius (6 mm with the 12 mm placeholder
+  cutter); the two inside bands meet there (decision 3 below).
+- Arrange puts a pie-cut in a back corner; one in a front corner is placed by hand (Rotate).
+- The room checks the cabinet beside each pie-cut door's hinge end and the open square in front of
+  it; a door swinging into something further away (an island, a dishwasher door) is not checked.
+- The ZPL label's L is drawn in its fixed 30 x 16 mm box, not to scale (as the rectangle always was).
+- In the plan a wall cabinet still lies over the base below it (now see-through).
+
+### Kitchen-3 decisions needed
+
+1. **How the two doors meet at the inside corner.** Built: one door runs through in front of the
+   other's end (closed, one door edge and a 1/8" gap show; that door opens first); per cabinet you
+   choose which. Alternatives: both stop short so each opens on its own (leaves an open slot about
+   13/16" (21 mm) wide into the cabinet at the corner), or a corner filler post. Recommendation: keep "one runs through".
+2. **Support for the L shelves at the corner.** Options: (a) as now, pins at the two end sides only;
+   (b) a cleat under the shelf's back corner (a small part in the cut list, screwed on site);
+   (c) a fixed L shelf (screwed or dadoed); (d) thicker backs with their own pin rows. Recommendation:
+   (b), or tell us how the shop does it.
+3. **Inside corner of the L parts.** Kept at the cutter's radius (6 mm with the placeholder cutter),
+   the two inside bands trimmed into it by hand. If the edgebander needs a larger radius to wrap one
+   band round the corner (for example 1/2"), say so and it becomes a setting.
+4. **Blind panel fixing.** No standard boring exists, so none is added; if the shop fixes blind
+   panels a particular way (connector bolts, hinge plates, screws through the side), say so.
+
 ## Next run
 
-- Stage 3, Polish-1 and Kitchen-2 are complete. Next is the owner's call: the Kitchen-2 decisions
-  above (L-shaped corners first), the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any
-  limit recorded above.
+- Stage 3, Polish-1, Kitchen-2 and Kitchen-3 are complete. Next is the owner's call: the Kitchen-3
+  decisions above (door meeting, shelf support, inside corner), diagonal corners, the shop facts in
+  "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
 
 ## Run log
 
@@ -3429,3 +3635,6 @@ the wall-end filler then runs past the wall and the room says so), `15-tool-tabl
   docs. See `git log`.
 - **Run 22 (Kitchen-2)**: blind corners, the room turning the corner, fillers, end panels, Fill gap,
   US presets (`06bf4b6`); Polish-1 leftovers (`f03c73b`); screenshots, docs. See `git log`.
+- **Run 23 (Kitchen-3)**: L-shaped parts, the pie-cut corner base and wall, the room round it, a blind
+  corner on either wall (`1e5c8a6`); screenshots, the deeper-cabinet fix, the see-through plan, docs.
+  See `git log`.

@@ -85,7 +85,7 @@ export function KitchenFields({ p, set, lib }: { p: CarcassParams; set: (fn: (p:
       <>
         <div className="grid grid-cols-2 gap-2">
           <SelectField
-            label="Corner"
+            label="Which corner"
             value={c.side}
             options={[
               { value: 'left', label: 'Back-left' },

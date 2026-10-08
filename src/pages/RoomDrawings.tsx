@@ -62,10 +62,12 @@ export function PlanView({
         <text x={room.width / 2} y={room.depth - font * 0.3} textAnchor="middle" fontSize={font * 0.75} fill="#a8a29e" transform={upright(room.depth - font * 0.3)}>
           back wall
         </text>
-        {cabinets.map((c) => {
+        {/* Kitchen-3: floor cabinets first, wall cabinets over them, see-through, so a corner base shows under its wall cabinet */}
+        {[...cabinets.filter((c) => c.params.kind !== 'wall'), ...cabinets.filter((c) => c.params.kind === 'wall')].map((c) => {
           const pl = place(c)
           const fp = footprint(c.params.width, c.params.depth, pl)
           const on = c.id === selected
+          const see = c.params.kind === 'wall' ? 0.6 : 1
           // Kitchen-3: a pie-cut is drawn as its L, a thick front along each leg (its doors)
           if (c.params.corner?.type === 'pie-cut' && !c.params.panel) {
             const { width: W, depth: D } = c.params
@@ -81,7 +83,7 @@ export function PlanView({
             const legs = `${formatLength(W, units)} × ${formatLength(D, units)}`
             return (
               <g key={c.id} className="cursor-grab" onPointerDown={(e) => onDown(e, c.id)}>
-                <polygon points={pts.map((q) => `${q[0]},${q[1]}`).join(' ')} fill={PLAN_FILL[c.params.kind]} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
+                <polygon points={pts.map((q) => `${q[0]},${q[1]}`).join(' ')} fill={PLAN_FILL[c.params.kind]} fillOpacity={see} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
                 {c.params.doors.count > 0 && fronts.map(([a, b], i) => <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={on ? '#b45309' : '#1c1917'} strokeWidth={stroke * 5} />)}
                 <text x={mid[0]} y={mid[1]} textAnchor="middle" dominantBaseline="middle" fontSize={fitSize(c.number, font, c.params.corner.legDepth * 0.9)} fill="#1c1917" transform={upright(mid[1])}>
                   {c.number}
@@ -107,7 +109,7 @@ export function PlanView({
           const fill = panel ? PLAN_FILL[panel] : PLAN_FILL[c.params.kind]
           return (
             <g key={c.id} className="cursor-grab" onPointerDown={(e) => onDown(e, c.id)}>
-              <rect x={fp.x} y={fp.y} width={fp.w} height={fp.d} fill={fill} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
+              <rect x={fp.x} y={fp.y} width={fp.w} height={fp.d} fill={fill} fillOpacity={see} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
               {bu ? (
                 <>
                   <line x1={at(bu[0]).x} y1={at(bu[0]).y} x2={at(bu[1]).x} y2={at(bu[1]).y} stroke={on ? '#b45309' : '#78716c'} strokeWidth={stroke * 2} strokeDasharray={`${stroke * 4} ${stroke * 3}`} />

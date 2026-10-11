@@ -56,7 +56,11 @@ export function ChangeMaterialsDialog({ job, data, open, onOpenChange }: { job: 
   // what the cabinets use now, per role ("PB18-WHT ×4, MDF18 ×1")
   const inUse = (r: MaterialRole) => {
     const n = new Map<string, number>()
-    for (const c of job.cabinets) n.set(rolesOf(c.params, lib)[r], (n.get(rolesOf(c.params, lib)[r]) ?? 0) + 1)
+    // drawer boxes: only the cabinets that have drawers
+    for (const c of job.cabinets) {
+      if (r === 'boxes' && (c.params.panel || !(c.params.drawers.count > 0))) continue
+      n.set(rolesOf(c.params, lib)[r], (n.get(rolesOf(c.params, lib)[r]) ?? 0) + 1)
+    }
     return [...n.entries()].map(([id, k]) => `${code(id)} ×${k}`).join(', ')
   }
   const bandInUse = (g: BandGroup) => {
@@ -189,7 +193,17 @@ export function ChangeMaterialsDialog({ job, data, open, onOpenChange }: { job: 
 
 function PreviewPanel({ preview: p, data, code }: { preview: SwapPreview; data: AppData; code: (id: string | null | undefined) => string }) {
   const units = data.settings.units
-  const edges = (e: Part['edges']) => (Object.entries(e) as [string, string | null | undefined][]).filter(([, v]) => v).map(([k, v]) => `${k} ${code(v)}`).join(', ') || 'raw'
+  // only the edges that change, grouped: "L1 L2 W1 W2 EB-WHT-1.0 → EB-OAK-1.0"
+  const edgeDiff = (a: Part['edges'], b: Part['edges']) => {
+    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])] as (keyof Part['edges'])[]
+    const groups = new Map<string, string[]>()
+    for (const k of keys) {
+      if ((a[k] ?? null) === (b[k] ?? null)) continue
+      const g = `${a[k] ? code(a[k]) : 'raw'} → ${b[k] ? code(b[k]) : 'raw'}`
+      groups.set(g, [...(groups.get(g) ?? []), k])
+    }
+    return [...groups.entries()].map(([g, ks]) => `${ks.join(' ')} ${g}`).join('; ')
+  }
   if (p.changes.length === 0) return <div className="rounded-md border bg-muted/30 p-3 text-sm">Nothing changes: the chosen cabinets already use these materials.</div>
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 text-sm" data-testid="materials-preview">
@@ -245,8 +259,8 @@ function PreviewPanel({ preview: p, data, code }: { preview: SwapPreview; data: 
               <tr key={r.cabinetId + r.key} className="border-b last:border-b-0">
                 <td className="px-2 py-1 font-mono">{r.cabinetNumber}{r.qty > 1 ? ` ×${r.qty}` : ''}</td>
                 <td className="px-2 py-1">{r.name}</td>
-                <td className={cn('px-2 py-1 font-mono', !r.materialChanged && 'text-muted-foreground')}>{r.materialChanged ? `${code(r.before.materialId)} → ${code(r.after.materialId)}` : code(r.after.materialId)}</td>
-                <td className={cn('px-2 py-1 font-mono text-[11px]', !r.edgesChanged && 'text-muted-foreground')}>{r.edgesChanged ? `${edges(r.before.edges)} → ${edges(r.after.edges)}` : '—'}</td>
+                <td className={cn('px-2 py-1 font-mono whitespace-nowrap', !r.materialChanged && 'text-muted-foreground')}>{r.materialChanged ? `${code(r.before.materialId)} → ${code(r.after.materialId)}` : code(r.after.materialId)}</td>
+                <td className={cn('px-2 py-1 font-mono text-[11px]', !r.edgesChanged && 'text-muted-foreground')}>{r.edgesChanged ? edgeDiff(r.before.edges, r.after.edges) : '—'}</td>
                 <td className={cn('px-2 py-1 font-mono text-[11px]', !r.sizeChanged && 'text-muted-foreground')}>{r.sizeChanged ? `${formatDims(r.before.size, units)} → ${formatDims(r.after.size, units)}` : '—'}</td>
               </tr>
             ))}

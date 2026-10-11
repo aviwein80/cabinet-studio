@@ -17,6 +17,9 @@ import { quotePdf } from '@/core/quotePdf'
 import type { AppData, Job } from '@/core/types'
 import { cn } from '@/lib/utils'
 
+/** "1 sheet", "3 sheets" ("pcs", "ft" and "m" as they are). */
+const one = (qty: number, unit: string) => (qty === 1 && /[a-z]s$/.test(unit) && unit !== 'pcs' ? unit.slice(0, -1) : unit)
+
 export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; out: JobOutput; setJob: (fn: (j: Job) => void) => void }) {
   const q = useMemo(() => jobQuote(job, out, data), [job, out, data])
   const $ = (v: number) => money(v, q.currency)
@@ -36,8 +39,8 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
     </span>
   )
   return (
-    <div className="grid gap-5 xl:grid-cols-[1fr_380px]" data-testid="quote">
-      <div className="flex flex-col gap-5">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]" data-testid="quote">
+      <div className="flex min-w-0 flex-col gap-5">
         <div className="rounded-xl border bg-background">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
             <h3 className="text-sm font-semibold">Quote</h3>
@@ -58,11 +61,11 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
                 return (
                   <TableRow key={l.key} data-line={l.key}>
                     <TableCell className="w-28 font-medium">{l.label}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs whitespace-normal text-muted-foreground">
                       {l.key === 'labour'
                         ? `${q.labour.hours} h${q.labour.rate !== null ? ` at ${$(q.labour.rate)}/h` : ''}`
                         : l.items.length
-                          ? l.items.map((i) => `${i.qty} ${i.unit} ${i.code}`).join(' · ')
+                          ? l.items.map((i) => `${i.qty} ${one(i.qty, i.unit)} ${i.code}`).join(' · ')
                           : 'none'}
                       {l.unconfirmed.length > 0 && (
                         <span className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -128,7 +131,7 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
               {q.lines.flatMap((l) =>
                 l.items.map((i) => (
                   <TableRow key={l.key + i.code}>
-                    <TableCell className="text-xs text-muted-foreground">{l.label}</TableCell>
+                    <TableCell className="text-xs whitespace-normal text-muted-foreground">{l.label}</TableCell>
                     <TableCell className="text-xs">
                       <span className="font-mono">{i.code}</span> {i.name !== i.code && <span className="text-muted-foreground">{i.name}</span>}
                     </TableCell>
@@ -144,7 +147,7 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-3">
         <div className="grid gap-3 rounded-xl border bg-background p-4">
           <div className="text-sm font-semibold">This job</div>
           <NumField label="Markup" suffix="%" min={0} max={1000} step={1} value={job.quote?.markupPct ?? 0} onChange={(v) => setJob((j) => (j.quote = { ...(j.quote ?? {}), markupPct: v }))} />

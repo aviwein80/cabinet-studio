@@ -65,6 +65,20 @@ Progress, tests and limits: `docs/stage-2-3-progress.md`, "Kitchen-3".
 - Open questions for the owner: see "Kitchen-3c decisions needed" in the progress file (letting L
   parts interlock on the sheet, the cleat's real size, the corner radius).
 
+## Job-1: change materials for a whole job; pricing beyond board (October 2026)
+
+Progress, tests and limits: `docs/stage-2-3-progress.md`, "Job-1".
+
+- **Done:** "Change materials" on the job (boards per role, bands per group, all or chosen
+  cabinets or by wall, part overrides kept unless replaced, preview with parts, sheets and
+  warnings, one undo). Job quotes: edgeband and hardware prices in the library, shop rate and
+  labour times (Settings → Pricing), markup and sales tax per job, the Quote tab, the quote below
+  the BOM and Areas and costs CSV, the Quote PDF. No price is invented: anything not entered is
+  "price not set" with a Configure badge.
+- Placeholders with Configure badges: labour 60 min per cabinet, 20 per drawer, 10 per door, 15
+  per sheet cut. The shop rate starts not set.
+- Open questions for the owner: see "Job-1 decisions needed" in the progress file.
+
 ## Custom-part Stage 2 and 3 (both complete)
 
 Plan: `docs/stage-2-3-spec.md`. Progress and open questions: `docs/stage-2-3-progress.md`.
@@ -291,7 +305,8 @@ built for them. Each would come back only with the change in the last column.
 
 ## Phase 3: office
 
-- Quotes and costing: sheet, edgeband, hardware and machine time.
+- Quotes and costing: sheet, edgeband, hardware and labour are in (Job-1); machine time from the
+  toolpaths is still to come.
 - Room or wall layout to place cabinets, with elevation drawings.
 - A productionManager `project.xml`, or a woodWOP batch list, for sending a whole job to the
   machine PC.

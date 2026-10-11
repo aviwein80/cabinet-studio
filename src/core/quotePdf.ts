@@ -76,7 +76,7 @@ export function quotePdf(job: Pick<Job, 'id' | 'number' | 'name' | 'customer' | 
     const detail =
       l.key === 'labour'
         ? `${q.labour.hours} h${q.labour.rate !== null ? ` at ${$(q.labour.rate)}/h` : ''}`
-        : l.items.map((i) => `${i.qty} ${i.unit}`).reduce((acc, s, k) => (k < 3 ? (acc ? `${acc}, ${s}` : s) : k === 3 ? `${acc}, ...` : acc), '')
+        : l.items.map((i) => `${i.qty} ${i.qty === 1 && /[a-z]s$/.test(i.unit) && i.unit !== 'pcs' ? i.unit.slice(0, -1) : i.unit}`).reduce((acc, s, k) => (k < 3 ? (acc ? `${acc}, ${s}` : s) : k === 3 ? `${acc}, ...` : acc), '')
     const note = lineNote(l)
     row(l.label, l.items.length ? detail : 'none', l.items.length === 0 ? $(0) : note && l.unpriced === l.items.length ? '' : $(l.amount), note ? { missing: note } : {})
   }
@@ -115,8 +115,13 @@ export function quotePdf(job: Pick<Job, 'id' | 'number' | 'name' | 'customer' | 
       room(5)
       doc.setFontSize(8)
       doc.text(l.label, cols[0], y)
-      const text = `${i.code}  ${i.name}`
-      doc.text(doc.splitTextToSize(text, 78)[0] as string, cols[1], y)
+      // the item's code and name, cut short (with ...) before the quantity column
+      let text = `${i.code}  ${i.name}`
+      if (doc.getTextWidth(text) > 72) {
+        while (text.length > 4 && doc.getTextWidth(`${text}...`) > 72) text = text.slice(0, -1)
+        text = `${text.trimEnd()}...`
+      }
+      doc.text(text, cols[1], y)
       doc.text(String(i.qty), cols[2], y, { align: 'right' })
       doc.text(i.unit, cols[3] - 16, y)
       if (i.amount === null) {

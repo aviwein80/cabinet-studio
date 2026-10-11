@@ -103,6 +103,25 @@ tool table, are paused.
    bit `1/2"`). Enter applies every field, as Tab does.
 5. **Cut list** with edgeband compensation and optional pre-mill allowance, plus a BOM: sheets,
    edgeband metres and hardware. The default sheet is **5 ft × 12 ft (1524 × 3658 mm)**.
+   **Change materials** (Cabinets tab): new boards for the whole job or chosen cabinets in one
+   step, per role (carcass, fronts, backs, drawer boxes) and new bands per group (carcass front
+   edges, shelf fronts, doors and drawer fronts); "Keep as is" is the default for each. Pick all
+   cabinets, tick some, or "select by wall". A board or band set by hand on a single part is kept
+   unless "Also replace part overrides" is ticked. The preview lists every part that changes
+   (board, edges and any size that follows the board's thickness), the sheets before and after
+   (an estimate from the automatic nest) and every warning the change brings, from the same
+   checks as the cabinet editor (Blum TANDEM 16 mm drawer sides, dado and groove depths, a part
+   kept at another thickness); parts on a hand-saved layout are flagged as for any material
+   change. One undo puts it all back.
+   **Quote** tab: board (whole sheets at each material's price), edgeband (the BOM's length, per
+   metre, or per foot in an inch shop), hardware (every BOM line, per piece), labour (time per
+   cabinet, drawer, door and sheet cut at the shop rate), then markup and sales tax per job (0 by
+   default) and the total. Prices are your own: edgeband and hardware in their library tables, the
+   shop rate and labour times in Settings → Pricing (the times are placeholders with Configure
+   badges; the shop rate starts not set). Anything without a price says **"price not set"** with
+   a Configure badge, is left out of the sums, and the total says it is incomplete; it is never
+   $0. The quote is added below the BOM and the Areas and costs CSV, and as a printable Quote PDF
+   (job number, name and customer field only).
 6. **Nesting** (built in): MaxRects with 16 heuristic and order combinations, keeping the result
    with the fewest sheets. It respects grain, rotation rules, edge trim and part spacing (the
    cut-out tool diameter plus extra). The cut order puts small parts first.
@@ -892,6 +911,9 @@ src/core/          pure TypeScript, no React — everything below is unit tested
   flipSide.ts      flip-side sheets: side-1 program, reference edge, registration
   manualNest.ts    layouts edited by hand: apply, snap, turn, live check, nest list files
   areas.ts         areas and costs per sheet and part
+  jobMaterials.ts  change materials for a whole job: roles from the generator, plan, preview, undo
+  quote.ts         job quote: board, edgeband, hardware, labour, markup, tax; quote CSV rows
+  quotePdf.ts      the printable quote (jsPDF)
   machining.ts     sheet programs: tool selection, placement transforms, contours, pockets
   mpr/             woodWOP MPR 4.0 writer + minimal parser (tests)
   validator.ts     pre-export checks

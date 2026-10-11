@@ -3945,11 +3945,141 @@ inches), `02-shape-area-ft2` ("1.6609 ft²"), `03-op-summary-ft-tool-picker-mm` 
 3. **Shape area unit**: in an inch shop shape areas are in ft² (as the Nesting panel). Keep ft²
    (recommended), or in² for small shapes?
 
+## Job-1: change materials for a whole job; pricing beyond board
+
+Two new features, not milestones of the spec. Baseline before the run: head `f9cdc81`, 1179 tests
+(1178 + 1 skipped), 17 lint warnings, typecheck and build clean; the 90 s timing test took 59.0 s
+run alone with nothing else running (80.0 s inside the full suite, which passed). After: see
+"Test-suite note (Job-1)". Tests in `tests/job-1.test.ts` (17).
+
+### A. Change materials for a whole job
+
+- **Where:** Cabinets tab → **Change materials** (`src/pages/job/ChangeMaterialsDialog.tsx`; the
+  logic is pure, `src/core/jobMaterials.ts`).
+- **Pickers:** boards per role, carcass, fronts (doors, drawer fronts; also the blind panel, filler
+  strip and end panel, which are made of the door board), backs, drawer boxes; bands per group,
+  carcass front edges, shelf fronts, doors and drawer fronts (or "No band"). "Keep as is" is the
+  default for each. Each picker says what the cabinets use now ("PB18-WHT ×8"); the drawer-box
+  picker marks boards over the TANDEM 16 mm side limit.
+- **Which part is which role:** read from the generator, not guessed from names: each cabinet is
+  generated once with a stand-in board per role (same thickness as the real one) and a stand-in band
+  per group, and the stand-in a part (or edge) comes out with is its role (`partRoles`). So a drawer
+  box is "boxes" whatever its name, and a side's front edge is "carcass front" whichever edge key it
+  is (L2 on the left side, L1 on the right).
+- **Scope:** all cabinets, or a chosen set (checkboxes), with **select by wall** (back, left, right,
+  not on a wall: the wall each cabinet stands on in the room, its own placement or where Arrange puts
+  it, `cabinetWalls`). The drawer-box board is written only on cabinets that have drawer boxes.
+- **Part overrides:** a board or band set by hand on one part (cabinet editor) is kept, and the
+  preview lists it ("Kept as set by hand"). With **Also replace part overrides** ticked, the override
+  on a part of a changed role, or on an edge of a changed group, is removed, so the part follows the
+  new choice. A band put by hand on an edge no group bands (a raw edge) is not a group's and is kept
+  either way; so is a hand board on a role that is not changing.
+- **Preview** (nothing is applied until Apply): cabinets and parts that change, every part with board
+  old → new, only the edges that change, and any size that changes because the board's thickness
+  changed (a 16 mm carcass makes the bottom between the sides 4 mm longer); board changes summed;
+  sheets before → after, in total and per board, from the automatic nest of the whole job (an
+  estimate: a hand-saved layout is not used for it); the warnings the change brings and the ones it
+  clears; parts on a hand-saved layout whose board changes.
+- **Checks:** the warnings are the generator's own (the same text as the cabinet editor and the export
+  check): Blum TANDEM drawer sides over 16 mm, dado and back-groove depths not less than the board,
+  a part kept at another thickness than its board ("part is 16 mm but material PB18-OAK is 18 mm"),
+  parts that no longer fit a sheet. Nothing is weakened: a pick that brings a warning can be applied,
+  as in the cabinet editor, and the warning stays in the job.
+- **Hand-saved layouts:** flagged as today: parts whose board changes are nested again on the new
+  board and named in the Nesting tab's banner (`applySavedNest`, unchanged).
+- **Undo:** every change is recorded (cabinet, setting, before, after). One undo (the toast's Undo or
+  the **Undo material change** button on the Cabinets tab) puts them all back; a setting changed
+  again since is left as it is and counted. The undo record lives while the app runs (not saved in
+  the file).
+
+### B. Pricing beyond board
+
+- **Library prices:** edgeband price per metre, typed and shown per foot in an inch shop (stored per
+  metre like every length in mm); hardware price per piece as the BOM counts it (a hinge, a plate, a
+  TANDEM 15/18/21 in runner set per drawer, pins, screws, dowels, anything in the BOM). New price
+  columns in Library → Edgebands and Library → Hardware; empty = not set, with a Configure badge.
+  Board prices are the existing material cost (per m² / ft² or per kg).
+- **Labour:** Settings → **Pricing**: shop rate per hour (starts **not set**, Configure badge) and
+  minutes per cabinet, per drawer, per door and per sheet cut, PLACEHOLDER 60 / 20 / 10 / 15 with
+  Configure badges and "Mark as confirmed" until edited or confirmed. Cabinets are carcasses (copies
+  counted; fillers and end panels are not); drawers are drawer fronts; doors are door parts; sheets
+  are the nest's sheets.
+- **Markup and sales tax:** per job on the Quote tab, 0 by default. Markup is on the subtotal, sales
+  tax on subtotal + markup.
+- **Quote tab:** board, edgeband, hardware, labour, subtotal, markup, sales tax, total, then every
+  item. An item without a price is **"price not set"** with a Configure badge (it opens the exact
+  field), left out of the sums; a line partly priced says "price not set for 1 of 5 items"; the total
+  says "incomplete: N prices not set". With nothing priced there are no amounts at all, never $0.00.
+  A price entered as 0 is the shop's own 0.
+- **Rounding:** each item to the cent (quantity as shown × price), a line is the sum of its items,
+  markup rounded on the subtotal, tax rounded on subtotal + markup, halves of a cent up. Edgeband's
+  quantity is the BOM's running length (0.01 m, or 0.1 ft in an inch shop, with the 2" trimming
+  allowance per edge), so the quote multiplies the figure the BOM shows.
+- **Exports:** the BOM CSV and the Areas and costs CSV get the quote **after a blank row** (every
+  item, the four line totals, subtotal, markup, sales tax, total; the rows above are byte-for-byte
+  as before); a new **Quote PDF** (Letter in an inch shop, A4 in mm; job number, name and customer
+  field only, no other customer data; "price not set" items with an amber Configure tag). Quote PDF
+  is on the Output tab and the Quote tab.
+- **No invented prices:** nothing ships with a price. The screenshots with prices use test values of
+  1.00 typed for the screenshot only (not in the app or the sample).
+
+### Goldens and output
+
+Stage 1 MPR goldens (`tests/mpr.test.ts`) and the custom-part goldens are byte-identical (no file
+under `tests/golden/` changed). `npm run sample`: every MPR, the cut list, labels (PDF and ZPL),
+sheet maps, validation and job file are byte-identical; one file changes, `J1042_bom.csv`: the quote
+block is added after a blank row (every item "price not set", as nothing in the sample has a price;
+labour 7.25 h); the order list above it is byte-identical. Committed regenerated. No program output
+changed; every output switch is still off.
+
+### Test-suite note (Job-1)
+
+After: 1196 tests (1195 + 1 skipped; 17 new in `tests/job-1.test.ts`), 17 lint warnings (none new),
+typecheck and build clean. One earlier test had an exact expectation of the old file: Polish-3 test 1
+compared the areas CSV with `areasCsv(...)`; it now compares with `areasCsv(...) + quoteCsv(...)`
+(exact, not loosened). The 90 s timing test passed in the final full run at 76.6 s with the whole
+suite beside it, and in 60.2 s run on its own with nothing else running (59.0 s before). The limit
+is unchanged.
+
+### Job-1 screenshots
+
+In `docs/screenshots/job-1/` (browser preview, inch mode, the tour's Ortiz kitchen; each under
+300 KB): `01-cabinets-change-materials-button`, `02-change-materials-dialog-by-wall` (oak carcass,
+MDF fronts, an 18 mm drawer-box board, oak door band, the back wall chosen), `03-change-materials-
+preview-warnings` (49 parts, sheets 5 → 5, the TANDEM warning, parts old → new),
+`04-applied-toast-undo`, `05-undone`, `06-library-edgeband-price-per-ft`,
+`07-library-hardware-price-per-piece`, `08-settings-pricing-labour`, `09-quote-nothing-priced`,
+`10-quote-test-prices-one-unpriced` (test prices of 1.00, the Salice hinge left unpriced, markup
+10 %, tax 6.25 %), `11-output-quote-pdf-export`, `12-quote-pdf-test-prices` (the PDF's first page).
+
+### Limits recorded (Job-1)
+
+- Custom (CAD/CAM) parts keep their own board; "Change materials" changes cabinets only.
+- The sheet estimate in the preview is the automatic nest; a hand-saved layout is not used for it.
+- The undo record is kept while the app runs; closing the app ends it (the change itself is saved).
+- Board in the quote is whole sheets bought; the value of remnants kept is not taken off (the Areas
+  and costs panel shows it).
+- Labour is simple time per item; machine time from the toolpaths is not used.
+- A hardware price is per BOM unit: a TANDEM line counts one runner set per drawer.
+- The batch wizard does not offer the Quote PDF; batch BOMs carry the quote block.
+
+### Job-1 decisions needed
+
+1. **Shop rate**: it starts not set, so labour is "price not set" until you enter it. Keep it so
+   (recommended), or start from a placeholder rate with a badge?
+2. **Labour times**: 60 min per cabinet, 20 per drawer, 10 per door, 15 per sheet cut are invented
+   round numbers. Please give your own (or confirm them).
+3. **Sales tax base**: tax is on subtotal + markup. Right for your state, or tax on materials only?
+4. **Fillers and end panels**: not counted as cabinets for labour. Count them (and at what time)?
+5. **Sample BOM**: it now ends with the quote block. Keep (recommended), or keep the quote only in
+   the Quote PDF and the Areas and costs CSV?
+
 ## Next run
 
-- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2 and Polish-3 are complete. Next is
-  the owner's call: the Polish-3 decisions above, the Kitchen-3c decisions (interlocking L parts,
-  cleat size, corner radius), diagonal corners, the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
+- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2, Polish-3 and Job-1 are complete. Next is
+  the owner's call: the Job-1 decisions above (shop rate, labour times, tax base), the Polish-3 and
+  Kitchen-3c decisions, diagonal corners, the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or
+  any limit recorded above.
 
 ## Run log
 
@@ -4040,3 +4170,7 @@ inches), `02-shape-area-ft2` ("1.6609 ft²"), `03-op-summary-ft-tool-picker-mm` 
   simulator and operation lengths, nesting area limits, tool size labels), open cabinets' shelves, plan
   labels, size changes on hand layouts, the onion-skin warning, label PDF layout, plurals, template
   names; tests, screenshots, this file. See `git log`.
+- **Run 27 (Job-1)**: change materials for a whole job (roles from the generator, scope by wall, part
+  overrides, preview with parts, sheets and warnings, one undo); pricing beyond board (edgeband and
+  hardware prices, shop rate and labour times, markup and tax, Quote tab, quote in the BOM and areas
+  CSV, Quote PDF); tests, screenshots, this file. See `git log`.

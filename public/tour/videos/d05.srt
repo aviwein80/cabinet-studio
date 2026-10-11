@@ -1,0 +1,63 @@
+1
+00:00:03,400 --> 00:00:09,648
+Deep dive: library templates. Tune a cabinet once, keep it in the library, and every job after that starts from your shop’s standard.
+
+2
+00:00:09,648 --> 00:00:18,580
+Templates: the built-in presets, then this shop’s own US sizes. The Novak kitchen was built from these.
+
+3
+00:00:18,580 --> 00:00:25,151
+The shop decides every 24" base gets two shelves from now on. Edit the template itself.
+
+4
+00:00:25,151 --> 00:00:35,012
+The banner says the key rule: existing jobs keep their own copy. A job you have already priced or cut never changes behind your back.
+
+5
+00:00:35,012 --> 00:00:44,110
+It is the same editor as a job cabinet. Shelves: 1 to 2.
+
+6
+00:00:44,110 --> 00:00:49,716
+New cabinets from this template get two shelves. For jobs already drawn, it is your call: Update existing jobs…
+
+7
+00:00:49,716 --> 00:01:02,132
+It lists the cabinets copied from this template: in J2061, the Novak kitchen, B1 and B5. Not cut yet, so update them.
+
+8
+00:01:02,132 --> 00:01:24,602
+Back in the job, B1 now has two shelves. Updating replaces the construction; the cabinet stays where it is in the room.
+
+9
+00:01:24,602 --> 00:01:37,479
+The other way round: tune a cabinet in a job, then save it. This 3-drawer base gets 15 in slides, for a run with plumbing behind it.
+
+10
+00:01:37,479 --> 00:01:48,357
+Save as template. It saves the parameters only: one-off edge overrides stay with this job’s cabinet, so a template stays clean.
+
+11
+00:01:48,357 --> 00:02:03,855
+Name it for what makes it different, and say when to use it. The next person to pick it will know.
+
+12
+00:02:03,855 --> 00:02:16,352
+It is in the library now, with your description, next to the others.
+
+13
+00:02:16,352 --> 00:02:25,215
+Export bundle saves templates, materials, edgebands and hardware as one file. Import bundle on the office PC and both use the same standards.
+
+14
+00:02:25,215 --> 00:02:53,244
+Reuse: a new job for a wet bar, J2070. Add cabinet, and the new template is in the list.
+
+15
+00:02:53,244 --> 00:03:09,284
+Open it: 15 in slides already set. No re-entering, and no chance of forgetting the one setting that matters on this job.
+
+16
+00:03:09,284 --> 00:03:14,577
+So: edit a template to change the standard, update old jobs only when you choose, and save good cabinets back to the library.

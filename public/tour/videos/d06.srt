@@ -1,0 +1,79 @@
+1
+00:00:03,401 --> 00:00:17,255
+Deep dive: the room tools. Arrange, Fill gap vs Split, Shrink to fit, how a run re-flows when you resize, and elevations, on a real 105" kitchen wall.
+
+2
+00:00:17,255 --> 00:00:36,112
+Order matters: Arrange lays cabinets out left to right in the order of this list. So add them in walking order: 18" drawers, 36" sink, two 24" bases.
+
+3
+00:00:36,112 --> 00:00:48,400
+Room tab. Width is the wall the run sits on; Wall height is the ceiling, which uppers and tall units are checked against.
+
+4
+00:00:48,400 --> 00:00:57,697
+Arrange along the back wall: tight to the left wall, each box butted to the next. Plan view is the clearest place to check it.
+
+5
+00:00:57,697 --> 00:01:06,597
+The app measures what is left: 18 + 36 + 24 + 24 = 102", so the run is 3" short of the 105" wall.
+
+6
+00:01:06,597 --> 00:01:15,958
+Two fixes. Split puts 1-1/2" at each end, centring the run, good under a centred window. Fill gap puts one 3" filler at the end.
+
+7
+00:01:15,958 --> 00:01:24,477
+Fill gap here: one filler against the right wall, where the installer scribes it to a wall that is never quite straight.
+
+8
+00:01:24,477 --> 00:01:32,824
+F1 is a cabinet in its own right: it gets a part, a label and a line on the cut list.
+
+9
+00:01:32,824 --> 00:01:41,825
+Final site measure: the wall is 104", not 105". Type it in, and the app flags F1 at once: it runs past the wall.
+
+10
+00:01:41,825 --> 00:01:52,977
+Shrink F1 to 2" to fit: the filler gives up the inch, and not one cabinet has to change. That is what fillers are for.
+
+11
+00:01:52,977 --> 00:02:05,626
+Resize in the room: click B3 and make it 21". The run re-flows: B4 and F1 slide left to stay butted, and the gap moves to the wall.
+
+12
+00:02:05,626 --> 00:02:16,924
+Widen its neighbour B4 to 27" and the run pushes back out to meet the wall. No cabinet ever overlaps another.
+
+13
+00:02:16,924 --> 00:02:24,841
+Snap keeps boxes against walls and neighbours when you drag them. Hold Alt to place one freely, say for a freestanding island.
+
+14
+00:02:24,841 --> 00:02:45,827
+Now the uppers, in the same walking order: 18", 36" over the sink, and two 24".
+
+15
+00:02:45,827 --> 00:02:57,429
+Arrange again. Wall cabinets get their own run, hung at 54": 18" above a 36" counter, the US standard, so their tops line up at 84".
+
+16
+00:02:57,429 --> 00:03:09,862
+The upper run is 102" on a 104" wall. Split it: 1" at each end, so the uppers stay centred over the bases instead of all shifting to one side.
+
+17
+00:03:09,862 --> 00:03:17,161
+Elevation shows the wall as the installer sees it: each box with its width and its height off the floor.
+
+18
+00:03:17,161 --> 00:03:26,241
+There is an elevation per wall. This job uses only the back wall, so the left wall is empty: a quick check nothing was put on the wrong wall.
+
+19
+00:03:26,241 --> 00:03:35,449
+Corners go the same way: Arrange puts a blind or pie-cut corner in the corner and starts the next wall from it (see Real jobs u01 and u02).
+
+20
+00:03:35,449 --> 00:03:40,512
+So: add in walking order, Arrange, then let fillers take up the site errors, and check every wall in elevation before you cut.

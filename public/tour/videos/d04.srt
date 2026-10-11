@@ -1,0 +1,71 @@
+1
+00:00:03,400 --> 00:00:12,505
+Deep dive: hardware. Salice hinges and plates, Blum TANDEM runners, and how each number in the library ends up as a hole or a part size.
+
+2
+00:00:12,505 --> 00:00:20,686
+Nine items ship with the app. Code and name are only labels: jobs point at a fixed id, so renaming an item never breaks a job.
+
+3
+00:00:20,686 --> 00:00:29,471
+Open the Salice 110° hinge. Amber notes mark the fields that move holes; everything else is a label.
+
+4
+00:00:29,471 --> 00:00:38,436
+Cup diameter 35 mm (1-3/8") and depth 9/16": the cup must sit fully in the door without breaking through an 11/16" panel.
+
+5
+00:00:38,436 --> 00:00:50,066
+Cup centre 13/16" from the edge: Salice K = 3 mm, so the 35 mm cup centre lands at 20.5 mm. Too close and the edge blows out; too far and the overlay changes.
+
+6
+00:00:50,066 --> 00:01:03,637
+The cruciform plate. Plate height (3 mm) is only a label: it decides the overlay with the hinge, but does not move a hole.
+
+7
+00:01:03,637 --> 00:01:15,265
+What the CNC bores: two holes 37 mm (1-7/16") back from the front of the side, 32 mm apart, 5 mm for euro screws. Change these and every job moves its holes.
+
+8
+00:01:15,265 --> 00:01:27,991
+TANDEM 15 in: runner length sets the drawer box length; the hole positions are where the runner screws into the side.
+
+9
+00:01:27,991 --> 00:01:36,782
+Minimum cabinet depth: below it the runner won’t fit and the app warns you. 18" for the 15 in runner...
+
+10
+00:01:36,782 --> 00:01:49,973
+...and 24" for the 21 in runner. So on depth alone, the app can pick the slide for you.
+
+11
+00:01:49,973 --> 00:02:06,962
+Back in the Novak kitchen: the 3-drawer base, B2, with Slide on Auto from depth.
+
+12
+00:02:06,962 --> 00:02:16,557
+The drawer sides come out 18" long: the box length follows the runner, 18 in here.
+
+13
+00:02:16,557 --> 00:02:25,389
+The box width is the opening less the clearance TANDEM needs on each side, so the subfront and back are cut to that.
+
+14
+00:02:25,389 --> 00:02:41,578
+A pipe behind this box? Pick 15 in and every drawer side drops to 15", with the runner holes moved to suit.
+
+15
+00:02:41,578 --> 00:02:51,905
+No pipe here, so back to Auto.
+
+16
+00:02:51,905 --> 00:03:04,753
+The order list falls out of the design. Cut list, Hardware: 16 hinges and 16 plates, one plate for every hinge...
+
+17
+00:03:04,753 --> 00:03:13,365
+...6 pairs of 18 in TANDEMs for the two 3-drawer bases, 12 shelf pins, dowels and screws. Order straight from this list.
+
+18
+00:03:13,365 --> 00:03:18,657
+So: the library holds the hardware facts once, and every cabinet borrows them for its holes, its part sizes and its order list.

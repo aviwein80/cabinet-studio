@@ -1,39 +1,43 @@
 1
-00:00:03,401 --> 00:00:07,315
+00:00:03,401 --> 00:00:07,255
 Machine & tools holds the tool table: every cutter and drill on the N-200, by number.
 
 2
-00:00:07,315 --> 00:00:11,207
-For now it is placeholder data. The amber box lists every value still to configure.
+00:00:07,255 --> 00:00:11,679
+It ships as placeholder data, because only your shop knows its real tools. The amber box counts what is left to set.
 
 3
-00:00:11,207 --> 00:00:15,882
-The tool table: number, type, diameter, max depth and more for each tool.
+00:00:11,679 --> 00:00:16,952
+Each row is one tool: number, type, diameter, max depth. Programs call tools by these numbers.
 
 4
-00:00:15,882 --> 00:00:19,499
-The Goldberg job needs a 6 mm drill for the Blum slide holes. Switch to millimetres to type it exactly.
+00:00:16,952 --> 00:00:21,173
+Tool sizes stay in millimetres even in an inch shop: bits are bought metric, and a drill must match exactly.
 
 5
-00:00:19,499 --> 00:00:23,639
-Add tool puts a new row at the bottom. Double-click a cell to change it.
+00:00:21,173 --> 00:00:26,323
+T205, a 6 mm drill for the TANDEM runner holes, is in the table from the start, so slide holes always find a drill.
 
 6
-00:00:23,639 --> 00:00:36,999
-Type: drill-vertical. A description. Diameter 6 mm, max depth 30 mm.
+00:00:26,323 --> 00:00:30,742
+Edit opens the tool. Measure the real bit before you change anything: the program trusts these numbers.
 
 7
-00:00:36,999 --> 00:00:43,211
-Save. Drills are matched by exact diameter, so the 6 mm holes will now find this drill.
+00:00:30,742 --> 00:00:36,779
+Mark as confirmed only once the number, diameter and depth match the bit in the machine. That clears its badge.
 
 8
-00:00:43,211 --> 00:00:52,915
-Back on the Goldberg job’s Output tab: 0 errors now.
+00:00:36,779 --> 00:00:43,109
+How holes find a drill: by diameter, within the drill matching tolerance (0.1 mm). An 8 mm hole uses T203, never a 7 mm bit.
 
 9
-00:00:52,915 --> 00:00:58,983
-Tick the simulate box, and the MPR programs can be exported.
+00:00:43,109 --> 00:00:48,404
+The cut-out tool is chosen here too: T101, the 12 mm compression cutter, sets the spacing nesting leaves between parts.
 
 10
-00:00:58,983 --> 00:01:03,118
-The tools are still placeholders, though: load the real N-200 table and simulate before cutting.
+00:00:48,404 --> 00:00:53,467
+When the real N-200 table is ready, Import tools loads it in one go; then the placeholder switch can go off.
+
+11
+00:00:53,467 --> 00:00:56,668
+Until then every job’s export check lists these tools to configure, and nothing should be cut.

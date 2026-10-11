@@ -1,71 +1,71 @@
 1
-00:00:03,400 --> 00:00:09,565
+00:00:03,400 --> 00:00:09,566
 Deep dive: the export check and the Configure badges. What each finding means, why it is there, and how to clear it properly.
 
 2
-00:00:09,565 --> 00:00:22,273
+00:00:09,566 --> 00:00:22,309
 Every export runs the check first. Errors block the export; warnings must be read; info is a reminder. Novak: 0 errors, 16 warnings, 1 info.
 
 3
-00:00:22,273 --> 00:00:33,154
+00:00:22,309 --> 00:00:33,201
 PLACEHOLDER_TOOLS: the tool table that ships with the app is invented. Every program would call tools that may not exist on your N-200.
 
 4
-00:00:33,154 --> 00:00:48,157
+00:00:33,201 --> 00:00:48,204
 Each tool it uses has a Configure badge: T101 is the cut-out cutter. Number, diameter and depth must match the woodWOP tool database.
 
 5
-00:00:48,157 --> 00:00:58,961
+00:00:48,204 --> 00:00:59,008
 MACHINE_PLACEHOLDER: table size, axis travel, tool change, safe Z and spoilboard. The checker uses them to catch parts off the table or cuts too deep.
 
 6
-00:00:58,961 --> 00:01:09,287
-SMALL_PARTS: the 6" x 2" corner cleat, #41. Vacuum may not hold it once it is cut free; cut it by hand, or hold it down.
+00:00:59,008 --> 00:01:09,368
+SMALL_PARTS: the 6" x 2" corner cleat, #41. Vacuum may not hold it once cut free, so the check names the fix: an onion skin, set under Machine & tools.
 
 7
-00:01:09,287 --> 00:01:20,226
+00:01:09,368 --> 00:01:20,414
 HORIZONTAL_SKIPPED: this machine profile has no horizontal drill, so edge holes are left out of the program, and listed on the label for drilling by hand.
 
 8
-00:01:20,226 --> 00:01:31,022
+00:01:20,414 --> 00:01:31,202
 UNCONFIRMED lists the placeholder values this job actually uses. Fix those first; the rest of the 73 can wait for the jobs that need them.
 
 9
-00:01:31,022 --> 00:01:44,603
+00:01:31,202 --> 00:01:44,799
 SIMULATE, the info: generated programs are not machine-proven. The box above is your promise to run each one in woodWOP. It is left unticked here.
 
 10
-00:01:44,603 --> 00:01:49,358
+00:01:44,799 --> 00:01:49,527
 The sidebar keeps count: 73 values to configure. Click it to go to Machine & tools.
 
 11
-00:01:49,358 --> 00:02:01,669
+00:01:49,527 --> 00:02:01,809
 Configure opens the field for the real value, typed from the tool database. Mark as confirmed keeps the value shown, for when it is already right.
 
 12
-00:02:01,669 --> 00:02:11,230
+00:02:01,809 --> 00:02:11,377
 Neither one switches on machine output. That is a separate switch, and it stays off until the shop has simulated real programs.
 
 13
-00:02:11,230 --> 00:02:21,134
+00:02:11,377 --> 00:02:21,290
 Import tools reads a CSV export of the real tool table, which clears many badges at once. Faster and safer than typing 73 values.
 
 14
-00:02:21,134 --> 00:02:33,510
+00:02:21,290 --> 00:02:33,706
 Badges are not only for the machine. Back in the job: the inside-corner radius of the L parts is a shop fact too.
 
 15
-00:02:33,510 --> 00:02:43,458
+00:02:33,706 --> 00:02:43,689
 The edgebander has been checked: it follows a 0.236" (6 mm) inside corner. So the value shown is right: Mark as confirmed.
 
 16
-00:02:43,458 --> 00:02:51,626
+00:02:43,689 --> 00:02:51,847
 The badge is gone. A confirmed value stops appearing as unconfirmed in every job and every export check.
 
 17
-00:02:51,626 --> 00:03:03,512
+00:02:51,847 --> 00:03:03,624
 Material prices work the same way: a Configure badge until a price is entered (deep dive 11).
 
 18
-00:03:03,512 --> 00:03:08,794
+00:03:03,624 --> 00:03:08,906
 So: read the check top to bottom, replace placeholders with real values, confirm only what you have checked, and simulate before you cut.

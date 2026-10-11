@@ -1,51 +1,51 @@
 1
-00:00:03,401 --> 00:00:12,293
+00:00:03,400 --> 00:00:12,042
 The Novak kitchen is sold. Hand it to the shop floor from the job's Output tab.
 
 2
-00:00:12,293 --> 00:00:15,486
+00:00:12,042 --> 00:00:15,210
 First, the export check. Read it top to bottom before anything is cut.
 
 3
-00:00:15,486 --> 00:00:20,451
+00:00:15,210 --> 00:00:20,152
 Placeholder tools and machine data: load the real N-200 values before running programs.
 
 4
-00:00:20,451 --> 00:00:25,893
-Small parts like the 2" x 6" corner cleat get a vacuum warning: hold them down or cut by hand.
+00:00:20,152 --> 00:00:25,556
+Small parts like the 2" x 6" corner cleat get a vacuum warning, with the fix: an onion skin keeps them held until the last pass.
 
 5
-00:00:25,893 --> 00:00:28,717
+00:00:25,556 --> 00:00:28,385
 Machine output switches stay off in this tour. The paperwork is what the floor needs today.
 
 6
-00:00:28,717 --> 00:00:36,239
+00:00:28,385 --> 00:00:35,917
 Sheet maps PDF: one page per sheet, every part numbered where it sits.
 
 7
-00:00:36,239 --> 00:00:43,900
+00:00:35,917 --> 00:00:43,580
 The operator lays each map next to its sheet and checks the parts as they come off.
 
 8
-00:00:43,900 --> 00:00:51,566
+00:00:43,580 --> 00:00:51,241
 Labels PDF: a sheet header label, then one label per part in cut order.
 
 9
-00:00:51,566 --> 00:00:58,887
+00:00:51,241 --> 00:00:58,560
 Each label carries the job, cabinet, part, size, banded edges and a barcode.
 
 10
-00:00:58,887 --> 00:01:03,121
+00:00:58,560 --> 00:01:02,834
 Labels ZPL sends the same labels straight to a Zebra printer at the machine.
 
 11
-00:01:03,121 --> 00:01:17,508
+00:01:02,834 --> 00:01:17,205
 Cut list CSV for anything cut on the panel saw, and for the edgebander operator.
 
 12
-00:01:17,508 --> 00:01:22,041
+00:01:17,205 --> 00:01:21,740
 BOM CSV goes to purchasing: hinges, plates, slides and edgeband to have on hand.
 
 13
-00:01:22,041 --> 00:01:27,143
+00:01:21,740 --> 00:01:26,844
 Maps, labels, cut list and order list: the job is ready for the floor.

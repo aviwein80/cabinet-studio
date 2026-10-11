@@ -1,67 +1,71 @@
 1
-00:00:03,401 --> 00:00:09,565
+00:00:03,400 --> 00:00:09,563
 Deep dive: nesting. How parts are laid out on sheets, which settings drive it and why, and how to fix a layout by hand.
 
 2
-00:00:09,565 --> 00:00:20,075
+00:00:09,563 --> 00:00:20,100
 The Novak kitchen nests onto six 5 x 12 ft sheets. One material per sheet, so the strip shows the board and how full each sheet is.
 
 3
-00:00:20,075 --> 00:00:30,989
+00:00:20,100 --> 00:00:31,029
 Sheet 4, white melamine, 93% used. Under the name: the trim at the sheet edge and the spacing between parts.
 
 4
-00:00:30,989 --> 00:00:44,973
+00:00:31,029 --> 00:00:45,086
 Those come from Machine & tools, Nesting. Part spacing is the cut-out tool (1/2") plus a little extra, so the bit has room between parts.
 
 5
-00:00:44,973 --> 00:00:53,843
+00:00:45,086 --> 00:00:53,961
 Edge trim: factory sheet edges are often chipped or a hair out of square, so the nest stays 3/8" in from every edge.
 
 6
-00:00:53,843 --> 00:01:03,861
+00:00:53,961 --> 00:01:04,029
 Allow 90° rotation lets parts turn to fit better. On a grained board, grain-locked parts never turn, so oak doors keep their grain vertical.
 
 7
-00:01:03,861 --> 00:01:12,774
+00:01:04,029 --> 00:01:12,949
 Nesting engine: Best of both runs the rectangle and true-shape nesters and keeps whichever uses fewer sheets.
 
 8
-00:01:12,774 --> 00:01:22,239
+00:01:12,949 --> 00:01:22,431
 Keep kits on one sheet keeps a cabinet’s parts together, handy for assembling box by box, at the cost of a little yield.
 
 9
-00:01:22,239 --> 00:01:32,882
-Offcuts: pieces at least this long and wide are kept as remnants, not scrap. Use stock offcuts first fills saved remnants before new sheets.
+00:01:22,431 --> 00:01:32,829
+Onion skin leaves a thin layer under small parts on the first cut-out pass, so the vacuum still holds them; it is cut last. Now with its area limit in ft².
 
 10
-00:01:32,882 --> 00:01:47,742
-Grain lives on the material. In the Library, the oak board has grain along the sheet length; white melamine has none, so its parts may turn.
+00:01:32,829 --> 00:01:43,465
+Offcuts: pieces at least this long and wide are kept as remnants, not scrap. Use stock offcuts first fills saved remnants before new sheets.
 
 11
-00:01:47,742 --> 00:02:11,611
-Back to the job. The Area and cost table splits each sheet: parts, remnants kept and scrap. That is your real yield.
+00:01:43,465 --> 00:01:58,383
+Grain lives on the material. In the Library, the oak board has grain along the sheet length; white melamine has none, so its parts may turn.
 
 12
-00:02:11,611 --> 00:02:21,054
-The job leaves offcuts. After cutting, Update offcut stock adds them to the library, so the next job can use them first.
+00:01:58,383 --> 00:02:22,407
+Back to the job. The Area and cost table splits each sheet: parts, remnants kept and scrap. That is your real yield.
 
 13
-00:02:21,054 --> 00:02:32,848
-Edit layout to move parts by hand, e.g. to keep the two halves of a pair on one sheet, or to free a sheet for a remnant.
+00:02:22,407 --> 00:02:31,852
+The job leaves offcuts. After cutting, Update offcut stock adds them to the library, so the next job can use them first.
 
 14
-00:02:32,848 --> 00:02:46,746
-Drag a part: it snaps to the nest spacing, the trim and its neighbours. The live check flags any overlap, spacing, trim or grain problem at once.
+00:02:31,852 --> 00:02:43,679
+Edit layout to move parts by hand, e.g. to keep the two halves of a pair on one sheet, or to free a sheet for a remnant.
 
 15
-00:02:46,746 --> 00:03:16,776
-Turn, End for end and Move to sheet… work on the picked part. Undo steps back; here we Cancel and keep the automatic nest.
+00:02:43,679 --> 00:02:57,360
+Drag a part: it snaps to the nest spacing, the trim and its neighbours. The live check flags any overlap, spacing, trim or grain problem at once.
 
 16
-00:03:16,776 --> 00:03:26,682
-Why it matters: a saved layout drives the programs, labels and export check. A sheet you never touched says “nested automatically” and re-nests when the job changes; a saved one stays put.
+00:02:57,360 --> 00:03:27,505
+Turn, End for end and Move to sheet… work on the picked part. Undo steps back; here we Cancel and keep the automatic nest.
 
 17
-00:03:26,682 --> 00:03:31,965
+00:03:27,505 --> 00:03:37,408
+Why it matters: a saved layout drives the programs, labels and export check. A sheet you never touched says “nested automatically” and re-nests when the job changes; a saved one stays put.
+
+18
+00:03:37,408 --> 00:03:42,691
 So: set spacing, trim and rotation once for your machine, let grain protect the show faces, and only hand-edit when you have a reason.

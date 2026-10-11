@@ -1,0 +1,75 @@
+1
+00:00:03,400 --> 00:00:18,586
+A U-shaped kitchen for the Brennans: three walls, two pie-cut corners, and a back wall that is 3" longer than the cabinets.
+
+2
+00:00:18,586 --> 00:00:29,235
+Walking order, left wall to right wall: an 18" drawer base, the back-left pie-cut corner…
+
+3
+00:00:29,235 --> 00:00:51,487
+…a 36" sink base and a 24" base on the back wall, the second pie-cut corner, and a 24" base on the right wall.
+
+4
+00:00:51,487 --> 00:01:03,315
+The second corner must be told which way it turns. Open B5: Corner → Pie-cut corner, back-right.
+
+5
+00:01:03,315 --> 00:01:14,354
+Why? A pie-cut is built for one hand: the L parts, the hinge side and the leg that meets the back wall all mirror.
+
+6
+00:01:14,354 --> 00:01:26,689
+The room: the back wall measures 135" corner to corner, the side walls 96".
+
+7
+00:01:26,689 --> 00:01:35,380
+Arrange: the corners go into both back corners and the side cabinets run down each leg.
+
+8
+00:01:35,380 --> 00:01:45,546
+Back wall: 36 + 36 + 24 + 36 = 132". That leaves 3" to take up. Two choices: one 3" filler, or 1-1/2" at each end.
+
+9
+00:01:45,546 --> 00:01:58,101
+In a U, split it. A filler beside each corner keeps the corner doors and the next cabinet’s doors and handles from hitting each other.
+
+10
+00:01:58,101 --> 00:02:06,617
+F1 and F2, 1-1/2" each, both next to a corner. Narrow, but enough clearance for a handle; and the run stays centred on the wall.
+
+11
+00:02:06,617 --> 00:02:12,141
+The plan keeps the small labels readable: F1 and F2 sit on their thin strips without crowding the cabinet names.
+
+12
+00:02:12,141 --> 00:02:19,629
+Elevations, one per wall. Back wall: corner, filler, sink, base, filler, corner.
+
+13
+00:02:19,629 --> 00:02:26,279
+Left wall: the 18" drawer base coming off the corner.
+
+14
+00:02:26,279 --> 00:02:34,720
+Right wall: the 24" base on the other leg.
+
+15
+00:02:34,720 --> 00:02:48,476
+In 3D: one continuous countertop line round all three walls.
+
+16
+00:02:48,476 --> 00:02:59,704
+Cut list: the fillers are parts like any other, 1-1/2" wide, banded on both long edges. Each takes the door board of its neighbour: F1 is MDF like the sink doors.
+
+17
+00:02:59,704 --> 00:03:06,951
+Both corners bring their L-shaped bottoms, tops and shelves, mirrored, with their corner cleats.
+
+18
+00:03:06,951 --> 00:03:13,996
+Nesting: the L parts nest by their true shape.
+
+19
+00:03:13,996 --> 00:03:20,440
+So: set the second corner’s hand, Arrange, split the leftover beside the corners, and check each wall’s elevation.

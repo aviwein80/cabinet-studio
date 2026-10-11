@@ -1,0 +1,55 @@
+1
+00:00:03,401 --> 00:00:09,842
+Before a kitchen is cut, someone should read every label once. Ortiz kitchen: doors, drawers, a blind corner, a filler and end panels.
+
+2
+00:00:09,842 --> 00:00:18,755
+Why bother? The label is what the person at the table has: if it’s wrong or unclear, the part gets banded wrong or lost on the cart.
+
+3
+00:00:18,755 --> 00:00:22,473
+Labels PDF: one 100 x 70 mm label per part, in cut order, and each sheet starts with a header label.
+
+4
+00:00:22,473 --> 00:00:29,378
+Header: sheet number, material and part count. Stick it on the stack so the sheet can be found again.
+
+5
+00:00:29,378 --> 00:00:39,046
+A part label: part ID barcode, cabinet and part name, finished size, the edge diagram showing which edges are banded, and its sheet and order.
+
+6
+00:00:39,046 --> 00:00:48,256
+Check the edge diagram against the cut list: a door is banded all round; a drawer front too. That is where mistakes cost a door.
+
+7
+00:00:48,256 --> 00:00:57,123
+The odd parts deserve a look: drawer box parts, the blind panel, the filler and the end panels.
+
+8
+00:00:57,123 --> 00:01:07,486
+Fillers and end panels go to install, not the assembly bench: their labels carry the same names as the room plan (F1, E1, E2), so the installer knows where each one goes. The filler adds: Scribe 1/2" on L2, trim to the wall.
+
+9
+00:01:07,486 --> 00:01:19,905
+Sheet maps PDF: one page per sheet, every part at its spot with its number, and the machine origin. Labels go on as parts come off.
+
+10
+00:01:19,905 --> 00:01:33,936
+Now an L-shaped corner, from the Novak kitchen: the L parts and the corner cleat have their own labels.
+
+11
+00:01:33,936 --> 00:01:43,138
+The L bottom’s label draws the L, so the banded inside edges L3 and W3 are clear. A rectangle would hide which edges are inside.
+
+12
+00:01:43,138 --> 00:01:52,348
+The cleat is marked "fix on site": it doesn’t go into the carcass at assembly, so it must not get lost in the offcut bin.
+
+13
+00:01:52,348 --> 00:01:57,936
+Label printer? Labels ZPL sends the same labels to a Zebra printer. Same content, no PDF step.
+
+14
+00:01:57,936 --> 00:02:04,379
+So: read the headers, the edge diagrams on show parts, and the odd parts once, before the first sheet goes on the machine.

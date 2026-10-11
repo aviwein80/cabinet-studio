@@ -1,0 +1,51 @@
+1
+00:00:03,401 --> 00:00:09,385
+Novak kitchen, six sheets nested automatically. The shop wants a hand tweak on the last sheet before cutting.
+
+2
+00:00:09,385 --> 00:00:17,450
+Sheet 6 is 63% used. Say the spoilboard has a worn patch under the narrow strip #13: move that part out of the way by hand.
+
+3
+00:00:17,450 --> 00:00:30,866
+Edit layout. Drag #13 to the right, into open space: it snaps to the nest spacing, the trim and its neighbours.
+
+4
+00:00:30,866 --> 00:00:42,689
+Live check: no overlaps, spacing, trim or grain problems. Save layout: from now on this layout drives the programs, labels and export check.
+
+5
+00:00:42,689 --> 00:00:58,032
+Then the site visit: the dishwasher space needs a wider cabinet. B5 goes from 24" to 27".
+
+6
+00:00:58,032 --> 00:01:11,791
+Back on Nesting, a banner: 7 parts changed size since this layout was saved. They keep their place, at the new size.
+
+7
+00:01:11,791 --> 00:01:20,304
+Why not move them silently? A saved layout is a decision you made. The app won’t undo it; it flags what no longer fits and lets you decide.
+
+8
+00:01:20,304 --> 00:01:34,304
+And the check is not weakened: the job now has errors. A wider part on a full sheet runs off the edge or into its neighbour.
+
+9
+00:01:34,304 --> 00:01:46,093
+Two ways out. Edit layout: fix it by hand and keep your tweak, good when one or two parts moved. Re-nest automatically: start fresh.
+
+10
+00:01:46,093 --> 00:01:51,643
+Seven parts on several sheets is too much hand work. Re-nest automatically.
+
+11
+00:01:51,643 --> 00:02:11,031
+The banner is gone and the errors with it. The sheets are back on the automatic nest, so the next change re-nests on its own.
+
+12
+00:02:11,031 --> 00:02:19,081
+If the tweak still matters, redo it now, on the final sizes. Rule of thumb: hand-edit last, once the sizes are signed off.
+
+13
+00:02:19,081 --> 00:02:25,293
+So: a hand layout stays put, size changes are flagged and checked, and you choose: fix by hand, or re-nest and redo the tweak.

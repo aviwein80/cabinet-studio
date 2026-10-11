@@ -1,59 +1,83 @@
 1
-00:00:03,400 --> 00:00:10,683
+00:00:03,401 --> 00:00:10,683
 Deep dive: pricing. What the app prices, how it splits a sheet’s cost, and how to build a full quote from its numbers. Example prices throughout.
 
 2
-00:00:10,683 --> 00:00:20,896
+00:00:10,683 --> 00:00:20,859
 Prices live on each material in the Library. Open the white melamine.
 
 3
-00:00:20,896 --> 00:00:34,721
+00:00:20,859 --> 00:00:34,537
 Costed by area, $2.85 per square foot. A 5 x 12 ft sheet is 60 ft², so one sheet costs $171. Price per ft² keeps working when the sheet size changes.
 
 4
-00:00:34,721 --> 00:00:43,753
+00:00:34,537 --> 00:00:43,450
 Density is only a label; nothing here touches cut sizes. Cancel. The other boards were priced the same way in Real jobs u06.
 
 5
-00:00:43,753 --> 00:01:03,534
+00:00:43,450 --> 00:01:03,130
 Back in the job, Nesting. Area and cost splits every sheet into three: the parts, remnants worth keeping, and scrap.
 
 6
-00:01:03,534 --> 00:01:16,917
+00:01:03,130 --> 00:01:16,515
 Sheet 1, the 1/4" HDF backs: $51.01 a sheet. The 13 parts use 81.8% of it ($41.71); the rest is scrap ($9.30). You pay for the whole sheet either way.
 
 7
-00:01:16,917 --> 00:01:31,877
+00:01:16,515 --> 00:01:31,493
 Sheet 4, melamine, 93% used: the better the nest, the less of each sheet is scrap. That is why spacing and rotation settings matter to price.
 
 8
-00:01:31,877 --> 00:01:47,625
+00:01:31,493 --> 00:01:47,241
 Sheet 6 leaves big offcuts. Remnants kept have their own line: material you still own, and can use on the next job.
 
 9
-00:01:47,625 --> 00:02:02,314
+00:01:47,241 --> 00:02:01,921
 The job line: six sheets cost $825.09. Less the remnants you keep, the job uses $625.75. Quote the first to be safe, the second to be sharp.
 
 10
-00:02:02,314 --> 00:02:26,188
-Per part: Areas and costs CSV gives each part its share of its sheet. Useful for pricing one cabinet, or a change order.
+00:02:01,921 --> 00:02:12,061
+The Quote tab turns those numbers into a quote. This job already has the EXAMPLE prices typed in Advanced examples e06.
 
 11
-00:02:26,188 --> 00:02:36,504
-What the sheet price leaves out: edgeband, hardware and labour. Their quantities are all in the BOM CSV.
+00:02:12,061 --> 00:02:25,821
+Board is the whole sheets bought, $825.10, not the $625.75 after remnants: you pay the supplier for whole sheets. Credit remnants yourself if you reuse them.
 
 12
-00:02:36,504 --> 00:02:51,337
-Worked example: 157 ft of 1 mm ABS at $0.25/ft is about $39; 16 Salice hinges and plates at $6 a pair, $96; 6 pairs of TANDEMs at $45, $270.
+00:02:25,821 --> 00:02:38,517
+Why $825.10 and not $825.09? The quote rounds each item to the cent, then adds the lines, so the PDF’s lines add up exactly.
 
 13
-00:02:51,337 --> 00:03:04,476
-So boards $825 + edgeband ~$40 + hardware ~$400 (with screws, pins and dowels) is about $1,265 in materials, before labour and margin.
+00:02:38,517 --> 00:02:49,960
+Edgeband uses the BOM’s running feet, which include the 2" trimming allowance per edge: you buy the waste too.
 
 14
-00:03:04,476 --> 00:03:15,401
-Labour is yours to add: machine time from the programs, plus banding, assembly and install. The app gives you every quantity; you set the rates.
+00:02:49,960 --> 00:03:00,735
+Hardware is per BOM unit: a hinge, a plate, and one TANDEM runner set per drawer. Price it the way your supplier sells it.
 
 15
-00:03:15,401 --> 00:03:21,645
-So: price boards per ft², nest well to cut scrap, decide how to treat remnants, and add edgeband, hardware and labour from the BOM.
+00:03:00,735 --> 00:03:12,807
+Labour is time per cabinet, drawer, door and sheet cut, at your shop rate. Simple on purpose: the times are yours, and start as badged placeholders.
+
+16
+00:03:12,807 --> 00:03:26,577
+Markup is on the subtotal; sales tax on subtotal + markup. Both are per job, because jobs differ (a contractor, a tax-exempt client).
+
+17
+00:03:26,577 --> 00:03:36,022
+What if a price goes missing? Clear the hinge’s example price in the Library…
+
+18
+00:03:36,022 --> 00:04:01,337
+…and the quote says so: "price not set for 1 of 6 items", and the total is marked incomplete. Never a silent $0 that undercuts you.
+
+19
+00:04:01,337 --> 00:04:25,918
+Put the example price back ($4.50) and the total is whole again.
+
+20
+00:04:25,918 --> 00:04:51,300
+Per part: the Areas and costs CSV gives each part its share of its sheet, and now ends with the same quote block. Useful for a change order.
+
+21
+00:04:51,300 --> 00:04:59,105
+So: price boards per ft² and nest well, decide how you treat remnants, set edgeband, hardware and labour once, and let "price not set" catch the gaps.

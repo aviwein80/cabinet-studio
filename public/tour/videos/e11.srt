@@ -1,0 +1,83 @@
+1
+00:00:03,400 --> 00:00:11,083
+The Ortiz family saw a sample board: they want natural oak cabinets on the back wall, with paint-grade MDF doors and drawer fronts. The job is already built.
+
+2
+00:00:11,083 --> 00:00:15,140
+Before Job-1 that meant opening every cabinet. Now: Cabinets tab → Change materials.
+
+3
+00:00:15,140 --> 00:00:28,361
+Boards by role (carcass, fronts, backs, drawer boxes) and bands by group. Each says what the job uses now. Anything left at "Keep as is" is not touched.
+
+4
+00:00:28,361 --> 00:00:35,085
+Roles come from how the app builds each cabinet, not from part names, so a "door" is always a door and a filler follows the fronts.
+
+5
+00:00:35,085 --> 00:00:44,605
+Carcass: PB18-OAK, the oak melamine with grain. Fronts: MDF18, paint grade.
+
+6
+00:00:44,605 --> 00:00:54,036
+Bands follow the look: oak ABS on the carcass front edges. Paint-grade MDF doors get no band, they are sprayed.
+
+7
+00:00:54,036 --> 00:00:59,101
+And a test: put the drawer boxes on 18 mm board, to see what the check says.
+
+8
+00:00:59,101 --> 00:01:11,017
+Only the back wall changes. Chosen cabinets → Select by wall: Back wall. The left-wall cabinets stay white.
+
+9
+00:01:11,017 --> 00:01:18,365
+Preview first. Nothing is applied yet.
+
+10
+00:01:18,365 --> 00:01:28,941
+The warning: TANDEM slides take drawer sides up to 16 mm. The same check as the cabinet editor; you can still apply, but the warning stays on the job.
+
+11
+00:01:28,941 --> 00:01:37,869
+Sheets before → after, per board: an estimate from the automatic nest, so you see the material cost of the change before you make it.
+
+12
+00:01:37,869 --> 00:01:48,610
+Every part that changes: board old → new, edges that change, and any size that changes with a board thickness.
+
+13
+00:01:48,610 --> 00:02:08,662
+That warning is a real problem, so set Drawer boxes back to Keep as is (PB16 white) and preview again.
+
+14
+00:02:08,662 --> 00:02:13,640
+Clean. Apply.
+
+15
+00:02:13,640 --> 00:02:18,923
+Done in one step. The cards show the oak carcass; the left wall stays white.
+
+16
+00:02:18,923 --> 00:02:33,949
+Cut list: oak and MDF parts now, and the oak band on the carcass edges.
+
+17
+00:02:33,949 --> 00:02:40,317
+Nesting re-runs: oak sheets with the grain kept along each part, and an MDF sheet for the fronts.
+
+18
+00:02:40,317 --> 00:02:46,037
+Quote follows too: the board line now counts oak and MDF sheets.
+
+19
+00:02:46,037 --> 00:02:54,258
+Customer changes their mind again? Cabinets tab → Undo material change. One click puts every part back.
+
+20
+00:02:54,258 --> 00:03:00,021
+All white again. (Undo lives while the app is open; anything you edited since is left alone.)
+
+21
+00:03:00,021 --> 00:03:05,783
+So: pick per role, choose the cabinets, preview parts, sheets and warnings, apply, and keep Undo as your safety net.

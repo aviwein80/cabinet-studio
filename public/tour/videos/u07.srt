@@ -1,43 +1,47 @@
 1
-00:00:03,400 --> 00:00:08,767
-Priya Patel changed her mind: the vanity is now natural oak, not white. Change the job's materials.
+00:00:03,401 --> 00:00:08,807
+Priya Patel changed her mind: the vanity is now natural oak, not white. Change the whole job’s materials at once.
 
 2
-00:00:08,767 --> 00:00:11,725
+00:00:08,807 --> 00:00:12,168
 Before: everything is white melamine. Note the sheet list.
 
 3
-00:00:11,725 --> 00:00:17,433
-Materials are set per cabinet. Open the sink cabinet, B1.
+00:00:12,168 --> 00:00:18,320
+Cabinets tab → Change materials. Each picker shows what the job uses now.
 
 4
-00:00:17,433 --> 00:00:25,907
-Carcass and doors: PB18-OAK, the natural oak melamine with grain.
+00:00:18,320 --> 00:00:27,260
+Carcass and fronts: PB18-OAK, the natural oak melamine with grain.
 
 5
-00:00:25,907 --> 00:00:38,507
-The edgebanding follows: oak ABS on the carcass front edges and all door edges.
+00:00:27,260 --> 00:00:36,413
+The edgebanding follows: oak ABS on the carcass front edges and on the doors and drawer fronts.
 
 6
-00:00:38,507 --> 00:01:00,086
-Same for the drawer bank, B2: oak carcass, oak drawer fronts, oak edges.
+00:00:36,413 --> 00:00:41,874
+Drawer boxes stay at "Keep as is": 16 mm white, the side thickness TANDEM slides are made for.
 
 7
-00:01:00,086 --> 00:01:07,982
-The drawer boxes stay white: they default to the 16 mm white board, the side thickness TANDEM slides are made for.
+00:00:41,874 --> 00:00:54,708
+Preview: every part that changes, sheets before and after, and no new warnings.
 
 8
-00:01:07,982 --> 00:01:19,860
-The cut list regroups by material: oak parts, the white drawer boxes and the backs.
+00:00:54,708 --> 00:00:59,278
+Apply to both cabinets. (One Undo would put it all back.)
 
 9
-00:01:19,860 --> 00:01:24,467
-The edgeband totals switch to the oak tape.
+00:00:59,278 --> 00:01:11,969
+The cut list regroups by material: oak parts, the white drawer boxes and the backs.
 
 10
-00:01:24,467 --> 00:01:31,864
-Nesting re-runs on its own: oak sheets now, with the grain kept along each part.
+00:01:11,969 --> 00:01:16,896
+The edgeband totals switch to the oak tape.
 
 11
-00:01:31,864 --> 00:01:35,065
-A change of finish on a whole job takes a minute, and the cut list, nesting and labels all follow.
+00:01:16,896 --> 00:01:24,592
+Nesting re-runs on its own: oak sheets now, with the grain kept along each part.
+
+12
+00:01:24,592 --> 00:01:28,334
+A change of finish on a whole job takes one dialog, and the cut list, nesting and labels all follow.

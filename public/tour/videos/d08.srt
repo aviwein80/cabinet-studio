@@ -1,0 +1,75 @@
+1
+00:00:03,400 --> 00:00:09,562
+Deep dive: labels and sheet maps. What every field on a label is for, where it goes on the part, and how the floor uses them.
+
+2
+00:00:09,562 --> 00:00:18,412
+Nesting, Sheet 4. Turn on Labels: each part shows the spot where its label goes.
+
+3
+00:00:18,412 --> 00:00:27,247
+The spot is picked per part: the biggest clear area, away from holes, which would tear the label, and away from edges still to be banded.
+
+4
+00:00:27,247 --> 00:00:38,747
+Click a part to see its details. The number on the sheet is the big number on its label and on the sheet map, so all three always agree.
+
+5
+00:00:38,747 --> 00:00:54,728
+Label size and edge clearance are set once under Machine & tools: 100 x 70 mm to match the label roll, and a margin from every part edge.
+
+6
+00:00:54,728 --> 00:01:05,705
+Back to the job: the label files are on the Output tab. Labels PDF first.
+
+7
+00:01:05,705 --> 00:01:15,871
+Each sheet starts with a header label: sheet 4 of 6, the board, 12 parts, 93% yield and the program name. It goes on the sheet, so the right board meets the right program.
+
+8
+00:01:15,871 --> 00:01:26,594
+Then one label per part, in cut order: cut 1, 2, 3... the order the machine cuts them, so labels leave the printer in the order parts come free.
+
+9
+00:01:26,594 --> 00:01:33,079
+Here is a door from Sheet 2, field by field.
+
+10
+00:01:33,079 --> 00:01:43,181
+Top bar: #50 is the number on the sheet map. The job and customer, S2/6 is the sheet, and "cut 1 · 2 of 3" is the cut order and which of three identical parts.
+
+11
+00:01:43,181 --> 00:01:52,797
+Then what it is: Left door of B4, the sink base. Finished size in large type, the cut size under it (1/16" smaller for the tape), and the board.
+
+12
+00:01:52,797 --> 00:02:02,046
+Edges: which side gets which tape, L1 L2 W1 W2, and the drawing shows the banded edges as thick lines, so the edgebander needs no cut list.
+
+13
+00:02:02,046 --> 00:02:12,532
+The barcode J2061-050 identifies the part at the bander or assembly bench. "Edge code 1:1:1:1" is the same banding as numbers, for a bander that reads codes.
+
+14
+00:02:12,532 --> 00:02:22,696
+Special parts say so: the pie-cut bottom lists its inside edges L3 and W3, and the corner cleat carries "Fix on site".
+
+15
+00:02:22,696 --> 00:02:32,970
+Sheet maps PDF: one page per sheet with every part number in place, the label spots and the edge codes.
+
+16
+00:02:32,970 --> 00:02:43,167
+Label the parts while they are still on the table, map in hand: once 12 parts are in a stack, two near-identical shelves are easy to mix up.
+
+17
+00:02:43,167 --> 00:02:53,910
+Labels ZPL is the same labels as raw Zebra code at 203 dpi: send it straight to a label printer by the machine, with no PDF and no scaling.
+
+18
+00:02:53,910 --> 00:03:02,225
+Each label is a ^XA ... ^XZ block: the text fields and the barcode are positioned in printer dots, sized for the 100 x 70 mm label.
+
+19
+00:03:02,225 --> 00:03:07,508
+So: header on the sheet, a label on every part before it moves, and the map to check nothing is missing.

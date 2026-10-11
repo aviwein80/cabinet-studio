@@ -646,9 +646,9 @@ describe('Kitchen-2 C: Polish-1 leftovers', () => {
     const { sampleJob } = await import('../src/core/sample')
     const base = { ...sampleJob(), createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }
     const mm = runJob(base, data())
-    expect(mm.issues.find((i) => i.code === 'SMALL_PART' && i.partNo === 22)!.message).toBe('Part #22 (764 x 100) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).')
+    expect(mm.issues.find((i) => i.code === 'SMALL_PART' && i.partNo === 22)!.message).toBe('Part #22 (764 x 100) is small; vacuum may not hold it. Set an onion skin (Machine & tools → Nesting → Onion skin) so it stays held until the last pass.')
     const inches = runJob(base, data((d) => (d.settings.units = 'in')))
-    expect(inches.issues.find((i) => i.code === 'SMALL_PART' && i.partNo === 22)!.message).toBe('Part #22 (30-1/16" x 3-15/16") is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).')
+    expect(inches.issues.find((i) => i.code === 'SMALL_PART' && i.partNo === 22)!.message).toBe('Part #22 (30-1/16" x 3-15/16") is small; vacuum may not hold it. Set an onion skin (Machine & tools → Nesting → Onion skin) so it stays held until the last pass.')
     // a sheet bigger than the machine table
     const big = (units: 'mm' | 'in') =>
       runJob(

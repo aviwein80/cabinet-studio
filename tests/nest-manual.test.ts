@@ -18,7 +18,7 @@ describe('manual nesting (NST-09)', () => {
     const out = runJob(withLayout(saved()), d)
     expect(out.nest.sheets.map((s) => s.placements)).toEqual(auto.nest.sheets.map((s) => s.placements))
     expect(out.programs.map((p) => p.ops)).toEqual(auto.programs.map((p) => p.ops))
-    expect(out.nest.manual).toEqual({ savedAt: '2026-10-06T09:00:00.000Z', missing: [], added: [], moved: [] })
+    expect(out.nest.manual).toEqual({ savedAt: '2026-10-06T09:00:00.000Z', missing: [], added: [], moved: [], resized: [] })
     expect(out.issues.some((i) => i.code === 'NEST_MANUAL')).toBe(true)
     expect(errors(out)).toEqual(errors(auto))
   })

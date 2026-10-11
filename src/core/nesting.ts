@@ -103,7 +103,8 @@ export type MaterialSheet = Omit<NestedSheet, 'index' | 'materialId' | 'thicknes
 
 export interface MaterialNest {
   sheets: MaterialSheet[]
-  unplaced: { uid: string; reason: string }[]
+  /** Polish-3: `fit`, the sizes of a part too big for the sheet, so the export check can give them in inches. */
+  unplaced: { uid: string; reason: string; fit?: { length: number; width: number; usableL: number; usableW: number; grainLocked: boolean } }[]
   strategy: string
   engine: 'rect' | 'shape'
   /** Kits whose parts ended up on more than one sheet. */
@@ -353,7 +354,7 @@ function rectNest(fitting: NestPart[], opt: NestOptions) {
 export function nestMaterial(parts: NestPart[], opt: NestOptions): MaterialNest {
   const usableL = opt.sheetLength - 2 * opt.edgeTrim
   const usableW = opt.sheetWidth - 2 * opt.edgeTrim
-  const unplaced: { uid: string; reason: string }[] = []
+  const unplaced: MaterialNest['unplaced'] = []
   const fitting: NestPart[] = []
   for (const p of parts) {
     const fitsStraight = p.length <= usableL + 1e-9 && p.width <= usableW + 1e-9
@@ -363,6 +364,7 @@ export function nestMaterial(parts: NestPart[], opt: NestOptions): MaterialNest 
       unplaced.push({
         uid: p.uid,
         reason: `${p.length} x ${p.width} does not fit the usable sheet area ${usableL} x ${usableW}${p.canRotate ? '' : ' (grain-locked, rotation not allowed)'}`,
+        fit: { length: p.length, width: p.width, usableL, usableW, grainLocked: !p.canRotate },
       })
   }
 

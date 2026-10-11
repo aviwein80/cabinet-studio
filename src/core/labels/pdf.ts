@@ -175,6 +175,46 @@ export function labelsPdf(out: JobOutput, size: '100x70' | '100x80', units: Unit
   return new Uint8Array(doc.output('arraybuffer'))
 }
 
+/** Width of the label's left column: from 4 mm to 2 mm short of the part drawing at 62 mm. */
+export const LABEL_TEXT_WIDTH = 56
+
+/** Polish-3: print `text` at `size`, or smaller (down to `min`) when it is wider than the column; cut short only below `min`. */
+function fitText(doc: jsPDF, text: string, x: number, y: number, size: number, min: number, maxW = LABEL_TEXT_WIDTH) {
+  let s = size
+  doc.setFontSize(s)
+  while (doc.getTextWidth(text) > maxW && s > min) doc.setFontSize((s = Math.max(min, s - 0.5)))
+  let t = text
+  while (doc.getTextWidth(t) > maxW && t.length > 1) t = t.slice(0, -2) + '…'
+  doc.text(t, x, y)
+  return s
+}
+
+/**
+ * Polish-3: the Edges line in the left column: one line when it fits, else the edges split over two
+ * lines (a part banded all round, "W1 EB-WHT-1.0" was hidden under the sheet), set smaller if even
+ * that is too wide. Leaves the font size set for the lines returned.
+ */
+export function edgeLines(doc: jsPDF, edges: string[], size: number, maxW = LABEL_TEXT_WIDTH): { text: string }[] {
+  doc.setFontSize(size)
+  const one = edges.length ? `Edges: ${edges.join('  ')}` : 'Edges: none'
+  if (doc.getTextWidth(one) <= maxW || edges.length < 2) return [{ text: one }]
+  for (let s = size; s >= 5; s -= 0.5) {
+    doc.setFontSize(s)
+    for (let k = Math.ceil(edges.length / 2); k < edges.length; k++) {
+      const a = `Edges: ${edges.slice(0, k).join('  ')}`
+      const b = `       ${edges.slice(k).join('  ')}`
+      if (doc.getTextWidth(a) <= maxW && doc.getTextWidth(b) <= maxW) return [{ text: a }, { text: b }]
+    }
+    for (let k = Math.ceil(edges.length / 2) - 1; k >= 1; k--) {
+      const a = `Edges: ${edges.slice(0, k).join('  ')}`
+      const b = `       ${edges.slice(k).join('  ')}`
+      if (doc.getTextWidth(a) <= maxW && doc.getTextWidth(b) <= maxW) return [{ text: a }, { text: b }]
+    }
+  }
+  const k = Math.ceil(edges.length / 2)
+  return [{ text: `Edges: ${edges.slice(0, k).join('  ')}` }, { text: `       ${edges.slice(k).join('  ')}` }]
+}
+
 function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: number, units: UnitSystem) {
   doc.setFillColor(0, 0, 0)
   doc.rect(0, 0, W, 11, 'F')
@@ -196,26 +236,19 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.text(`cut ${l.cutOrder}${l.copy ? `  ·  ${l.copy.n} of ${l.copy.of}` : ''}`, W - 3, 9, { align: 'right' })
   doc.setTextColor(0, 0, 0)
 
+  // Polish-3: every line of the left column is kept clear of the part drawing and the sheet beside it
+  // (a line that fits is printed as before; a longer one is set smaller, the edges wrapped to two lines)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
-  doc.text(l.partName.slice(0, 26), 4, 17.5)
+  fitText(doc, l.partName.slice(0, 26), 4, 17.5, 13, 9)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.text(l.cabinet.slice(0, 40), 4, 22)
+  fitText(doc, l.cabinet.slice(0, 40), 4, 22, 8, 6)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.text(`${formatLength(l.finished.l, units)} x ${formatLength(l.finished.w, units)} x ${formatLength(l.finished.t, units)}`, 4, 29.5)
+  fitText(doc, `${formatLength(l.finished.l, units)} x ${formatLength(l.finished.w, units)} x ${formatLength(l.finished.t, units)}`, 4, 29.5, 14, 8)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.text(`finished size   cut ${formatLength(l.cut.l, units)} x ${formatLength(l.cut.w, units)}`, 4, 33.5)
-  doc.setFontSize(8)
-  doc.text(`${l.materialCode}  ${l.materialName}`.slice(0, 44), 4, 38.5)
-  const edgeText = (['L1', 'L2', 'W1', 'W2', 'L3', 'W3'] as const)
-    .filter((k) => l.edges[k])
-    .map((k) => `${k} ${l.edges[k]}`)
-    .join('  ')
-  doc.setFontSize(7)
-  doc.text(edgeText ? `Edges: ${edgeText}` : 'Edges: none', 4, 43)
+  fitText(doc, `finished size   cut ${formatLength(l.cut.l, units)} x ${formatLength(l.cut.w, units)}`, 4, 33.5, 7, 5)
+  fitText(doc, `${l.materialCode}  ${l.materialName}`.slice(0, 44), 4, 38.5, 8, 6)
+  const edges = (['L1', 'L2', 'W1', 'W2', 'L3', 'W3'] as const).filter((k) => l.edges[k]).map((k) => `${k} ${l.edges[k]}`)
+  for (const [i, line] of edgeLines(doc, edges, 7).entries()) doc.text(line.text, 4, 43 + i * 3.3)
 
   const inst = out.instances.find((i) => i.uid === l.uid)
   const shape = inst?.cam

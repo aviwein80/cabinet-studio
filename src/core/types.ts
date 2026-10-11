@@ -484,7 +484,11 @@ export interface SavedSheet {
   sheetWidth: number
   offcutId?: string
   flip?: { axis: 'end' | 'side'; reference: number; length: number; width: number }
-  placements: { uid: string; x: number; y: number; rotated: boolean; flip?: boolean; inside?: string }[]
+  /**
+   * Polish-3: `size`, the part's cut length and width when the layout was saved, so a part that
+   * changes size afterwards is flagged (absent in layouts saved before: not checked).
+   */
+  placements: { uid: string; x: number; y: number; rotated: boolean; flip?: boolean; inside?: string; size?: [number, number] }[]
   /**
    * Polish-2: saved with the layout but left as the nester laid it out (the editor changed other
    * sheets): shown "nested automatically", not "laid out by hand". Absent on sheets saved before.

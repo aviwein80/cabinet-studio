@@ -157,7 +157,8 @@ describe('Polish-2 B: the room', () => {
     const j = laundry()
     byNo(j, 'W2').params.doors.count = 0
     const w2 = elevationOf(j.cabinets, j.room!, 'back', placeOf(j), lib).find((e) => e.number === 'W2')!
-    expect(w2.divisions).toEqual([])
+    // (Polish-3: an open cabinet shows its shelves through the open front; nothing else)
+    expect(w2.divisions.map((d) => d.kind)).toEqual(Array(byNo(j, 'W2').params.shelves.count).fill('shelf'))
   })
 
   it('9: a size change in a room as Arrange left it keeps it arranged (the vanity: no second Arrange)', () => {

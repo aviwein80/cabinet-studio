@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { type CutterOutline, machineModelOf, toolOutline } from '@/core/machineModel'
-import { formatLength } from '@/core/units'
+import { fineLength, formatLength, pathLength } from '@/core/units'
 import type { MachineProfile, UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 import { RotaryStock } from '@/cam/rotary/stock'
@@ -534,12 +534,13 @@ function Simulator({ part, toolpaths, machine, units, color, busy }: { part: Cam
           </ol>
         </section>
         <section className="grid grid-cols-2 gap-1.5">
-          <Stat label="Cutting" value={`${(tl.cutLength / 1000).toFixed(1)} m`} />
-          <Stat label="Rapids" value={`${(tl.rapidLength / 1000).toFixed(1)} m`} />
+          <Stat label="Cutting" value={pathLength(tl.cutLength, units)} />
+          <Stat label="Rapids" value={pathLength(tl.rapidLength, units)} />
           <Stat label="Removed" value={units === 'in' ? `${(summary.removed / 16387.064).toFixed(1)} in³` : `${(summary.removed / 1000).toFixed(1)} cm³`} />
           <Stat label="Deepest" value={fmt(summary.deepest)} />
           <Stat label={rot ? 'Surface cut' : 'Face cut'} value={`${summary.cutPct.toFixed(1)}%`} />
-          <Stat label="Cells" value={fmt(cell)} />
+          {/* Polish-3: a cell is under 1/16": decimal inches, not 0" */}
+          <Stat label="Cells" value={fineLength(cell, units)} />
           {pieces && (pieces.scrap > 0 || pieces.offcut > 0) && <Stat label="Cut free" value={[pieces.scrap ? `${pieces.scrap} scrap` : '', pieces.offcut ? `${pieces.offcut} offcut${pieces.offcut > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ')} />}
         </section>
         {placeholders.length > 0 && (

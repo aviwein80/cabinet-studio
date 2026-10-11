@@ -4,7 +4,7 @@ import { pieFootprint } from '@/core/construction/pieCut'
 import { footprint, toRoom } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, Room, UnitSystem } from '@/core/types'
-import { elevationLabels, fitSize, narrowLabelRows, wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
+import { elevationLabels, fitSize, narrowLabelRows, planNumberLabels, wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
 
 function upright(y: number) {
   return `translate(0 ${2 * y}) scale(1 -1)`
@@ -49,6 +49,8 @@ export function PlanView({
   const pad = Math.max(room.width, room.depth) * 0.1
   const stroke = room.width / 500
   const font = Math.max(room.width, room.depth) / 42
+  // Polish-3: narrow neighbours' numbers moved apart along their footprints, not run together ("EF1")
+  const numbers = planNumberLabels(cabinets, place, font)
   return (
     <svg viewBox={`${-pad} ${-pad} ${room.width + 2 * pad} ${room.depth + 2 * pad}`} className="h-full w-full touch-none" onPointerMove={onMove} onPointerUp={onUp}>
       <text x={room.width / 2} y={room.depth + pad * 0.62} textAnchor="middle" fontSize={font} fill="#57534e">
@@ -123,9 +125,6 @@ export function PlanView({
                 const y = front.y1 + (front.y2 - front.y1) * t
                 return <line key={t} x1={x} y1={y} x2={x + front.ix * tick} y2={y + front.iy * tick} stroke="#1c1917" strokeWidth={stroke * 1.5} />
               })}
-              <text x={fp.x + fp.w / 2} y={fp.y + fp.d / 2} textAnchor="middle" dominantBaseline="middle" fontSize={fitSize(c.number, font, Math.max(fp.w, fp.d) * 0.9)} fill="#1c1917" transform={upright(fp.y + fp.d / 2)}>
-                {c.number}
-              </text>
               {panel !== 'end-panel' && (
                 <text x={labelX} y={labelY} textAnchor="middle" fontSize={fitSize(formatLength(front.len, units), font * 0.72, front.len * 0.95)} fill="#57534e" transform={upright(labelY)}>
                   {formatLength(front.len, units)}
@@ -134,12 +133,25 @@ export function PlanView({
             </g>
           )
         })}
+        {/* Polish-3: the numbers over every cabinet (a later cabinet's fill hid a narrow neighbour's), clicks go through */}
+        <g pointerEvents="none">
+          {cabinets.map((c) => {
+            const num = numbers.get(c.id)
+            return (
+              num && (
+                <text key={c.id} x={num.x} y={num.y} textAnchor="middle" dominantBaseline="middle" fontSize={num.size} fill="#1c1917" transform={upright(num.y)}>
+                  {c.number}
+                </text>
+              )
+            )
+          })}
+        </g>
       </g>
     </svg>
   )
 }
 
-const FILL = { toe: '#d6d3d1', drawer: '#fde68a', door: '#f5f5f4', blind: '#e7e5e4', filler: '#ecfccb', leg: 'url(#corner-hatch)' }
+const FILL = { toe: '#d6d3d1', drawer: '#fde68a', door: '#f5f5f4', blind: '#e7e5e4', filler: '#ecfccb', leg: 'url(#corner-hatch)', shelf: '#a8a29e' }
 const BOX_FILL = { cabinet: '#fafaf9', filler: '#fafaf9', 'end-panel': '#d6d3d1' }
 
 export function ElevationView({
@@ -194,9 +206,14 @@ export function ElevationView({
           return (
             <g key={item.id} className={item.endView ? 'cursor-pointer' : 'cursor-grab'} onPointerDown={(e) => onDown(e, item.id)}>
               <rect x={item.x} y={item.z} width={item.w} height={item.h} fill={item.endView ? 'url(#corner-hatch)' : item.faces ? BOX_FILL[item.kind] : '#d6d3d1'} stroke={on ? '#b45309' : '#44403c'} strokeWidth={on ? stroke * 3 : stroke} />
-              {item.divisions.map((div, i) => (
-                <rect key={i} x={item.x + div.u0 * item.w + inset} y={div.z0 + inset} width={Math.max(1, (div.u1 - div.u0) * item.w - 2 * inset)} height={Math.max(1, div.z1 - div.z0 - 2 * inset)} fill={FILL[div.kind]} stroke="#44403c" strokeWidth={stroke} />
-              ))}
+              {item.divisions.map((div, i) =>
+                // Polish-3: an open cabinet's shelf, its own thickness (no inset)
+                div.kind === 'shelf' ? (
+                  <rect key={i} x={item.x + div.u0 * item.w} y={div.z0} width={Math.max(1, (div.u1 - div.u0) * item.w)} height={Math.max(stroke, div.z1 - div.z0)} fill={FILL.shelf} stroke="#44403c" strokeWidth={stroke * 0.6} data-testid="elevation-shelf" />
+                ) : (
+                  <rect key={i} x={item.x + div.u0 * item.w + inset} y={div.z0 + inset} width={Math.max(1, (div.u1 - div.u0) * item.w - 2 * inset)} height={Math.max(1, div.z1 - div.z0 - 2 * inset)} fill={FILL[div.kind]} stroke="#44403c" strokeWidth={stroke} />
+                ),
+              )}
               {narrow ? (
                 // too narrow for a label across it (a filler, an end panel): the number above it
                 <text x={item.x + item.w / 2} y={labelY} textAnchor="middle" fontSize={font * 0.6} fill="#1c1917" transform={upright(labelY)}>

@@ -168,6 +168,16 @@ export function formatArea(mm2: number, units: UnitSystem) {
   return units === 'in' ? `${(mm2 / MM2_PER_FT2).toFixed(2)} ft²` : `${(mm2 / MM2_PER_M2).toFixed(3)} m²`
 }
 
+/**
+ * Polish-3: a nesting area limit typed on the Machine page (onion skin, own cut-out, bridged parts):
+ * m² to 0.01 in a millimetre shop, ft² to 0.01 in an inch shop. Stored in mm².
+ */
+export function areaField(mm2: number, units: UnitSystem) {
+  return units === 'in'
+    ? { suffix: 'ft²', value: Math.round((mm2 / MM2_PER_FT2) * 100) / 100, max: 32, toMm2: (v: number) => v * MM2_PER_FT2 }
+    : { suffix: 'm²', value: Math.round(mm2 / 1e4) / 100, max: 3, toMm2: (v: number) => v * 1e6 }
+}
+
 export function formatMoney(v: number | null, currency = '$') {
   return v === null ? '—' : `${currency}${v.toFixed(2)}`
 }
@@ -193,12 +203,16 @@ export function costByOptions(inches: boolean): { value: MaterialCost['by']; lab
   ]
 }
 
-/** Areas and costs as CSV (one row per sheet, then one per part, then the job total). */
-export function areasCsv(costs: JobCosts, instances: PartInstance[], lib: Pick<Library, 'materials'>, currency = '$') {
+/**
+ * Areas and costs as CSV (one row per sheet, then one per part, then the job total). Areas in m², or
+ * in ft² in an inch shop (Polish-3: as the Nesting panel shows them); weights stay in kg.
+ */
+export function areasCsv(costs: JobCosts, instances: PartInstance[], lib: Pick<Library, 'materials'>, currency = '$', units: UnitSystem = 'mm') {
   const code = (id: string) => lib.materials.find((m) => m.id === id)?.code ?? id
   const n = (v: number | null, d = 2) => (v === null ? '' : v.toFixed(d))
-  const a = (mm2: number) => (mm2 / MM2_PER_M2).toFixed(4)
-  const lines = [`Row,Sheet or part,Material,Area m2,Parts m2,Remnant m2,Scrap m2,Cost ${currency.replace(/,/g, '')},Parts cost,Remnant value,Scrap cost,Weight kg`]
+  const a = (mm2: number) => (mm2 / (units === 'in' ? MM2_PER_FT2 : MM2_PER_M2)).toFixed(4)
+  const u = units === 'in' ? 'ft2' : 'm2'
+  const lines = [`Row,Sheet or part,Material,Area ${u},Parts ${u},Remnant ${u},Scrap ${u},Cost ${currency.replace(/,/g, '')},Parts cost,Remnant value,Scrap cost,Weight kg`]
   for (const s of costs.sheets)
     lines.push(['Sheet', s.index, code(s.materialId), a(s.sheetArea), a(s.partsArea), a(s.remnantArea), a(s.scrapArea), n(s.sheetCost), n(s.partsCost), n(s.remnantValue), n(s.scrapCost), n(s.sheetWeight, 1)].join(','))
   const byUid = new Map(instances.map((i) => [i.uid, i]))

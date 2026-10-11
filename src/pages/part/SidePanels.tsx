@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { deletePoint3d, insertPoint3d, movePoint3d, poly3dLength } from '@/cam/mesh/poly3d'
 import { Input } from '@/components/ui/input'
 import type { Material, UnitSystem } from '@/core/types'
-import { formatLength } from '@/core/units'
+import { formatLength, shapeArea } from '@/core/units'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useStore } from '@/app/store'
@@ -105,7 +105,7 @@ export function PropertiesPanel({
   const vars = resolveVariables(part.variables, { L: part.length, W: part.width, T: part.thickness })
   return (
     <div className="flex flex-col">
-      {one && <EntityProps e={one} part={part} fmt={fmt} nodeSeg={nodeSeg} onChange={onChange} />}
+      {one && <EntityProps e={one} part={part} fmt={fmt} units={units} nodeSeg={nodeSeg} onChange={onChange} />}
       {sel.length > 1 && (
         <div className="border-b border-white/10 px-4 py-3 text-xs text-stone-300">
           {sel.length} shapes selected · {(() => {
@@ -210,7 +210,7 @@ function DoorSection({ part, onChange }: { part: CamPart; onChange: (p: CamPart)
   )
 }
 
-function EntityProps({ e, part, fmt, nodeSeg, onChange }: { e: Entity; part: CamPart; fmt: (n: number) => string; nodeSeg: { id: string; seg: number } | null; onChange: (p: CamPart) => void }) {
+function EntityProps({ e, part, fmt, units, nodeSeg, onChange }: { e: Entity; part: CamPart; fmt: (n: number) => string; units: UnitSystem; nodeSeg: { id: string; seg: number } | null; onChange: (p: CamPart) => void }) {
   const g = e.g
   const cs = entityContours(e)
   const b = boxOf(cs)
@@ -305,7 +305,7 @@ function EntityProps({ e, part, fmt, nodeSeg, onChange }: { e: Entity; part: Cam
             {e.g.c.closed && (
               <>
                 <dt>Area</dt>
-                <dd className="text-right text-stone-200 tabular-nums">{(Math.abs(area(e.g.c)) / 1e6).toFixed(4)} m²</dd>
+                <dd className="text-right text-stone-200 tabular-nums">{shapeArea(Math.abs(area(e.g.c)), units)}</dd>
               </>
             )}
           </>

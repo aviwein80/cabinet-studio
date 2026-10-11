@@ -26,7 +26,7 @@ import { backend, type OutFile } from '@/app/backend'
 import { buildFiles, bomCsv, useJobOutput, type ExportKind } from '@/app/jobOutput'
 import { useStore, type JobTab } from '@/app/store'
 import { CabinetThumb } from '@/components/CabinetThumb'
-import { contentsLabel, kindLabel } from '@/components/kindLabel'
+import { contentsLabel, countOf, kindLabel } from '@/components/kindLabel'
 import { EmptyState, PageHeader } from '@/components/PageHeader'
 import { SheetView } from '@/components/SheetView'
 import { NumField, TextField } from '@/components/fields'
@@ -49,6 +49,7 @@ import { RoomTab } from './RoomTab'
 import { PartList } from '@/components/PartList'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { nanoid } from 'nanoid'
+import { nestChangedText } from '@/core/manualNest'
 import { cn } from '@/lib/utils'
 import { AreaCostPanel } from '@/components/AreaCostPanel'
 import { type BackplotMode, SheetBackplot } from '@/components/SheetBackplot'
@@ -98,11 +99,11 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
         actions={
           out && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{out.instances.length} parts</span>
+              <span>{countOf(out.instances.length, 'part')}</span>
               <span>·</span>
-              <span>{out.programs.length} sheets</span>
-              {counts.error > 0 && <Badge variant="destructive">{counts.error} errors</Badge>}
-              {counts.warning > 0 && <Badge className="bg-amber-100 text-amber-900">{counts.warning} warnings</Badge>}
+              <span>{countOf(out.programs.length, 'sheet')}</span>
+              {counts.error > 0 && <Badge variant="destructive">{countOf(counts.error, 'error')}</Badge>}
+              {counts.warning > 0 && <Badge className="bg-amber-100 text-amber-900">{countOf(counts.warning, 'warning')}</Badge>}
               {featuresOf(data.settings).plugins && <JobPluginMenu job={job} instances={out.instances} />}
             </div>
           )
@@ -452,6 +453,12 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
   const selPl = selected ? sh.placements.find((p) => p.uid === selected) : undefined
   const remnants = jobRemnants(out.nest)
   const usedOffcuts = out.nest.sheets.filter((x) => x.offcutId).length
+  const renest = () =>
+    mutate((d) => {
+      const j = d.jobs.find((x) => x.id === job.id)
+      if (j) delete j.nestEdit
+    })
+  const changedSince = out.nest.manual ? nestChangedText(out.nest.manual, (uid) => instances.get(uid)?.no) : null
   const saveOffcuts = () => {
     let res = { used: 0, added: 0 }
     updateLibrary((l) => {
@@ -480,7 +487,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
               <div className="h-full bg-amber-500" style={{ width: `${Math.round(p.sheet.utilization)}%` }} />
             </div>
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
-              <span>{p.sheet.placements.length} parts</span>
+              <span>{countOf(p.sheet.placements.length, 'part')}</span>
               <span>{Math.round(p.sheet.utilization)}%</span>
             </div>
           </button>
@@ -490,6 +497,19 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
         )}
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {job.nestEdit && changedSince && (
+          // Polish-3: parts changed since the layout was saved by hand (size or material): say so, offer the automatic nest
+          <div className="flex flex-wrap items-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900" data-testid="nest-changed-banner">
+            <TriangleAlert className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1">{changedSince}</span>
+            <Button size="xs" variant="outline" onClick={() => setEditing(true)}>
+              <Pencil /> Edit layout
+            </Button>
+            <Button size="xs" onClick={renest}>
+              Re-nest automatically
+            </Button>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-2 text-xs">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="font-mono font-medium">{prog.name}.mpr</span>
@@ -511,16 +531,7 @@ function NestingTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
                   <Pencil /> Edit layout
                 </Button>
                 {job.nestEdit && (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() =>
-                      mutate((d) => {
-                        const j = d.jobs.find((x) => x.id === job.id)
-                        if (j) delete j.nestEdit
-                      })
-                    }
-                  >
+                  <Button size="xs" variant="ghost" onClick={renest}>
                     Automatic nest
                   </Button>
                 )}
@@ -812,9 +823,9 @@ function OutputTab({ job, data, out, setJob }: { job: Job; data: AppData; out: J
         <div className="rounded-xl border bg-background p-4">
           <div className="mb-3 flex items-center gap-3 text-sm">
             <h3 className="font-semibold">Validation</h3>
-            <Badge variant={counts.error ? 'destructive' : 'outline'}>{counts.error} errors</Badge>
+            <Badge variant={counts.error ? 'destructive' : 'outline'}>{countOf(counts.error, 'error')}</Badge>
             <Badge variant="outline" className={counts.warning ? 'border-amber-300 bg-amber-50 text-amber-900' : ''}>
-              {counts.warning} warnings
+              {countOf(counts.warning, 'warning')}
             </Badge>
             <Badge variant="outline">{counts.info} info</Badge>
           </div>
@@ -827,7 +838,7 @@ function OutputTab({ job, data, out, setJob }: { job: Job; data: AppData; out: J
           <ProgramManager
             job={job}
             data={data}
-            programs={files.map((f, i) => ({ ...f, note: out.programs[i] ? `${out.programs[i].sheet.placements.length} parts · ${out.programs[i].ops.length} operations` : 'Custom part turned over: underside drilling' }))}
+            programs={files.map((f, i) => ({ ...f, note: out.programs[i] ? `${countOf(out.programs[i].sheet.placements.length, 'part')} · ${countOf(out.programs[i].ops.length, 'operation')}` : 'Custom part turned over: underside drilling' }))}
             jobErrors={counts.error}
             acknowledged={ack}
             setJob={setJob}
@@ -841,7 +852,7 @@ function OutputTab({ job, data, out, setJob }: { job: Job; data: AppData; out: J
                   <div className="min-w-0">
                     <div className="truncate font-mono">{f.name}</div>
                     <div className="text-muted-foreground">
-                      {out.programs[i] ? `${out.programs[i].sheet.placements.length} parts · ${out.programs[i].ops.length} operations` : 'Custom part turned over: underside drilling'}
+                      {out.programs[i] ? `${countOf(out.programs[i].sheet.placements.length, 'part')} · ${countOf(out.programs[i].ops.length, 'operation')}` : 'Custom part turned over: underside drilling'}
                     </div>
                   </div>
                   <Button size="xs" variant="outline" onClick={() => setPreview(f)}>

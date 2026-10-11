@@ -28,7 +28,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { MachineProfile, Tool } from '@/core/types'
 import { aggregateOf, machineModelOf } from '@/core/machineModel'
-import { formatLength } from '@/core/units'
+import { formatLength, pathLength, toolSize } from '@/core/units'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/app/store'
 
@@ -413,6 +413,9 @@ function OpEditor({
   pathPick?: PathPick | null
   setPathPick?: (p: PathPick | null) => void
 }) {
+  const units = useStore((s) => s.data?.settings.units ?? 'mm')
+  // Polish-3: tool sizes are metric (as the bits are made): in an inch shop the size carries its unit ("6 mm", or 1/2" when exact)
+  const toolDia = (d: number) => (units === 'in' ? toolSize(d, 'in') : String(d))
   const set = <K extends keyof CamOp>(k: K, v: CamOp[K]) => onChange({ ...op, [k]: v } as CamOp)
   const lv = (patch: Partial<CamOp['levels']>) => onChange({ ...op, levels: { ...op.levels, ...patch } })
   // (on a tilted plane only tools in the main spindle: the drill block cannot tilt, M3.4)
@@ -455,7 +458,7 @@ function OpEditor({
         )}
         {tp && (
           <span className="ml-auto text-stone-400">
-            {(tp.stats.cut / 1000).toFixed(2)} m cut · {tp.stats.minutes.toFixed(1)} min
+            {pathLength(tp.stats.cut, units, 2)} cut · {tp.stats.minutes.toFixed(1)} min
           </span>
         )}
       </div>
@@ -504,7 +507,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'rough3d' ? (op.pattern === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (bull-nose first)') : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : op.kind === 'finish3d' && op.strategy === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'rough3d' ? (op.pattern === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (bull-nose first)') : op.kind === 'finish3d' && (op.strategy === 'projection' || op.strategy === 'pencil') ? 'Pick automatically (smallest ball-nose first)' : op.kind === 'finish3d' && op.strategy === 'flat' ? 'Pick automatically (widest flat-bottomed tool)' : op.kind === 'finish3d' && op.strategy === 'undercut' ? 'Pick automatically (lollipop reaching furthest)' : 'Pick automatically (ball-nose first)' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${toolDia(t.diameter)}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
           />
           <NumField label="Safe height" value={op.levels.safeZ} min={0} onChange={(v) => lv({ safeZ: v })} hint="At least the model top plus rapid-down" />
@@ -518,7 +521,7 @@ function OpEditor({
             className="col-span-2"
             label="Tool"
             value={op.toolId ?? NONE}
-            options={[{ value: NONE, label: op.kind === 'drill' ? (op.tiltedPlane ? 'Pick a tool (main spindle)' : 'Match each hole diameter') : 'Pick automatically' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${t.diameter}` }))]}
+            options={[{ value: NONE, label: op.kind === 'drill' ? (op.tiltedPlane ? 'Pick a tool (main spindle)' : 'Match each hole diameter') : 'Pick automatically' }, ...allowed.map((t) => ({ value: t.id, label: `T${t.number} · ${t.name} · Ø${toolDia(t.diameter)}` }))]}
             onChange={(v) => set('toolId', v === NONE ? null : v)}
             badge={toolItem && <ConfigureBadge item={toolItem} />}
           />

@@ -89,10 +89,21 @@ export function formatDims(values: number[], units: UnitSystem) {
 /**
  * A name with the width in the shop's units on the end ("Sink base 36"", "Sink base 900"). A size
  * the name already ends with (36", 36 in, 800, 800 mm, 23-1/4") is replaced, not repeated.
+ * Polish-3: so is a size with its unit inside the name (Base 24" 2-door), and a millimetre name that
+ * already has the width as a bare number inside it is left as it is.
  */
 export function sizedName(name: string, widthMm: number, units: UnitSystem) {
-  const base = name.trim().replace(/\s+-?\d+(?:[.,]\d+)?(?:[\s-]+\d+\/\d+)?\s*(?:mm|in|["″])?$/i, '').trim()
+  const trimmed = name.trim()
+  const base = trimmed.replace(/\s+-?\d+(?:[.,]\d+)?(?:[\s-]+\d+\/\d+)?\s*(?:mm|in|["″])?$/i, '').trim()
   const size = units === 'in' ? formatInches(widthMm) : fmt(Math.round(widthMm))
+  // Polish-3: a size with its unit inside the name ('Base 24" 2-door') is the width: replaced there, not added again at the end
+  const inner = base === trimmed ? /(^|\s)(?:\d+(?:[.,]\d+)?(?:[\s-]+\d+\/\d+)?|\d+\/\d+)\s*(mm\b|in\b|["″])/i.exec(trimmed) : null
+  // (a millimetre name with the width as a bare number inside it, 'Base 600 2-door', already says it)
+  if (!inner && base === trimmed && units === 'mm' && new RegExp(`(^|\\s)${size}(\\s|$)`).test(trimmed)) return trimmed
+  if (inner) {
+    const unit = inner[2].toLowerCase() === 'mm' && units === 'mm' ? ' mm' : ''
+    return `${trimmed.slice(0, inner.index)}${inner[1]}${size}${unit}${trimmed.slice(inner.index + inner[0].length)}`
+  }
   return base ? `${base} ${size}` : size
 }
 
@@ -161,3 +172,22 @@ export function runLength(mm: number, units: UnitSystem) {
 export function trimSpacingText(trim: number, spacing: number, units: UnitSystem) {
   return units === 'in' ? `Trim ${formatInches(trim)} · spacing ${formatInches(spacing)}` : `Trim ${trim} · spacing ${spacing} mm`
 }
+
+/** Polish-3: a closed shape's area in the part designer: m² to 0.0001, or ft² to 0.0001 in an inch shop. */
+export function shapeArea(mm2: number, units: UnitSystem) {
+  return units === 'in' ? `${(mm2 / (MM_PER_IN * 12) ** 2).toFixed(4)} ft²` : `${(mm2 / 1e6).toFixed(4)} m²`
+}
+
+/**
+ * Polish-3: a toolpath's length of cutting or rapids: metres (to `mDigits` places, as each screen
+ * showed them) in a millimetre shop, feet to 0.1 in an inch shop.
+ */
+export function pathLength(mm: number, units: UnitSystem, mDigits = 1) {
+  return units === 'in' ? `${(mm / (MM_PER_IN * 12)).toFixed(1)} ft` : `${(mm / 1000).toFixed(mDigits)} m`
+}
+
+/**
+ * Polish-3: tool sizes stay metric on purpose in an inch shop (Kitchen-2: the bits are made in mm). The
+ * Machine page's tool table says so, so "Ball-nose 6 mm (placeholder)" beside inch sizes is not a slip.
+ */
+export const TOOL_UNITS_NOTE = 'Tool sizes stay in millimetres, as the bits are made: a size reads in inches only when it is an exact inch size (12.7 mm reads 1/2"). Tool names are your own text; the placeholder names give the metric size.'

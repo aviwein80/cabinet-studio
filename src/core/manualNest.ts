@@ -29,8 +29,13 @@ export function layoutOf(nest: Pick<JobNest, 'sheets'>): SavedSheet[] {
     sheetWidth: s.sheetWidth,
     ...(s.offcutId ? { offcutId: s.offcutId } : {}),
     ...(s.flip ? { flip: { ...s.flip } } : {}),
-    placements: s.placements.map((p) => ({ uid: p.uid, x: p.x, y: p.y, rotated: p.rotated, ...(p.flip ? { flip: true } : {}), ...(p.inside ? { inside: p.inside } : {}) })),
+    placements: s.placements.map((p) => ({ uid: p.uid, x: p.x, y: p.y, rotated: p.rotated, ...(p.flip ? { flip: true } : {}), ...(p.inside ? { inside: p.inside } : {}), size: (p.rotated ? [p.dy, p.dx] : [p.dx, p.dy]) as [number, number] })),
   }))
+}
+
+/** Polish-3: the part's cut size differs from the size saved with the layout (by more than 0.01 mm). */
+export function sizeChanged(p: SavedSheet['placements'][number], inst: Pick<PartInstance, 'cutLength' | 'cutWidth'>) {
+  return !!p.size && (Math.abs(p.size[0] - inst.cutLength) > 0.01 || Math.abs(p.size[1] - inst.cutWidth) > 0.01)
 }
 
 /**
@@ -56,6 +61,26 @@ export interface ManualInfo {
   added: string[]
   /** Parts in the layout on a sheet of another material than the job now gives them. */
   moved: string[]
+  /** Polish-3: parts in the layout whose cut size changed since it was saved (they keep their place at the new size). */
+  resized: string[]
+}
+
+/**
+ * Polish-3: what changed in the job since the layout was saved by hand, for the Nesting tab's banner
+ * (null when nothing did): parts that changed size keep their place at the new size; parts that
+ * changed material were nested again on their new material.
+ */
+export function nestChangedText(m: Pick<ManualInfo, 'moved'> & { resized?: string[] }, no: (uid: string) => number | undefined) {
+  const list = (uids: string[]) => {
+    const nos = uids.map(no).filter((n): n is number => n !== undefined)
+    return nos.length ? ` (${nos.slice(0, 8).map((n) => `#${n}`).join(', ')}${nos.length > 8 ? ', …' : ''})` : ''
+  }
+  const parts = (n: number) => `${n} part${n === 1 ? '' : 's'}`
+  const out: string[] = []
+  const resized = m.resized ?? []
+  if (resized.length) out.push(`${parts(resized.length)} changed size since this layout was saved${list(resized)} and ${resized.length === 1 ? 'keeps its' : 'keep their'} place at the new size`)
+  if (m.moved.length) out.push(`${parts(m.moved.length)} changed material${list(m.moved)} and ${m.moved.length === 1 ? 'was' : 'were'} nested again on the new material`)
+  return out.length ? `${out.join('; ')}.` : null
 }
 
 /**
@@ -68,6 +93,7 @@ export function applySavedNest(saved: SavedNest, instances: PartInstance[], lib:
   const used = new Set<string>()
   const missing: ManualInfo['missing'] = []
   const moved: string[] = []
+  const resized: string[] = []
   const sheets: NestedSheet[] = []
   for (const s of saved.sheets) {
     const placements: Placement[] = []
@@ -83,6 +109,7 @@ export function applySavedNest(saved: SavedNest, instances: PartInstance[], lib:
         continue
       }
       used.add(p.uid)
+      if (sizeChanged(p, inst)) resized.push(p.uid)
       placements.push({ uid: p.uid, x: r3(p.x), y: r3(p.y), rotated: p.rotated, ...footprint(inst, p.rotated), ...(p.flip ? { flip: true } : {}), ...(p.inside && s.placements.some((q) => q.uid === p.inside) ? { inside: p.inside } : {}) })
       area += instanceArea(inst)
     }
@@ -110,7 +137,7 @@ export function applySavedNest(saved: SavedNest, instances: PartInstance[], lib:
     unplaced: extra.unplaced,
     spacing: extra.spacing,
     materials: extra.materials,
-    manual: { savedAt: saved.savedAt, missing, added: rest.map((i) => i.uid), moved },
+    manual: { savedAt: saved.savedAt, missing, added: rest.map((i) => i.uid), moved, resized },
   }
 }
 
@@ -328,7 +355,8 @@ export function readNestList(text: string, instances: PartInstance[], lib: Pick<
         missing.push({ uid: p.uid, ...(p.partId ? { partId: p.partId } : {}) })
         continue
       }
-      placements.push({ uid: inst.uid, x: p.x, y: p.y, rotated: !!p.rotated, ...(p.flip ? { flip: true } : {}), ...(p.inside ? { inside: p.inside } : {}) })
+      const size = Array.isArray(p.size) && p.size.length === 2 && p.size.every((v) => Number.isFinite(v) && v > 0) ? { size: [p.size[0], p.size[1]] as [number, number] } : {}
+      placements.push({ uid: inst.uid, x: p.x, y: p.y, rotated: !!p.rotated, ...(p.flip ? { flip: true } : {}), ...(p.inside ? { inside: p.inside } : {}), ...size })
     }
     sheets.push({ materialId: mat.id, sheetLength: s.sheetLength, sheetWidth: s.sheetWidth, ...(s.offcutId ? { offcutId: s.offcutId } : {}), ...(s.flip ? { flip: s.flip } : {}), placements })
   }

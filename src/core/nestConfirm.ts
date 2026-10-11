@@ -8,6 +8,9 @@
 import { type ConfigTarget, isConfirmed, keyOf, type NestValueKey, type Unconfirmed } from './confirm'
 import { bridgesOn, flipSheetsOn, nestSettingsOf, sharedLinesOn } from './machining'
 import type { MachineProfile, ShopSettings } from './types'
+import { formatLength, MM_PER_IN } from './units'
+
+const MM2_PER_FT2 = (MM_PER_IN * 12) ** 2
 
 export const NEST_VALUE_LABEL: Record<NestValueKey, string> = {
   sharedSmall: 'Shared lines: smallest part that shares lines',
@@ -20,19 +23,23 @@ export const NEST_VALUE_LABEL: Record<NestValueKey, string> = {
 
 export function nestValue(settings: ShopSettings, k: NestValueKey): string {
   const ns = nestSettingsOf(settings)
+  // Polish-3: in an inch shop the badge reads in the units of the field beside it (ft², inches)
+  const inch = settings.units === 'in'
+  const area = (mm2: number) => (inch ? `${(mm2 / MM2_PER_FT2).toFixed(2)} ft²` : `${(mm2 / 1e6).toFixed(2)} m²`)
+  const len = (mm: number) => (inch ? formatLength(mm, 'in') : `${mm} mm`)
   switch (k) {
     case 'sharedSmall':
-      return `${(ns.sharedMinArea / 1e6).toFixed(2)} m², ${ns.sharedMinSide} mm side`
+      return `${area(ns.sharedMinArea)}, ${len(ns.sharedMinSide)} side`
     case 'bridgeWidth':
-      return `${ns.bridgeWidth} mm`
+      return len(ns.bridgeWidth)
     case 'bridgeMaxLength':
-      return `${ns.bridgeMaxLength} mm`
+      return len(ns.bridgeMaxLength)
     case 'bridgeMaxArea':
-      return `${(ns.bridgeMaxArea / 1e6).toFixed(2)} m²`
+      return area(ns.bridgeMaxArea)
     case 'flipAxis':
       return ns.flipAxis === 'end' ? 'end for end' : 'over the long edge'
     case 'flipReference':
-      return `${ns.flipReference} mm`
+      return len(ns.flipReference)
   }
 }
 

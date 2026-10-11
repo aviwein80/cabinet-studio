@@ -55,7 +55,7 @@ export function buildFiles(kinds: ExportKind[], job: Job, data: AppData, out: Jo
         files.push({ name: `${base}_bom.csv`, data: bomCsv(out, data) })
         break
       case 'areas-csv':
-        files.push({ name: `${base}_areas-costs.csv`, data: areasCsv(jobCosts(out.nest, out.instances, data.library), out.instances, data.library, data.settings.currency ?? '$') })
+        files.push({ name: `${base}_areas-costs.csv`, data: areasCsv(jobCosts(out.nest, out.instances, data.library), out.instances, data.library, data.settings.currency ?? '$', data.settings.units) })
         break
     }
   }

@@ -21,3 +21,8 @@ export function contentsLabel(p: Pick<CarcassParams, 'doors' | 'drawers' | 'shel
   const parts = [drawers > 0 ? n(drawers, 'drawer', 'drawers') : '', p.doors.count > 0 ? n(p.doors.count, 'door', 'doors') : '', p.shelves.count > 0 ? n(p.shelves.count, 'shelf', 'shelves') : ''].filter(Boolean)
   return parts.length ? parts.join(' · ') : 'no doors, drawers or shelves'
 }
+
+/** Polish-3: a count with its noun in the singular or plural ("1 error", "2 errors"). */
+export function countOf(n: number, one: string, many = `${one}s`) {
+  return `${n} ${n === 1 ? one : many}`
+}

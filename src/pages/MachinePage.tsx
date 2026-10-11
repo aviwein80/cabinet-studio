@@ -18,6 +18,8 @@ import { fmt } from '@/core/geometry'
 import { featuresOf } from '@/core/features'
 import type { FeatureFlags, Tool, ToolType } from '@/core/types'
 import { formatLength } from '@/core/units'
+import { areaField } from '@/core/areas'
+import { TOOL_UNITS_NOTE } from '@/core/units'
 import { MachineModelSection } from './machine/MachineModelSection'
 import { CutDefaultsSection } from './machine/CutDefaultsSection'
 import { ConfigureBadge, UnconfirmedList, ValueBadges } from '@/components/Configure'
@@ -123,6 +125,9 @@ export function MachinePage() {
   }
   const feat = featuresOf(s)
   const ns = nestSettingsOf(s)
+  const onionArea = areaField(ns.onionSkinMaxArea, s.units)
+  const sharedArea = areaField(ns.sharedMinArea, s.units)
+  const bridgeArea = areaField(ns.bridgeMaxArea, s.units)
   const locked = isLocked(s, adminUnlocked)
 
   const exportTools = async (kind: 'csv' | 'xlsx' = 'csv') => {
@@ -358,8 +363,8 @@ export function MachinePage() {
               <SwitchField label="Keep kits on one sheet" checked={ns.keepKitsTogether} onChange={(v) => updateSettings((x) => (x.nesting.keepKitsTogether = v))} hint="A kit is the kit name on a custom part, or a whole cabinet when the next switch is on." />
               <SwitchField label="Each cabinet is a kit" checked={ns.kitByCabinet} onChange={(v) => updateSettings((x) => (x.nesting.kitByCabinet = v))} />
               <div className="grid grid-cols-2 gap-2">
-                <NumField label="Onion skin" value={ns.onionSkin} min={0} max={2} step={0.1} onChange={(v) => updateSettings((x) => (x.nesting.onionSkin = v))} hint="0 = off. Left by the first cut-out pass, cut last." />
-                <NumField label="On parts under" suffix="m²" value={Math.round(ns.onionSkinMaxArea / 1e4) / 100} min={0} max={3} step={0.01} onChange={(v) => updateSettings((x) => (x.nesting.onionSkinMaxArea = v * 1e6))} />
+                <NumField label="Onion skin" metric value={ns.onionSkin} min={0} max={2} step={0.1} onChange={(v) => updateSettings((x) => (x.nesting.onionSkin = v))} hint="0 = off. Left by the first cut-out pass, cut last." />
+                <NumField label="On parts under" suffix={onionArea.suffix} value={onionArea.value} min={0} max={onionArea.max} step={0.01} onChange={(v) => updateSettings((x) => (x.nesting.onionSkinMaxArea = onionArea.toMm2(v)))} />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <SelectField
@@ -387,14 +392,14 @@ export function MachinePage() {
                     <div className="grid grid-cols-2 gap-2">
                       <NumField
                         label="Own cut-out under"
-                        suffix="m²"
-                        value={Math.round(ns.sharedMinArea / 1e4) / 100}
+                        suffix={sharedArea.suffix}
+                        value={sharedArea.value}
                         min={0}
-                        max={3}
+                        max={sharedArea.max}
                         step={0.01}
                         cfg="nest:sharedSmall"
                         badge={nestBadge('sharedSmall')}
-                        onChange={(v) => mutate((d) => ((d.settings.nesting.sharedMinArea = v * 1e6), confirmKey(d.machine, 'nest:sharedSmall')))}
+                        onChange={(v) => mutate((d) => ((d.settings.nesting.sharedMinArea = sharedArea.toMm2(v)), confirmKey(d.machine, 'nest:sharedSmall')))}
                         hint="Hold-down: smaller parts keep their own cut-out."
                       />
                       <NumField
@@ -420,7 +425,7 @@ export function MachinePage() {
                     <div className="grid grid-cols-3 gap-2">
                       <NumField label="Bridge width" value={ns.bridgeWidth} min={1} max={50} step={0.5} cfg="nest:bridgeWidth" badge={nestBadge('bridgeWidth')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeWidth = v), confirmKey(d.machine, 'nest:bridgeWidth')))} />
                       <NumField label="Longest bridge" value={ns.bridgeMaxLength} min={1} max={200} cfg="nest:bridgeMaxLength" badge={nestBadge('bridgeMaxLength')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxLength = v), confirmKey(d.machine, 'nest:bridgeMaxLength')))} hint="Widest gap bridged" />
-                      <NumField label="Parts under" suffix="m²" value={Math.round(ns.bridgeMaxArea / 1e4) / 100} min={0} max={3} step={0.01} cfg="nest:bridgeMaxArea" badge={nestBadge('bridgeMaxArea')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxArea = v * 1e6), confirmKey(d.machine, 'nest:bridgeMaxArea')))} />
+                      <NumField label="Parts under" suffix={bridgeArea.suffix} value={bridgeArea.value} min={0} max={bridgeArea.max} step={0.01} cfg="nest:bridgeMaxArea" badge={nestBadge('bridgeMaxArea')} onChange={(v) => mutate((d) => ((d.settings.nesting.bridgeMaxArea = bridgeArea.toMm2(v)), confirmKey(d.machine, 'nest:bridgeMaxArea')))} />
                     </div>
                   )}
                 </>
@@ -496,7 +501,10 @@ export function MachinePage() {
           </div>
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Tool table</h2>
+              <div>
+                <h2 className="text-sm font-semibold">Tool table</h2>
+                {s.units === 'in' && <p className="text-xs text-muted-foreground" data-testid="tool-units-note">{TOOL_UNITS_NOTE}</p>}
+              </div>
               {!cadTools && (
               <Button
                 size="sm"

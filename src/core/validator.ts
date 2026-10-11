@@ -8,8 +8,9 @@ import { boxOf, type Seg, toPoints } from '@/cam/geom'
 import type { PartInstance } from './cutlist'
 import { EPS, fmt } from './geometry'
 import { formatInches, sizeText } from './units'
+import { formatArea } from './areas'
 import { areaPaths, EndType, FillRule, inflatePaths, intersect, JoinType, type Paths64 } from 'clipper2-ts'
-import { cutoutTool, drillFits, drillToleranceOf, placementTransform, type JobNest, type SheetProgram } from './machining'
+import { cutoutTool, drillFits, drillToleranceOf, nestSettingsOf, partAreaOf, placementTransform, type JobNest, type SheetProgram } from './machining'
 import type { Placement } from './nesting'
 import { machineModelOf } from './machineModel'
 import { featuresOf } from './features'
@@ -53,6 +54,16 @@ export function validateJob(
   // values (depths, thicknesses, tool sizes, tolerances, clearances) stay exact in millimetres
   const inch = settings.units === 'in'
   const dim = (mm: number) => (inch ? formatInches(mm) : fmt(mm))
+  // Polish-3: what the small-part warning says about the onion skin is what the sheet program does
+  const skinNs = nestSettingsOf(settings)
+  const holdDownText = (inst: PartInstance, pl: Placement, sheet: Pick<SheetProgram['sheet'], 'placements'>) => {
+    const where = 'Machine & tools → Nesting → Onion skin'
+    if (!(skinNs.onionSkin > 0)) return `Set an onion skin (${where}) so it stays held until the last pass.`
+    if (pl.inside) return `It sits in another part's cut-out and is cut before it; the onion skin is not used on it.`
+    if (sheet.placements.some((q) => q.inside === pl.uid)) return `Parts sit in its cut-outs; the onion skin is not used on it.`
+    if (partAreaOf(inst) >= skinNs.onionSkinMaxArea) return `The onion skin is set only for parts under ${formatArea(skinNs.onionSkinMaxArea, settings.units)} (${where}); this part is larger.`
+    return `It is left on the ${fmt(skinNs.onionSkin)} mm onion skin, cut last.`
+  }
   const size = (mm: number) => sizeText(mm, settings.units)
   const pair = (a: number, b: number) => (inch ? `${formatInches(a)} x ${formatInches(b)}` : `${fmt(a)} x ${fmt(b)} mm`)
 
@@ -92,7 +103,10 @@ export function validateJob(
 
   for (const u of nest.unplaced) {
     const inst = byUid.get(u.uid)
-    add({ severity: 'error', code: 'NOT_NESTED', message: `Part ${inst?.partId ?? u.uid} could not be nested: ${u.reason}`, partUid: u.uid, partNo: inst?.no })
+    // Polish-3: in an inch shop the sizes in inches (they were in mm)
+    const f = inch ? u.fit : undefined
+    const reason = f ? `${dim(f.length)} x ${dim(f.width)} does not fit the usable sheet area ${dim(f.usableL)} x ${dim(f.usableW)}${f.grainLocked ? ' (grain-locked, rotation not allowed)' : ''}` : u.reason
+    add({ severity: 'error', code: 'NOT_NESTED', message: `Part ${inst?.partId ?? u.uid} could not be nested: ${reason}`, partUid: u.uid, partNo: inst?.no })
   }
 
   // M2.8 manual nesting: the layout was edited by hand; say what changed since, and hold it to
@@ -103,6 +117,11 @@ export function validateJob(
     if (m.missing.length)
       add({ severity: 'warning', code: 'NEST_MISSING', message: `${m.missing.length} part(s) in the saved layout are no longer in the job: ${m.missing.slice(0, 8).map((x) => x.partId ?? x.uid).join(', ')}${m.missing.length > 8 ? ', …' : ''}. Their places are empty; save the layout again to drop them.` })
     if (m.moved.length) add({ severity: 'warning', code: 'NEST_MATERIAL', message: `${m.moved.length} part(s) changed material since the layout was saved; they were nested again on their new material.` })
+    // Polish-3: a part that changed size is flagged too (it keeps its place, at the new size)
+    if (m.resized?.length) {
+      const nos = m.resized.map((uid) => byUid.get(uid)?.no).filter((n): n is number => n !== undefined)
+      add({ severity: 'warning', code: 'NEST_SIZE', partUid: m.resized[0], partNo: nos[0], message: `${m.resized.length} part(s) changed size since the layout was saved (${nos.slice(0, 8).map((n) => `#${n}`).join(', ')}${nos.length > 8 ? ', …' : ''}); they keep their place at the new size. Re-nest automatically, or edit the layout and save it again.` })
+    }
     if (m.added.length) add({ severity: 'info', code: 'NEST_ADDED', message: `${m.added.length} part(s) are not in the saved layout and were nested automatically after the saved sheets.` })
     for (const sh of nest.sheets) {
       const mat = lib.materials.find((x) => x.id === sh.materialId)
@@ -187,7 +206,7 @@ export function validateJob(
           ...ref,
           severity: 'warning',
           code: 'SMALL_PART',
-          message: `Part #${inst.no} (${dim(pl.dx)} x ${dim(pl.dy)}) is small; vacuum may not hold it. Consider onion-skin or tabs (not yet supported).`,
+          message: `Part #${inst.no} (${dim(pl.dx)} x ${dim(pl.dy)}) is small; vacuum may not hold it. ${holdDownText(inst, pl, sh)}`,
         })
     }
     const spacing = cutter?.diameter ?? 0

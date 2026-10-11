@@ -8,14 +8,14 @@ import type { CancelCheck } from './cancel'
 import { featuresOf } from './features'
 import type { PartInstance } from './cutlist'
 import { polygonArea, r3 } from './geometry'
-import { nestMaterial, type NestedSheet, type NestPart } from './nesting'
+import { type MaterialNest, nestMaterial, type NestedSheet, type NestPart } from './nesting'
 import type { ManualInfo } from './manualNest'
 import { type BridgePlan, bridgePlan, type SharedPlan, sharedLinePlan } from './sheetCuts'
 import type { HDrillDir, Job, Library, MachineProfile, NestSettings, OpPurpose, ShopSettings, Tool, Vec2 } from './types'
 
 export interface JobNest {
   sheets: NestedSheet[]
-  unplaced: { uid: string; reason: string }[]
+  unplaced: MaterialNest['unplaced']
   spacing: number
   /** Engine and kit result per material. */
   materials?: { materialId: string; engine: 'rect' | 'shape'; strategy: string; splitKits: string[] }[]
@@ -346,7 +346,8 @@ function machineHitsOf(part: NonNullable<PartInstance['cam']>, paths: Toolpath[]
   return found
 }
 
-function partAreaOf(inst: PartInstance | undefined) {
+/** A part's area as the onion skin's limit reads it (the validator's small-part warning too, Polish-3). */
+export function partAreaOf(inst: PartInstance | undefined) {
   if (!inst) return Infinity
   return inst.outline.length >= 3 ? Math.abs(polygonArea(inst.outline)) : inst.cutLength * inst.cutWidth
 }

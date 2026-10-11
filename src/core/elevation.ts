@@ -58,9 +58,10 @@ export function wallLength(wall: WallId, room: Room) {
 export interface FrontDivision {
   /**
    * Kitchen-2: `blind` the blind panel of a blind corner, `filler` a filler strip's face. Kitchen-3:
-   * `leg` a pie-cut's other leg, seen end on.
+   * `leg` a pie-cut's other leg, seen end on. Polish-3: `shelf` a shelf of an open cabinet (no doors, no
+   * drawers), seen through its open front: its thickness at the height the construction puts it.
    */
-  kind: 'toe' | 'drawer' | 'door' | 'blind' | 'filler' | 'leg'
+  kind: 'toe' | 'drawer' | 'door' | 'blind' | 'filler' | 'leg' | 'shelf'
   /** Room Z. */
   z0: number
   z1: number
@@ -69,7 +70,8 @@ export interface FrontDivision {
   u1: number
 }
 
-export function frontDivisions(p: CarcassParams, z: number): FrontDivision[] {
+/** `T`: the carcass board's thickness (where an open cabinet's shelves stand). */
+export function frontDivisions(p: CarcassParams, z: number, T = 18): FrontDivision[] {
   const out: FrontDivision[] = []
   const g = p.doors.gap
   const tk = p.kind === 'base' && p.toeKick.enabled ? p.toeKick.height : 0
@@ -110,6 +112,17 @@ export function frontDivisions(p: CarcassParams, z: number): FrontDivision[] {
     const dz1 = frontZ1
     if (dz1 - dz0 > 80) {
       for (let i = 0; i < p.doors.count; i++) out.push({ kind: 'door', z0: z + dz0, z1: z + dz1, u0: i / p.doors.count, u1: (i + 1) / p.doors.count })
+    }
+  }
+  // Polish-3: an open cabinet shows its shelves, where the construction puts them (between bottom and top)
+  const shelves = Math.max(0, Math.round(p.shelves.count))
+  if (p.doors.count <= 0 && drawers === 0 && shelves > 0 && p.width > 2 * T) {
+    const lo = tk + T
+    const hi = p.height - T
+    const c = p.shelves.sideClearance
+    for (let i = 0; i < shelves; i++) {
+      const zc = lo + ((hi - lo) * (i + 1)) / (shelves + 1)
+      out.push({ kind: 'shelf', z0: z + zc - T / 2, z1: z + zc + T / 2, u0: (T + c) / p.width, u1: (p.width - T - c) / p.width })
     }
   }
   return out
@@ -225,7 +238,8 @@ export function elevationOf(cabinets: CabinetInstance[], room: Room, wall: WallI
     if (on === wall) {
       const span = alongWall(wall, fp, room)
       const faces = facesViewer(wall, pl.rotation)
-      items.push({ id: c.id, number: c.number, name: c.name, x: span.x, w: span.w, z: pl.z, h: c.params.height, faces, divisions: faces ? frontDivisions(c.params, pl.z) : [], kind })
+      const T = lib?.materials.find((m) => m.id === c.params.carcassMaterialId)?.thickness ?? 18
+      items.push({ id: c.id, number: c.number, name: c.name, x: span.x, w: span.w, z: pl.z, h: c.params.height, faces, divisions: faces ? frontDivisions(c.params, pl.z, T) : [], kind })
       continue
     }
     // a corner cabinet in a back corner, seen from the side wall beside it
@@ -306,4 +320,86 @@ export function narrowLabelRows(items: Pick<ElevationCabinet, 'id' | 'number' | 
     rows.set(it.id, row)
   }
   return rows
+}
+
+/** A cabinet's number label in the plan: its footprint, the label's font size, and the direction into the cabinet from its front. */
+export interface PlanLabel {
+  id: string
+  number: string
+  x: number
+  y: number
+  w: number
+  d: number
+  size: number
+  into: { x: number; y: number }
+}
+
+/**
+ * Polish-3: the plan's cabinet numbers sit in the middle of each footprint; narrow neighbours (an end
+ * panel and the filler beside it) ran together there ("EF1"). A label that would overlap one already
+ * placed is moved along its footprint's long side (into the cabinet first, then towards its front),
+ * a line at a time, to the nearest place where it is clear, staying inside its footprint when it can.
+ * Labels that are clear stay where they were. Returns each moved label's offset from the middle.
+ */
+export function planLabelOffsets(items: PlanLabel[]) {
+  const out = new Map<string, { dx: number; dy: number }>()
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = []
+  const boxAt = (it: PlanLabel, dx: number, dy: number) => {
+    const hw = labelWidth(it.number, it.size) / 2 + it.size * 0.12
+    const hh = it.size * 0.55
+    const cx = it.x + it.w / 2 + dx
+    const cy = it.y + it.d / 2 + dy
+    return { x0: cx - hw, x1: cx + hw, y0: cy - hh, y1: cy + hh }
+  }
+  const clear = (b: { x0: number; x1: number; y0: number; y1: number }) => !placed.some((p) => b.x0 < p.x1 && b.x1 > p.x0 && b.y0 < p.y1 && b.y1 > p.y0)
+  // wide footprints first (their labels never move), then left to right, front to back
+  const fits = (it: PlanLabel) => labelWidth(it.number, it.size) <= it.w * 0.9 && it.size <= it.d * 0.9
+  const order = [...items].sort((a, b) => Number(fits(b)) - Number(fits(a)) || a.x + a.w / 2 - (b.x + b.w / 2) || a.y + a.d / 2 - (b.y + b.d / 2))
+  for (const it of order) {
+    const alongY = it.d >= it.w
+    const box0 = boxAt(it, 0, 0)
+    const step = alongY ? (box0.y1 - box0.y0) * 1.05 : (box0.x1 - box0.x0) * 1.05
+    const sign = (alongY ? it.into.y : it.into.x) < 0 ? -1 : 1
+    const room = ((alongY ? it.d : it.w) - step) / 2
+    type Spot = { dx: number; dy: number; box: typeof box0 }
+    let best: Spot | null = null
+    let outside: Spot | null = null
+    for (let k = 0; k <= 12 && !best; k++)
+      for (const s of k === 0 ? [0] : [sign, -sign]) {
+        const off = s * k * step
+        const dx = alongY ? 0 : off
+        const dy = alongY ? off : 0
+        const box = boxAt(it, dx, dy)
+        if (!clear(box)) continue
+        if (Math.abs(off) <= Math.max(0, room) + 1e-9) {
+          best = { dx, dy, box }
+          break
+        }
+        outside ??= { dx, dy, box }
+      }
+    const pick = best ?? outside ?? { dx: 0, dy: 0, box: box0 }
+    placed.push(pick.box)
+    if (pick.dx !== 0 || pick.dy !== 0) out.set(it.id, { dx: pick.dx, dy: pick.dy })
+  }
+  return out
+}
+
+/**
+ * Polish-3: the plan's cabinet numbers (a pie-cut's is drawn on its L, not here): where each is
+ * drawn (`x`, `y`, room coordinates) and its font size, narrow neighbours moved apart
+ * (`planLabelOffsets`). `font`: the plan's label size.
+ */
+export function planNumberLabels(cabinets: CabinetInstance[], place: (c: CabinetInstance) => CabinetPlacement, font: number) {
+  const items: PlanLabel[] = cabinets
+    .filter((c) => !(c.params.corner?.type === 'pie-cut' && !c.params.panel))
+    .map((c) => {
+      const pl = place(c)
+      const { width: W, depth: D } = c.params
+      const fp = footprint(W, D, pl)
+      const a = toRoom(0, 0, 0, pl, W, D)
+      const back = toRoom(0, D, 0, pl, W, D)
+      return { id: c.id, number: c.number, x: fp.x, y: fp.y, w: fp.w, d: fp.d, size: fitSize(c.number, font, Math.max(fp.w, fp.d) * 0.9), into: { x: Math.sign(back[0] - a[0]), y: Math.sign(back[1] - a[1]) } }
+    })
+  const moved = planLabelOffsets(items)
+  return new Map(items.map((it) => [it.id, { x: it.x + it.w / 2 + (moved.get(it.id)?.dx ?? 0), y: it.y + it.d / 2 + (moved.get(it.id)?.dy ?? 0), size: it.size, item: it }]))
 }

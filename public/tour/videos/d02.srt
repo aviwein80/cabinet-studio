@@ -1,0 +1,79 @@
+1
+00:00:03,401 --> 00:00:05,704
+Deep dive: doors and drawers. How the app sizes fronts, why the reveals matter, and how a drawer box is built for Blum TANDEM.
+
+2
+00:00:05,704 --> 00:00:19,571
+Start with the 24" two-door base, B1. Doors are full overlay: they cover the box edges, with a small gap all round.
+
+3
+00:00:19,571 --> 00:00:24,647
+Doors: None, One or Pair. A pair on anything over about 21" wide keeps each door light and its swing short.
+
+4
+00:00:24,647 --> 00:00:33,571
+The Gap is the reveal: 1/8" between the pair and round the edges. Even reveals are what make a kitchen look straight.
+
+5
+00:00:33,571 --> 00:00:44,259
+So each door is half the width less the gaps, 11-7/8"; and the box height less the toe kick and a gap, 30-7/16".
+
+6
+00:00:44,259 --> 00:00:51,383
+Every door edge gets 1 mm ABS (L1 L2 W1 W2): doors are handled more than anything else in a kitchen.
+
+7
+00:00:51,383 --> 00:01:05,939
+Switch to One door and the app asks for the hinge side, the side the door swings from. Pick it to suit the room.
+
+8
+00:01:05,939 --> 00:01:12,035
+One 24" door is wide and heavy, so back to a pair.
+
+9
+00:01:12,035 --> 00:01:27,119
+Add one drawer to the same box. Drawers stack from the bottom, so it goes under the doors, and the doors shrink to 24-5/16" to make room.
+
+10
+00:01:27,119 --> 00:01:36,220
+The drawer front: 6" high, the full width less the gaps, banded on all four edges like a door.
+
+11
+00:01:36,220 --> 00:01:45,479
+The box behind it: two sides, a subfront, a back and a 1/4" HDF bottom. Sides are 18" long for an 18" slide.
+
+12
+00:01:45,479 --> 00:01:54,747
+Box parts are 5/8" (16 mm) board: Blum TANDEM takes sides up to 16 mm. An 18 mm side would not fit the runner.
+
+13
+00:01:54,747 --> 00:02:02,599
+The box is 5-3/16" high: lower than its front, so the front covers the box and the runners.
+
+14
+00:02:02,599 --> 00:02:14,953
+Not wanted here: back to 0 drawers, and Done. Now the 3-drawer base, B2.
+
+15
+00:02:14,953 --> 00:02:24,459
+Doors: None, Drawers: 3. Three equal fronts fill the height above the toe kick.
+
+16
+00:02:24,459 --> 00:02:30,299
+Slide: Auto from depth picks the longest TANDEM that fits, 15, 18 or 21 in. Choose one only for a shallow or odd box.
+
+17
+00:02:30,299 --> 00:02:38,357
+Box material defaults to the 16 mm drawer board. The 18 mm boards are marked "too thick for TANDEM", so the reason not to use them is right there in the list.
+
+18
+00:02:38,357 --> 00:02:48,151
+Three drawers, three sets of box parts. The cut list groups them, and the 16 mm parts nest on their own sheet.
+
+19
+00:02:48,151 --> 00:03:08,099
+Explode to see the three boxes inside, with the runner holes bored in the cabinet sides.
+
+20
+00:03:08,099 --> 00:03:13,393
+In short: reveals set the door and front sizes, depth sets the slide, and TANDEM sets the box board. The app keeps all three in step.

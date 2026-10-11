@@ -1,0 +1,103 @@
+1
+00:00:03,400 --> 00:00:10,307
+Deep dive: every field of the cabinet editor, worked through on one cabinet: the 24" two-door base B1 in the Novak kitchen.
+
+2
+00:00:10,307 --> 00:00:17,943
+Name is what the floor reads on every label and the cut list. Make it say what the box is, not "Cabinet 2".
+
+3
+00:00:17,943 --> 00:00:25,431
+Type sets sensible defaults: a Base gets a toe kick and top rails; a Wall gets a full top and hangs off the floor.
+
+4
+00:00:25,431 --> 00:00:33,658
+Width, height and depth are the outside of the box. 34-1/2" high plus a 1-1/2" countertop gives the standard 36" counter.
+
+5
+00:00:33,658 --> 00:00:40,726
+24" deep is the carcass only: the doors add their thickness in front, and the countertop overhangs that.
+
+6
+00:00:40,726 --> 00:00:47,242
+Corner turns the box into a blind or pie-cut corner (deep dive 6). This one is in a straight run.
+
+7
+00:00:47,242 --> 00:00:55,670
+Materials. Carcass: sides, bottom, rails and shelves. 18 mm melamine (it reads 11/16") is the shop’s standard box board.
+
+8
+00:00:55,670 --> 00:01:02,459
+Back: 1/4" HDF. Thin and cheap, and set in a groove it holds the box square.
+
+9
+00:01:02,459 --> 00:01:10,039
+Doors can be another board, such as paint-grade MDF, without touching the box. The cut list splits them by material.
+
+10
+00:01:10,039 --> 00:01:18,475
+Construction. Toe kick: a recess so you can stand close to the counter, about 4" high and set back 2-3/8".
+
+11
+00:01:18,475 --> 00:01:27,343
+Top: two rails, not a full top. The countertop covers it anyway; rails save board and leave room to screw the top on from below.
+
+12
+00:01:27,343 --> 00:01:35,894
+Bottom joint: the bottom sits in a 5/16" dado in the sides. The dado carries the load and squares the box as it is assembled.
+
+13
+00:01:35,894 --> 00:01:43,790
+Joinery: screw pilots drilled by the CNC, so assembly is just driving screws, with nothing to mark out by hand.
+
+14
+00:01:43,790 --> 00:01:52,590
+Back fixing: captured in a 5/16" groove set 1/2" in from the back edge, which leaves a lip to scribe to an uneven wall.
+
+15
+00:01:52,590 --> 00:02:03,906
+Shelves: make it two. The front setback keeps each shelf clear of the doors and the hinges.
+
+16
+00:02:03,906 --> 00:02:13,010
+Shelf-pin rows on the 32 mm system: 5 mm holes (3/16") every 32 mm (1-1/4"), so the customer can move shelves later.
+
+17
+00:02:13,010 --> 00:02:22,596
+Rows sit 1-7/16" in from the front and back. The zone margin keeps holes away from the top and bottom, where they would only weaken the side.
+
+18
+00:02:22,596 --> 00:02:30,870
+Doors: a pair on a 24" box. The 1/8" gap is the reveal between the two doors and round them.
+
+19
+00:02:30,870 --> 00:02:40,770
+Hinge cups: 35 mm cups, centred 13/16" from the door edge, the first 3-15/16" from the end. These follow the Salice sheet, and the CNC bores them.
+
+20
+00:02:40,770 --> 00:02:48,538
+Drawers: none here. Add some and the box gets Blum TANDEM slides picked from its depth (deep dives 2 and 4).
+
+21
+00:02:48,538 --> 00:02:57,354
+Edgebanding by group: 1 mm ABS on carcass fronts and door edges takes knocks; 0.4 mm PVC is enough on a shelf front.
+
+22
+00:02:57,354 --> 00:03:05,937
+The parts table: every panel this box makes, with its size, material and banded edges. Two shelves now.
+
+23
+00:03:05,937 --> 00:03:13,437
+Each edge button (L1, L2, W1, W2) bands that one edge of that one part: an override for this cabinet only.
+
+24
+00:03:13,437 --> 00:03:27,926
+Explode pulls the parts apart: you can see how it goes together, with the hinge cups and shelf-pin holes in place.
+
+25
+00:03:27,926 --> 00:03:38,100
+Reset to template takes the box back to the library preset. Done keeps these changes in this job only; the library is untouched.
+
+26
+00:03:38,100 --> 00:03:42,503
+Every setting flows on: the cut list, nesting, labels and programs all rebuild from the box you just described.

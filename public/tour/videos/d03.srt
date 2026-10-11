@@ -1,0 +1,75 @@
+1
+00:00:03,400 --> 00:00:05,643
+Deep dive: edgebanding. Which edges get tape and why, how to override one edge, the L-shaped corner parts, and what it does to cut sizes.
+
+2
+00:00:05,643 --> 00:00:19,436
+Open B1, the 24" two-door base. Edgebanding is set by group, so one choice covers every part of that kind.
+
+3
+00:00:19,436 --> 00:00:26,517
+Carcass front edges: only the edges you see with the doors open. Backs, tops and hidden edges stay raw: tape there is wasted money.
+
+4
+00:00:26,517 --> 00:00:35,393
+1 mm ABS on carcass fronts: it takes the knocks of pots and vacuum cleaners. 0.4 mm PVC on shelf fronts, which nothing hits.
+
+5
+00:00:35,393 --> 00:00:43,689
+Doors (all edges): every door edge gets 1 mm. A door is handled thousands of times, and melamine chips without it.
+
+6
+00:00:43,689 --> 00:00:52,557
+The parts table shows the result per part. The edges are L1 L2 (the long edges) and W1 W2 (the short ones).
+
+7
+00:00:52,557 --> 00:00:59,698
+Left side: only one long edge, its front, is banded. The back edge goes against the wall and is never seen.
+
+8
+00:00:59,698 --> 00:01:12,292
+Bottom: its front edge only. Top rails and the back: nothing, because the countertop and the wall hide them.
+
+9
+00:01:12,292 --> 00:01:19,269
+Doors: all four edges, L1 L2 W1 W2.
+
+10
+00:01:19,269 --> 00:01:31,063
+Override one edge: this shelf will hold heavy pans, so give its front 1 mm ABS instead of 0.4 mm. Only this part changes.
+
+11
+00:01:31,063 --> 00:01:45,361
+Now the pie-cut corner, B3. Its bottom, top and shelf are L-shaped, and the edges facing you are the two inside edges of the L.
+
+12
+00:01:45,361 --> 00:01:52,668
+Those are L3 and W3: banded with the carcass tape. The outer edges sit against the walls, so they stay raw.
+
+13
+00:01:52,668 --> 00:02:05,257
+The shelf’s inside edges get the shelf tape, 0.4 mm. The same group rules apply to L parts as to plain ones.
+
+14
+00:02:05,257 --> 00:02:15,634
+The inside corner of an L can’t be square: the router leaves a radius. It is a job setting, 0.236" (a 6 mm bit), with a Configure badge until your edgebander confirms it can follow it.
+
+15
+00:02:15,634 --> 00:02:26,721
+On the Cut list, cut sizes are smaller than finished sizes by the tape thickness, so the part is right once it is banded.
+
+16
+00:02:26,721 --> 00:02:36,433
+The sink-base door is cut 30-5/16" x 17-13/16": 1/16" small each way for 1 mm of tape on both edges, so it finishes at 30-3/8" x 17-7/8".
+
+17
+00:02:36,433 --> 00:02:47,173
+Edgeband totals, in feet, are what to order. Each edge counts an extra 1-15/16" overhang: the bander needs it, and it is trimmed off.
+
+18
+00:02:47,173 --> 00:03:02,118
+The tapes live in the Library. Thickness reads 0.039" and 0.016" (1 mm and 0.4 mm) exactly: rounding them to 1/16" would throw every cut size off.
+
+19
+00:03:02,118 --> 00:03:07,274
+So: band what is seen and handled, pick the tape by how hard it is used, and let the app take the thickness off the cut sizes.

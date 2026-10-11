@@ -1,55 +1,59 @@
 1
-00:00:03,401 --> 00:00:16,657
+00:00:03,401 --> 00:00:16,413
 Now B2, the 3-drawer base. Click its pencil.
 
 2
-00:00:16,657 --> 00:00:24,689
+00:00:16,413 --> 00:00:24,267
 Match the sink base: 34-1/2" high and 23-1/4" deep.
 
 3
-00:00:24,689 --> 00:00:29,920
+00:00:24,267 --> 00:00:28,727
 Drawers: how many, and the slide. The drawer boxes are built to suit.
 
 4
-00:00:29,920 --> 00:00:34,432
+00:00:28,727 --> 00:00:33,152
 Slides are Blum TANDEM, 15, 18 or 21 in. Auto picks the length from the cabinet depth.
 
 5
-00:00:34,432 --> 00:00:48,525
+00:00:33,152 --> 00:00:46,782
 Explode the model to see the drawer boxes and the slide holes bored in the sides.
 
 6
-00:00:48,525 --> 00:00:56,333
-The editor flags things to check, like drawer sides thicker than TANDEM allows.
+00:00:46,782 --> 00:00:51,431
+Drawer boxes default to a 16 mm board, the side thickness TANDEM is made for. This library has none yet...
 
 7
-00:00:56,333 --> 00:01:16,849
-Next, B3, the 2-door base: 30" wide, same height and depth.
+00:00:51,431 --> 00:00:58,189
+...so a placeholder 16 mm board stands in, with a Configure badge until you set up your real one.
 
 8
-00:01:16,849 --> 00:01:22,643
-Doors and hinges: none, one or a pair, the gap, and the hinge cup boring.
+00:00:58,189 --> 00:01:18,072
+Next, B3, the 2-door base: 30" wide, same height and depth.
 
 9
-00:01:22,643 --> 00:01:27,037
-Hinges are Salice Silentia+ 110°: 35 mm cups with 3 mm plates, bored automatically.
+00:01:18,072 --> 00:01:23,774
+Doors and hinges: none, one or a pair, the gap, and the hinge cup boring.
 
 10
-00:01:27,037 --> 00:01:33,227
-The black dots in 3D are the hinge cups, plates and shelf-pin holes.
+00:01:23,774 --> 00:01:28,142
+Hinges are Salice Silentia+ 110°: 35 mm cups with 3 mm plates, bored automatically.
 
 11
-00:01:33,227 --> 00:01:40,663
-Edgebanding: click any edge of any part in the list to change its band.
+00:01:28,142 --> 00:01:33,977
+The black dots in 3D are the hinge cups, plates and shelf-pin holes.
 
 12
-00:01:40,663 --> 00:01:51,372
-Add hole puts an extra hole on any part, typed in by position, size and depth.
+00:01:33,977 --> 00:01:40,030
+Edgebanding: click any edge of any part in the list to change its band.
 
 13
-00:01:51,372 --> 00:02:11,580
-Last base, B4: one door, 15" wide.
+00:01:40,030 --> 00:01:49,506
+Add hole puts an extra hole on any part, typed in by position, size and depth.
 
 14
-00:02:11,580 --> 00:02:23,511
+00:01:49,506 --> 00:02:09,038
+Last base, B4: one door, 15" wide.
+
+15
+00:02:09,038 --> 00:02:20,657
 With one door you choose the hinge side. Make this one hinge on the right.

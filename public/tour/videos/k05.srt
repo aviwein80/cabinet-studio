@@ -1,31 +1,31 @@
 1
-00:00:03,400 --> 00:00:08,882
+00:00:03,400 --> 00:00:09,152
 The wall is 171" and the run is 168". Fix it in Elevation.
 
 2
-00:00:08,882 --> 00:00:16,703
+00:00:09,152 --> 00:00:16,379
 Keep it symmetric: widen the two drawer bases at the ends by 1-1/2" each.
 
 3
-00:00:16,703 --> 00:00:24,343
+00:00:16,379 --> 00:00:23,564
 B5 gets the same 19-1/2".
 
 4
-00:00:24,343 --> 00:00:39,268
+00:00:23,564 --> 00:00:37,685
 And the wall cabinets over them, W1 and W5, so the uppers still line up.
 
 5
-00:00:39,268 --> 00:00:44,683
-They now overlap their neighbours. Arrange along the back wall closes the run up again.
+00:00:37,685 --> 00:00:40,685
+No second Arrange: the room was as Arrange left it, so each new width re-flows the run at once.
 
 6
-00:00:44,683 --> 00:00:51,185
+00:00:40,685 --> 00:00:47,022
 19-1/2 + 24 + 36 + 24 + 19-1/2 + 24 + 24 = 171": wall to wall, no gap.
 
 7
-00:00:51,185 --> 00:01:06,808
+00:00:47,022 --> 00:01:00,726
 In 3D the kitchen now fills the wall from corner to corner.
 
 8
-00:01:06,808 --> 00:01:09,810
+00:01:00,726 --> 00:01:03,728
 Next: a walk around the finished kitchen and its cut list.

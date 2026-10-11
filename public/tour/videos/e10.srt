@@ -1,0 +1,55 @@
+1
+00:00:03,400 --> 00:00:11,162
+Revision drill. The Patel vanity is cut-ready (oak, 30" sink base + 18" drawer bank). Then a change order arrives with three changes.
+
+2
+00:00:11,162 --> 00:00:16,225
+Note the starting point: parts, sheets and warnings in the header. Every change below moves these numbers.
+
+3
+00:00:16,225 --> 00:00:27,595
+Change 1: four drawers instead of three. Open B2, Drawers → 4.
+
+4
+00:00:27,595 --> 00:00:39,967
+Downstream: four shorter fronts, four boxes, four pairs of TANDEM runners and their holes. The fronts are re-spaced for you.
+
+5
+00:00:39,967 --> 00:00:49,761
+Change 2: the plumber needs room. The sink base drops to 27". Open B1, Width → 27.
+
+6
+00:00:49,761 --> 00:00:59,780
+Downstream: sides stay, but the bottom, rails, back and both doors get narrower; the hinge boring moves with the doors.
+
+7
+00:00:59,780 --> 00:01:13,257
+And the room: 27 + 18 = 45" in a 48" alcove. A 3" gap opens. Fill gap puts one filler against the wall.
+
+8
+00:01:13,257 --> 00:01:35,669
+Change 3: painted fronts. Cabinets → Change materials: Fronts → MDF18, and no band on doors and drawer fronts (they will be sprayed).
+
+9
+00:01:35,669 --> 00:01:49,503
+The preview names every part: the new fronts, and the filler too, because a filler is made of the door board.
+
+10
+00:01:49,503 --> 00:02:00,661
+Now the full downstream check. Cut list: MDF fronts with no band, four drawer fronts, the narrower sink-base parts, the filler.
+
+11
+00:02:00,661 --> 00:02:08,957
+Hardware: one more pair of runners, and the edgeband total drops by the length of every front edge.
+
+12
+00:02:08,957 --> 00:02:18,181
+Nesting re-runs on its own: an MDF sheet appears for the fronts and filler. Had the layout been saved by hand, the changed parts would be flagged instead.
+
+13
+00:02:18,181 --> 00:02:26,586
+Labels, sheet maps and programs are rebuilt from this: any printed before the change are now wrong. Reprint them all and bin the old ones.
+
+14
+00:02:26,586 --> 00:02:33,030
+So: make each change where it belongs, then walk the chain: room, cut list, hardware, nesting, labels. Nothing downstream needs editing by hand.

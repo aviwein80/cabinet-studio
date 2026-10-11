@@ -1,0 +1,47 @@
+1
+00:00:03,401 --> 00:00:24,454
+The Patel vanity again, but built the way a millimetre shop would: a 1200 mm alcove. Units switch at the bottom of the side bar.
+
+2
+00:00:24,454 --> 00:00:42,436
+Metric presets: "Sink base" and "Base cabinet, 3 drawers". Round 800 / 600 mm widths, not the US 36" and 18" presets.
+
+3
+00:00:42,436 --> 00:00:58,831
+Size the sink base for the alcove: 750 mm wide, 800 mm high (comfort height with the top), 530 mm deep.
+
+4
+00:00:58,831 --> 00:01:08,386
+Every field reads in whole millimetres. No fractions, no rounding to 1/16": what you type is what is stored and cut.
+
+5
+00:01:08,386 --> 00:01:25,397
+The drawer bank: 450 wide, 800 high, 530 deep.
+
+6
+00:01:25,397 --> 00:01:37,882
+Slide: "Auto from depth" picks the TANDEM length from the cabinet depth. At 530 mm it takes the 15" runner; a 24" deep US base gets the 18".
+
+7
+00:01:37,882 --> 00:02:01,484
+Room: 1200 mm between the walls. Arrange: 750 + 450 = 1200, a perfect fit.
+
+8
+00:02:01,484 --> 00:02:13,816
+Cut list: sizes in mm, board thickness 18 and 16, and edgeband totals in metres, as metric suppliers sell it.
+
+9
+00:02:13,816 --> 00:02:21,181
+In the inch version the sink base was 30", stored as 762 mm. Here it is 750. Either way the app stores millimetres; only the display differs.
+
+10
+00:02:21,181 --> 00:02:32,873
+Nesting: sheets in mm (3658 x 1524 for the 12 x 5 ft stock), areas in m² instead of ft².
+
+11
+00:02:32,873 --> 00:02:39,752
+Labels and sheet maps print in mm, and the programs are identical either way: the machine always works in millimetres.
+
+12
+00:02:39,752 --> 00:02:46,193
+So: pick the unit your shop and suppliers speak. Metric jobs get round numbers and no rounding; the parts and programs are the same.

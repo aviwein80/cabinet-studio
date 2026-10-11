@@ -1,0 +1,43 @@
+1
+00:00:03,400 --> 00:00:11,550
+Two small jobs came in as part lists, not designed cabinets: garage shelving for Sam Kim and a closet for Rosa Diaz. Batch runs handle exactly that.
+
+2
+00:00:11,550 --> 00:00:20,299
+Here is the list: one CSV, one row per part. The order column splits it into two jobs, J2081 and J2082. Sizes in inches, fractions allowed.
+
+3
+00:00:20,299 --> 00:00:29,509
+grain yes keeps a part along the sheet; assembly keeps a unit’s panels together on one sheet, and puts it on their labels.
+
+4
+00:00:29,509 --> 00:00:40,927
+The setup in use decides what happens: the N-200 (still placeholder tools) and a Waste areas report step.
+
+5
+00:00:40,927 --> 00:00:58,175
+Run a list now: choose the CSV (and any DXF drawings it names), then Run.
+
+6
+00:00:58,175 --> 00:01:09,218
+2 orders, 6 rows. Each order is nested on its own: J2081 needs 3 sheets, J2082 just 1. Customers’ parts never share a sheet, so labels and costs stay per job.
+
+7
+00:01:09,218 --> 00:01:19,223
+Each job gets programs, labels, sheet maps, cut list, BOM and a report. The same export checks as the Output tab run on every order.
+
+8
+00:01:19,223 --> 00:01:28,242
+A job with errors would get only its report, no programs, so a bad list can’t slip through unattended.
+
+9
+00:01:28,242 --> 00:01:38,363
+Save outputs (.zip): everything in one file, a folder per order.
+
+10
+00:01:38,363 --> 00:01:55,634
+J2082’s report: the sheets, the parts, and the checks. The 4" x 3" rail blocks are small parts, so it tells you to hold them with an onion skin.
+
+11
+00:01:55,634 --> 00:02:02,079
+So: lists in, a job per order, every order checked, one zip out. Machine output switches stay off; nothing here sends a program anywhere.

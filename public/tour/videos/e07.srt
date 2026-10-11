@@ -1,0 +1,59 @@
+1
+00:00:03,401 --> 00:00:11,313
+The Lee bookcase from e01, ready to cut. The header says 4 warnings. Before anything goes to the machine, read every one.
+
+2
+00:00:11,313 --> 00:00:19,823
+Output tab → Validation: 0 errors, 4 warnings, 1 info. Errors block export; warnings are things a person must decide.
+
+3
+00:00:19,823 --> 00:00:28,912
+1. PLACEHOLDER_TOOLS: the tool table is invented data until the real N-200 table is loaded. A shop fact, not a job problem.
+
+4
+00:00:28,912 --> 00:00:38,092
+2. MACHINE_PLACEHOLDER: table size, travel, safe Z, spoilboard. Also shop facts, confirmed once on the Machine page.
+
+5
+00:00:38,092 --> 00:00:47,643
+3. HORIZONTAL_SKIPPED: 24 Confirmat edge holes on the six sides. No horizontal drill unit, so they are not in the program.
+
+6
+00:00:47,643 --> 00:00:55,006
+This one is about the job. Either drill 24 holes by hand, or join the carcass a way the machine can drill from the face.
+
+7
+00:00:55,006 --> 00:01:04,421
+4. UNCONFIRMED: the 16 placeholder values this job would use. Listed so you can’t miss one, and confirming never switches output on.
+
+8
+00:01:04,421 --> 00:01:12,875
+And the info: SIMULATE. Generated programs are not machine-proven; open each in woodWOP first. That one never goes away, on purpose.
+
+9
+00:01:12,875 --> 00:01:23,894
+Fix the job finding. Open T1: Joinery → Screw pilots (face drilled). Screw heads land on the outside of the sides: on a built-in those face the walls and the next unit.
+
+10
+00:01:23,894 --> 00:01:53,878
+Screw pilots are drilled from the face by the vertical spindles. Same for T2 and T3: the units are identical.
+
+11
+00:01:53,878 --> 00:02:09,859
+Back to the check: 3 warnings. HORIZONTAL_SKIPPED is gone: every hole is now on the program.
+
+12
+00:02:09,859 --> 00:02:15,078
+What’s left are shop facts. Configure jumps to the exact value: here, T101 on the Machine page.
+
+13
+00:02:15,078 --> 00:02:32,010
+Do not Mark as confirmed to make a warning go away. Measure the real bit; the program trusts these numbers.
+
+14
+00:02:32,010 --> 00:02:41,735
+Also worth a look: three 1/4" backs on three sheets. At 31" x 83" only one fits across a 60" sheet, so this is right, not a bad nest.
+
+15
+00:02:41,735 --> 00:02:49,098
+So: 0 errors, and every remaining warning is a shop fact you can name. That is a clean check. Output switches stay off until the shop is set up.

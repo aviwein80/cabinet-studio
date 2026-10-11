@@ -1,0 +1,67 @@
+1
+00:00:03,401 --> 00:00:13,203
+The Goldberg sign from the CAM basics: outline, recess pocket, hanging holes. The customer wants the name cut in too.
+
+2
+00:00:13,203 --> 00:00:18,367
+The lettering is already drawn, but drawing is not machining: no operation uses it yet. Select it…
+
+3
+00:00:18,367 --> 00:00:23,462
+…Add operation → Engrave. Engrave follows the line of each letter with a small cutter, at one depth.
+
+4
+00:00:23,462 --> 00:00:33,231
+Why not V-carve? It needs a V-bit and gives sharp serifs; the placeholder table has none confirmed, and a stroke font engraves cleanly.
+
+5
+00:00:33,231 --> 00:00:39,229
+The tool is picked automatically: T103, the 6 mm spiral cutter for grooves. 1/16" deep by default.
+
+6
+00:00:39,229 --> 00:00:44,363
+Go 1/8" deep so the paint has a clean wall to sit against. Depth in inches; the program gets millimetres.
+
+7
+00:00:44,363 --> 00:00:55,013
+The amber notes: T103’s numbers, feeds and holder are placeholders. Every one stays listed until the shop confirms it.
+
+8
+00:00:55,013 --> 00:01:02,187
+Order matters. Engrave went in before the Profile: the part must stay held by the sheet until the very last cut frees it.
+
+9
+00:01:02,187 --> 00:01:08,836
+Sort by tool would group operations by cutter to save tool changes, but it would never move the cut-out ahead of them.
+
+10
+00:01:08,836 --> 00:01:29,349
+Simulate: drills, then pocket, the new engraving, and the cut-out last.
+
+11
+00:01:29,349 --> 00:01:35,132
+Each operation with its time. Click Engrave to jump to it.
+
+12
+00:01:35,132 --> 00:01:49,342
+The totals in shop units: cut length in feet, material removed in cubic inches, the deepest cut in inches.
+
+13
+00:01:49,342 --> 00:01:57,397
+Why care about feet of cut? It is machine time, and time is what a sign costs. Here the engraving adds 16 s of cutting for very little material removed.
+
+14
+00:01:57,397 --> 00:02:18,426
+3D: the lettering cut into the recess.
+
+15
+00:02:18,426 --> 00:02:32,868
+Collision check: shank, holder and rapids against the material. Clean, with the holder outline still marked invented.
+
+16
+00:02:32,868 --> 00:02:42,465
+Program: the engraving becomes one more woodWOP macro, between the pocket and the contour. Custom-part output stays off.
+
+17
+00:02:42,465 --> 00:02:48,679
+So: select what to machine, let the tool be matched, set the depth for the finish, keep the cut-out last, and read the simulation totals.

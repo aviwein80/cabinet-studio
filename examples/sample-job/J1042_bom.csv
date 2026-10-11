@@ -8,3 +8,25 @@ Hardware,PIN-5,"Shelf pin 5 mm",24,pcs
 Hardware,SALICE-110-SC,"Salice Silentia+ 110° soft-close, full overlay",18,pcs
 Hardware,SALICE-B2VGV-H3,"Salice cruciform plate 3 mm, euro screw (B2VGV)",18,pcs
 Hardware,DOWEL-8x30,"Wood dowel 8 x 30",14,pcs
+
+Quote,Item,Name,Qty,Unit,Price each $,Total,Note
+Board,HDF6-WHT,HDF 6 white back,1,sheets,,,price not set
+Board,PB18-WHT,Melamine PB 18 white,2,sheets,,,price not set
+Edgeband,EB-WHT-1.0,ABS white 1.0 x 22,36.19,m,,,price not set
+Edgeband,EB-WHT-0.4,PVC white 0.4 x 22,3.52,m,,,price not set
+Hardware,SCREW-4x50,Chipboard screw 4 x 50,16,pcs,,,price not set
+Hardware,PIN-5,Shelf pin 5 mm,24,pcs,,,price not set
+Hardware,SALICE-110-SC,"Salice Silentia+ 110° soft-close, full overlay",18,pcs,,,price not set
+Hardware,SALICE-B2VGV-H3,"Salice cruciform plate 3 mm, euro screw (B2VGV)",18,pcs,,,price not set
+Hardware,DOWEL-8x30,Wood dowel 8 x 30,14,pcs,,,price not set
+Labour,Cabinets,"Cabinets, 60 min each",5,cabinets,,,price not set
+Labour,Doors,"Doors, 10 min each",9,doors,,,price not set
+Labour,Sheets cut,"Sheets cut, 15 min each",3,sheets,,,price not set
+Line total,Board,,,,,,price not set
+Line total,Edgeband,,,,,,price not set
+Line total,Hardware,,,,,,price not set
+Line total,Labour,7.25 h,,,,,price not set
+Subtotal,,,,,,,incomplete: 10 prices not set
+Markup,0 %,,,,,,
+Sales tax,0 %,,,,,,
+Total,,,,,,,incomplete: 10 prices not set

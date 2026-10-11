@@ -55,6 +55,11 @@ export interface EdgeBand {
   thickness: number
   width: number
   color: string
+  /**
+   * Job-1: price per metre of band, in the shop currency (typed and shown per foot in an inch shop).
+   * Absent = not set: the quote says "price not set" (never an invented price).
+   */
+  price?: number
 }
 
 export type HardwareCategory =
@@ -95,6 +100,11 @@ export interface Hardware {
   slideHoles?: number[]
   /** Smallest cabinet depth for this runner. */
   minCabinetDepth?: number
+  /**
+   * Job-1: price per piece, as the BOM counts it (a hinge, a plate, a TANDEM runner set per drawer), in
+   * the shop currency. Absent = not set: the quote says "price not set".
+   */
+  price?: number
 }
 
 /** Geometry frozen on one cabinet so a library edit can leave that job alone. */
@@ -470,6 +480,8 @@ export interface Job {
    * of date and is not used.
    */
   programEdits?: Record<string, { text: string; base: string; editedAt: string }>
+  /** Job-1: markup and sales tax on this job's quote, percent. Absent = 0. */
+  quote?: { markupPct?: number; taxPct?: number }
 }
 
 /** A nest edited by hand, or loaded from a nest list: sheets and where each part sits. */
@@ -873,6 +885,8 @@ export interface ShopSettings {
   machineFolder?: string
   /** Currency symbol for material costs (M2.8). Default "$". */
   currency?: string
+  /** Job-1: shop rate and labour times for job quotes. Absent values are not set / the PLACEHOLDER times. */
+  pricing?: import('./quote').PricingSettings
   /** Custom-part module switches. Absent keys take the defaults in `DEFAULT_FEATURES`. */
   features?: Partial<FeatureFlags>
   /** Folder watcher for part-list CSVs (desktop app), and the batch setup it runs. */

@@ -21,6 +21,9 @@ import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
 import { useConfigureTarget } from '@/components/configureFocus'
 import { formatDims } from '@/core/units'
+import { ConfigureBadge } from '@/components/Configure'
+import { PriceInput } from '@/components/PriceField'
+import { bandPriceShown, bandPriceStored } from '@/core/quote'
 
 const HW_CATEGORIES: HardwareCategory[] = ['hinge', 'mounting-plate', 'shelf-pin', 'slide', 'connector', 'dowel', 'screw', 'leg', 'handle', 'other']
 
@@ -66,6 +69,8 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
     const m = t.kind === 'material' ? data?.library.materials.find((x) => x.id === t.materialId) : undefined
     if (m) setEditing(m)
   })
+  // Job-1: a price badge (edgeband per length, hardware per piece) focuses the price cell
+  useConfigureTarget(['price'])
   if (!data) return null
   const lib = data.library
   const units = data.settings.units
@@ -89,6 +94,24 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
       if (tab === 'edgebands') l.edgebands.push({ id: `eb-${n}`, code: `EB-${n.toUpperCase()}`, name: 'New edgeband', thickness: 1, width: 22, color: '#e7e2d8' })
       if (tab === 'hardware') l.hardware.push({ id: `hw-${n}`, code: `HW-${n.toUpperCase()}`, name: 'New hardware item', category: 'other' })
     })
+  }
+
+  // Job-1: prices. Empty = not set (a Configure badge), never taken as 0.
+  const currency = data.settings.currency ?? '$'
+  const perUnit = units === 'in' ? 'ft' : 'm'
+  const priceCell = (what: 'edgeband' | 'hardware', row: { id: string; code: string; price?: number }) => {
+    const shown = what === 'edgeband' ? bandPriceShown(row.price, units) : row.price
+    return (
+      <div className="flex items-center gap-1" data-cfg={`price:${what}:${row.id}`}>
+        <PriceInput
+          className="h-7 w-20 text-right text-xs"
+          label={`${row.code} price`}
+          value={shown}
+          onChange={(v) => setField(what === 'edgeband' ? 'edgebands' : 'hardware')(row.id, 'price', what === 'edgeband' ? bandPriceStored(v, units) : v)}
+        />
+        {shown === undefined && <ConfigureBadge item={{ key: `price:${what}:${row.id}`, label: `${row.code} price`, value: 'price not set', group: 'Pricing', target: { kind: 'price', what, id: row.id } }} />}
+      </div>
+    )
   }
 
   const exportBundle = async () => {
@@ -214,13 +237,22 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             onDelete={remove('edgebands')}
             canDelete={(b) => (bandInUse(data, b.id) ? 'Used by a template or job cabinet' : null)}
             empty="No edgebands."
+            extraColumns={[{ key: 'price', label: `Price, ${currency} per ${perUnit}`, width: '190px', render: (b) => priceCell('edgeband', b) }]}
           />
-          <p className="mt-2 text-[11px] text-muted-foreground">Band thickness is subtracted from the cut size of every banded edge (plus the pre-mill allowance set on the Machine page). Change thickness with Edit.</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Band thickness is subtracted from the cut size of every banded edge (plus the pre-mill allowance set on the Machine page). Change thickness with Edit. Prices are your own (per {perUnit === 'ft' ? 'foot' : 'metre'} of band, used by job quotes); an empty price is “price not set”, never $0.</p>
         </TabsContent>
         <TabsContent value="hardware" className="min-h-0 flex-1 overflow-auto p-5">
-          <EditableTable rows={lib.hardware} columns={HW_COLS} onChange={setField('hardware')} onEdit={setEditing} onDelete={remove('hardware')} empty="No hardware." />
+          <EditableTable
+            rows={lib.hardware}
+            columns={HW_COLS}
+            onChange={setField('hardware')}
+            onEdit={setEditing}
+            onDelete={remove('hardware')}
+            empty="No hardware."
+            extraColumns={[{ key: 'price', label: `Price, ${currency} per piece`, width: '190px', render: (h) => priceCell('hardware', h) }]}
+          />
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Plate H on the Salice plate is 3 mm. That height is a label: it does not move holes. Setback, screw spacing and hole size do — change those with Edit. Code and name are labels too. Jobs keep the id, so a rename does not retarget them.
+            Plate H on the Salice plate is 3 mm. That height is a label: it does not move holes. Setback, screw spacing and hole size do — change those with Edit. Code and name are labels too. Jobs keep the id, so a rename does not retarget them. Prices are your own, per piece as the BOM counts it (a TANDEM runner set per drawer); an empty price is “price not set” in quotes, never $0.
           </p>
         </TabsContent>
         <TabsContent value="rules" className="min-h-0 flex-1 overflow-auto p-5">

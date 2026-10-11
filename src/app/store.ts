@@ -10,6 +10,7 @@ import { DEFAULT_ROOM, nextCabinetNumber, pushNeighbours } from '@/core/room'
 import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, MachineSetup, ShopSettings } from '@/core/types'
 import { draftBlock } from '@/core/spec/draft'
+import { applySwap, undoSwap, type MaterialSwap, type SwapUndo } from '@/core/jobMaterials'
 import { toast } from 'sonner'
 import { backend } from './backend'
 
@@ -25,7 +26,7 @@ export type Route =
   | { page: 'parts' }
   | { page: 'part'; partId: string; jobId?: string }
 
-export type JobTab = 'cabinets' | 'room' | 'parts' | 'cutlist' | 'nesting' | 'output'
+export type JobTab = 'cabinets' | 'room' | 'parts' | 'cutlist' | 'nesting' | 'quote' | 'output'
 export type LibraryTab = 'templates' | 'materials' | 'edgebands' | 'hardware' | 'rules' | 'offcuts' | 'patterns' | 'fonts'
 
 interface State {
@@ -50,6 +51,12 @@ interface State {
   updateCabinet(jobId: string, cab: CabinetInstance): void
   duplicateCabinet(jobId: string, cabId: string): void
   removeCabinet(jobId: string, cabId: string): void
+  /** Job-1: change materials on the job's cabinets in one step; returns the number of settings changed. */
+  swapMaterials(jobId: string, swap: MaterialSwap): number
+  /** The last material change (kept while the app runs), for its one-step undo. */
+  materialUndo: SwapUndo | null
+  /** Undo the last material change: settings changed again since are left as they are. */
+  undoMaterials(): { reverted: number; skipped: number } | null
   saveTemplate(name: string, description: string, params: CarcassParams): string
   updateLibrary(fn: (lib: Library) => void): void
   /** Edits the machine shown on the Machine page: the main one, or another machine (M2.9). */
@@ -134,9 +141,16 @@ export const useStore = create<State>((set, get) => {
         if (!(r.page === 'part' && r.partId === t.partId)) set({ route: { page: 'part', partId: t.partId, ...(t.jobId ? { jobId: t.jobId } : {}) } })
       } else if (t.kind === 'material') {
         if (!(r.page === 'library' && r.tab === 'materials')) set({ route: { page: 'library', tab: 'materials' } })
+      } else if (t.kind === 'price') {
+        // Job-1: a library price: the edgeband or hardware table
+        const tab = t.what === 'edgeband' ? 'edgebands' : 'hardware'
+        if (!(r.page === 'library' && r.tab === tab)) set({ route: { page: 'library', tab } })
+      } else if (t.kind === 'labour') {
+        // Job-1: the shop rate and labour times are on the Settings page
+        if (r.page !== 'settings') set({ route: { page: 'settings' } })
       } else if (r.page !== 'machine') set({ route: { page: 'machine' } })
       // badges on other pages are about the main machine
-      if (t.kind !== 'op' && t.kind !== 'fixture' && t.kind !== 'material' && r.page !== 'machine') set({ machineEdit: null })
+      if (t.kind !== 'op' && t.kind !== 'fixture' && t.kind !== 'material' && t.kind !== 'price' && t.kind !== 'labour' && r.page !== 'machine') set({ machineEdit: null })
       set({ configure: t })
     },
     clearConfigure: () => set({ configure: null }),
@@ -265,6 +279,34 @@ export const useStore = create<State>((set, get) => {
           j.cabinets = j.cabinets.filter((c) => c.id !== cabId)
         }),
       )
+    },
+
+    materialUndo: null,
+    swapMaterials(jobId, swap) {
+      let n = 0
+      mutate((d) =>
+        touchJob(d, jobId, (j) => {
+          const { cabinets, undo } = applySwap(j, swap, d.library)
+          j.cabinets = cabinets
+          n = undo.changes.length
+          set({ materialUndo: n ? undo : get().materialUndo })
+        }),
+      )
+      return n
+    },
+    undoMaterials() {
+      const u = get().materialUndo
+      if (!u) return null
+      let res: { reverted: number; skipped: number } = { reverted: 0, skipped: 0 }
+      mutate((d) =>
+        touchJob(d, u.jobId, (j) => {
+          const r = undoSwap(j, u)
+          j.cabinets = r.cabinets
+          res = { reverted: r.reverted, skipped: r.skipped }
+        }),
+      )
+      set({ materialUndo: null })
+      return res
     },
 
     saveTemplate(name, description, params) {

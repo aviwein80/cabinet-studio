@@ -4,6 +4,8 @@ import { labelsPdf, sheetMapPdf } from './labels/pdf'
 import { labelsZpl } from './labels/zpl'
 import { encodeCp1252 } from './mpr/writer'
 import { mprFiles, type JobOutput } from './pipeline'
+import { jobQuote, quoteCsv } from './quote'
+import { quotePdf } from './quotePdf'
 import type { AppData, Job } from './types'
 import { formatInches, runLength } from './units'
 
@@ -11,9 +13,10 @@ export type OutFile = { name: string; data: string | Uint8Array }
 
 /**
  * The BOM (order list). Polish-2: in an inch shop the sheet sizes are in inches ("144 x 60 in") and
- * edgeband in feet; a millimetre shop's file is as before ("3658x1524", metres).
+ * edgeband in feet; a millimetre shop's file is as before ("3658x1524", metres). Job-1: with the job,
+ * the quote follows after a blank row (`quoteCsv`); the order list above it is unchanged.
  */
-export function bomCsv(out: JobOutput, data: AppData) {
+export function bomCsv(out: JobOutput, data: AppData, job?: Pick<Job, 'cabinets' | 'quote'>) {
   const inch = data.settings.units === 'in'
   const lines = ['Type,Code,Name,Qty,Unit']
   const sheetsByMat = new Map<string, number>()
@@ -26,10 +29,10 @@ export function bomCsv(out: JobOutput, data: AppData) {
   }
   for (const e of out.edgebands) lines.push(['Edgeband', e.code, `"${e.name}"`, ...(inch ? [runLength(e.length, 'in').replace(' ft', ''), 'ft'] : [e.metres, 'm'])].join(','))
   for (const h of out.hardware) lines.push(['Hardware', h.code, `"${h.name}"`, h.qty, 'pcs'].join(','))
-  return lines.join('\r\n') + '\r\n'
+  return lines.join('\r\n') + '\r\n' + (job ? quoteCsv(jobQuote(job, out, data)) : '')
 }
 
-export type ExportKind = 'mpr' | 'labels-pdf' | 'sheetmap-pdf' | 'labels-zpl' | 'cutlist-csv' | 'bom-csv' | 'areas-csv'
+export type ExportKind = 'mpr' | 'labels-pdf' | 'sheetmap-pdf' | 'labels-zpl' | 'cutlist-csv' | 'bom-csv' | 'areas-csv' | 'quote-pdf'
 
 export function buildFiles(kinds: ExportKind[], job: Job, data: AppData, out: JobOutput): OutFile[] {
   const files: OutFile[] = []
@@ -52,10 +55,13 @@ export function buildFiles(kinds: ExportKind[], job: Job, data: AppData, out: Jo
         files.push({ name: `${base}_cutlist.csv`, data: cutListCsv(out.cutList) })
         break
       case 'bom-csv':
-        files.push({ name: `${base}_bom.csv`, data: bomCsv(out, data) })
+        files.push({ name: `${base}_bom.csv`, data: bomCsv(out, data, job) })
         break
       case 'areas-csv':
-        files.push({ name: `${base}_areas-costs.csv`, data: areasCsv(jobCosts(out.nest, out.instances, data.library), out.instances, data.library, data.settings.currency ?? '$', data.settings.units) })
+        files.push({ name: `${base}_areas-costs.csv`, data: areasCsv(jobCosts(out.nest, out.instances, data.library), out.instances, data.library, data.settings.currency ?? '$', data.settings.units) + quoteCsv(jobQuote(job, out, data)) })
+        break
+      case 'quote-pdf':
+        files.push({ name: `${base}_quote.pdf`, data: quotePdf(job, jobQuote(job, out, data), data.settings.shopName) })
         break
     }
   }

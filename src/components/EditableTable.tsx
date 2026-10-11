@@ -50,6 +50,7 @@ export function EditableTable<T extends { id: string }>({
   canDelete,
   empty,
   rowExtra,
+  extraColumns,
 }: {
   rows: T[]
   columns: Column<T>[]
@@ -60,6 +61,8 @@ export function EditableTable<T extends { id: string }>({
   empty: string
   /** Shown before the row's buttons (e.g. a "Configure" badge). */
   rowExtra?: (row: T) => React.ReactNode
+  /** Job-1: columns drawn by the page (a price with its Configure badge), after the others. */
+  extraColumns?: { key: string; label: string; width?: string; render: (row: T) => React.ReactNode }[]
 }) {
   const units = useStore((s) => s.data?.settings.units ?? 'mm')
   return (
@@ -69,6 +72,11 @@ export function EditableTable<T extends { id: string }>({
           <TableRow>
             {columns.map((c) => (
               <TableHead key={c.key} className={cn('text-xs', c.type === 'num' && 'text-right')} style={{ width: c.width }}>
+                {c.label}
+              </TableHead>
+            ))}
+            {extraColumns?.map((c) => (
+              <TableHead key={c.key} className="text-xs" style={{ width: c.width }}>
                 {c.label}
               </TableHead>
             ))}
@@ -119,6 +127,11 @@ export function EditableTable<T extends { id: string }>({
                     </TableCell>
                   )
                 })}
+                {extraColumns?.map((c) => (
+                  <TableCell key={c.key} className="py-1">
+                    {c.render(r)}
+                  </TableCell>
+                ))}
                 <TableCell className="py-1">
                   <div className="flex items-center justify-end gap-1">
                     {rowExtra?.(r)}
@@ -137,7 +150,7 @@ export function EditableTable<T extends { id: string }>({
           })}
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={columns.length + 1} className="py-8 text-center text-xs text-muted-foreground">
+              <TableCell colSpan={columns.length + (extraColumns?.length ?? 0) + 1} className="py-8 text-center text-xs text-muted-foreground">
                 {empty}
               </TableCell>
             </TableRow>

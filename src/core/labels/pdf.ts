@@ -117,7 +117,7 @@ function miniSheet(doc: jsPDF, out: JobOutput, l: LabelRecord, x: number, y: num
  * Same job in, same PDF bytes out: the creation date is the job's own date (not the clock) and
  * the file id is derived from it, so re-running a job gives byte-identical files.
  */
-function pinPdf(doc: jsPDF, stamp: string | undefined, key: string) {
+export function pinPdf(doc: jsPDF, stamp: string | undefined, key: string) {
   let d = stamp ? new Date(stamp) : new Date(NaN)
   if (!Number.isFinite(d.getTime()) || d.getUTCFullYear() < 1970 || d.getUTCFullYear() > 2037) d = new Date(Date.UTC(2026, 0, 1))
   // Written in UTC as text, so the shop computer's time zone does not change the file.

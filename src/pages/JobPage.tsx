@@ -10,15 +10,18 @@ import {
   FileCode2,
   FileText,
   Info,
+  Layers,
   LayoutGrid,
   Pencil,
   PenTool,
   Plus,
   Printer,
+  Receipt,
   ShieldAlert,
   Table2,
   Trash2,
   TriangleAlert,
+  Undo2,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -56,6 +59,8 @@ import { type BackplotMode, SheetBackplot } from '@/components/SheetBackplot'
 import { NestEditor } from './job/NestEditor'
 import { JobPluginMenu } from './job/JobPluginMenu'
 import { ProgramManager } from './job/ProgramManager'
+import { ChangeMaterialsDialog } from './job/ChangeMaterialsDialog'
+import { QuoteTab } from './job/QuoteTab'
 import { jobCosts } from '@/core/areas'
 import { featuresOf } from '@/core/features'
 
@@ -125,6 +130,9 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
             <TabsTrigger value="nesting">
               <LayoutGrid /> Nesting
             </TabsTrigger>
+            <TabsTrigger value="quote">
+              <Receipt /> Quote
+            </TabsTrigger>
             <TabsTrigger value="output">
               <FileCode2 /> Output
             </TabsTrigger>
@@ -155,6 +163,9 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
         <TabsContent value="nesting" className="min-h-0 flex-1 overflow-hidden">
           {out && <NestingTab job={job} data={data} out={out} />}
         </TabsContent>
+        <TabsContent value="quote" className="min-h-0 flex-1 overflow-auto p-5">
+          {out && <QuoteTab job={job} data={data} out={out} setJob={setJob} />}
+        </TabsContent>
         <TabsContent value="output" className="min-h-0 flex-1 overflow-auto p-5">
           {out && <OutputTab job={job} data={data} out={out} setJob={setJob} />}
         </TabsContent>
@@ -164,8 +175,9 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
 }
 
 function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (fn: (j: Job) => void) => void }) {
-  const { go, addCabinet, duplicateCabinet, removeCabinet } = useStore()
+  const { go, addCabinet, duplicateCabinet, removeCabinet, materialUndo, undoMaterials } = useStore()
   const [adding, setAdding] = useState(false)
+  const [changing, setChanging] = useState(false)
   const matName = (id: string) => data.library.materials.find((m) => m.id === id)?.code ?? '—'
   // Kitchen-3c: the inside corner radius of the job's L parts (pie-cut bottoms, tops and shelves)
   useConfigureTarget(['kitchen'])
@@ -200,10 +212,29 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Cabinets</h2>
-        <Button size="sm" onClick={() => setAdding(true)}>
-          <Plus /> Add cabinet
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {/* Job-1: the last material change, undone in one step */}
+          {materialUndo?.jobId === job.id && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const r = undoMaterials()
+                if (r) toast.success(`Material change undone${r.skipped ? ` (${countOf(r.skipped, 'setting')} changed since left as is)` : ''}`)
+              }}
+            >
+              <Undo2 /> Undo material change
+            </Button>
+          )}
+          <Button size="sm" variant="outline" disabled={job.cabinets.length === 0} onClick={() => setChanging(true)}>
+            <Layers /> Change materials
+          </Button>
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <Plus /> Add cabinet
+          </Button>
+        </div>
       </div>
+      <ChangeMaterialsDialog job={job} data={data} open={changing} onOpenChange={setChanging} />
 
       {job.cabinets.length === 0 ? (
         <EmptyState icon={<LayoutGrid className="size-5" />} title="No cabinets in this job" action={<Button size="sm" onClick={() => setAdding(true)}><Plus /> Add from library</Button>}>
@@ -336,7 +367,7 @@ function CutListTab({ job, data, out }: { job: Job; data: AppData; out: JobOutpu
           <Button size="sm" variant="outline" onClick={() => saveOne({ name: `${base}_cutlist.csv`, data: cutListCsv(out.cutList) }, 'csv', 'CSV')}>
             <Download /> Cut list CSV
           </Button>
-          <Button size="sm" variant="outline" onClick={() => saveOne({ name: `${base}_bom.csv`, data: bomCsv(out, data) }, 'csv', 'CSV')}>
+          <Button size="sm" variant="outline" onClick={() => saveOne({ name: `${base}_bom.csv`, data: bomCsv(out, data, job) }, 'csv', 'CSV')}>
             <Download /> BOM CSV
           </Button>
         </div>
@@ -727,8 +758,9 @@ const EXPORTS: { kind: ExportKind; label: string; desc: string; icon: typeof Fil
   { kind: 'sheetmap-pdf', label: 'Sheet maps PDF', desc: 'A4 layout with label spots and edge codes', icon: FileText, ext: 'pdf' },
   { kind: 'labels-zpl', label: 'Labels ZPL', desc: 'Raw Zebra 203 dpi, send direct to printer', icon: Printer, ext: 'zpl' },
   { kind: 'cutlist-csv', label: 'Cut list CSV', desc: 'Grouped parts with edges', icon: Table2, ext: 'csv' },
-  { kind: 'bom-csv', label: 'BOM CSV', desc: 'Sheets, edgeband totals, hardware', icon: Table2, ext: 'csv' },
-  { kind: 'areas-csv', label: 'Areas and costs CSV', desc: 'Per sheet and part: parts, remnants, scrap', icon: Table2, ext: 'csv' },
+  { kind: 'bom-csv', label: 'BOM CSV', desc: 'Sheets, edgeband totals, hardware, then the quote', icon: Table2, ext: 'csv' },
+  { kind: 'areas-csv', label: 'Areas and costs CSV', desc: 'Per sheet and part: parts, remnants, scrap, then the quote', icon: Table2, ext: 'csv' },
+  { kind: 'quote-pdf', label: 'Quote PDF', desc: 'Board, edgeband, hardware, labour, markup, tax, total', icon: Receipt, ext: 'pdf' },
 ]
 
 function OutputTab({ job, data, out, setJob }: { job: Job; data: AppData; out: JobOutput; setJob: (fn: (j: Job) => void) => void }) {

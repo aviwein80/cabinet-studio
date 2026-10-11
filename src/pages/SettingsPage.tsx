@@ -14,6 +14,7 @@ import { AboutSection } from "@/components/AboutSection";
 import { StorageSection } from "./settings/StorageSection";
 import { AdminSection } from "./settings/AdminSection";
 import { PluginsSection } from "./settings/PluginsSection";
+import { PricingSection } from "./settings/PricingSection";
 import { featuresOf } from "@/core/features";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -134,6 +135,7 @@ export function SettingsPage() {
             Sending a sheet uploads its page images to that provider.
           </p>
         </section>
+        <PricingSection />
         <StorageSection />
         {featuresOf(data.settings).batchAdditions && <AdminSection />}
         {featuresOf(data.settings).plugins && <PluginsSection />}

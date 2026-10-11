@@ -143,6 +143,10 @@ export type ConfigTarget =
   | { kind: 'fixtureType'; typeId: string }
   | { kind: 'fixture'; partId: string; jobId?: string; fixtureId: string }
   | { kind: 'kitchen'; key: KitchenValueKey }
+  /** Job-1: a library price (edgeband per length, hardware per piece). */
+  | { kind: 'price'; what: 'edgeband' | 'hardware'; id: string }
+  /** Job-1: the shop rate or a labour time (Settings > Pricing). */
+  | { kind: 'labour'; key: import('./quote').LabourKey }
 
 /**
  * Kitchen-2: corner, filler and end-panel values that are placeholders until the shop confirms them.
@@ -168,7 +172,7 @@ export interface Unconfirmed {
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures' | 'Kitchen defaults'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures' | 'Kitchen defaults' | 'Pricing'
   target: ConfigTarget
 }
 
@@ -198,6 +202,10 @@ export const keyOf = (t: ConfigTarget): string => {
       return `fixture:${t.partId}:${t.fixtureId}`
     case 'kitchen':
       return `kitchen:${t.key}`
+    case 'price':
+      return `price:${t.what}:${t.id}`
+    case 'labour':
+      return `labour:${t.key}`
   }
 }
 

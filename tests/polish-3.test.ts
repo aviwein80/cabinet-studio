@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { newPart } from '../src/cam/doc'
 import { countOf } from '../src/components/kindLabel'
 import { areaField, areasCsv, jobCosts } from '../src/core/areas'
+import { jobQuote, quoteCsv } from '../src/core/quote'
 import { buildCabinet } from '../src/core/construction/carcass'
 import { defaultAppData } from '../src/core/defaults'
 import { elevationOf, frontDivisions, labelWidth, planNumberLabels } from '../src/core/elevation'
@@ -36,7 +37,8 @@ describe('Polish-3 A: inch mode shows inches and feet everywhere (mm mode unchan
     const fileMm = textOf(buildFiles(['areas-csv'], sampleJob(), mm, outMm)[0])
     // millimetres: the header and every area as before (m² to 4 places), and the same as the call without units
     expect(fileMm.split('\r\n')[0]).toBe('Row,Sheet or part,Material,Area m2,Parts m2,Remnant m2,Scrap m2,Cost $,Parts cost,Remnant value,Scrap cost,Weight kg')
-    expect(fileMm).toBe(areasCsv(costs, outMm.instances, mm.library, '$'))
+    // (Job-1: the quote follows the areas after a blank row)
+    expect(fileMm).toBe(areasCsv(costs, outMm.instances, mm.library, '$') + quoteCsv(jobQuote(sampleJob(), outMm, mm)))
     expect(fileMm.split('\r\n')[1].split(',')[3]).toBe((costs.sheets[0].sheetArea / 1e6).toFixed(4))
     // inches: the same rows, areas in ft²
     const d = inchData()

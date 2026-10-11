@@ -3826,11 +3826,130 @@ In `docs/screenshots/polish-2/` (browser preview, inch mode, the tour's jobs fro
 - A size change re-arranges only a room exactly as Arrange left it; once a cabinet is moved by hand,
   only the neighbour push applies (a returned cabinet does not come back round the corner by itself).
 
+## Polish-3: fixes from re-recording the video tour
+
+A bug-fix round, not a milestone of the spec: 12 items found while re-recording the tour on `d7b8e08`.
+Each was reproduced first (in a test, the browser preview, or a rendered label page); the jobs are the
+tour's, rebuilt in `tests/polish-2-jobs.ts`. Every real fix has a test in `tests/polish-3.test.ts`.
+Baseline before the round: head `d7b8e08`, 1166 tests (1165 + 1 skipped), 17 lint warnings, typecheck
+and build clean; the 90 s timing test took 63.0 s alone (117.4 s inside the full suite, where it fails
+under load as recorded before). After: see "Test-suite note (Polish-3)".
+
+### A. Inch mode shows inches and feet everywhere (mm mode unchanged)
+
+| # | Found | Fix | Test |
+|---|---|---|---|
+| 1 | Areas-and-costs CSV areas in m² while the Nesting panel shows ft² | In an inch shop the four area columns are ft² ("Area ft2, Parts ft2, ..."), to 4 places; weights stay kg. A millimetre shop's file is byte-identical (`areasCsv`) | `1` |
+| 2 | Shape panel "Area 0.1543 m²" | ft² to 4 places in an inch shop: "1.6609 ft²" (`shapeArea`) | `2` |
+| 3 | Simulator "Cutting 4.2 m", "Rapids 1.2 m"; the operation summary "m cut" | Feet to 0.1 in an inch shop ("95.6 ft", "78.9 ft cut"); metres as before in mm (`pathLength`) | `3` |
+| 4 | Machine & tools "On parts under ... m²" | The three nesting area limits (onion skin, own cut-out, bridged parts) typed and shown in ft² in an inch shop (`areaField`); their Configure badges too, which also gave lengths in mm beside inch fields ("120 mm side" now 4-3/4") (`nestValue`) | `4` |
+| 5 | Placeholder tool names in mm | Kept metric on purpose (Kitchen-2: the bits are made in mm; a size reads in inches only when it is an exact inch size). Now labelled: the tool table says so in an inch shop (`TOOL_UNITS_NOTE`), and the operation's tool picker gives the size with its unit ("Ø8 mm", was a bare "Ø8") | `5` |
+
+Found while fixing (same class, same screens): the simulator's cell size read `0"` (now `0.010"`,
+`fineLength`); the Onion skin field read 0.3 mm as `0"` (now kept in mm like the pre-mill beside it);
+the export check's "could not be nested" gave both sizes in mm in an inch shop (now
+`157-1/2" x 19-11/16" ... 143-1/4" x 59-3/16"`; mm text unchanged). Tests `3` and "A, found while fixing".
+
+### B. The room
+
+- **6 An open cabinet drew as an empty box.** With Doors: None (and no drawers) the elevation now
+  shows each shelf through the open front, at the height and length the construction cuts it
+  (`frontDivisions`, kind `shelf`; the carcass board's thickness from the library). Doors or drawers:
+  no shelves drawn, as before. Polish-2 test 8 expected an open cabinet's elevation to be empty; it now
+  expects exactly its shelves. Test `6`.
+- **7 Plan view ran narrow labels together ("EF1").** A number that would overlap one already placed
+  moves along its footprint's long side (into the cabinet first), one line at a time, to the nearest
+  clear place inside its footprint; clear labels stay in the middle (`planLabelOffsets`,
+  `planNumberLabels`). The numbers are also drawn over every cabinet now (a later cabinet's fill hid
+  part of a narrow neighbour's number), and clicks pass through them. Test `7`.
+
+### C. Nesting and output
+
+- **8 A hand-saved layout ignored size changes.** A saved layout now records each part's cut size
+  (`SavedSheet.placements[].size`; in nest list files too). A part whose size changed since is flagged
+  like a material change: a warning in the export check (`NEST_SIZE`, part numbers), and a banner on the
+  Nesting tab naming the parts with **Re-nest automatically** (drops the hand layout) and **Edit
+  layout** (`nestChangedText`). The part keeps its place at the new size, so a part that grew into a
+  neighbour is still caught by the overlap and spacing checks. Layouts saved before this run have no
+  sizes and are not checked. Test `8`; the M2.8 test now also expects `resized: []`.
+- **9 Small-part warning said onion skin was "not yet supported".** It says what the sheet program
+  does: with no onion skin, "Set an onion skin (Machine & tools → Nesting → Onion skin) so it stays
+  held until the last pass"; with one that covers the part, "It is left on the 0.3 mm onion skin, cut
+  last"; with one for smaller parts only, the limit and where to change it (area in ft² in an inch
+  shop). Same test as the sheet program (`partAreaOf`). Kitchen-2 test 8 had the old sentence; it now
+  has the new one. Test `9`.
+
+### D. Labels and text
+
+- **10 Label PDF overlaps.** The left column (part name, cabinet, size, cut size, material, edges) is
+  kept clear of the part drawing and the sheet at 62 mm: a line that fits prints exactly as before; a
+  longer one is set smaller (the inch size line "30-3/8" x 17-7/8" x 11/16""); the Edges line of a
+  part banded all round goes on two lines above the barcode (`fitText`, `edgeLines`). The same bug was
+  in millimetres: the sample job's doors (banded all round) had W1/W2 hidden under the sheet. Test
+  `10` reads every line printed through jsPDF's own text hook.
+- **11 "1 errors".** The job header, the Validation counts and the sheet/program lists read "1 error",
+  "1 part · 1 operation" (`countOf`). Test `11`.
+- **12 Save-as-template "Base 24" 2-door 24"".** A size with its unit inside the name is the width:
+  replaced there, not added again ("Base 24" 2-door", or "Base 30" 2-door" once resized); a millimetre
+  name that already has the width as a bare number is left as it is (`sizedName`). Test `12`.
+
+### Goldens and output
+
+Stage 1 MPR goldens (`tests/mpr.test.ts`) and the custom-part goldens are byte-identical (no file under
+`tests/golden/` changed). `npm run sample`: the MPRs, cut list, BOM, sheet maps, ZPL labels and job file
+are byte-identical; two files change, as a direct result of items 9 and 10: `validation.txt` (the six
+SMALL_PART lines now carry the new onion-skin sentence) and `J1042_labels_100x70.pdf` (the doors banded
+all round now print W1 and W2 on a second Edges line instead of under the sheet). Both are committed
+regenerated. No program output changed; every output switch is still off.
+
+### Test-suite note (Polish-3)
+
+After: 1179 tests (1178 + 1 skipped; 13 new in `tests/polish-3.test.ts`), 17 lint warnings, typecheck
+and build clean. In the final full run every test passed except the 90 s timing test, at 95.1 s with
+the whole suite running beside it (117.4 s in the baseline run before any change); run on its own with
+nothing else running it passed in 63.2 s (63.0 s before). The limit is unchanged. Three earlier tests
+had expectations of the old behaviour, now set to the new exact values (none loosened): Kitchen-2 test 8
+(the SMALL_PART sentence), Polish-2 test 8 (an open cabinet's elevation: exactly its shelves, was
+empty), and the M2.8 manual-nesting test (`resized: []` added).
+
+### Polish-3 screenshots
+
+In `docs/screenshots/polish-3/` (browser preview, inch mode, the tour's jobs; label pages rendered from
+the PDFs; each under 300 KB):
+
+`01-job-header-1-error-inch-not-nested` ("1 error", "1 part · 1 operation", the oversize part in
+inches), `02-shape-area-ft2` ("1.6609 ft²"), `03-op-summary-ft-tool-picker-mm` ("78.9 ft cut",
+"Ø8 mm"), `04-simulator-cutting-rapids-ft` ("95.6 ft", "3.1 ft", cells "0.010""),
+`05-machine-nesting-areas-ft2` (onion skin in mm, limits in ft², badge), `06-tool-table-metric-note`,
+`07-elevation-open-cabinet-shelves` (W2, Doors: None), `08-plan-end-panel-filler-apart` (E2 and F1),
+`09-nesting-resized-parts-renest` (banner, Re-nest automatically), `10a-label-door-four-edges-inch-before-after`,
+`10b-label-material-line-inch-before-after`, `10c-label-sample-door-mm-before-after`,
+`11-small-part-onion-skin-text`, `12-save-template-name` ("Base 24" 2-door").
+
+### Limits recorded (Polish-3)
+
+- The areas CSV and the material dialog give weights in kg in an inch shop (no pound setting).
+- A layout saved before Polish-3 has no part sizes; a size change on it is not flagged until it is
+  saved again.
+- The ZPL labels were not part of this list (item 10 is the PDF).
+- Tool names are the shop's own text and are not converted; the placeholder names stay metric.
+
+### Polish-3 decisions needed
+
+1. **Sample files**: the sample's `validation.txt` and labels PDF changed (items 9 and 10 change them by
+   nature). Keep the new files (recommended), or keep the old layout on the all-round-banded doors
+   (their W1/W2 hidden under the sheet)? Labels that fit already print byte-for-byte as before.
+2. **Resized parts in a hand layout**: a part that changed size keeps its place and is flagged. Keep it
+   so (recommended: the overlap check still blocks a bad layout, and the shop decides), or re-nest such
+   parts on extra sheets automatically, as a material change does?
+3. **Shape area unit**: in an inch shop shape areas are in ft² (as the Nesting panel). Keep ft²
+   (recommended), or in² for small shapes?
+
 ## Next run
 
-- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c and Polish-2 are complete. Next is the owner's
-  call: the Kitchen-3c decisions above (interlocking L parts, cleat size, corner radius), diagonal
-  corners, the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
+- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2 and Polish-3 are complete. Next is
+  the owner's call: the Polish-3 decisions above, the Kitchen-3c decisions (interlocking L parts,
+  cleat size, corner radius), diagonal corners, the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or any limit recorded above.
 
 ## Run log
 
@@ -3917,3 +4036,7 @@ In `docs/screenshots/polish-2/` (browser preview, inch mode, the tour's jobs fro
 - **Run 25 (Polish-2)**: 26 items from recording the "Real jobs" tour: inch mode, the room, job
   editing, nesting badges, custom parts; tests and the tour's jobs as fixtures; screenshots, this file.
   See `git log`.
+- **Run 26 (Polish-3)**: 12 items from re-recording the tour: inch mode (areas CSV, shape area,
+  simulator and operation lengths, nesting area limits, tool size labels), open cabinets' shelves, plan
+  labels, size changes on hand layouts, the onion-skin warning, label PDF layout, plurals, template
+  names; tests, screenshots, this file. See `git log`.

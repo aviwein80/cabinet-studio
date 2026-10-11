@@ -1,35 +1,35 @@
 1
-00:00:05,579 --> 00:00:10,773
+00:00:05,579 --> 00:00:10,759
 Before anything goes near the machine, simulate it. Open the sign.
 
 2
-00:00:10,773 --> 00:00:16,649
+00:00:10,759 --> 00:00:16,627
 Drilling runs first, then milling in list order. The cut-out is already last: new operations go in before it.
 
 3
-00:00:16,649 --> 00:00:21,175
+00:00:16,627 --> 00:00:21,066
 Now Simulate. It plays the toolpaths in program order on a block of material.
 
 4
-00:00:21,175 --> 00:00:34,909
+00:00:21,066 --> 00:00:34,581
 Play: the two holes first, then the pocket clears the recess, ring by ring.
 
 5
-00:00:34,909 --> 00:00:41,844
+00:00:34,581 --> 00:00:41,543
 Each operation is listed with its time. Click one to jump to it: the profile, last.
 
 6
-00:00:41,844 --> 00:00:46,647
-The totals: how far it cuts, how much material comes out, the deepest cut.
+00:00:41,543 --> 00:00:46,425
+The totals, all in inch units: how far it cuts (in feet), how much material comes out, the deepest cut.
 
 7
-00:00:46,647 --> 00:01:03,473
+00:00:46,425 --> 00:01:03,566
 3D shows the finished part. Drag to turn it.
 
 8
-00:01:03,473 --> 00:01:10,569
+00:01:03,566 --> 00:01:10,931
 The collision check looks for the shank, holder or rapids hitting the material.
 
 9
-00:01:10,569 --> 00:01:21,467
+00:01:10,931 --> 00:01:22,001
 This checks our own toolpaths, not the machine. Simulate in woodWOP before cutting too.

@@ -1,83 +1,83 @@
 1
-00:00:03,401 --> 00:00:09,677
+00:00:03,401 --> 00:00:09,757
 Deep dive: CAM end to end. A spice-rack side from a DXF, through its operations, their order, the tools they pick, and the simulation.
 
 2
-00:00:09,677 --> 00:00:23,943
+00:00:09,757 --> 00:00:20,947
 Import drawing. The largest closed shape becomes the outline, and every CAD layer is kept, because the layers tell the app what to machine.
 
 3
-00:00:23,943 --> 00:00:48,597
+00:00:20,947 --> 00:00:31,112
 It was drawn in millimetres: 14 pieces become 3 closed shapes, 1 open path and 10 circles. The part reads 9-13/16" x 17-11/16" in this inch shop.
 
 4
-00:00:48,597 --> 00:01:00,189
+00:00:31,112 --> 00:00:42,725
 Machining rules turn layer names into operations: DRILL_12 is a 12 mm deep drill, POCKET_6 a 6 mm pocket. Agree layer names with your designer once, and imports need no clicks.
 
 5
-00:01:00,189 --> 00:01:09,783
+00:00:42,725 --> 00:00:52,365
 INSIDE and OUTLINE cut through. NOTES has no rule, so it is listed and left alone: a dimension line never gets machined by mistake.
 
 6
-00:01:09,783 --> 00:01:18,638
+00:00:52,365 --> 00:01:01,380
 Join ends closer than... closes small gaps CAD drawings often have. An open outline can’t be cut as a part.
 
 7
-00:01:18,638 --> 00:01:29,915
+00:01:01,380 --> 00:01:12,723
 Pick the material, so thickness and "through" depths are right, then Create part.
 
 8
-00:01:29,915 --> 00:01:41,770
+00:01:12,723 --> 00:01:24,544
 Four operations, in program order: drill, pocket, inside cut, then the outline. The order is the point.
 
 9
-00:01:41,770 --> 00:01:50,577
+00:01:24,544 --> 00:01:33,348
 Small work first, outline last: while the part is still joined to the sheet, the vacuum holds it firmly. Cut it free first and it can shift.
 
 10
-00:01:50,577 --> 00:02:04,368
+00:01:33,348 --> 00:01:47,154
 Open the drill. Tool: Match each hole diameter. The 5 mm holes pick T201, a 5 mm drill, so a hole is never routed or drilled the wrong size.
 
 11
-00:02:04,368 --> 00:02:17,872
+00:01:47,154 --> 00:02:00,604
 Open the pocket. It uses T101, the 12 mm compression cutter, 1/4" deep. Depth per pass 0 means the tool’s own step-down.
 
 12
-00:02:17,872 --> 00:02:28,565
+00:02:00,604 --> 00:02:11,273
 Strategy: follow the shape, climb milling for a clean wall in melamine. Stepover 45% of the tool still has a Configure badge: your number, not ours.
 
 13
-00:02:28,565 --> 00:02:38,629
+00:02:11,273 --> 00:02:21,330
 Entry: a helix would be gentlest, but it doesn’t fit at this pocket’s start, so the app ramps in instead and says so.
 
 14
-00:02:38,629 --> 00:02:47,273
+00:02:21,330 --> 00:02:29,956
 Rest machining and finish passes are there for tight corners and fine walls. Not needed on a 1/4" pocket with a 12 mm tool.
 
 15
-00:02:47,273 --> 00:02:56,892
+00:02:29,956 --> 00:02:39,473
 Sort by tool would group work by tool to save changes; the cut-out still stays last. Here it is already one drill and one cutter.
 
 16
-00:02:56,892 --> 00:03:00,824
+00:02:39,473 --> 00:02:43,441
 Checked them all? Accept all.
 
 17
-00:03:00,824 --> 00:03:20,443
+00:02:43,441 --> 00:03:02,285
 Simulate plays the toolpaths in program order on a block of the real board thickness.
 
 18
-00:03:20,443 --> 00:03:32,637
+00:03:02,285 --> 00:03:12,333
 Each operation with its time; the totals show cut length, material removed and the deepest cut, to catch a depth typo before it hits the spoilboard.
 
 19
-00:03:32,637 --> 00:04:06,762
+00:03:12,333 --> 00:03:32,572
 3D shows the finished side: holes, pocket and handle cut-out. Drag to turn it.
 
 20
-00:04:06,762 --> 00:04:25,380
+00:03:32,572 --> 00:03:50,187
 The collision check looks for the shank, the holder or a rapid move hitting material. It checks our toolpaths; simulate in woodWOP too.
 
 21
-00:04:25,380 --> 00:04:30,668
+00:03:50,187 --> 00:03:55,468
 So: name layers by rule, keep the cut-out last, let each hole pick its drill, configure your own feeds and stepover, and simulate.

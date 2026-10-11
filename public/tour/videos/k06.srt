@@ -1,31 +1,31 @@
 1
-00:00:03,402 --> 00:00:23,434
+00:00:03,400 --> 00:00:14,178
 The finished Hartman kitchen: 171" of cabinets from wall to wall.
 
 2
-00:00:23,434 --> 00:00:36,295
+00:00:14,178 --> 00:00:24,008
 Drawer bases at both ends, the 36" sink base in the middle, two pantries on the right.
 
 3
-00:00:36,295 --> 00:00:41,932
+00:00:24,008 --> 00:00:29,215
 Plan view: one straight run along the back wall of the 171" x 144" room.
 
 4
-00:00:41,932 --> 00:00:48,614
+00:00:29,215 --> 00:00:35,844
 Elevation: symmetric about the sink, with the uppers and pantries all topping out at 84".
 
 5
-00:00:48,614 --> 00:00:51,955
+00:00:35,844 --> 00:00:39,176
 The job header keeps the totals: parts and sheets for the whole kitchen.
 
 6
-00:00:51,955 --> 00:00:58,627
+00:00:39,176 --> 00:00:45,714
 The Cut list tab has every part, ready for the shop.
 
 7
-00:00:58,627 --> 00:01:06,079
+00:00:45,714 --> 00:00:53,076
 Nesting lays all the parts out on full sheets, listed down the left.
 
 8
-00:01:06,079 --> 00:01:09,481
+00:00:53,076 --> 00:00:56,478
 From an empty room to a full kitchen, all from library presets.

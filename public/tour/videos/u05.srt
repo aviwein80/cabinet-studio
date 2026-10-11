@@ -1,51 +1,51 @@
 1
-00:00:03,400 --> 00:00:18,940
+00:00:03,400 --> 00:00:18,008
 A laundry room for the Reyes family: a broom closet and cabinets over the washer and dryer.
 
 2
-00:00:18,940 --> 00:00:26,913
+00:00:18,008 --> 00:00:25,495
 A 24" x 84" tall cabinet at the left end becomes the broom closet.
 
 3
-00:00:26,913 --> 00:00:40,128
+00:00:25,495 --> 00:00:37,471
 Over the washer and dryer: a 36" and a 24" wall cabinet, 30" high.
 
 4
-00:00:40,128 --> 00:00:51,603
+00:00:37,471 --> 00:00:48,581
 The wall is 84": 24" for the closet, 60" for the side-by-side washer and dryer.
 
 5
-00:00:51,603 --> 00:00:58,801
+00:00:48,581 --> 00:00:56,085
 Arrange: the tall cabinet stands at the left; the wall cabinets hang at 54" beside it.
 
 6
-00:00:58,801 --> 00:01:01,405
-Elevation: the uppers hang at 54", tops at 84" like the closet, with room for the machines below.
+00:00:56,085 --> 00:00:58,689
+The uppers top out at 84", level with the closet, leaving 54" for the machines below.
 
 7
-00:01:01,405 --> 00:01:09,261
+00:00:58,689 --> 00:01:06,432
 Make the 24" one an open shelf for detergent: set its doors to None.
 
 8
-00:01:09,261 --> 00:01:11,664
-W2 now has no doors (two fewer parts). The 3D view shows its open shelves.
+00:01:06,432 --> 00:01:08,834
+W2 is now open: the elevation draws no doors on it, and the 3D shows its shelves.
 
 9
-00:01:11,664 --> 00:01:25,157
+00:01:08,834 --> 00:01:21,116
 In 3D.
 
 10
-00:01:25,157 --> 00:01:34,150
+00:01:21,116 --> 00:01:30,216
 Cut list: the open cabinet has no doors and no hinges, so the hardware total drops too.
 
 11
-00:01:34,150 --> 00:01:38,606
+00:01:30,216 --> 00:01:34,579
 Nesting: a small job on a few sheets, with offcuts kept for the next one.
 
 12
-00:01:38,606 --> 00:01:44,204
+00:01:34,579 --> 00:01:40,052
 Labels and sheet maps are on the Output tab. Machine output switches stay off.
 
 13
-00:01:44,204 --> 00:01:47,208
+00:01:40,052 --> 00:01:43,054
 A laundry room in a few minutes: one tall cabinet, two uppers, one of them open.

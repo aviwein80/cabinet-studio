@@ -1,63 +1,67 @@
 1
-00:00:03,405 --> 00:00:21,083
+00:00:03,400 --> 00:00:18,416
 A bathroom vanity for Priya Patel: a 48" alcove, built from two kitchen presets.
 
 2
-00:00:21,083 --> 00:00:27,921
+00:00:18,416 --> 00:00:23,996
 Start with the 36" sink base for the basin...
 
 3
-00:00:27,921 --> 00:00:34,803
+00:00:23,996 --> 00:00:29,091
 ...and the 18" 3-drawer base for a drawer bank beside it.
 
 4
-00:00:34,803 --> 00:00:53,783
+00:00:29,091 --> 00:00:46,857
 The alcove is 48" between the walls. Set the room in the Room tab.
 
 5
-00:00:53,783 --> 00:00:56,433
+00:00:46,857 --> 00:00:49,511
 Kitchen sizes don't fit: 36" + 18" is 54", 6" too wide. Click the sink base to resize it.
 
 6
-00:00:56,433 --> 00:01:04,926
+00:00:49,511 --> 00:00:52,964
 Vanity sizes: 30" wide, 31-1/2" high for a comfort-height top, 21" deep.
 
 7
-00:01:04,926 --> 00:01:13,166
-The drawer bank gets the same height and depth.
+00:00:52,964 --> 00:00:58,967
+At 30" the drawer bank slides back beside it at once: 30" + 18" fills the 48" alcove, no second Arrange.
 
 8
-00:01:13,166 --> 00:01:17,907
-Arrange again: 30" + 18" fills the 48" alcove exactly, wall to wall.
+00:00:58,967 --> 00:01:02,304
+Now the comfort height and vanity depth.
 
 9
-00:01:17,907 --> 00:01:22,231
-Elevation: both boxes at 31-1/2", the basin cabinet on the left, drawers on the right.
+00:01:02,304 --> 00:01:10,337
+The drawer bank gets the same height and depth.
 
 10
-00:01:22,231 --> 00:01:34,907
-And in 3D.
+00:01:10,337 --> 00:01:14,555
+Elevation: both boxes at 31-1/2", the basin cabinet on the left, drawers on the right.
 
 11
-00:01:34,907 --> 00:01:40,082
-The Cut list: every part resized to the vanity, with edgebanding per edge.
+00:01:14,555 --> 00:01:26,972
+And in 3D.
 
 12
-00:01:40,082 --> 00:01:46,745
-Hardware: Blum TANDEM 18 in slides for the drawers, Salice hinges on 3 mm plates for the doors.
+00:01:26,972 --> 00:01:32,110
+The Cut list: every part resized to the vanity, with edgebanding per edge.
 
 13
-00:01:46,745 --> 00:01:54,511
-Nesting: a small job like this goes on just a few 5 x 12 ft sheets.
+00:01:32,110 --> 00:01:38,586
+Hardware: Blum TANDEM 18 in slides for the drawers, Salice hinges on 3 mm plates for the doors.
 
 14
-00:01:54,511 --> 00:01:57,935
-The leftover board is shown as an offcut you can keep in stock for the next job.
+00:01:38,586 --> 00:01:46,230
+Nesting: a small job like this goes on just a few 5 x 12 ft sheets.
 
 15
-00:01:57,935 --> 00:02:06,423
-On the Output tab the labels and sheet maps are ready. Machine output switches stay off.
+00:01:46,230 --> 00:01:49,620
+The leftover board is shown as an offcut you can keep in stock for the next job.
 
 16
-00:02:06,423 --> 00:02:09,424
+00:01:49,620 --> 00:01:58,031
+On the Output tab the labels and sheet maps are ready. Machine output switches stay off.
+
+17
+00:01:58,031 --> 00:02:01,032
 A custom-size vanity from kitchen presets, sized to the alcove in under two minutes.

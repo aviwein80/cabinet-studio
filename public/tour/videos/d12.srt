@@ -1,43 +1,43 @@
 1
-00:00:03,401 --> 00:00:10,687
+00:00:03,400 --> 00:00:10,687
 Deep dive: inches and millimetres. What the switch changes, why some values show as fractions and some as decimals, and what stays metric on purpose.
 
 2
-00:00:10,687 --> 00:00:23,965
+00:00:10,687 --> 00:00:23,994
 The switch is at the bottom of the side bar. This shop works in Inches: the Novak cabinets read 24" x 34-1/2" x 24".
 
 3
-00:00:23,965 --> 00:00:44,443
+00:00:23,994 --> 00:00:44,564
 Switch to Millimetres. Same cabinets, same parts: only the display changes. Nothing is re-sized or rounded by switching.
 
 4
-00:00:44,443 --> 00:01:11,173
+00:00:44,564 --> 00:01:11,328
 Open B1 in millimetres: the toe kick is 100, the dado 8, shelf-pin holes 5 mm on a 32 mm pitch, 35 mm hinge cups. Euro hardware is designed in round millimetres.
 
 5
-00:01:11,173 --> 00:01:41,800
+00:01:11,328 --> 00:01:41,970
 Back to Inches. The same values become 3-15/16", 5/16", 1-1/4" and 1-3/8". The fractions are the nearest 1/16" for reading, but the app keeps the exact value.
 
 6
-00:01:41,800 --> 00:01:54,911
+00:01:41,970 --> 00:01:55,075
 When 1/16" is too coarse, the app shows a decimal: the inside-corner radius reads 0.236" (6 mm), not "1/4", because a 1/4" radius would be a different bit.
 
 7
-00:01:54,911 --> 00:02:13,691
+00:01:55,075 --> 00:02:13,855
 Same with edgeband: 1 mm reads 0.039" and 0.4 mm reads 0.016". Rounded to 1/16" they would read 1/16" and 0", and every cut size would be wrong.
 
 8
-00:02:13,691 --> 00:02:37,889
+00:02:13,855 --> 00:02:38,206
 You can see it in the cut list: a shelf with 0.4 mm tape reads 22-1/2" both finished and cut. The 0.4 mm is still taken off; it is just smaller than 1/16".
 
 9
-00:02:37,889 --> 00:02:54,735
+00:02:38,206 --> 00:02:55,011
 What stays metric on purpose: the machine. Tool diameters and depths, feeds in mm/min and drill sizes are how HOMAG and the tool makers define them.
 
 10
-00:02:54,735 --> 00:03:08,621
+00:02:55,011 --> 00:03:08,891
 So are the 100 x 70 mm label stock, the board names (PB 18 is 18 mm board) and the woodWOP programs. Matching the source avoids conversion errors.
 
 11
-00:03:08,621 --> 00:03:15,124
+00:03:08,891 --> 00:03:15,395
 So: pick the units your shop talks in. Fractions are for reading, decimals show where 1/16" isn’t enough, and the machine side stays in millimetres.

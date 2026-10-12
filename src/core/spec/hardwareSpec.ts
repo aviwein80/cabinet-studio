@@ -25,7 +25,7 @@ export const ITEM_FIELDS: { key: keyof Hardware; label: string; for: HardwareCat
   { key: 'plateSetback', label: 'Screws back from the front', for: ['mounting-plate'] },
   { key: 'plateSpacing', label: 'Screw spacing', for: ['mounting-plate'] },
   { key: 'slideLength', label: 'Runner length', for: ['slide'] },
-  { key: 'minCabinetDepth', label: 'Smallest cabinet depth', for: ['slide'] },
+  { key: 'minInsideDepth', label: 'Minimum inside cabinet depth', for: ['slide'] },
   { key: 'holeDiameter', label: 'Screw / hole diameter', for: ['mounting-plate', 'slide', 'shelf-pin', 'handle', 'connector', 'dowel', 'screw', 'leg', 'other'] },
   { key: 'holeDepth', label: 'Screw / hole depth', for: ['mounting-plate', 'slide', 'shelf-pin', 'handle', 'connector', 'dowel', 'screw', 'leg', 'other'] },
 ]
@@ -36,7 +36,7 @@ Return ONLY a JSON object, no prose:
 {"name": V, "manufacturer": V, "code": V,
  "category": "hinge"|"mounting-plate"|"slide"|"shelf-pin"|"handle"|"connector"|"dowel"|"screw"|"leg"|"other",
  "item": {"cupDiameter": V, "cupDepth": V, "cupCentre": V, "plateHeight": V, "plateSetback": V, "plateSpacing": V,
-          "holeDiameter": V, "holeDepth": V, "slideLength": V, "minCabinetDepth": V},
+          "holeDiameter": V, "holeDepth": V, "slideLength": V, "minInsideDepth": V},
  "holes": [{"x": V, "y": V, "diameter": V, "depth": V, "face": "top"|"underside"|"edge"}],
  "notes": string, "warnings": [string]}
 Leave out item fields that do not apply to this kind of hardware.

@@ -238,8 +238,13 @@ export function money(v: number, currency = '$') {
   return `${v < 0 ? '-' : ''}${currency}${s}`
 }
 
-/** A unit price for display: cents, more places only when the price has them (an edgeband per foot). */
+/**
+ * A unit price for display, one rule for the Quote tab, the CSVs and the Quote PDF (Polish-4: a labour
+ * price per door showed 8.6667): to the cent, halves up; a price under 1.00 keeps up to 4 places when
+ * it has them (an edgeband at 0.035 per ft). Amounts are worked from the exact price, not this text.
+ */
 export function unitPrice(v: number) {
+  if (Math.abs(v) >= 1 - 1e-9) return round2(v).toFixed(2)
   const r4 = Math.round(v * 10000) / 10000
   return Math.abs(r4 * 100 - Math.round(r4 * 100)) < 1e-6 ? r4.toFixed(2) : String(r4)
 }

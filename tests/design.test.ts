@@ -63,9 +63,10 @@ describe('Salice hinge boring', () => {
 })
 
 describe('Blum TANDEM', () => {
-  it('picks the runner from Blum\'s cabinet-depth table', () => {
+  it('picks the runner from Blum\'s minimum inside cabinet depth (Polish-4: was an overall-depth table)', () => {
     expect(selectTandem(610, 'auto').slide.inches).toBe(21)
-    expect(selectTandem(560, 'auto').slide.inches).toBe(18)
+    expect(selectTandem(557, 'auto').slide.inches).toBe(21)
+    expect(selectTandem(541.5, 'auto').slide.inches).toBe(18)
     expect(selectTandem(457, 'auto').slide.inches).toBe(15)
     expect(selectTandem(400, 'auto').shallow).toBe(true)
     expect(selectTandem(700, 15).slide.part).toBe('563H3810B')
@@ -77,7 +78,9 @@ describe('Blum TANDEM', () => {
     p.shelves.count = 0
     p.drawers = { count: 1, frontHeight: 150, slide: 'auto' }
     const g = generateCarcass(p, lib)
-    const slide = selectTandem(p.depth, 'auto').slide
+    // (by the inside depth: the side's front edge to the back panel)
+    const slide = selectTandem(p.depth - p.back.setback - (6 + p.back.clearance), 'auto').slide
+    expect(slide.inches).toBe(18)
     expect(g.hardware.find((h) => h.hardwareCode === slide.part)?.qty).toBe(1)
     for (const key of ['side-left', 'side-right']) {
       const holes = drills(key, g.parts, 'slide')

@@ -17,7 +17,11 @@
  *
  * Blum TANDEM plus BLUMOTION 563H, frameless, the three US lengths the shop stocks.
  * - 563H3810B = 15 in (381), 563H4570B = 18 in (457), 563H5330B = 21 in (533).
- * - Blum's cabinet-depth table: a 24 in (610) cabinet takes 21 in, 21 in (533) takes 18 in, 18 in (457) takes 15 in.
+ * - Polish-4: the runner is picked from Blum's minimum INSIDE cabinet depth (front edge of the side to the
+ *   back panel): 15 in 404 mm (15-29/32"), 18 in 480 mm (18-29/32"), 21 in 557 mm (21-15/16"), from the
+ *   563H installation sheet (the table beside the nominal lengths). It was a rough overall-depth table
+ *   (24 in cabinet → 21 in, 21 in → 18 in, 18 in → 15 in), which gave a 530 mm cabinet with 511 mm
+ *   inside the 15 in runner, and a 24 in (609.6 mm) cabinet the 18 in one, 0.4 mm short of "610".
  * - Frameless screw locations, from the cabinet front face, are on the 37 mm System 32 line:
  *   15 in → 165 and 357, 18 in → 261 and 453, 21 in → 261 and 517 (each is 37 + n×32).
  * - The screw line is 37 mm above the bottom of that drawer's opening. Runner setback from the face is 3 mm.
@@ -50,18 +54,16 @@ export interface TandemSlide {
   /** Nominal runner / drawer-box length. */
   length: number
   part: string
-  /** Smallest overall cabinet depth Blum lists for this runner. */
-  minCabinetDepth: number
-  /** Minimum inside cabinet depth. */
+  /** Blum's minimum inside cabinet depth for this runner (Polish-4: what the runner is picked by). */
   minInside: number
   /** Screw holes from the front edge of the cabinet side. */
   holesFromFront: number[]
 }
 
 export const TANDEM: TandemSlide[] = [
-  { inches: 15, length: 381, part: '563H3810B', minCabinetDepth: 457, minInside: 404, holesFromFront: [165, 357] },
-  { inches: 18, length: 457, part: '563H4570B', minCabinetDepth: 533, minInside: 480, holesFromFront: [261, 453] },
-  { inches: 21, length: 533, part: '563H5330B', minCabinetDepth: 610, minInside: 557, holesFromFront: [261, 517] },
+  { inches: 15, length: 381, part: '563H3810B', minInside: 404, holesFromFront: [165, 357] },
+  { inches: 18, length: 457, part: '563H4570B', minInside: 480, holesFromFront: [261, 453] },
+  { inches: 21, length: 533, part: '563H5330B', minInside: 557, holesFromFront: [261, 517] },
 ]
 
 export const BLUM = {
@@ -83,12 +85,17 @@ export const BLUM = {
   hookFromBottom: 11,
 } as const
 
-export function selectTandem(cabinetDepth: number, choice: 'auto' | 15 | 18 | 21): { slide: TandemSlide; shallow: boolean } {
+/**
+ * The runner for a drawer: the one chosen, or (auto) the longest whose minimum inside cabinet depth the
+ * cabinet has. `insideDepth` is from the front edge of the side to the back panel; `minInside` gives a
+ * runner's minimum (the library's, when it has its own; Blum's otherwise).
+ */
+export function selectTandem(insideDepth: number, choice: 'auto' | 15 | 18 | 21, minInside: (t: TandemSlide) => number = (t) => t.minInside): { slide: TandemSlide; shallow: boolean } {
   if (choice !== 'auto') {
     const slide = TANDEM.find((t) => t.inches === choice) ?? TANDEM[0]
-    return { slide, shallow: cabinetDepth + 0.01 < slide.minCabinetDepth }
+    return { slide, shallow: insideDepth + 0.01 < minInside(slide) }
   }
-  const fitting = TANDEM.filter((t) => cabinetDepth + 0.01 >= t.minCabinetDepth)
+  const fitting = TANDEM.filter((t) => insideDepth + 0.01 >= minInside(t))
   const slide = fitting.length > 0 ? fitting[fitting.length - 1] : TANDEM[0]
   return { slide, shallow: fitting.length === 0 }
 }

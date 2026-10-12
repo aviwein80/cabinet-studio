@@ -6,7 +6,7 @@ import { MAIN_MACHINE, newMachineSetup, profileOf } from '@/core/machines'
 import { checkPassword } from '@/core/admin'
 import { sampleJob } from '@/core/sample'
 import { normalizeData } from '@/core/normalize'
-import { DEFAULT_ROOM, nextCabinetNumber, pushNeighbours } from '@/core/room'
+import { DEFAULT_ROOM, jobFronts, nextCabinetNumber, pushNeighbours, withJobFronts } from '@/core/room'
 import type { CamPart } from '@/cam/types'
 import type { AppData, CabinetInstance, CabinetTemplate, CarcassParams, Job, Library, MachineProfile, MachineSetup, ShopSettings } from '@/core/types'
 import { draftBlock } from '@/core/spec/draft'
@@ -240,7 +240,8 @@ export const useStore = create<State>((set, get) => {
             name: template.name,
             templateId: template.id,
             qty: 1,
-            params: clone(template.params),
+            // Polish-4: a filler takes the job's front board, as Fill gap and Split give it
+            params: withJobFronts(clone(template.params), jobFronts(j.cabinets)),
             overrides: {},
           })
         }),

@@ -294,6 +294,56 @@ function arrangeCornerRun(run: Item[], room: Room, z: number, lib: Library | und
 }
 
 /**
+ * Polish-4: a corner cabinet Arrange cannot put in a corner because another corner cabinet listed
+ * before it already fills that one, while the other back corner is free (a U-shaped kitchen built
+ * from two corner cabinets of the same template), and what to set so Arrange turns the run there.
+ * Arrange lays such a cabinet along the back wall like any other, so the setting is left to the
+ * shop: changing the corner mirrors the cabinet's parts.
+ */
+export interface CornerHint {
+  /** The cabinet laid on the back wall, and the one already in its corner. */
+  id: string
+  takenBy: string
+  /** The corner it is set to, and the free one. */
+  corner: 'left' | 'right'
+  free: 'left' | 'right'
+  /** The setting to change (as the cabinet editor names it) and the value that puts it in the free corner. */
+  field: string
+  value: string
+  /** It must also come before the back wall's cabinets in the job (a back-left corner listed after them). */
+  move: boolean
+}
+
+export function cornerHints(cabinets: Pick<CabinetInstance, 'id' | 'params'>[]): CornerHint[] {
+  const out: CornerHint[] = []
+  for (const run of [cabinets.filter((c) => c.params.kind !== 'wall'), cabinets.filter((c) => c.params.kind === 'wall')]) {
+    // the corners as arrangeCornerRun takes them: the first of each side, a right one only after the left
+    const iL = run.findIndex((c) => cornerSide(c.params) === 'left')
+    let iR = run.findIndex((c) => cornerSide(c.params) === 'right')
+    if (iR >= 0 && iR < iL) iR = -1
+    for (const [i, c] of run.entries()) {
+      const side = cornerSide(c.params)
+      if (!side || i === iL || i === iR) continue
+      const taken = side === 'left' ? iL : iR
+      const free = side === 'left' ? 'right' : 'left'
+      if (taken < 0 || (free === 'right' ? iR : iL) >= 0) continue
+      const k = c.params.corner!
+      const field = k.type === 'pie-cut' ? 'Which corner' : 'Blind side'
+      // a blind corner on the back wall has its blind side in its corner; on a side wall the other way round
+      const value = k.type === 'pie-cut' ? (free === 'right' ? 'Back-right' : 'Back-left') : (k.wall === 'side') === (free === 'right') ? 'Left' : 'Right'
+      out.push({ id: c.id, takenBy: run[taken].id, corner: side, free, field, value, move: free === 'left' })
+    }
+  }
+  return out
+}
+
+/** Polish-4: the hint in words, with the cabinets' numbers. */
+export function cornerHintText(h: CornerHint, numberOf: (id: string) => string) {
+  const n = numberOf(h.id)
+  return `${n} is set to the back-${h.corner} corner, which ${numberOf(h.takenBy)} already fills, so Arrange lays it along the back wall. To put it in the free back-${h.free} corner (a U-shaped kitchen), set ${n}'s ${h.field} to ${h.value}${h.move ? " and list it before the back wall's cabinets" : ''}: Arrange then turns the run there.`
+}
+
+/**
  * Lay the job out in the room. Without corner cabinets: floor cabinets along the back wall, left to
  * right; one that does not fit becomes a return on the left wall, butted against the side of the
  * back run. With corner cabinets (Kitchen-2): the run turns the corner, see `arrangeCornerRun`. Wall
@@ -874,12 +924,58 @@ export function nextCabinetNumber(j: Pick<Job, 'cabinets'>, p: Pick<CarcassParam
   return `${prefix}${n}`
 }
 
+/** Polish-4: the boards and door band a new filler takes from the job (`jobFronts`). */
+export interface JobFronts {
+  doorMaterialId: string
+  doorBand: CarcassParams['edgebands']['door']
+  carcassMaterialId: string
+}
+
+const hasFronts = (p: CarcassParams) => !p.panel && (p.doors.count > 0 || (p.drawers?.count ?? 0) > 0 || (p.corner?.type === 'blind' && p.corner.blindPanel))
+
+/** The value most cabinets have (copies counted), the first cabinet's on a tie. */
+function mostUsed(cabs: CabinetInstance[], key: (c: CabinetInstance) => string) {
+  const n = new Map<string, number>()
+  for (const c of cabs) n.set(key(c), (n.get(key(c)) ?? 0) + Math.max(1, c.qty))
+  let best: string | null = null
+  for (const [k, v] of n) if (best === null || v > n.get(best)!) best = k
+  return best
+}
+
+/**
+ * Polish-4: one rule for a new filler's boards, however it is made (Fill gap, Split, or added from a
+ * filler template and then arranged): the face is the job's front board, the board most of the
+ * job's cabinets with doors or drawer fronts have them in (copies counted; on a tie the first
+ * cabinet's), with that cabinet's door band; the return is the carcass board most cabinets have.
+ * Fillers and end panels do not count. Null when the job has no cabinet to take it from (the
+ * template's boards are kept). Each filler can still be changed by hand afterwards.
+ */
+export function jobFronts(cabinets: CabinetInstance[]): JobFronts | null {
+  const boxes = cabinets.filter((c) => !c.params.panel)
+  if (!boxes.length) return null
+  const faced = boxes.filter((c) => hasFronts(c.params))
+  const from = faced.length ? faced : boxes
+  const door = mostUsed(from, (c) => c.params.doorMaterialId)!
+  const carcass = mostUsed(boxes, (c) => c.params.carcassMaterialId)!
+  return { doorMaterialId: door, doorBand: from.find((c) => c.params.doorMaterialId === door)!.params.edgebands.door, carcassMaterialId: carcass }
+}
+
+/** Polish-4: give a filler's params the job's boards (nothing changes when `fronts` is null). */
+export function withJobFronts(p: CarcassParams, fronts: JobFronts | null) {
+  if (!fronts || p.panel?.type !== 'filler') return p
+  p.doorMaterialId = fronts.doorMaterialId
+  p.carcassMaterialId = fronts.carcassMaterialId
+  p.edgebands = { ...p.edgebands, door: fronts.doorBand }
+  return p
+}
+
 /**
  * Kitchen-2: fill a run's gap with fillers, using `filler` (a filler template's params) sized to the
  * cabinet beside it. 'one': the run moves to its anchored end and one filler takes the whole gap at
  * the other end; 'split': the run is centred and a filler of half the gap goes at each end. A filler
- * against a wall gets the template's scribe allowance on the wall side. Every cabinet in the job is
- * given its own placement first. Returns the new fillers' ids.
+ * against a wall gets the template's scribe allowance on the wall side; Polish-4: its boards are the
+ * job's (`jobFronts`), the same at both ends of a split. Every cabinet in the job is given its own
+ * placement first. Returns the new fillers' ids.
  */
 export function fillGap(job: Job, gap: RunGap, mode: 'one' | 'split', filler: CarcassParams, room: Room, place: (c: CabinetInstance) => CabinetPlacement, makeId: () => string): string[] {
   for (const c of job.cabinets) c.placement = place(c)
@@ -890,6 +986,7 @@ export function fillGap(job: Job, gap: RunGap, mode: 'one' | 'split', filler: Ca
   for (const c of run) c.placement = { ...c.placement!, [along]: c.placement![along] + shift }
   const ends: { at: 'start' | 'end'; width: number }[] = mode === 'split' ? [{ at: 'start', width: gap.total / 2 }, { at: 'end', width: gap.total / 2 }] : [{ at: gap.anchor === 'start' ? 'end' : 'start', width: gap.total }]
   const ids: string[] = []
+  const fronts = jobFronts(job.cabinets)
   for (const e of ends) {
     const ref = e.at === 'start' ? run[0] : run[run.length - 1]
     const p: CarcassParams = JSON.parse(JSON.stringify(filler))
@@ -898,9 +995,8 @@ export function fillGap(job: Job, gap: RunGap, mode: 'one' | 'split', filler: Ca
     p.depth = ref.params.depth
     p.width = Math.round(e.width * 1000) / 1000
     p.toeKick = { ...ref.params.toeKick }
-    p.doorMaterialId = ref.params.doorMaterialId
-    p.carcassMaterialId = ref.params.carcassMaterialId
-    p.edgebands = { ...p.edgebands, door: ref.params.edgebands.door }
+    // Polish-4: the job's front board (was the neighbour's, so a split gap could get two boards)
+    withJobFronts(p, fronts)
     const atWall = e.at === 'start' ? gap.startIsWall : gap.endIsWall
     if (p.panel?.type === 'filler') {
       // which way the wall is, seen from the filler's front: on the back wall the start is the left;

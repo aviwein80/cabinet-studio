@@ -18,6 +18,7 @@ import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { buildCabinet, generateCarcass, isOpInsidePart } from '@/core/construction/carcass'
 import { drawerBoard, KITCHEN_DEFAULTS } from '@/core/defaults'
+import { TANDEM } from '@/core/hardware/specs'
 import { ValueBadges } from '@/components/Configure'
 import { placeholderBoard } from '@/core/confirm'
 import { TemplateJobsButton } from '@/pages/LibraryEditDialog'
@@ -396,6 +397,7 @@ export function CabinetEditorPage({ target }: { target: Target }) {
                   { value: '21', label: '21 in (533 mm)' },
                 ]}
                 onChange={(v) => setP((x) => (x.drawers.slide = v === 'auto' ? 'auto' : (Number(v) as 15 | 18 | 21)))}
+                hint={`Auto: the longest runner the inside depth (side front edge to the back panel) takes, by Blum's minimum: ${TANDEM.map((t) => `${t.inches} in from ${formatLength(t.minInside, data.settings.units)}${data.settings.units === 'mm' ? ' mm' : ''}`).join(', ')}.`}
               />
             </div>
             {p.drawers.count > 0 && (

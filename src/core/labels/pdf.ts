@@ -264,15 +264,69 @@ function drawLabel(doc: jsPDF, out: JobOutput, l: LabelRecord, W: number, H: num
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
   doc.text(l.partId, 4, barY + 14)
+  // Polish-4: the notes in full (they were cut at 60 characters); a second line moves the program and
+  // edge code up by one line, beside the barcode
+  const notes = noteLines(doc, l.notes, W, 4 + doc.getTextWidth(l.partId) + 2)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(6)
-  doc.text(l.program, W - 3, H - 9, { align: 'right' })
-  doc.text(`edge code ${l.edgeDiagram}`, W - 3, H - 6, { align: 'right' })
-  if (l.notes.length) {
+  const up = notes.length > 1 ? 3 : 0
+  doc.text(l.program, W - 3, H - 9 - up, { align: 'right' })
+  doc.text(`edge code ${l.edgeDiagram}`, W - 3, H - 6 - up, { align: 'right' })
+  if (notes.length) {
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7)
-    doc.text(l.notes.join(' | ').slice(0, 60), W - 3, H - 2.5, { align: 'right' })
+    doc.setFontSize(notes[0].size)
+    for (const [i, t] of notes.entries()) doc.text(t.text, W - 3, H - 2.5 - (notes.length - 1 - i) * 2.7, { align: 'right' })
   }
+}
+
+/** Polish-4: the narrowest a note is set before it is wrapped, and the right margin of the label. */
+const NOTE_MIN = 5
+const NOTE_MARGIN = 3
+
+/**
+ * Polish-4: the label's notes ("Scribe 1/2" on L2: trim to the wall | Label does not fit: apply to back
+ * face") at the foot of the label, right-aligned: one line at 7 pt when it fits (as before), else set
+ * smaller (down to 5 pt), else on two lines, the upper one kept clear of the part id on the left
+ * (`idRight`). Cut short with "…" only when even that is too wide. Measured in the doc's current
+ * font (the bold one the notes print in); leaves the font size changed.
+ */
+export function noteLines(doc: jsPDF, notes: string[], W: number, idRight: number): { text: string; size: number }[] {
+  if (!notes.length) return []
+  const full = W - 2 * NOTE_MARGIN
+  const upper = W - NOTE_MARGIN - idRight
+  const one = notes.join(' | ')
+  const width = (t: string, s: number) => {
+    doc.setFontSize(s)
+    return doc.getTextWidth(t)
+  }
+  for (let s = 7; s >= NOTE_MIN; s -= 0.5) if (width(one, s) <= full) return [{ text: one, size: s }]
+  // two lines: split between notes (at any size down to the smallest), else between words
+  const splits: [string, string][] = []
+  for (let k = 1; k < notes.length; k++) splits.push([notes.slice(0, k).join(' | '), notes.slice(k).join(' | ')])
+  const words = one.split(' ')
+  for (let k = 1; k < words.length; k++) splits.push([words.slice(0, k).join(' '), words.slice(k).join(' ')])
+  const between = notes.length - 1
+  for (const group of [splits.slice(0, between), splits.slice(between)])
+    for (let s = 6.5; s >= NOTE_MIN; s -= 0.5) {
+      let best: [string, string] | null = null
+      let score = Infinity
+      for (const [a, b] of group) {
+        const wa = width(a, s) / upper
+        const wb = width(b, s) / full
+        if (wa <= 1 && wb <= 1 && Math.max(wa, wb) < score) [best, score] = [[a, b], Math.max(wa, wb)]
+      }
+      if (best) return [{ text: best[0], size: s }, { text: best[1], size: s }]
+    }
+  // too long even so: the most that fits, cut short
+  const cut = (t: string, maxW: number) => {
+    let r = t
+    while (width(r, NOTE_MIN) > maxW && r.length > 1) r = r.slice(0, -2) + '…'
+    return r
+  }
+  if (!splits.length) return [{ text: cut(one, full), size: NOTE_MIN }]
+  const over = ([a, b]: [string, string]) => Math.max(width(a, NOTE_MIN) / upper, width(b, NOTE_MIN) / full)
+  const [a, b] = splits.reduce((m, sp) => (over(sp) < over(m) ? sp : m))
+  return [{ text: cut(a, upper), size: NOTE_MIN }, { text: cut(b, full), size: NOTE_MIN }]
 }
 
 // ---------------------------------------------------------------------------------------------

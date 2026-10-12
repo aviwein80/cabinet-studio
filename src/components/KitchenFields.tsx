@@ -147,7 +147,7 @@ export function KitchenFields({ p, set, lib }: { p: CarcassParams; set: (fn: (p:
     const f = p.panel
     return (
       <>
-        <SelectField label="Board (face)" value={p.doorMaterialId} options={boards(lib)} onChange={(v) => set((x) => (x.doorMaterialId = v))} />
+        <SelectField label="Board (face)" value={p.doorMaterialId} options={boards(lib)} onChange={(v) => set((x) => (x.doorMaterialId = v))} hint="A new filler takes the job's front board (the one most cabinets' doors and drawer fronts are in). Change it here for this filler only." />
         <div className="grid grid-cols-2 gap-2">
           <NumField label="Return depth" value={f.returnDepth} min={0} max={300} onChange={(v) => set((x) => x.panel?.type === 'filler' && (x.panel.returnDepth = v))} cfg={cfg('fillerReturn')} badge={f.returnDepth > 0 ? badge('fillerReturn') : undefined} hint="0 = a flat strip." />
           <SelectField

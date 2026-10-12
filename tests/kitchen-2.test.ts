@@ -664,10 +664,11 @@ describe('Kitchen-2 C: Polish-1 leftovers', () => {
     expect(big('mm')).toMatch(/^Sheet 6000 x 2400 mm is larger than the machine table \d+(\.\d+)? x \d+(\.\d+)? mm\.$/)
     expect(big('in')).toMatch(/^Sheet 236-1\/4" x 94-1\/2" is larger than the machine table [\d-/]+" x [\d-/]+"\.$/)
     // sizes in construction warnings; machining values (depths, thicknesses) stay in mm
-    const shallow = job([cabinet('tpl-base-drawers', (p) => (p.depth = 450))])
+    // (Polish-4: by Blum's minimum inside depth; 420 mm deep is 401.5 mm inside, under the 404 mm for 15 in)
+    const shallow = job([cabinet('tpl-base-drawers', (p) => (p.depth = 420))])
     const w = (units: 'mm' | 'in') => runJob(shallow, data((d) => (d.settings.units = units))).issues.filter((i) => i.code === 'CONSTRUCTION').map((i) => i.message)
-    expect(w('mm')).toContain('B1 Base cabinet, 3 drawers: Cabinet depth 450 mm is under the 457 mm minimum for a 15 in TANDEM runner.')
-    expect(w('in')).toContain('B1 Base cabinet, 3 drawers: Cabinet depth 17-11/16" is under the 18" minimum for a 15 in TANDEM runner.')
+    expect(w('mm')).toContain('B1 Base cabinet, 3 drawers: Inside depth 401.5 mm (cabinet depth 420 mm) is under the 404 mm minimum inside depth for a 15 in TANDEM runner.')
+    expect(w('in')).toContain('B1 Base cabinet, 3 drawers: Inside depth 15-13/16" (cabinet depth 16-9/16") is under the 15-7/8" minimum inside depth for a 15 in TANDEM runner.')
   })
 
   it('9: the nesting header gives trim and spacing in the shop unit', async () => {

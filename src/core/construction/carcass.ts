@@ -1,6 +1,6 @@
 import { EPS, X, Y, Z, neg, r3, rectPolygon } from '../geometry'
 import { PLATE_ID, hingeCode, plateBoring, slideBoring, SLIDE_IDS } from '../hardware/resolve'
-import { BLUM, hingeHeights, selectTandem } from '../hardware/specs'
+import { BLUM, hingeHeights, selectTandem, type TandemSlide } from '../hardware/specs'
 import { onPart } from '../lpart'
 import type { BlindCornerParams, CabinetInstance, CarcassParams, HardwareLine, HardwarePin, Library, Operation, Part, UnitSystem, Vec2 } from '../types'
 import { drawerBoard } from '../defaults'
@@ -259,10 +259,11 @@ export function generateCarcass(p: CarcassParams, lib: Library, pin?: { hardware
       warnings.push('Drawer fronts were shortened so a door still fits above them.')
     }
     if (frontH < 60) warnings.push(`Drawer fronts are under ${S(60)} tall.`)
-    const { slide } = selectTandem(D, p.drawers?.slide ?? 'auto')
-    const slideId = SLIDE_IDS[slide.part]
-    const runner = slideBoring(lib, slide, slideId ? pin?.hardware?.[slideId] : undefined)
-    if (D + 0.01 < runner.minCabinetDepth) warnings.push(`Cabinet depth ${S(D)} is under the ${S(runner.minCabinetDepth)} minimum for a ${slide.inches} in TANDEM runner.`)
+    // Polish-4: by the inside depth (side front edge to the back panel) against Blum's minimum inside depth
+    const runnerOf = (t: TandemSlide) => slideBoring(lib, t, SLIDE_IDS[t.part] ? pin?.hardware?.[SLIDE_IDS[t.part]] : undefined)
+    const { slide } = selectTandem(backFrontY, p.drawers?.slide ?? 'auto', (t) => runnerOf(t).minInsideDepth)
+    const runner = runnerOf(slide)
+    if (backFrontY + 0.01 < runner.minInsideDepth) warnings.push(`Inside depth ${S(backFrontY)} (cabinet depth ${S(D)}) is under the ${S(runner.minInsideDepth)} minimum inside depth for a ${slide.inches} in TANDEM runner.`)
     // Polish-1: the box (sides, subfront, back) is its own material when one is chosen. Polish-2:
     // otherwise the library's 16 mm drawer-box board (owner decision), the carcass board only when
     // the library has none. The TANDEM side limit is checked against what is really used.

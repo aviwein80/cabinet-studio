@@ -98,7 +98,12 @@ export interface Hardware {
   slideLength?: number
   /** Slide screw holes from the front of the cabinet side. */
   slideHoles?: number[]
-  /** Smallest cabinet depth for this runner. */
+  /**
+   * Polish-4: the smallest inside cabinet depth (side front edge to the back panel) for this runner;
+   * picks the runner and drives the shallow-cabinet warning. Absent = Blum's figure.
+   */
+  minInsideDepth?: number
+  /** Before Polish-4: a smallest overall cabinet depth. Read from older files, no longer used. */
   minCabinetDepth?: number
   /**
    * Job-1: price per piece, as the BOM counts it (a hinge, a plate, a TANDEM runner set per drawer), in
@@ -115,6 +120,8 @@ export interface HardwarePin {
   holeDepth?: number
   slideLength?: number
   slideHoles?: number[]
+  minInsideDepth?: number
+  /** Before Polish-4 (not used). */
   minCabinetDepth?: number
 }
 

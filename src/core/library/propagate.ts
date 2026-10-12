@@ -12,7 +12,7 @@ export function drivingKeys(item: Hardware | Material | EdgeBand, kind: ItemKind
   const hw = item as Hardware
   if (hw.category === 'mounting-plate') return ['plateSetback', 'plateSpacing', 'holeDiameter', 'holeDepth']
   if (hw.category === 'hinge') return ['cupDiameter', 'cupDepth', 'cupCentre']
-  if (hw.category === 'slide') return ['slideLength', 'slideHoles', 'minCabinetDepth']
+  if (hw.category === 'slide') return ['slideLength', 'slideHoles', 'minInsideDepth']
   return []
 }
 
@@ -100,7 +100,7 @@ function pinFrom(hw: Hardware): HardwarePin {
   if (hw.holeDepth != null) pin.holeDepth = hw.holeDepth
   if (hw.slideLength != null) pin.slideLength = hw.slideLength
   if (hw.slideHoles) pin.slideHoles = [...hw.slideHoles]
-  if (hw.minCabinetDepth != null) pin.minCabinetDepth = hw.minCabinetDepth
+  if (hw.minInsideDepth != null) pin.minInsideDepth = hw.minInsideDepth
   return pin
 }
 

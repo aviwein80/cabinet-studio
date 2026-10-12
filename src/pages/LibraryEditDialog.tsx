@@ -119,7 +119,7 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
               <>
                 <NumField label="Runner length" hint="Drives the drawer box length." value={hw.slideLength ?? 0} min={100} max={800} onChange={(v) => set((r) => ((r as Hardware).slideLength = v))} />
                 <HolesField value={hw.slideHoles ?? []} onChange={(v) => set((r) => ((r as Hardware).slideHoles = v))} />
-                <NumField label="Minimum cabinet depth" hint="Drives the shallow-cabinet warning." value={hw.minCabinetDepth ?? 0} min={0} max={1200} onChange={(v) => set((r) => ((r as Hardware).minCabinetDepth = v))} />
+                <NumField label="Minimum inside cabinet depth" hint="From the front edge of the side to the back panel, as the maker lists it. Picks the runner (Auto) and drives the shallow-cabinet warning." value={hw.minInsideDepth ?? 0} min={0} max={1200} onChange={(v) => set((r) => ((r as Hardware).minInsideDepth = v))} />
               </>
             )}
             {kind === 'hardware' && hw.category !== 'hinge' && hw.category !== 'mounting-plate' && hw.category !== 'slide' && (

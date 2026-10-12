@@ -57,7 +57,8 @@ export function slideBoring(lib: Library, slide: TandemSlide, pin?: HardwarePin)
     diameter: pin?.holeDiameter ?? first?.diameter ?? BLUM.holeDiameter,
     depth: pin?.holeDepth ?? first?.depth ?? BLUM.holeDepth,
     code: row?.code ?? slide.part,
-    minCabinetDepth: pin?.minCabinetDepth ?? row?.minCabinetDepth ?? slide.minCabinetDepth,
+    /** Polish-4: the minimum inside cabinet depth (an older file's overall "minCabinetDepth" is not used). */
+    minInsideDepth: pin?.minInsideDepth ?? row?.minInsideDepth ?? slide.minInside,
     patternId: pat?.id,
   }
 }

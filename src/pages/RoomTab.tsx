@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { buildCabinet } from '@/core/construction/carcass'
 import { WALLS, elevationOf, placementFromElevation, type WallId } from '@/core/elevation'
 import { KITCHEN_PRESETS } from '@/core/defaults'
-import { arrangeCabinets, cornerClearance, fillGap, fillersPastWall, footprint, nextRotation, pieClearance, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type FillerShrink, type RoomBlock, type RunGap } from '@/core/room'
+import { arrangeCabinets, cornerClearance, cornerHints, cornerHintText, fillGap, fillersPastWall, footprint, nextRotation, pieClearance, placementOf, pushNeighbours, roomProblems, runGaps, snapPlacement, toRoom, type FillerShrink, type RoomBlock, type RunGap } from '@/core/room'
 import { formatLength } from '@/core/units'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Part, Room } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -122,6 +122,8 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
   // Polish-2: a filler past a wall can be shrunk to fit
   const shrinks = fillersPastWall(job.cabinets, room, place, units)
   const gaps = runGaps(job.cabinets, room, place, lib)
+  // Polish-4: a second corner cabinet set to a corner already filled (a U-shaped kitchen)
+  const hints = cornerHints(job.cabinets)
   const numberOf = (id: string) => job.cabinets.find((c) => c.id === id)?.number ?? '?'
   const rearrange = () =>
     setJob((j) => {
@@ -286,6 +288,18 @@ export function RoomTab({ job, setJob }: { job: Job; setJob: (fn: (j: Job) => vo
                 </Button>
                 <Button size="xs" variant="outline" onClick={() => fill(g, 'split')}>
                   Split: {L(g.total / 2)} at each end
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        {hints.length > 0 && (
+          <div role="status" className="flex flex-col gap-1 border-b border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-900">
+            {hints.map((h) => (
+              <div key={h.id} className="flex flex-wrap items-center gap-2">
+                <span>{cornerHintText(h, numberOf)}</span>
+                <Button size="xs" variant="outline" onClick={() => go({ page: 'cabinet', jobId: job.id, cabinetId: h.id, from: 'room' })}>
+                  Edit {numberOf(h.id)}
                 </Button>
               </div>
             ))}

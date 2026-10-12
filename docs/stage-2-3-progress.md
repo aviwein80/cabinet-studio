@@ -4074,12 +4074,92 @@ preview-warnings` (49 parts, sheets 5 → 5, the TANDEM warning, parts old → n
 5. **Sample BOM**: it now ends with the quote block. Keep (recommended), or keep the quote only in
    the Quote PDF and the Areas and costs CSV?
 
+## Polish-4: fixes from recording the Advanced examples
+
+A bug-fix round, not a milestone of the spec: 6 items found while recording the Advanced examples on
+`c159f7b`. Each was reproduced first (a script on the tour's jobs from `tests/polish-2-jobs.ts`, a new
+U-shaped kitchen, or a rendered label page). Every real fix has a test in `tests/polish-4.test.ts` (12).
+Baseline before the round: head `c159f7b`, 1196 tests (1194 passed, 1 skipped, 1 failed: the 90 s timing
+test at 94.9 s inside the full suite, as recorded before), 17 lint warnings, typecheck and build clean;
+the 90 s timing test took 73.4 s run alone with nothing else running. After: see "Test-suite note
+(Polish-4)".
+
+| # | Found | Real bug? | Fix | Test |
+|---|---|---|---|---|
+| 1 | Ortiz F1 label: "Scribe 1/2" on L2: trim to the wall \| Label does not fit: ap" | Yes: the notes were cut at 60 characters | The notes print in full (`noteLines`): one line at 7 pt when it fits (as before, so labels that fitted are unchanged), else set smaller down to 5 pt, else two lines split between notes (between words only if no note split fits), the upper line kept clear of the part id; the program and edge code then move up one line beside the barcode. "…" only if even two 5 pt lines cannot hold it. F1's note fits on one 7 pt line (76 characters, 84 mm of the 94 mm) | `1` (two) |
+| 2 | U kitchen Split: F1 MDF (the sink base's door board), F2 white | Yes: each filler copied the board of the cabinet beside it | One rule (`jobFronts`, `withJobFronts`): a new filler's face is the job's front board, the board most of the job's cabinets with doors or drawer fronts have them in (copies counted; first cabinet's on a tie; fillers, end panels and open cabinets do not count), with that cabinet's door band; its return is the carcass board most cabinets have. Applied by Fill gap, Split and Add (a filler added from its template, which Arrange then places; Arrange itself never changes a board). Editable per filler: the filler's Board (face) field says so, and a board set by hand is kept | `2` (two) |
+| 3 | U kitchen: Arrange turns into the second corner only once the second pie-cut is set to back-right by hand | Not a bug in Arrange, but nothing said what to set | A hint on the Room tab (`cornerHints`, `cornerHintText`): "B5 is set to the back-left corner, which B2 already fills, so Arrange lays it along the back wall. To put it in the free back-right corner (a U-shaped kitchen), set B5's Which corner to Back-right: Arrange then turns the run there." with an **Edit B5** button. Pie-cuts ("Which corner"), blind corners on the back or side wall ("Blind side", the right way round), base and wall runs. Chosen over turning it automatically: the corner setting mirrors the cabinet's parts and hinges, which Arrange (placement only) should not change silently | `3` (two) |
+| 4 | "Auto from depth" picked 15" for a 530 mm (20-7/8") cabinet | Yes | The runner is picked by the **inside** depth (side front edge to the back panel) against Blum's minimum inside cabinet depth from the 563H installation sheet: 15" 404 mm, 18" 480 mm (18-29/32"), 21" 557 mm. It compared the overall depth with a rough table (457 / 533 / 610). 530 mm deep is 511.5 mm inside: 18" now. Found with it: a standard 24" US base (609.6 mm, 0.4 mm under "610") got 18"; it now gets 21" (591.1 mm inside). The shallow warning uses the same rule ("Inside depth 401.5 mm (cabinet depth 420 mm) is under the 404 mm minimum inside depth for a 15 in TANDEM runner.", inches in an inch shop). The library field is now **Minimum inside cabinet depth** (`minInsideDepth`; the old overall "minCabinetDepth" in saved files is not used, and the built-in runners get Blum's figures on load); the cabinet editor's Slide picker says the rule | `4` (four), both units |
+| 5 | Patel vanity change order: 8 → 10 warnings | No: both new ones are correct | In the rebuilt job the count goes 7 → 9 (the tour's app had one more warning before and after, not part of the change). The two new ones are SMALL_PART on the new filler's two parts: the strip (3" x 27-1/2") and its return (3-7/16" x 27-1/2"). Narrow strips the vacuum may not hold, flagged by the same rule that already flagged the vanity's 3-7/8" drawer parts. The 4th drawer and the MDF fronts add no warning (the UNCONFIRMED line lists T204, the cup bit, among the first six, which only reorders that line) | `5` |
+| 6 | Areas and costs CSV: per-door labour "8.6667" | Yes | One display rule for unit prices (`unitPrice`, used by the Quote tab, both CSVs and the Quote PDF): to the cent, halves up; a price under 1.00 keeps up to 4 places when it has them (an edgeband at 0.035 per ft). Amounts are still worked from the exact price (7 doors x 8.6667 = 60.67) | `6` |
+
+### Goldens and output
+
+Stage 1 MPR goldens (`tests/mpr.test.ts`) and the custom-part goldens are byte-identical (no file under
+`tests/golden/` changed). `npm run sample` is byte-identical: every MPR, the cut list, BOM, labels (PDF
+and ZPL), sheet maps, validation and job file (the sample's cabinets are 560 mm deep, 541.5 mm inside,
+18" runners as before; its label notes fit on one 7 pt line as before; nothing in it has a price). No
+program output changed in the sample; every output switch is still off.
+
+Changes outside the sample, by item 4: a US base 24" deep with drawers now takes the 21" runner (BOM
+563H5330B, drawer boxes 21" long, runner holes at 261 / 517 mm), so the Ortiz kitchen's drawer base
+programs change; a 530 mm cabinet takes 18".
+
+### Test-suite note (Polish-4)
+
+After: 1208 tests (1206 passed, 1 skipped, 12 new in `tests/polish-4.test.ts`), 17 lint warnings (none
+new), typecheck and build clean. In the final full run every test passed except the 90 s timing test, at
+96.9 s with the whole suite beside it (94.9 s in the baseline run before any change); run on its own with
+nothing else running it passed in 74.6 s (73.4 s before). The limit is unchanged.
+
+Two earlier tests had expectations of the old TANDEM rule, now set to Blum's inside-depth figures (exact,
+not loosened): `design.test.ts` "picks the runner..." (560 overall was "18"; the function now takes the
+inside depth: 557 → 21, 541.5 → 18) and the box test (selects by the inside depth); Kitchen-2 test 8
+(the warning in both units: a 450 mm cabinet is 431.5 mm inside, enough for 15", so the test uses 420 mm,
+401.5 mm inside, and the new wording).
+
+### Polish-4 screenshots
+
+In `docs/screenshots/polish-4/` (browser preview, inch mode; label pages rendered from the PDFs; each under
+300 KB): `01a-label-f1-notes-before-after` (Ortiz F1, the note cut at "ap" and in full),
+`01b-label-notes-two-lines` (test notes too long for one line), `02a-split-fillers-job-front-board`
+(F1 and F2 both PB18-WHT after Split, the sink base's doors MDF), `02b-filler-board-hint-u-turned` (F1's
+Board (face) and its hint; the U turned once B5 is set to Back-right), `03-u-kitchen-corner-hint` (both
+pie-cuts back-left: the hint and Edit B5), `04a-slide-auto-hint-530mm` (20-7/8" deep, Auto, the rule),
+`04b-530mm-drawer-sides-18in` (the drawer sides 18"), `05-patel-change-order-warnings` (#39 and #40, the
+filler's two parts), `06a-quote-unit-prices-rounded` (labour 52.00, 17.33, 8.67, 13.00; test shop rate
+52.00, not in the app), `06b-areas-csv-unit-price-before-after`.
+
+### Limits recorded (Polish-4)
+
+- The ZPL labels still cut the notes at 60 characters (item 1 is the PDF; the ZPL field is 2 lines of
+  49 mm).
+- A shop that typed its own "Minimum cabinet depth" for a runner before Polish-4 should enter it again as
+  the minimum inside depth; the old value is kept in the file but not used.
+- The corner hint covers a corner cabinet set to a corner another one already fills. A back-right corner
+  listed before the back-left one in the job is still laid as a plain cabinet without a hint.
+- Unit prices shown are rounded; quantity x shown price can differ from the amount by a few cents (7 x
+  8.67 = 60.69, the amount is 60.67 from the exact 8.6667).
+- In an inch shop Blum's minimums show to 1/16" (15-7/8", 18-7/8", 21-15/16"; Blum lists 15-29/32",
+  18-29/32", 21-15/16").
+
+### Polish-4 decisions needed
+
+1. **Second corner cabinet**: Arrange shows a hint and leaves the setting to you. Keep (recommended: the
+   setting mirrors the cabinet's parts), or have Arrange set the second corner to the free corner itself?
+2. **Filler board**: the job's most-used front board. Keep (recommended), or add a "front board" setting
+   per job that fillers (and end panels) follow?
+3. **Unit price vs amount**: amounts use the exact price, so a line can read 7 x 8.67 = 60.67. Keep
+   (recommended, as asked), or work each amount from the rounded price shown (60.69)?
+4. **TANDEM 21" in 24" bases**: US 24" drawer bases now take the 21" runner, as Blum's table says.
+   Confirm you stock 563H5330B (the spec says you do).
+
 ## Next run
 
-- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2, Polish-3 and Job-1 are complete. Next is
-  the owner's call: the Job-1 decisions above (shop rate, labour times, tax base), the Polish-3 and
-  Kitchen-3c decisions, diagonal corners, the shop facts in "Stage 3 exit", Phase 0 in `ROADMAP.md`, or
-  any limit recorded above.
+- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2, Polish-3, Job-1 and Polish-4 are complete.
+  Next is the owner's call: the Polish-4 and Job-1 decisions above (shop rate, labour times, tax base), the
+  Polish-3 and Kitchen-3c decisions, diagonal corners, the shop facts in "Stage 3 exit", Phase 0 in
+  `ROADMAP.md`, or any limit recorded above.
 
 ## Run log
 
@@ -4174,3 +4254,6 @@ preview-warnings` (49 parts, sheets 5 → 5, the TANDEM warning, parts old → n
   overrides, preview with parts, sheets and warnings, one undo); pricing beyond board (edgeband and
   hardware prices, shop rate and labour times, markup and tax, Quote tab, quote in the BOM and areas
   CSV, Quote PDF); tests, screenshots, this file. See `git log`.
+- **Run 28 (Polish-4)**: 6 items from recording the Advanced examples: label notes in full, one rule for a
+  filler's board, the U-kitchen corner hint, the TANDEM runner by Blum's inside depth, the Patel change
+  order's warnings explained, unit prices rounded; tests, screenshots, this file. See `git log`.

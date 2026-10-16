@@ -1,0 +1,491 @@
+1
+00:00:04,000 --> 00:00:09,906
+One job from start to finish: a home library. Bookcases on every wall, a sliding bookcase door at the entry, and a custom table in the middle.
+
+2
+00:00:09,906 --> 00:00:15,910
+The room: 14' x 12' (168" x 144"), with an 8' (96") ceiling. The entry is a 36" opening in the front wall.
+
+3
+00:00:15,910 --> 00:00:22,414
+Everything here is done in the app as it is. Where the app can’t do something, a caption says so and shows the workaround.
+
+4
+00:00:22,414 --> 00:00:25,438
+Start on the Jobs page: New job.
+
+5
+00:00:25,438 --> 00:00:36,910
+A job number, a name and the customer.
+
+6
+00:00:36,910 --> 00:00:44,872
+An empty job. The tabs along the top are the whole workflow: cabinets, room, custom parts, cut list, nesting, quote, output.
+
+7
+00:00:44,872 --> 00:00:48,674
+Room first, so every cabinet has a wall to go on.
+
+8
+00:00:48,674 --> 00:00:56,414
+Room width is the back wall: 168". Room depth, back wall to front wall: 144".
+
+9
+00:00:56,414 --> 00:01:00,615
+Wall height: 96", an 8' ceiling. The tall bookcases will stop under it.
+
+10
+00:01:00,615 --> 00:01:06,756
+Plan view stays empty until there are cabinets. When it fills, the back wall is at the top and the front wall, with the entry, at the bottom.
+
+11
+00:01:06,756 --> 00:01:14,262
+Honest note: the room has walls and a ceiling height, but no door or window object. The 36" entry will simply be a gap left in the front run.
+
+12
+00:01:14,262 --> 00:01:21,278
+Snap is on: a cabinet dragged near a wall lines up against it. Hold Alt to place freely. That is how the side and front runs will go in.
+
+13
+00:01:21,278 --> 00:01:25,781
+The room is set and saved. Next: the cabinets, from the template library.
+
+14
+00:01:27,000 --> 00:01:33,553
+The layout, worked out on paper first. Back wall 168": six bookcases 28" wide. Each side wall: four 30" units.
+
+15
+00:01:33,553 --> 00:01:41,258
+Front wall: two 30" bookcases left of a 36" entry, then 48" of bare wall where the sliding bookcase door parks when it is open.
+
+16
+00:01:41,258 --> 00:01:47,862
+Every unit is 12" deep and 90" tall: 6" under the ceiling, room for a crown or a scribe strip on site.
+
+17
+00:01:47,862 --> 00:01:58,690
+Add cabinet opens the template library. The Tall 24" x 84" pantry is the closest start: tall carcass, shelf-pin rows.
+
+18
+00:01:58,690 --> 00:02:20,381
+Open it with the pencil and turn it into the back-wall bookcase: 28" wide, 90" tall, 12" deep.
+
+19
+00:02:20,381 --> 00:02:27,310
+Doors: None. A library wall is open shelving: no hinges, no cup boring.
+
+20
+00:02:27,310 --> 00:02:34,447
+Six adjustable shelves: seven openings of about 12", right for most books. 28" is a safe span for a 3/4" shelf under books.
+
+21
+00:02:34,447 --> 00:02:40,774
+Shelf-pin rows on the 32 mm system pitch, front and back, so the shelves can be moved later.
+
+22
+00:02:40,774 --> 00:02:47,810
+Shelf fronts are what you see in a library, so band them with the 1 mm ABS, not the 0.4 mm tape.
+
+23
+00:02:47,810 --> 00:02:57,937
+The parts table: two sides, top, bottom, back and six shelves.
+
+24
+00:02:57,937 --> 00:03:10,692
+The back wall needs six identical units: copy this one five times.
+
+25
+00:03:10,692 --> 00:03:15,652
+Six bookcases, 28" x 90" x 12". Set one up carefully, then copy: every unit stays identical.
+
+26
+00:03:16,867 --> 00:03:21,222
+The back wall run. Six units of 28" make exactly 168", wall to wall.
+
+27
+00:03:21,222 --> 00:03:26,138
+Arrange along the back wall lines the cabinets up in order, from the left corner.
+
+28
+00:03:26,138 --> 00:03:35,668
+Plan view: six units against the back wall, 12" deep. The thick line on each is its front, facing into the room.
+
+29
+00:03:35,668 --> 00:03:45,490
+Elevation, back wall: no doors, so every shelf shows. The shelf lines run level across all six units.
+
+30
+00:03:45,490 --> 00:03:52,642
+90" tall under a 96" ceiling: the 6" gap at the top is left on purpose for a crown or scribe strip fitted on site.
+
+31
+00:03:52,642 --> 00:04:09,511
+In 3D: the first wall of the library.
+
+32
+00:04:09,511 --> 00:04:16,663
+Note: the toe kick from the pantry template is kept: a recessed plinth reads well under a library run and protects the bottom shelf.
+
+33
+00:04:16,663 --> 00:04:23,267
+Arrange only fills the back wall (and its corners). The side walls are placed by hand next, with Rotate and snap.
+
+34
+00:04:24,500 --> 00:04:30,404
+The side walls: four 30" units on each, 120" between the back run and the front wall. Arrange can’t do side walls, so these go in by hand.
+
+35
+00:04:30,404 --> 00:04:40,964
+The method: copy a bookcase. The copy lands in the back-left corner, on top of T1.
+
+36
+00:04:40,964 --> 00:04:51,340
+Drag it into the open room first, then set Width to 30". Order matters: widening a unit that is already turned shifts it off its wall (logged as a bug).
+
+37
+00:04:51,340 --> 00:06:23,401
+Rotate three times: the thick front edge now faces right, into the room. Then drag it to the left wall; snap pulls it flush.
+
+38
+00:06:23,401 --> 00:08:23,652
+Right wall: the same steps, but one Rotate turns the front to face left, into the room.
+
+39
+00:08:23,652 --> 00:09:41,019
+Front wall: two 30" units left of the entry. Two Rotates turn them to face the back wall.
+
+40
+00:09:41,019 --> 00:09:47,521
+Sixteen units placed. The gap on the front wall, right of the two units, is the 36" entry and the 48" wall where the sliding door will park.
+
+41
+00:09:47,521 --> 00:09:54,525
+Honest note: there is no typed X/Y position. Most units landed within 1/4", but the last left-wall unit (T10) snapped onto the corner and pokes past the wall. Fixed next.
+
+42
+00:09:54,525 --> 00:10:02,691
+Check each wall in Elevation. Left wall:
+
+43
+00:10:02,691 --> 00:10:08,004
+Right wall:
+
+44
+00:10:08,004 --> 00:10:14,455
+Front wall: two units, then the open stretch for the entry and the door.
+
+45
+00:10:14,455 --> 00:10:56,151
+And in 3D: bookcases on three walls and part of the fourth.
+
+46
+00:11:01,839 --> 00:11:08,461
+First, the fix. T10, top of the left wall, snapped onto the corner bookcase. The yellow banner says which units overlap or run past a wall.
+
+47
+00:11:08,461 --> 00:11:23,295
+Hold Alt and drag it down, flush to the wall and the unit below. Alt turns snap off, so it goes exactly where it is dropped.
+
+48
+00:11:23,295 --> 00:11:28,299
+T10 is fixed. The banner still lists T15 and T16: the front pair sits 0.3" past the front wall. They get the same Alt-drag nudge next.
+
+49
+00:11:28,299 --> 00:11:35,510
+Now the front wall. Two 30" units from 12" to 72", then the 36" entry, from 72" to 108".
+
+50
+00:11:35,510 --> 00:11:42,478
+From 108" to 156": 48" of bare wall. When the sliding bookcase door opens, it rolls right and parks here.
+
+51
+00:11:42,478 --> 00:11:49,484
+Why 48"? The door will be 40" wide, 2" past the opening on each side, so it needs at least 40" to park clear of the entry.
+
+52
+00:11:49,484 --> 00:11:59,603
+Elevation, front wall: the two bookcases, then the open wall where the door and its track will go.
+
+53
+00:11:59,603 --> 00:12:05,608
+Remember: the room has no door object, so the entry is just this gap. A caption will mark it in 3D too.
+
+54
+00:12:11,437 --> 00:12:32,757
+First the nudge from last time: Alt-drag the two front units up by a hair, so they sit on the front wall, not 0.3" past it.
+
+55
+00:12:32,757 --> 00:12:38,762
+Now the sliding bookcase door. It covers the 36" entry and rolls right along a wall-mounted track to open.
+
+56
+00:12:38,762 --> 00:13:13,420
+The bookcase part is a real cabinet: copy a bookcase, drag it clear, then size it: 40" wide (2" past each side of the opening), 84" tall, 10" deep.
+
+57
+00:13:13,420 --> 00:13:19,478
+Height off the floor 1/2": a hung door must clear the floor. App bug: the field shows 1/2" but a fraction is not saved (1" is). The clearance is set by the rollers on site.
+
+58
+00:13:19,478 --> 00:13:37,190
+Two Rotates face it into the room, then Alt-drag it over the entry: 70" to 110" along the front wall.
+
+59
+00:13:37,190 --> 00:13:46,822
+Rename it in the editor so the cut list and labels say what it is.
+
+60
+00:13:46,822 --> 00:13:54,325
+Honest note: the app has no sliding-door or roller hardware for a cabinet. The rollers bolt to the top of this unit on site, from the track kit.
+
+61
+00:13:54,325 --> 00:14:04,474
+Its back faces the hallway when closed, so the white HDF back is the finished face outside. A painted panel could be added later.
+
+62
+00:14:04,474 --> 00:14:24,070
+The track kit itself goes in the Library, under Hardware: Add row.
+
+63
+00:14:24,070 --> 00:14:29,212
+Price: $320 here is an EXAMPLE price, for the demo only.
+
+64
+00:14:29,212 --> 00:14:37,217
+Honest limit: a library row can’t be attached to a job, and the Quote has no manual line. So this kit will NOT appear in the job’s quote. Add it by hand.
+
+65
+00:14:37,217 --> 00:14:49,623
+What the shop does make: a header board the steel track screws to. That is a custom part in the job.
+
+66
+00:14:49,623 --> 00:15:08,044
+Track header: 96" long, 5-1/2" tall, from 18 mm MDF (paint grade). There is no solid-wood stock in the library.
+
+67
+00:15:08,044 --> 00:15:16,602
+Screw holes for the track: 3/8" holes every 16", 2-3/4" up, to line up with the track’s own holes. First hole 4" in.
+
+68
+00:15:16,602 --> 00:15:45,185
+Five more at 20, 36, 52, 68 and 84 inches along: 16" centres, all inside the 96" board.
+
+69
+00:15:45,185 --> 00:15:56,636
+Select everything (Ctrl+A), then Add operation → Drill and Use selection: the drill takes the six circles as holes.
+
+70
+00:15:56,636 --> 00:16:00,331
+Cut through: on. The screws pass right through the board into the studs.
+
+71
+00:16:00,331 --> 00:16:11,400
+The warning is honest: the placeholder tool table has no 3/8" drill. Load the real tools before cutting. That is the shop’s job, not a demo shortcut.
+
+72
+00:16:11,400 --> 00:16:18,405
+The door: a real cabinet. The header: a real CNC part. The steel track and rollers: bought in, with an example price, outside the quote.
+
+73
+00:16:19,633 --> 00:16:25,038
+The table in the middle of the room: 60" x 36", 30" high. Every part of it is a custom part, cut on the CNC.
+
+74
+00:16:25,038 --> 00:16:34,041
+Honest limits first: the thickest stock in the library is 18 mm, so the top is two layers glued up (about 1-7/16"). And custom parts can’t be placed in the room, so the table won’t show in 3D.
+
+75
+00:16:34,041 --> 00:16:54,754
+Upper layer of the top: New part on the job’s Custom parts tab. 60" x 36", 18 mm MDF.
+
+76
+00:16:54,754 --> 00:17:09,078
+A Rounded rectangle with 2" corners, typed in: 0,0 then @60,36. Use as part outline.
+
+77
+00:17:09,078 --> 00:17:15,516
+The old square-cornered rectangle is still there. Click its corner and Delete it.
+
+78
+00:17:15,516 --> 00:17:28,858
+A monogram for the Hartleys: Text, "H", 6" tall, baseline at 28,15, near the centre.
+
+79
+00:17:28,858 --> 00:17:45,143
+Machining. Click the H, then Add operation → Engrave: the cutter follows the letter’s lines.
+
+80
+00:17:45,143 --> 00:17:58,567
+Click empty space so nothing is selected: then an operation uses the outline. Chamfer: a bevel along the top edge, the shaped edge of the table.
+
+81
+00:17:58,567 --> 00:18:11,938
+And Profile: cut the shape out of the sheet, rounded corners and all.
+
+82
+00:18:11,938 --> 00:19:00,984
+The lower layer: the same outline, no chamfer or monogram, so it stays hidden under the upper one. Same steps, sped up.
+
+83
+00:19:00,984 --> 00:19:38,656
+Legs: each leg is two slabs glued into an L, 28-1/2" x 3-1/2". Four legs, eight slabs. 28-1/2" + the top = about 30" high.
+
+84
+00:19:38,656 --> 00:20:53,623
+Aprons tie the legs together under the top: two long (50") and two short (26"), 4" deep.
+
+85
+00:20:53,623 --> 00:21:01,127
+The job’s custom parts: the track header, the two top layers, eight leg slabs and four aprons. Joinery (pocket screws or dowels) is done at the bench.
+
+86
+00:21:02,333 --> 00:21:13,339
+Review time. Elevations first: every wall, square-on, to check heights and shelf lines.
+
+87
+00:21:13,339 --> 00:21:21,822
+Left and right walls: four 30" units each, shelves level with the back run.
+
+88
+00:21:21,822 --> 00:21:29,100
+Front wall: two bookcases, then the sliding door: 84" tall, lower than the 90" units, so the track fits above it.
+
+89
+00:21:29,100 --> 00:23:23,030
+In 3D, from the entry side. The table is not shown: custom parts can’t be placed in the room (logged as a feature idea).
+
+90
+00:23:23,030 --> 00:23:34,077
+Materials. A library this size looks better in wood tone: Cabinets tab → Change materials.
+
+91
+00:23:34,077 --> 00:23:39,523
+Carcass: PB18-OAK, the natural oak melamine with grain. (There are no doors, so fronts don’t matter here.)
+
+92
+00:23:39,523 --> 00:23:45,124
+Carcass front edges in oak ABS too: on open shelving every front edge is on show.
+
+93
+00:23:45,124 --> 00:23:56,996
+Preview: every part that changes, and the sheets before and after.
+
+94
+00:23:56,996 --> 00:24:02,510
+Apply to all 17 cabinets.
+
+95
+00:24:02,510 --> 00:24:15,907
+Check a bookcase: the shelf fronts are still white ABS. Change materials has no shelf-front picker, so each unit would need editing (logged as a feature idea; left white here).
+
+96
+00:24:15,907 --> 00:24:22,409
+The custom parts stay in MDF: the table and the track header are painted, a different finish from the oak bookcases.
+
+97
+00:24:22,409 --> 00:25:02,472
+In 3D: the library in oak.
+
+98
+00:25:08,837 --> 00:25:16,318
+One more catch from review: the banner says T17 and T16 overlap. The 40" door ran 1-5/8" into the bookcase left of the entry.
+
+99
+00:25:16,318 --> 00:25:28,957
+Fix: Alt-drag the door right so its left edge meets that bookcase at 72". It will cover 72" to 112": the 36" opening plus 4" on the open side.
+
+100
+00:25:28,957 --> 00:25:33,460
+The overlap warning is gone: the door now clears the bookcase.
+
+101
+00:25:33,460 --> 00:25:38,962
+On site the track gets a stop at that end, so the door closes against the bookcase and doesn’t rub it.
+
+102
+00:25:38,962 --> 00:25:44,384
+Now the export check, on the Output tab. It lists everything that would stop a clean cut.
+
+103
+00:25:44,384 --> 00:25:52,426
+The warnings are the expected ones for this demo shop: placeholder tool table, placeholder machine values. Nothing about the design itself.
+
+104
+00:25:52,426 --> 00:26:00,510
+Machining output switches stay OFF. Turning them on is for a real shop with real tools, after a woodWOP simulation.
+
+105
+00:26:00,510 --> 00:26:10,698
+Cut list: every bookcase part, the door, and the custom parts, grouped by material.
+
+106
+00:26:10,698 --> 00:26:19,351
+The table and the track header, in MDF: top layers, eight leg slabs, four aprons.
+
+107
+00:26:19,351 --> 00:26:27,900
+Hardware: shelf pins and Confirmat screws from the bookcases. The track kit is not here: library rows can’t be linked to a job.
+
+108
+00:26:27,900 --> 00:26:38,132
+Nesting packs the parts onto sheets: oak melamine for the bookcases, MDF for the table and header.
+
+109
+00:26:38,132 --> 00:26:48,469
+The two 60" x 36" top layers and the 96" header fit on one 5' x 12' MDF sheet; the slabs and aprons fill in around them.
+
+110
+00:26:48,469 --> 00:26:54,974
+Oak sheets are 5' x 12': the 90" sides run along the 144" length, with the grain running up the bookcases.
+
+111
+00:26:56,200 --> 00:27:04,031
+The quote. Sheets, edgeband, hardware and labour are all counted, but no prices are set yet, so the total says "incomplete".
+
+112
+00:27:04,031 --> 00:27:10,033
+Every price typed from here on is an EXAMPLE price, for the demo only. Use your own supplier’s prices.
+
+113
+00:27:10,033 --> 00:27:37,558
+Library → Materials. Sheet goods here are costed per square foot. Example prices: oak melamine $1.60, MDF $1.10, 1/4" HDF back $0.70.
+
+114
+00:27:37,558 --> 00:27:46,389
+Edgebands, per foot. Example prices: oak ABS $0.30, white ABS $0.25.
+
+115
+00:27:46,389 --> 00:27:55,650
+Hardware, per piece. Example prices: Confirmat screw $0.08, shelf pin $0.10.
+
+116
+00:27:55,650 --> 00:28:04,411
+Labour: Settings → Pricing. Example price: $65 an hour. The minutes per cabinet are still the placeholder times; set your own.
+
+117
+00:28:04,411 --> 00:28:13,400
+Back to the quote.
+
+118
+00:28:13,400 --> 00:28:22,115
+Every line is priced now. Board, edgeband, hardware, labour, and a total, all at the example prices above.
+
+119
+00:28:22,115 --> 00:28:28,621
+Not in it, by design of the app: the $320 example track kit. Add it to the customer’s quote by hand.
+
+120
+00:28:28,621 --> 00:28:38,228
+Labels: one per part, for every bookcase panel and custom part, from the Output tab.
+
+121
+00:28:38,228 --> 00:31:01,687
+The finished library, in 3D: oak bookcases on every wall, the entry, and the sliding bookcase door over it.
+
+122
+00:31:01,687 --> 00:31:55,212
+The table stands in the middle in real life; in the app it lives on the Custom parts tab, cut list and nest.
+
+123
+00:31:55,212 --> 00:32:01,717
+Room, cabinets, door, table, materials, export check, cut list, nest, quote and labels: one job, start to finish.

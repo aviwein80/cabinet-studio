@@ -37,6 +37,11 @@ export interface Material {
    * a Configure badge until the shop confirms it or edits it into its own board.
    */
   placeholder?: boolean
+  /**
+   * Library-1: thick stock the app added with invented sizes (1-1/2" / 38 mm MDF and plywood): a
+   * Configure badge until the shop confirms it or enters its own code, name, thickness or sheet size.
+   */
+  placeholderStock?: boolean
 }
 
 /** How a sheet material is costed: per square metre of sheet, or per kilogram (needs the density). */
@@ -428,6 +433,67 @@ export interface Room {
   width: number
   depth: number
   height: number
+  /** Library-1: doors, windows and plain openings in the walls (room geometry only, see `openings.ts`). */
+  openings?: RoomOpening[]
+}
+
+export type OpeningKind = 'door' | 'window' | 'opening'
+
+/**
+ * Library-1: a door, window or plain opening in one wall. `at` is measured along the wall from the
+ * viewer's left end (facing that wall from inside the room, as its elevation shows it) to the
+ * opening's left edge; `sill` is its bottom above the floor (0 for a door).
+ */
+export interface RoomOpening {
+  id: string
+  kind: OpeningKind
+  wall: 'back' | 'front' | 'left' | 'right'
+  at: number
+  width: number
+  height: number
+  sill: number
+  /** Short name shown in the drawings (D1, W1...). */
+  name?: string
+  /** The starting sizes, not yet typed (a Configure badge until one of them is). */
+  placeholder?: boolean
+}
+
+/**
+ * Library-1: one copy of a job custom part placed in the room, for display only (see `roomParts.ts`).
+ * (x, y): the footprint's corner nearest the room origin; z: its underside above the floor.
+ */
+export interface RoomPart {
+  id: string
+  /** The job custom part (`Job.camParts`). */
+  partId: string
+  x: number
+  y: number
+  z: number
+  rotation: 0 | 90 | 180 | 270
+  /** 'flat' face up (a top), 'edge' on its long edge (an apron), 'end' on its end (a leg). */
+  stand: 'flat' | 'edge' | 'end'
+  /** Placements with the same group move and turn together (a table). */
+  group?: string
+}
+
+/**
+ * Library-1: a line typed into the job's quote by hand (installation, delivery, a part bought in).
+ * Its amount is qty x unit price; `taxable` lines carry the sales tax, the others do not.
+ */
+export interface QuoteManualLine {
+  id: string
+  description: string
+  qty: number
+  /** Price per unit, shop currency. Absent = not set yet ("price not set", never taken as 0). */
+  unitPrice?: number
+  taxable: boolean
+}
+
+/** Library-1: a library hardware row added to the job by hand (a sliding-door track kit), so many per job. */
+export interface JobHardware {
+  id: string
+  hardwareId: string
+  qty: number
 }
 
 export interface PartOverride {
@@ -458,6 +524,11 @@ export interface CabinetInstance {
   params: CarcassParams
   overrides: Record<string, PartOverride>
   placement?: CabinetPlacement
+  /**
+   * Library-1: a sliding-door unit (a bookcase on a track over the entry): it may cover a door,
+   * window or opening on purpose, so the room notes it instead of warning. Room only; no machining.
+   */
+  slidingDoor?: boolean
   /** Old hardware geometry kept after a library edit. Absent means follow the library. */
   pin?: { hardware?: Record<string, HardwarePin> }
 }
@@ -487,8 +558,15 @@ export interface Job {
    * of date and is not used.
    */
   programEdits?: Record<string, { text: string; base: string; editedAt: string }>
-  /** Job-1: markup and sales tax on this job's quote, percent. Absent = 0. */
-  quote?: { markupPct?: number; taxPct?: number }
+  /**
+   * Job-1: markup and sales tax on this job's quote, percent. Absent = 0. Library-1: `lines`, lines
+   * typed in by hand (added after the hardware line, before labour's markup and tax).
+   */
+  quote?: { markupPct?: number; taxPct?: number; lines?: QuoteManualLine[] }
+  /** Library-1: library hardware added to the job by hand (qty per job): in the BOM and the quote. */
+  hardware?: JobHardware[]
+  /** Library-1: custom parts placed in the room (display only). */
+  roomParts?: RoomPart[]
 }
 
 /** A nest edited by hand, or loaded from a nest list: sheets and where each part sits. */
@@ -1106,6 +1184,8 @@ export interface Library {
    * version reach an existing shop file but a preset the shop deleted does not come back.
    */
   seeded?: string[]
+  /** Library-1: built-in materials already added to this library once (the 1-1/2" thick stock): one deleted later stays deleted. */
+  seededMaterials?: string[]
   /** Single-stroke engraving fonts made in the font editor (NEW-24). */
   fonts?: import('../cam/types').StrokeFont[]
 }

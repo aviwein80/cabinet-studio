@@ -15,7 +15,7 @@ import type { Placement } from './nesting'
 import { machineModelOf } from './machineModel'
 import { featuresOf } from './features'
 import type { Library, MachineProfile, ShopSettings } from './types'
-import { bodiesItem, machineUnconfirmed, MODEL_FACT_LABEL, type Unconfirmed, usedUnconfirmed } from './confirm'
+import { bodiesItem, machineUnconfirmed, MODEL_FACT_LABEL, placeholderStock, type Unconfirmed, usedUnconfirmed } from './confirm'
 import { resolveTool } from '@/cam/ops'
 import { pathToRegion, uncutLength } from './sheetCuts'
 import { checkSheet } from './manualNest'
@@ -572,6 +572,11 @@ export function validateJob(
   const camParts = [...new Map(instances.filter((i) => i.cam).map((i) => [i.cam!.id, i.cam!])).values()]
   for (const p of camParts) for (const op of p.ops) if (op.enabled && op.toolId) toolIds.add(op.toolId)
   const used = usedUnconfirmed(machine, toolIds, camParts, (op) => (op.toolId ? null : resolveTool(op, machine)))
+  // Library-1: thick stock still at its invented sizes, when a part of this job is cut from it
+  for (const id of [...new Set(instances.map((i) => i.materialId))]) {
+    const u = placeholderStock(lib.materials.find((m) => m.id === id), machine)
+    if (u) used.push(u)
+  }
   if (used.length)
     add({
       severity: 'warning',

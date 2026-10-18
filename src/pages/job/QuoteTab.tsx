@@ -2,19 +2,26 @@
  * Job-1: the job's quote: board, edgeband, hardware, labour, markup, sales tax and the total. A line
  * or item without a price says "price not set" with a Configure badge and is left out of the sums.
  */
-import { Download, FileText } from 'lucide-react'
-import { useMemo } from 'react'
+import { Download, FileText, Plus, Trash2 } from 'lucide-react'
+import { nanoid } from 'nanoid'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { backend } from '@/app/backend'
 import { bomCsv } from '@/app/jobOutput'
 import { ConfigureBadge } from '@/components/Configure'
+import { useConfigureTarget } from '@/components/configureFocus'
 import { NumField } from '@/components/fields'
+import { PriceInput } from '@/components/PriceField'
+import { enterApplies } from '@/components/enterApplies'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { JobOutput } from '@/core/pipeline'
-import { anyPriced, jobQuote, lineNote, money, totalNote, unitPrice } from '@/core/quote'
+import { anyPriced, jobQuote, lineNote, MANUAL_LABEL, money, totalNote, unitPrice } from '@/core/quote'
 import { quotePdf } from '@/core/quotePdf'
-import type { AppData, Job } from '@/core/types'
+import type { AppData, Job, QuoteManualLine } from '@/core/types'
 import { cn } from '@/lib/utils'
 
 /** "1 sheet", "3 sheets" ("pcs", "ft" and "m" as they are). */
@@ -100,9 +107,26 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
                 <TableCell className="text-xs text-muted-foreground">{q.markupPct} % of the subtotal</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{amt(q.markup)}</TableCell>
               </TableRow>
+              {q.manual.items.length > 0 && (
+                // Library-1: the lines typed in by hand, as quoted (not marked up)
+                <TableRow data-line="manual">
+                  <TableCell className="font-medium">{MANUAL_LABEL}</TableCell>
+                  <TableCell className="text-xs whitespace-normal text-muted-foreground">{q.manual.items.map((i) => `${i.qty} × ${i.name}${i.taxable ? '' : ' (no tax)'}`).join(' · ')}</TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {q.manual.unpriced === q.manual.items.length ? (
+                      <NotSet text="price not set" item={q.manual.items.find((i) => i.missing)?.missing} />
+                    ) : (
+                      <span className="flex flex-col items-end gap-0.5">
+                        {$(q.manual.amount)}
+                        {q.manual.unpriced > 0 && <NotSet text={lineNote({ items: q.manual.items, unpriced: q.manual.unpriced })} item={q.manual.items.find((i) => i.missing)?.missing} />}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
               <TableRow>
                 <TableCell className="font-medium">Sales tax</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{q.taxPct} % of subtotal + markup</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{q.taxPct} % of subtotal + markup{q.manual.items.length > 0 ? ` + taxable ${MANUAL_LABEL.toLowerCase()} lines` : ''}</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{amt(q.tax)}</TableCell>
               </TableRow>
               <TableRow className="border-t-2 text-base">
@@ -128,9 +152,9 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {q.lines.flatMap((l) =>
+              {[...q.lines, { key: 'manual', label: MANUAL_LABEL, items: q.manual.items }].flatMap((l) =>
                 l.items.map((i) => (
-                  <TableRow key={l.key + i.code}>
+                  <TableRow key={l.key + ('id' in i ? i.id : i.code)}>
                     <TableCell className="text-xs whitespace-normal text-muted-foreground">{l.label}</TableCell>
                     <TableCell className="text-xs">
                       <span className="font-mono">{i.code}</span> {i.name !== i.code && <span className="text-muted-foreground">{i.name}</span>}
@@ -153,6 +177,8 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
           <NumField label="Markup" suffix="%" min={0} max={1000} step={1} value={job.quote?.markupPct ?? 0} onChange={(v) => setJob((j) => (j.quote = { ...(j.quote ?? {}), markupPct: v }))} />
           <NumField label="Sales tax" suffix="%" min={0} max={100} step={0.25} value={job.quote?.taxPct ?? 0} onChange={(v) => setJob((j) => (j.quote = { ...(j.quote ?? {}), taxPct: v }))} hint="On the subtotal plus markup. Both start at 0." />
         </div>
+        <ManualLines job={job} setJob={setJob} currency={q.currency} />
+        <JobHardwarePanel job={job} data={data} setJob={setJob} />
         <div className="rounded-xl border bg-background p-4 text-xs text-muted-foreground">
           <p>
             Board is the whole sheets the nest uses, at each material’s price. Edgeband is the BOM’s running length (with the trimming allowance) per {q.units === 'in' ? 'foot' : 'metre'}. Hardware is every BOM line per piece. Labour is the time per cabinet, drawer, door and sheet cut at the shop rate (Settings → Pricing).
@@ -170,6 +196,151 @@ export function QuoteTab({ job, data, out, setJob }: { job: Job; data: AppData; 
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Library-1: lines typed into the quote by hand (installation, delivery, a part bought in): a
+ * description, a quantity, a unit price and whether it is taxed. Saved with the job; in the quote, the
+ * BOM and areas CSVs and the Quote PDF. A line's price left empty is "price not set" (never $0).
+ */
+function ManualLines({ job, setJob, currency }: { job: Job; setJob: (fn: (j: Job) => void) => void; currency: string }) {
+  useConfigureTarget(['quote'])
+  const lines = job.quote?.lines ?? []
+  const set = (id: string, fn: (l: QuoteManualLine) => void) =>
+    setJob((j) => {
+      j.quote = { ...(j.quote ?? {}), lines: (j.quote?.lines ?? []).map((l) => (l.id === id ? (() => { const n = { ...l }; fn(n); return n })() : l)) }
+    })
+  const add = () => setJob((j) => (j.quote = { ...(j.quote ?? {}), lines: [...(j.quote?.lines ?? []), { id: `ql-${nanoid(6)}`, description: '', qty: 1, taxable: true }] }))
+  const remove = (id: string) =>
+    setJob((j) => {
+      const rest = (j.quote?.lines ?? []).filter((l) => l.id !== id)
+      j.quote = { ...(j.quote ?? {}), lines: rest }
+      if (!rest.length) delete j.quote.lines
+    })
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-2 rounded-xl border bg-background p-4" data-testid="quote-manual">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold">{MANUAL_LABEL} lines</div>
+        <Button size="xs" variant="outline" onClick={add}>
+          <Plus /> Add line
+        </Button>
+      </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">Installation, delivery, a part bought in. Priced as you type them (after the markup); taxed when ticked.</p>
+      {lines.map((l, i) => (
+        <div key={l.id} className="grid grid-cols-[1fr_auto] gap-1.5 rounded-md border p-2" data-cfg={`quote:line:${l.id}`}>
+          <Input className="h-8" aria-label={`Line ${i + 1} description`} placeholder={`Line ${i + 1}: description`} defaultValue={l.description} onKeyDown={enterApplies} onBlur={(e) => e.target.value !== l.description && set(l.id, (x) => (x.description = e.target.value))} />
+          <Button size="icon-sm" variant="ghost" aria-label={`Remove line ${i + 1}`} onClick={() => remove(l.id)}>
+            <Trash2 />
+          </Button>
+          <div className="col-span-2 flex flex-wrap items-center gap-2 text-xs">
+            <label className="flex items-center gap-1">
+              Qty <QtyInput value={l.qty} onChange={(v) => set(l.id, (x) => (x.qty = v))} label={`Line ${i + 1} quantity`} />
+            </label>
+            <label className="flex items-center gap-1">
+              {currency} each <PriceInput className="h-7 w-24 text-right text-xs" label={`Line ${i + 1} unit price`} value={l.unitPrice} onChange={(v) => set(l.id, (x) => (v === undefined ? delete x.unitPrice : (x.unitPrice = v)))} />
+            </label>
+            <label className="flex items-center gap-1.5">
+              <Checkbox checked={l.taxable} onCheckedChange={(v) => set(l.id, (x) => (x.taxable = v === true))} aria-label={`Line ${i + 1} taxable`} /> Taxable
+            </label>
+            {l.unitPrice === undefined && <ConfigureBadge item={{ key: `quote:line:${l.id}`, label: `${l.description || `Line ${i + 1}`}: unit price`, value: 'price not set', group: 'Pricing', target: { kind: 'quote', key: `line:${l.id}` } }} />}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function QtyInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+  const [text, setText] = useState(String(value))
+  const [last, setLast] = useState(value)
+  if (last !== value) {
+    setLast(value)
+    setText(String(value))
+  }
+  return (
+    <Input
+      className="h-7 w-16 text-right text-xs tabular-nums"
+      inputMode="decimal"
+      aria-label={label}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+      onBlur={() => {
+        const n = Number(text.trim().replace(',', '.'))
+        if (Number.isFinite(n) && n >= 0 && n !== value) onChange(n)
+        else setText(String(value))
+      }}
+    />
+  )
+}
+
+/**
+ * Library-1: a library hardware row added to the job by hand (a sliding-door track kit), so many per
+ * job. It goes into the BOM and the quote's hardware line (at the library's price per piece).
+ */
+function JobHardwarePanel({ job, data, setJob }: { job: Job; data: AppData; setJob: (fn: (j: Job) => void) => void }) {
+  const lib = data.library.hardware
+  const rows = job.hardware ?? []
+  const [pick, setPick] = useState<string>('')
+  const add = () => {
+    if (!pick) return
+    setJob((j) => {
+      const list = j.hardware ?? []
+      const same = list.find((h) => h.hardwareId === pick)
+      j.hardware = same ? list.map((h) => (h.id === same.id ? { ...h, qty: h.qty + 1 } : h)) : [...list, { id: `jh-${nanoid(6)}`, hardwareId: pick, qty: 1 }]
+    })
+    setPick('')
+  }
+  const set = (id: string, qty: number) => setJob((j) => (j.hardware = (j.hardware ?? []).map((h) => (h.id === id ? { ...h, qty } : h))))
+  const remove = (id: string) =>
+    setJob((j) => {
+      j.hardware = (j.hardware ?? []).filter((h) => h.id !== id)
+      if (!j.hardware.length) delete j.hardware
+    })
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-2 rounded-xl border bg-background p-4" data-testid="job-hardware">
+      <div className="text-sm font-semibold">Hardware added to this job</div>
+      <p className="text-[11px] leading-snug text-muted-foreground">A library hardware row the cabinets do not bring by themselves (a sliding-door track kit). Goes into the BOM and the quote at its library price.</p>
+      <div className="flex min-w-0 gap-1.5">
+        <Select value={pick} onValueChange={setPick}>
+          <SelectTrigger className="h-8 w-full min-w-0 flex-1 [&>span]:truncate" aria-label="Library hardware to add">
+            <SelectValue placeholder="Choose library hardware" />
+          </SelectTrigger>
+          <SelectContent>
+            {lib.map((h) => (
+              <SelectItem key={h.id} value={h.id}>
+                {h.code} · {h.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button size="sm" variant="outline" disabled={!pick} onClick={add}>
+          <Plus /> Add
+        </Button>
+      </div>
+      {rows.map((r) => {
+        const h = lib.find((x) => x.id === r.hardwareId)
+        return (
+          <div key={r.id} className="flex min-w-0 items-center gap-2 text-xs">
+            <span className="min-w-0 flex-1 truncate">
+              {h ? (
+                <>
+                  <span className="font-mono">{h.code}</span> {h.name}
+                </>
+              ) : (
+                <span className="text-amber-800">No longer in the library ({r.hardwareId}): left out</span>
+              )}
+            </span>
+            <QtyInput value={r.qty} onChange={(v) => set(r.id, v)} label={`${h?.code ?? r.hardwareId} quantity`} />
+            <span className="text-muted-foreground">pcs</span>
+            <Button size="icon-xs" variant="ghost" aria-label={`Remove ${h?.code ?? r.hardwareId}`} onClick={() => remove(r.id)}>
+              <Trash2 />
+            </Button>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -15,7 +15,7 @@ import { ratePerM2 } from './areas'
 import type { Unconfirmed } from './confirm'
 import type { PartInstance } from './cutlist'
 import type { JobNest } from './machining'
-import type { AppData, Job, UnitSystem } from './types'
+import type { AppData, Job, QuoteManualLine, UnitSystem } from './types'
 
 export type LabourTimeKey = 'cabinet' | 'drawer' | 'door' | 'sheet'
 export type LabourKey = 'shopRate' | LabourTimeKey
@@ -72,6 +72,8 @@ export function labourUnconfirmed(p: PricingSettings | undefined): Unconfirmed[]
 }
 
 export type QuoteLineKey = 'board' | 'edgeband' | 'hardware' | 'labour'
+/** Library-1: the lines typed in by hand, in the quote, the CSVs and the PDF. */
+export const MANUAL_LABEL = 'Other'
 export const QUOTE_LINES: QuoteLineKey[] = ['board', 'edgeband', 'hardware', 'labour']
 export const QUOTE_LINE_LABEL: Record<QuoteLineKey, string> = { board: 'Board', edgeband: 'Edgeband', hardware: 'Hardware', labour: 'Labour' }
 
@@ -100,15 +102,29 @@ export interface QuoteLine {
   unconfirmed: Unconfirmed[]
 }
 
+/** Library-1: a line typed into the quote by hand, as quoted (its own price, taxed or not). */
+export interface ManualQuoteItem extends QuoteItem {
+  id: string
+  taxable: boolean
+}
+
 export interface JobQuote {
   currency: string
   units: UnitSystem
   lines: QuoteLine[]
+  /**
+   * Library-1: the lines typed in by hand (installation, delivery...). Priced as typed: they come
+   * after the markup (not marked up) and carry the sales tax only when taxable. `amount` is their
+   * sum, `taxable` the sum of the taxable ones; a line without a price is left out and counted.
+   */
+  manual: { items: ManualQuoteItem[]; amount: number; taxable: number; unpriced: number }
   labour: { minutes: Record<LabourTimeKey, number>; counts: Record<LabourTimeKey, number>; hours: number; rate: number | null }
   subtotal: number
   markupPct: number
   markup: number
   taxPct: number
+  /** Library-1: what the sales tax is on: subtotal + markup + the taxable lines typed in. */
+  taxBase: number
   tax: number
   total: number
   /** Every item without a price (deduplicated by what to set). */
@@ -145,6 +161,23 @@ export function bandPriceStored(shown: number | undefined, units: UnitSystem): n
 
 const materialMissing = (id: string, code: string, part: 'price' | 'density'): Unconfirmed => ({ key: `material:${id}:${part}`, label: `${code} ${part}`, value: 'not set', group: 'Materials', target: { kind: 'material', materialId: id, part } })
 const notSet = (label: string, target: Unconfirmed['target'], key: string): Unconfirmed => ({ key, label, value: 'price not set', group: 'Pricing', target })
+
+/** Library-1: a hand-typed line's item (its price not set until typed: never taken as 0). */
+export function manualItem(l: QuoteManualLine, i: number): ManualQuoteItem {
+  const qty = Number.isFinite(l.qty) ? l.qty : 0
+  const price = l.unitPrice === undefined || !Number.isFinite(l.unitPrice) ? null : l.unitPrice
+  return {
+    id: l.id,
+    code: `Line ${i + 1}`,
+    name: l.description.trim() || `Line ${i + 1}`,
+    qty,
+    unit: 'ea',
+    price,
+    amount: price === null ? null : round2(qty * price),
+    taxable: l.taxable,
+    ...(price === null ? { missing: notSet(`${l.description.trim() || `Line ${i + 1}`}: unit price`, { kind: 'quote', key: `line:${l.id}` }, `quote:line:${l.id}`) } : {}),
+  }
+}
 
 export function jobQuote(job: Pick<Job, 'cabinets' | 'quote'>, out: QuoteInput, data: Pick<AppData, 'library' | 'settings'>): JobQuote {
   const lib = data.library
@@ -213,20 +246,32 @@ export function jobQuote(job: Pick<Job, 'cabinets' | 'quote'>, out: QuoteInput, 
   const markupPct = job.quote?.markupPct ?? 0
   const taxPct = job.quote?.taxPct ?? 0
   const markup = round2((subtotal * markupPct) / 100)
-  const tax = round2(((subtotal + markup) * taxPct) / 100)
+  // Library-1: the lines typed in by hand, as quoted: not marked up, taxed when taxable
+  const manualItems = (job.quote?.lines ?? []).map(manualItem)
+  const manual = {
+    items: manualItems,
+    amount: round2(manualItems.reduce((n, i) => n + (i.amount ?? 0), 0)),
+    taxable: round2(manualItems.filter((i) => i.taxable).reduce((n, i) => n + (i.amount ?? 0), 0)),
+    unpriced: manualItems.filter((i) => i.amount === null).length,
+  }
+  const taxBase = round2(subtotal + markup + manual.taxable)
+  const tax = round2((taxBase * taxPct) / 100)
   const unpriced = new Map<string, Unconfirmed>()
   for (const l of lines) for (const i of l.items) if (i.missing) unpriced.set(i.missing.key, i.missing)
+  for (const i of manualItems) if (i.missing) unpriced.set(i.missing.key, i.missing)
   return {
     currency,
     units,
     lines,
     labour: { minutes, counts, hours: Math.round((totalMinutes / 60) * 100) / 100, rate },
+    manual,
     subtotal,
     markupPct,
     markup,
     taxPct,
+    taxBase,
     tax,
-    total: round2(subtotal + markup + tax),
+    total: round2(subtotal + markup + manual.amount + tax),
     unpriced: [...unpriced.values()],
     complete: unpriced.size === 0,
   }
@@ -256,8 +301,8 @@ export function lineNote(l: Pick<QuoteLine, 'items' | 'unpriced'>) {
 }
 
 /** At least one item has a price (else the quote has no amounts at all). */
-export function anyPriced(q: Pick<JobQuote, 'lines'>) {
-  return q.lines.some((l) => l.items.some((i) => i.amount !== null))
+export function anyPriced(q: Pick<JobQuote, 'lines'> & Partial<Pick<JobQuote, 'manual'>>) {
+  return q.lines.some((l) => l.items.some((i) => i.amount !== null)) || !!q.manual?.items.some((i) => i.amount !== null)
 }
 
 export function totalNote(q: Pick<JobQuote, 'unpriced'>) {
@@ -276,11 +321,14 @@ export function quoteCsv(q: JobQuote): string {
   const n = (v: number | null) => (v === null ? '' : v.toFixed(2))
   const rows: (string | number)[][] = [['Quote', 'Item', 'Name', 'Qty', 'Unit', `Price each ${q.currency.replace(/,/g, '')}`, 'Total', 'Note']]
   for (const l of q.lines) for (const i of l.items) rows.push([l.label, i.code, i.name, i.qty, i.unit, i.price === null ? '' : unitPrice(i.price), n(i.amount), i.amount === null ? 'price not set' : ''])
+  // Library-1: the lines typed in by hand (after the markup; "no tax" on those not taxed)
+  for (const i of q.manual?.items ?? []) rows.push([MANUAL_LABEL, i.code, i.name, i.qty, i.unit, i.price === null ? '' : unitPrice(i.price), n(i.amount), [i.amount === null ? 'price not set' : '', i.taxable ? '' : 'no tax'].filter(Boolean).join('; ')])
   // a line (or the whole quote) with nothing priced has no amount: "price not set", not 0.00
   for (const l of q.lines) rows.push(['Line total', l.label, l.key === 'labour' ? `${q.labour.hours} h` : '', '', '', '', l.items.length && l.unpriced === l.items.length ? '' : n(l.amount), lineNote(l)])
   const some = anyPriced(q)
   rows.push(['Subtotal', '', '', '', '', '', some ? n(q.subtotal) : '', totalNote(q)])
   rows.push(['Markup', `${q.markupPct} %`, '', '', '', '', some ? n(q.markup) : '', ''])
+  if (q.manual?.items.length) rows.push(['Line total', MANUAL_LABEL, '', '', '', '', q.manual.unpriced === q.manual.items.length ? '' : n(q.manual.amount), lineNote({ items: q.manual.items, unpriced: q.manual.unpriced })])
   rows.push(['Sales tax', `${q.taxPct} %`, '', '', '', '', some ? n(q.tax) : '', ''])
   rows.push(['Total', '', '', '', '', '', some ? n(q.total) : '', totalNote(q)])
   return '\r\n' + rows.map((r) => r.map(esc).join(',')).join('\r\n') + '\r\n'

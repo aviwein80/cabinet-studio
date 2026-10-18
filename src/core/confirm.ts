@@ -147,6 +147,10 @@ export type ConfigTarget =
   | { kind: 'price'; what: 'edgeband' | 'hardware'; id: string }
   /** Job-1: the shop rate or a labour time (Settings > Pricing). */
   | { kind: 'labour'; key: import('./quote').LabourKey }
+  /** Library-1: a value set on the job's Room tab (an opening's sizes, `opening:<id>`). */
+  | { kind: 'room'; key: string }
+  /** Library-1: a value on the job's Quote tab (a hand-typed line's unit price, `line:<id>`). */
+  | { kind: 'quote'; key: string }
 
 /**
  * Kitchen-2: corner, filler and end-panel values that are placeholders until the shop confirms them.
@@ -172,7 +176,7 @@ export interface Unconfirmed {
   label: string
   /** The value in use, as shown to the owner. */
   value: string
-  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures' | 'Kitchen defaults' | 'Pricing'
+  group: 'Tools' | 'Holders' | 'Aggregates' | 'Machine model' | 'Machine parts' | 'Cutting values' | 'Operations' | 'Materials' | 'Nesting' | 'Fixtures' | 'Kitchen defaults' | 'Pricing' | 'Room'
   target: ConfigTarget
 }
 
@@ -206,6 +210,10 @@ export const keyOf = (t: ConfigTarget): string => {
       return `price:${t.what}:${t.id}`
     case 'labour':
       return `labour:${t.key}`
+    case 'room':
+      return `room:${t.key}`
+    case 'quote':
+      return `quote:${t.key}`
   }
 }
 
@@ -261,6 +269,23 @@ export function placeholderBoard(mat: Pick<Material, 'id' | 'code' | 'thickness'
   const target: ConfigTarget = { kind: 'material', materialId: mat.id, part: 'board' }
   if (isConfirmed(m, keyOf(target))) return null
   return { key: keyOf(target), label: `${mat.code}: drawer-box board`, value: `placeholder ${fmt(mat.thickness)} mm board`, group: 'Materials', target }
+}
+
+/**
+ * Library-1: thick stock the app added with invented sizes (1-1/2" / 38 mm), until the shop confirms it
+ * or saves its own code, name, thickness or sheet size over it. Shown in the library's materials and in
+ * the job's export check when a part uses it.
+ */
+export function placeholderStock(mat: Pick<Material, 'id' | 'code' | 'thickness' | 'sheetLength' | 'sheetWidth' | 'placeholderStock'> | null | undefined, m: Pick<MachineProfile, 'confirmed'>): Unconfirmed | null {
+  if (!mat?.placeholderStock) return null
+  const target: ConfigTarget = { kind: 'material', materialId: mat.id, part: 'board' }
+  if (isConfirmed(m, keyOf(target))) return null
+  return { key: keyOf(target), label: `${mat.code}: thick stock`, value: `placeholder ${fmt(mat.thickness)} mm, ${fmt(mat.sheetLength)} x ${fmt(mat.sheetWidth)} mm sheet`, group: 'Materials', target }
+}
+
+/** Library-1: a material's badge, whichever kind of placeholder it is (the drawer-box board, or thick stock). */
+export function materialPlaceholder(mat: Material | null | undefined, m: Pick<MachineProfile, 'confirmed'>): Unconfirmed | null {
+  return placeholderBoard(mat, m) ?? placeholderStock(mat, m)
 }
 
 /** Tools whose lengths matter to collision checks: 3D shapes, and every router in a holder (M2.7). */

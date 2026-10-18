@@ -5,7 +5,7 @@
  */
 import { jsPDF } from 'jspdf'
 import { pinPdf } from './labels/pdf'
-import { anyPriced, lineNote, money, totalNote, unitPrice, type JobQuote } from './quote'
+import { anyPriced, lineNote, MANUAL_LABEL, money, totalNote, unitPrice, type JobQuote } from './quote'
 import type { Job } from './types'
 
 export function quotePdf(job: Pick<Job, 'id' | 'number' | 'name' | 'customer' | 'updatedAt'>, q: JobQuote, shopName = ''): Uint8Array {
@@ -87,7 +87,15 @@ export function quotePdf(job: Pick<Job, 'id' | 'number' | 'name' | 'customer' | 
   const a = (v: number) => (some ? $(v) : '')
   row('Subtotal', '', a(q.subtotal), tn ? { missing: tn } : {})
   row('Markup', `${q.markupPct} %`, some ? $(q.markup) : '', some ? {} : { missing: 'price not set' })
-  row('Sales tax', `${q.taxPct} %`, some ? $(q.tax) : '', some ? {} : { missing: 'price not set' })
+  // Library-1: the lines typed in by hand, as quoted (after the markup)
+  const manual = q.manual
+  if (manual?.items.length) {
+    const note = lineNote({ items: manual.items, unpriced: manual.unpriced })
+    const all = manual.items.map((i) => i.name).reduce((acc, s, k) => (k < 2 ? (acc ? `${acc}, ${s}` : s) : k === 2 ? `${acc}, ...` : acc), '')
+    const detail = all.length > 48 ? `${all.slice(0, 45).trimEnd()}...` : all
+    row(MANUAL_LABEL, detail, note && manual.unpriced === manual.items.length ? '' : $(manual.amount), note ? { missing: note } : {})
+  }
+  row('Sales tax', manual?.items.some((i) => !i.taxable) ? `${q.taxPct} % (not on lines marked no tax)` : `${q.taxPct} %`, some ? $(q.tax) : '', some ? {} : { missing: 'price not set' })
   doc.line(L, y - 4, R, y - 4)
   row('Total', '', a(q.total), { bold: true, ...(tn ? { missing: tn } : {}) })
   y += 4
@@ -110,13 +118,15 @@ export function quotePdf(job: Pick<Job, 'id' | 'number' | 'name' | 'customer' | 
   doc.line(L, y, R, y)
   y += 4
   doc.setFont('helvetica', 'normal')
-  for (const l of q.lines)
+  const itemLines = [...q.lines, ...(q.manual?.items.length ? [{ label: MANUAL_LABEL, items: q.manual.items }] : [])]
+  for (const l of itemLines)
     for (const i of l.items) {
       room(5)
       doc.setFontSize(8)
       doc.text(l.label, cols[0], y)
       // the item's code and name, cut short (with ...) before the quantity column
-      let text = `${i.code}  ${i.name}`
+      // a hand-typed line is its description (and "no tax" when it is not taxed)
+      let text = 'taxable' in i ? `${i.name}${i.taxable ? '' : '  (no tax)'}` : `${i.code}  ${i.name}`
       if (doc.getTextWidth(text) > 72) {
         while (text.length > 4 && doc.getTextWidth(`${text}...`) > 72) text = text.slice(0, -1)
         text = `${text.trimEnd()}...`

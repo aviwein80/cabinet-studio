@@ -91,7 +91,8 @@ function rowUnits(row: Row, fallback: UnitSystem): UnitSystem {
 function len(v: unknown, units: UnitSystem): number | null {
   if (v === undefined || v === null || v === '') return null
   if (typeof v === 'number') return Number.isFinite(v) ? (units === 'in' ? v * 25.4 : v) : null
-  return parseLength(String(v), units)
+  // Library-1: a file: a bare fraction in millimetres is refused, as before (fields take it as mm)
+  return parseLength(String(v), units, { file: true })
 }
 
 function unitsSummary(rows: Row[], fallback: UnitSystem): NonNullable<ImportResult<unknown>['units']> {

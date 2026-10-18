@@ -159,6 +159,16 @@ export function expandJob(job: Job, lib: Library, settings: ShopSettings, opts: 
       }
     }
   }
+  // Library-1: library hardware added to the job by hand (a sliding-door track kit), so many per job
+  for (const h of job.hardware ?? []) {
+    const row = lib.hardware.find((x) => x.id === h.hardwareId)
+    if (!row) {
+      warnings.push(`Hardware added to the job (${h.hardwareId}) is no longer in the library. It is left out of the BOM and the quote.`)
+      continue
+    }
+    if (!(h.qty > 0)) continue
+    hw.set(row.code, (hw.get(row.code) ?? 0) + h.qty)
+  }
   for (const cp of job.camParts ?? []) {
     const blocked = draftBlock(cp)
     if (blocked) {

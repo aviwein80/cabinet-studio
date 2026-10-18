@@ -69,8 +69,11 @@ export function CabinetEditorPage({ target }: { target: Target }) {
   const lib = data.library
 
   const commit = (next: CabinetInstance) => {
-    if (target.kind === 'cabinet') updateCabinet(target.jobId, next)
-    else
+    if (target.kind === 'cabinet') {
+      // Library-1: a change of width that moved the run beside it in the room says what moved
+      const moved = updateCabinet(target.jobId, next)
+      if (moved) toast.info('Room: the run moved', { description: moved, duration: 8000 })
+    } else
       updateLibrary((l) => {
         const t = l.templates.find((tt) => tt.id === target.templateId)
         if (t) {

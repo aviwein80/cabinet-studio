@@ -1,10 +1,79 @@
 import type { PointerEvent } from 'react'
 import { blindSpans } from '@/core/construction/carcass'
 import { pieFootprint } from '@/core/construction/pieCut'
+import { openingRoomSpan } from '@/core/openings'
 import { footprint, toRoom } from '@/core/room'
+import type { PartShape } from '@/core/roomParts'
 import { formatLength } from '@/core/units'
-import type { CabinetInstance, CabinetPlacement, Room, UnitSystem } from '@/core/types'
+import type { CabinetInstance, CabinetPlacement, Room, RoomOpening, UnitSystem } from '@/core/types'
 import { elevationLabels, fitSize, narrowLabelRows, planNumberLabels, wallLength, type ElevationCabinet, type WallId } from '@/core/elevation'
+
+/** Library-1: what the drawings also show besides the cabinets: the room's openings, custom parts placed in it, and the cabinets a change just moved. */
+export interface RoomExtras {
+  openings: RoomOpening[]
+  shapes: PartShape[]
+  /** Cabinets a change of width just moved along the run (outlined until the next change). */
+  moved: string[]
+  selectedOpening: string | null
+  selectedPart: string | null
+  onDownOpening: (e: PointerEvent<SVGElement>, id: string) => void
+  onDownPart: (e: PointerEvent<SVGElement>, id: string) => void
+}
+
+const OPENING_STROKE = { door: '#8a6a46', window: '#0369a1', opening: '#57534e' }
+
+/** Library-1: an opening in the plan: the wall broken at it, a door's leaf and swing, a window's glass, a plain opening dashed. */
+function PlanOpening({ o, room, stroke, font, on, onDown }: { o: RoomOpening; room: Room; stroke: number; font: number; on: boolean; onDown: (e: PointerEvent<SVGElement>, id: string) => void }) {
+  const [lo, hi] = openingRoomSpan(o, room)
+  const w = hi - lo
+  // the wall line at the opening, from its low end to its high end, and the way into the room
+  const line =
+    o.wall === 'back'
+      ? { a: [lo, room.depth], b: [hi, room.depth], n: [0, -1] }
+      : o.wall === 'front'
+        ? { a: [lo, 0], b: [hi, 0], n: [0, 1] }
+        : o.wall === 'left'
+          ? { a: [0, lo], b: [0, hi], n: [1, 0] }
+          : { a: [room.width, lo], b: [room.width, hi], n: [-1, 0] }
+  const [ax, ay] = line.a
+  const [bx, by] = line.b
+  const [nx, ny] = line.n
+  const col = on ? '#b45309' : OPENING_STROKE[o.kind]
+  const t = stroke * 4
+  // the gap in the wall: a band across the wall line in the floor's colour
+  const gap = o.wall === 'back' || o.wall === 'front' ? { x: lo, y: ay - t, width: w, height: 2 * t } : { x: ax - t, y: lo, width: 2 * t, height: w }
+  const quarter = Array.from({ length: 13 }, (_, i) => {
+    const t2 = (i / 12) * (Math.PI / 2)
+    // from the leaf (straight into the room from the low end) round to the high end of the wall line
+    const ux = (bx - ax) / w
+    const uy = (by - ay) / w
+    return `${ax + w * (nx * Math.cos(t2) + ux * Math.sin(t2))},${ay + w * (ny * Math.cos(t2) + uy * Math.sin(t2))}`
+  }).join(' ')
+  const mid = [(ax + bx) / 2 + nx * font * 0.9, (ay + by) / 2 + ny * font * 0.9]
+  return (
+    <g className="cursor-pointer" onPointerDown={(e) => onDown(e, o.id)} data-testid={`plan-opening-${o.id}`}>
+      <rect {...gap} fill="#f7f4ee" stroke="none" />
+      <line x1={ax} y1={ay} x2={ax + nx * t * 1.6} y2={ay + ny * t * 1.6} stroke={col} strokeWidth={stroke * 2} />
+      <line x1={bx} y1={by} x2={bx + nx * t * 1.6} y2={by + ny * t * 1.6} stroke={col} strokeWidth={stroke * 2} />
+      {o.kind === 'door' && (
+        <>
+          <line x1={ax} y1={ay} x2={ax + nx * w} y2={ay + ny * w} stroke={col} strokeWidth={stroke * 1.5} />
+          <polyline points={quarter} fill="none" stroke={col} strokeWidth={stroke} strokeDasharray={`${stroke * 3} ${stroke * 2}`} />
+        </>
+      )}
+      {o.kind === 'window' && (
+        <>
+          <line x1={ax} y1={ay} x2={bx} y2={by} stroke={col} strokeWidth={stroke * 1.2} />
+          <line x1={ax + nx * t} y1={ay + ny * t} x2={bx + nx * t} y2={by + ny * t} stroke={col} strokeWidth={stroke * 1.2} />
+        </>
+      )}
+      {o.kind === 'opening' && <line x1={ax} y1={ay} x2={bx} y2={by} stroke={col} strokeWidth={stroke * 1.2} strokeDasharray={`${stroke * 4} ${stroke * 3}`} />}
+      <text x={mid[0]} y={mid[1]} textAnchor="middle" dominantBaseline="middle" fontSize={fitSize(o.name ?? '', font * 0.6, Math.max(w, font))} fill={col} transform={upright(mid[1])}>
+        {o.name}
+      </text>
+    </g>
+  )
+}
 
 function upright(y: number) {
   return `translate(0 ${2 * y}) scale(1 -1)`
@@ -36,6 +105,7 @@ export function PlanView({
   onDown,
   onMove,
   onUp,
+  extras,
 }: {
   room: Room
   cabinets: CabinetInstance[]
@@ -45,6 +115,7 @@ export function PlanView({
   onDown: (e: PointerEvent<SVGElement>, id: string) => void
   onMove: (e: PointerEvent<SVGElement>) => void
   onUp: (e: PointerEvent<SVGElement>) => void
+  extras?: RoomExtras
 }) {
   const pad = Math.max(room.width, room.depth) * 0.1
   const stroke = room.width / 500
@@ -64,6 +135,8 @@ export function PlanView({
         <text x={room.width / 2} y={room.depth - font * 0.3} textAnchor="middle" fontSize={font * 0.75} fill="#a8a29e" transform={upright(room.depth - font * 0.3)}>
           back wall
         </text>
+        {/* Library-1: doors, windows and openings in the walls */}
+        {extras?.openings.map((o) => <PlanOpening key={o.id} o={o} room={room} stroke={stroke} font={font} on={extras.selectedOpening === o.id} onDown={extras.onDownOpening} />)}
         {/* Kitchen-3: floor cabinets first, wall cabinets over them, see-through, so a corner base shows under its wall cabinet */}
         {[...cabinets.filter((c) => c.params.kind !== 'wall'), ...cabinets.filter((c) => c.params.kind === 'wall')].map((c) => {
           const pl = place(c)
@@ -133,6 +206,22 @@ export function PlanView({
             </g>
           )
         })}
+        {/* Library-1: custom parts placed in the room, plain solids seen from above */}
+        {extras?.shapes.map((sh) => {
+          const on = extras.selectedPart === sh.id
+          return (
+            <polygon key={sh.id} points={sh.points.map((q) => `${q[0]},${q[1]}`).join(' ')} fill="#d6c3a5" fillOpacity={0.75} stroke={on ? '#b45309' : '#7c5a2c'} strokeWidth={on ? stroke * 3 : stroke} className="cursor-grab" onPointerDown={(e) => extras.onDownPart(e, sh.id)} data-testid="plan-part" />
+          )
+        })}
+        {/* Library-1: the cabinets a change of width just moved along the run */}
+        <g pointerEvents="none">
+          {cabinets
+            .filter((c) => extras?.moved.includes(c.id))
+            .map((c) => {
+              const fp = footprint(c.params.width, c.params.depth, place(c))
+              return <rect key={c.id} x={fp.x} y={fp.y} width={fp.w} height={fp.d} fill="#0284c7" fillOpacity={0.12} stroke="#0284c7" strokeWidth={stroke * 2.5} strokeDasharray={`${stroke * 5} ${stroke * 3}`} data-testid="plan-moved" />
+            })}
+        </g>
         {/* Polish-3: the numbers over every cabinet (a later cabinet's fill hid a narrow neighbour's), clicks go through */}
         <g pointerEvents="none">
           {cabinets.map((c) => {
@@ -163,6 +252,7 @@ export function ElevationView({
   onDown,
   onMove,
   onUp,
+  extras,
 }: {
   room: Room
   wall: WallId
@@ -172,6 +262,8 @@ export function ElevationView({
   onDown: (e: PointerEvent<SVGElement>, id: string) => void
   onMove: (e: PointerEvent<SVGElement>) => void
   onUp: (e: PointerEvent<SVGElement>) => void
+  /** Library-1: the openings on this wall, the placed custom parts (as seen facing it), the cabinets just moved. */
+  extras?: RoomExtras
 }) {
   const length = wallLength(wall, room)
   const pad = Math.max(length, room.height) * 0.08
@@ -194,6 +286,29 @@ export function ElevationView({
       <g transform={`translate(0 ${room.height}) scale(1 -1)`}>
         <line x1={0} y1={0} x2={length} y2={0} stroke="#78716c" strokeWidth={stroke * 2} />
         <line x1={0} y1={room.height} x2={length} y2={room.height} stroke="#d6d3d1" strokeWidth={stroke} strokeDasharray={`${stroke * 4} ${stroke * 3}`} />
+        {/* Library-1: the wall's doors, windows and openings, behind the cabinets standing in front of it */}
+        {extras?.openings
+          .filter((o) => o.wall === wall)
+          .map((o) => {
+            const on = extras.selectedOpening === o.id
+            const col = on ? '#b45309' : OPENING_STROKE[o.kind]
+            const ly = o.sill + o.height - font * 0.75
+            return (
+              <g key={o.id} className="cursor-pointer" onPointerDown={(e) => extras.onDownOpening(e, o.id)} data-testid={`elevation-opening-${o.id}`}>
+                <rect x={o.at} y={o.sill} width={o.width} height={o.height} fill={o.kind === 'window' ? '#e0f2fe' : o.kind === 'door' ? '#efe7da' : 'none'} stroke={col} strokeWidth={on ? stroke * 3 : stroke * 1.5} strokeDasharray={o.kind === 'opening' ? `${stroke * 5} ${stroke * 3}` : undefined} />
+                {o.kind === 'window' && (
+                  <>
+                    <line x1={o.at + o.width / 2} y1={o.sill} x2={o.at + o.width / 2} y2={o.sill + o.height} stroke={col} strokeWidth={stroke * 0.8} />
+                    <line x1={o.at} y1={o.sill + o.height / 2} x2={o.at + o.width} y2={o.sill + o.height / 2} stroke={col} strokeWidth={stroke * 0.8} />
+                  </>
+                )}
+                {o.kind === 'door' && <circle cx={o.at + o.width * 0.88} cy={o.sill + Math.min(o.height, 1000)} r={stroke * 3} fill={col} />}
+                <text x={o.at + o.width / 2} y={ly} textAnchor="middle" fontSize={fitSize(o.name ?? '', font * 0.6, o.width * 0.9)} fill={col} transform={upright(ly)}>
+                  {o.name}
+                </text>
+              </g>
+            )
+          })}
         {items.map((item) => {
           const on = item.id === selected
           const inset = Math.min(item.w, item.h) * 0.02
@@ -236,6 +351,32 @@ export function ElevationView({
               )}
             </g>
           )
+        })}
+        {/* Library-1: each opening's outline again over the cabinets, dashed, so one covered by a cabinet (a sliding bookcase door over the entry) still shows */}
+        <g pointerEvents="none">
+          {extras?.openings
+            .filter((o) => o.wall === wall && items.some((it) => Math.min(it.x + it.w, o.at + o.width) - Math.max(it.x, o.at) > 0.5 && Math.min(it.z + it.h, o.sill + o.height) - Math.max(it.z, o.sill) > 0.5))
+            .map((o) => (
+              <g key={o.id} data-testid={`elevation-opening-over-${o.id}`}>
+                <rect x={o.at} y={o.sill} width={o.width} height={o.height} fill="none" stroke={extras.selectedOpening === o.id ? '#b45309' : OPENING_STROKE[o.kind]} strokeWidth={stroke * 2} strokeDasharray={`${stroke * 6} ${stroke * 4}`} />
+                <text x={o.at + o.width / 2} y={o.sill + o.height - font * 0.75} textAnchor="middle" fontSize={fitSize(o.name ?? '', font * 0.55, o.width * 0.9)} fill={OPENING_STROKE[o.kind]} transform={upright(o.sill + o.height - font * 0.75)}>
+                  {o.name}
+                </text>
+              </g>
+            ))}
+        </g>
+        {/* Library-1: the cabinets a change of width just moved */}
+        <g pointerEvents="none">
+          {items
+            .filter((it) => extras?.moved.includes(it.id))
+            .map((it) => (
+              <rect key={it.id} x={it.x} y={it.z} width={it.w} height={it.h} fill="#0284c7" fillOpacity={0.1} stroke="#0284c7" strokeWidth={stroke * 2.5} strokeDasharray={`${stroke * 5} ${stroke * 3}`} data-testid="elevation-moved" />
+            ))}
+        </g>
+        {/* Library-1: custom parts placed in the room, as seen facing this wall (see-through: they may stand in front of the cabinets) */}
+        {extras?.shapes.map((sh) => {
+          const on = extras.selectedPart === sh.id
+          return <polygon key={sh.id} points={sh.points.map((q) => `${q[0]},${q[1]}`).join(' ')} fill="#d6c3a5" fillOpacity={0.45} stroke={on ? '#b45309' : '#7c5a2c'} strokeWidth={on ? stroke * 3 : stroke} strokeDasharray={`${stroke * 4} ${stroke * 2}`} className="cursor-pointer" onPointerDown={(e) => extras.onDownPart(e, sh.id)} data-testid="elevation-part" />
         })}
       </g>
     </svg>

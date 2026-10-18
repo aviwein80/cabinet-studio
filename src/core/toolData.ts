@@ -108,14 +108,15 @@ export function parseFormText(s: string): { value: FormPoint[] } | { error: stri
  * Read a typed cell. Empty clears an optional field (required ones refuse it). Returns the value,
  * or an error in plain words.
  */
-export function parseCell(text: string, f: ToolField, units: UnitSystem, m?: Pick<MachineProfile, 'holders' | 'aggregates'>): { value: unknown } | { error: string } {
+export function parseCell(text: string, f: ToolField, units: UnitSystem, m?: Pick<MachineProfile, 'holders' | 'aggregates'>, opts: { file?: boolean } = {}): { value: unknown } | { error: string } {
   const s = text.trim()
   const required = f.key === 'number' || f.key === 'type' || f.key === 'name' || f.key === 'diameter' || f.key === 'maxDepth'
   if (!s) return required ? { error: `${f.label} is needed.` } : { value: undefined }
   switch (f.kind) {
     case 'num':
     case 'len': {
-      const n = f.kind === 'len' ? parseLength(s, units) : Number(s.replace(',', '.'))
+      // Library-1: a typed cell takes fractions in either unit; a spreadsheet file keeps refusing a bare one in mm
+      const n = f.kind === 'len' ? parseLength(s, units, opts) : Number(s.replace(',', '.'))
       if (n === null || !Number.isFinite(n)) return { error: `${f.label}: “${s}” is not a number.` }
       if (n < 0 || (f.positive && n === 0)) return { error: `${f.label} must be above zero.` }
       if (f.key === 'number' && !Number.isInteger(n)) return { error: 'Tool numbers are whole numbers.' }
@@ -325,7 +326,7 @@ export function toolsFromRows(rows: Record<string, unknown>[], m: MachineProfile
     const bad: string[] = []
     for (const [f, v] of cells) {
       if (!v.trim() || f.key === 'number') continue
-      const r = parseCell(v, f, 'mm', m)
+      const r = parseCell(v, f, 'mm', m, { file: true })
       if ('error' in r) bad.push(r.error)
       else t = withField(t, f.key, r.value)
     }

@@ -154,7 +154,7 @@ export interface ElevationCabinet {
 }
 
 /** Position of a room point along a wall's elevation, viewer's left to right. */
-function alongPoint(wall: WallId, p: Vec3, room: Room) {
+export function alongPoint(wall: WallId, p: Vec3, room: Room) {
   if (wall === 'back') return p[0]
   if (wall === 'front') return room.width - p[0]
   if (wall === 'left') return p[1]

@@ -170,7 +170,7 @@ export function parseBatchCsv(text: string, data: AppData, opts: { defaultOrder:
         if (required) errors.push({ row: rowNo, message: `${what} is missing.` })
         return null
       }
-      const n = parseLength(s, units)
+      const n = parseLength(s, units, { file: true })
       if (n === null || !(n > 0)) {
         errors.push({ row: rowNo, message: `${what} "${s}" is not a length.` })
         return null
@@ -212,7 +212,7 @@ export function parseBatchCsv(text: string, data: AppData, opts: { defaultOrder:
       materialId: mat?.id ?? null,
       length: L ?? 0,
       width: W ?? 0,
-      thickness: (raw.thickness ? parseLength(raw.thickness, units) : null) ?? mat?.thickness ?? 19,
+      thickness: (raw.thickness ? parseLength(raw.thickness, units, { file: true }) : null) ?? mat?.thickness ?? 19,
       qty: qty >= 1 ? qty : 1,
       grain: locked ? 'length' : 'none',
       ...(prio && Number.isFinite(prio) ? { priority: prio } : {}),
@@ -249,7 +249,7 @@ function parseFittingRow(raw: RawRow, rowNo: number, data: AppData, units: UnitS
   let at: number | null = null
   if (fittingPattern(data.library, { hardwareId: hw.id, face })) {
     if (!raw.at) return bad(`${hw.code} is drilled: give its position along the edge (at).`)
-    at = parseLength(raw.at, units)
+    at = parseLength(raw.at, units, { file: true })
     if (at === null || at < 0) return bad(`Position "${raw.at}" is not a length.`)
   }
   const qty = raw.qty ? Math.round(Number(raw.qty)) : 1

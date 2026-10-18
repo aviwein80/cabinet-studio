@@ -4154,10 +4154,94 @@ filler's two parts), `06a-quote-unit-prices-rounded` (labour 52.00, 17.33, 8.67,
 4. **TANDEM 21" in 24" bases**: US 24" drawer bases now take the 21" runner, as Blum's table says.
    Confirm you stock 563H5330B (the spec says you do).
 
+## Library-1: fixes and features from building a library room
+
+A round of 3 bugs and 6 features found while building a full library-room job (open bookcases on all
+four walls, a sliding bookcase door over the entry, a table made of custom parts) on `20cfaf7`. The job
+is a test fixture (`tests/library-1-jobs.ts`); every item has tests in `tests/library-1.test.ts` (47).
+Baseline before the round: head `20cfaf7`, 1208 tests (1207 passed, 1 skipped, none failed; the 90 s
+timing test passed in the full run at 74.8 s), 17 lint warnings, typecheck and build clean. After: see
+"Test-suite note (Library-1)".
+
+| # | Found | Real bug? | Fix | Test |
+|---|---|---|---|---|
+| 1 | Room, "Height off the floor": `1/2` showed 1/2" but saved z = 0 | Yes, but not the reader: the typed height went through the drag snap, which pulls anything within 1/2" (12.7 mm) to the floor (3/8" too; 1" was out of reach, so whole numbers "worked"). And the field kept showing the typed text when the value set was another | The field sets the typed height as it is (no snap), as one undo step. Every length field now shows the value really set after Enter or Tab (`NumField`, `LenInput`). One reader for every length field, in both units: decimals, fractions and mixed numbers (`1/2`, `1-1/2`, `1 1/2`, `12.5`, `.5`, `12,5`) with an explicit unit winning (`38 mm` in an inch shop, `1-1/2"` in a millimetre shop); a bare value is the shop's unit (`1-1/2` in a millimetre shop is 1.5 mm). Files (library CSV/XLSX import, batch and door lists, the tool spreadsheet) keep refusing a bare fraction in millimetres, as Polish-1 decided. The part designer's expressions read a mixed number in either unit (`1-1/2` mm was 1 minus 1/2). Two inputs that read plain numbers (the fillet radius, a hand-edited toolpath step) now use the reader, millimetres as before | `#1` (seven): every format in both units, refusals, files, the field commit, a source scan that lists every file reading a length (16 of them) with each module's own path exercised, the room height |
+| 2 | Width on a turned unit (90/270) grew from the wrong corner; a right-wall unit "moved from x = 156" to 152.9"" | Yes, two bugs. (a) A unit turned 90 (right wall) or 180 (front wall) kept its own right end and grew to its left, into the back corner; the back stayed on the wall (x never moved in the push itself). (b) The x change: a field still focused (Width, Depth) applied its text to the next cabinet picked in the room, because the field lost focus after the pick: a Depth typed for one unit, then a click on a right-wall unit, moved that unit off its wall by the difference | (a) One rule for which end stays put (`growDirection`): a run held by a corner cabinet grows away from it (as before); else a run closed at one end only (against a wall, or a cabinet standing in the corner on the adjoining wall) grows away from that end, a side-wall run closed at both keeping its back-corner end; else the unit keeps its own left end (seen from its front) and grows to its right, the run beside it moving along. The back never leaves its wall. The library's side-wall runs are closed against the back run, so they now grow towards the front instead of into the corner bookcase. (b) A focused field in the room's panel is applied to what it was typed for before anything else is picked (that press then only picks, no drag); the panel's fields are keyed by the cabinet; `NumField` follows a new value during the render, so no field anywhere can commit old text to a new value | `#2` (nine): every turn keeps the back and the left end, the reported unit stays at 156", left-wall run grows away from the corner, a run held only by the right wall grows left, the notice text; a source check for (b) |
+| 2 | "On a back-wall run, changing one unit's width pushes its neighbours along: keep that only if it is the intended run behaviour, and show what moved" | No: intended (Polish-1, Kitchen-2): a run stays closed and nothing overlaps | **Kept**, with an indication: a notice on the Room tab says what changed and what moved ("T2 is 2" narrower; its left end stayed where it was along the back wall. T3, T10 and T11 moved 2" to the left along the back wall, so the run stays closed."), the moved cabinets outlined in the plan and elevations, with Undo. A change of width in the cabinet editor shows the same text as a message | `#2` |
+| 3 | A copy always landed stacked on T1 in the back-left corner | Yes: Duplicate copied the placement (the copy sat exactly on the original), or, with no placement of its own, took Arrange's spot for its place in the list (often on another cabinet) | `copyCabinet` / `placeCopy`: in a room laid out by hand the copy goes beside the original on the same wall: its right (seen from the front) if free, then its left, then the nearest gap along the wall it fits in, clear of every cabinet (at its height) and of the wall's openings. Nowhere free: set 4" in front and 4" to the right of the original, overlapping it, selected, with a notice (Room tab) or a message with "Show in the room" (Cabinets tab). Every cabinet is given its own placement first, so nothing else moves. An arranged room (no placements) is as before: Arrange puts the copy after the original. A **Copy** button in the room's panel | `#3` (six) |
+| 4 | Typed position | Feature | The room's panel: **X from the left wall**, **Y from the front wall** (the footprint's corner, as the plan shows it), **Turn** (keeps the footprint's middle, as Rotate), **Snap back to the wall** (straight back to the wall its turn puts behind it; says "Its back is on the back wall" when it is). Inch/mm as every field. **Undo/Redo** for everything changed on the Room tab (buttons, Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y): each step keeps the room before and after; undo puts back item by item what is still as the step left it (a setting changed since is left, and counted), a drag is one step, a copy is removed, a removed opening comes back | `#4` (four) |
+| 5 | Room openings | Feature | `Room.openings`: door, window or plain opening on any wall: where along it (from the wall's left end as its elevation shows it), width, height, sill. A new one starts at 36" x 80" (window 36" x 48", 36" up), PLACEHOLDERS with a Configure badge until a size is typed. Drawn in the plan (the wall broken, a door's leaf and swing, a window's glass, an opening dashed), in the elevations (behind the cabinets, and dashed over a cabinet standing in it) and in 3D (see-through boxes just outside the wall). A cabinet whose span along the wall and height overlap an opening is a warning; a base under a window, a wall cabinet above a door are clear. A cabinet marked **Sliding-door unit** (room only) covers one on purpose: a note, not a warning. Arrange skips an opening at the cabinet's height (as a tall's span); Fill gap cuts the wall at openings (each piece its own run, measured to the opening; no scribe at an opening); copies keep out; cabinets snap to opening edges | `#5` (seven) |
+| 6 | Manual quote lines; hardware per job | Feature | **Other lines** on the Quote tab: description, quantity, unit price, taxable yes/no; saved with the job (`Job.quote.lines`); after the markup, priced as typed (not marked up); sales tax on subtotal + markup + the taxable lines. A line without a price is "price not set" with a Configure badge, left out, the total incomplete (never $0). In the quote, both CSVs ("Other" rows, "no tax" noted) and the Quote PDF. **Hardware added to this job** (`Job.hardware`): a library hardware row and a quantity per job, added to the BOM count (so it merges with the same item the cabinets use) and priced in the quote's hardware line; a row deleted from the library is left out with a warning. Found with it: the BOM wrote a name with an inch mark (`96"`) unescaped, breaking the row; quotes are now doubled | `#6` (five) |
+| 7 | Custom parts in the room | Feature | `Job.roomParts`: copies of a job's custom parts (up to its quantity) with X, Y, height, turn and how it stands: flat (a top), on its long edge (an apron), on its end (a leg). Parts in the same group (a part of an assembly starts in its group) move and turn together (Group X/Y/height, Turn 90° about the group's middle; dragging one in the plan drags the group). Shown as solids from the outline and thickness: 3D (the outline through the thickness), plan (the outline, or the strip a standing part spans), elevations (see-through). Display only: the custom part itself is not touched; the cut list, nest and every program are identical | `#7` (five) |
+| 8 | Thick stock | Feature | Library: **MDF38** and **PLY38**, 1-1/2" (38 mm) on an 8 ft x 4 ft sheet, as PLACEHOLDERS (`placeholderStock`): a Configure badge in the materials table (new "Placeholder" column) and the edit dialog, and in the export check (UNCONFIRMED) when a job's part is cut from one; the badge clears when confirmed, or when the shop's own code, name, thickness or sheet size is saved (in the table too). Seeded once into older shop files; one deleted stays deleted | `#8` (three) |
+| 9 | Change materials: a Shelf front picker | Already there (Job-1): "Shelf fronts" is one of the three edgeband pickers | Checked end to end on the library job: a whole-job switch to oak with Shelf fronts set bands every shelf front in oak, the preview lists every shelf's edges, one undo puts them back. Nothing to change | `#9` (one) |
+
+### Decision on #2's run behaviour
+
+Kept: changing one unit's width moves the units beside it along the run (Polish-1's intended "run"
+behaviour: the run stays closed and nothing overlaps; a gap absorbs the change), now with a notice of
+what moved and how far, the moved units outlined, and Undo. What changed is which end stays put: away
+from the corner the run is closed against, else the unit's own left end, the same on every wall and in
+every turn.
+
+### Goldens and output
+
+Stage 1 MPR goldens and the custom-part goldens are byte-identical (no file under `tests/golden/`
+changed). `npm run sample` is byte-identical: every MPR, the cut list, BOM, labels (PDF and ZPL), sheet
+maps, validation and job file. No program output changed; every output switch is still off. Changes in
+output elsewhere: the BOM doubles a quote inside a name (only names with `"` change); a job that cuts a
+part from MDF38 or PLY38 lists it in its UNCONFIRMED warning; a job with Other lines or hardware added
+gets them in its BOM, quote and CSVs.
+
+### Test-suite note (Library-1)
+
+After: 1255 tests (1254 passed, 1 skipped, 47 new in `tests/library-1.test.ts`), 15 lint warnings (17 before:
+the two removed were in code rewritten here; none new), typecheck and build clean. In the final full run, with
+nothing else running, every test passed, the 90 s timing test included at 74.0 s (74.8 s in the baseline run).
+An earlier full run made while the browser screenshots were being taken had that test at 92.5 s; run again
+alone it passed as above. The limit is unchanged.
+
+No earlier test was changed. The library import's Polish-1 rule (a bare "3/4" in a millimetre file is
+refused) holds: files read lengths with `file: true`; fields read a bare fraction as the shop's unit.
+
+### Library-1 screenshots
+
+In `docs/screenshots/library-1/` (browser preview, inch mode, the library fixture; each under 300 KB):
+`01-room-3d-library`, `02-plan-openings-table` (D1's swing, W1, the table), `03-height-off-floor-half-inch`,
+`04-width-right-wall-notice` (T6 39-1/8", still at 156", T7 moved and outlined), `05-copy-beside-on-wall`
+(T12 beside T7), `06-typed-x-snap-back`, `07-elevation-front-door-slider` (D1 dashed over S1),
+`08-elevation-left-window`, `09-window-added-configure-badge`, `10-window-sized-cabinets-warned`,
+`11-table-parts-group`, `12-3d-table-turned-openings`, `13-quote-line-price-not-set`,
+`14-quote-other-line-track-kit`, `15-library-thick-stock-badges`, `16-thick-stock-edit-dialog`,
+`17-change-materials-shelf-fronts`.
+
+### Limits recorded (Library-1)
+
+- Fill gap is offered on the back wall and on a side wall turning a corner, as before; a front-wall run,
+  or a side-wall run without a corner cabinet, gets no gap offer (openings or not).
+- Openings are see-through boxes outside the wall in 3D (the room has no wall solids to cut); in the
+  elevations they are moved by typing, not dragged.
+- Custom parts in the room turn in quarter turns only, and as many copies as the part's quantity.
+- Undo on the Room tab is kept while the app runs (not saved with the job), as the material change's undo.
+- A value typed in the room's panel and not yet applied when another cabinet is clicked is applied to the
+  cabinet it was typed for; that click only picks (the next press drags).
+- Openings' starting sizes and the thick stock are badged; the room's own sizes (as before) are not.
+
+### Library-1 decisions needed
+
+1. **Other lines and the markup**: lines typed by hand are priced as typed, after the markup (not marked
+   up). Keep (recommended: you type the price you charge), or mark them up like the materials?
+2. **A bare fraction in a millimetre shop** reads as millimetres (`1/2` = 0.5 mm; `1/2"` is 12.7 mm).
+   Keep (recommended: the unit is the shop's unless typed), or read a bare fraction as inches?
+3. **Thick stock**: MDF38 and PLY38 at 38 mm on 8 ft x 4 ft sheets are invented. Enter the stock you buy
+   (exact thickness: 1-1/2" is 38.1 mm) or delete the one you do not use.
+4. **Run growth**: a run closed at one end grows away from it; open at both, a unit keeps its left end.
+   Keep (recommended), or always keep the end nearest the back corner?
+
 ## Next run
 
-- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2, Polish-3, Job-1 and Polish-4 are complete.
-  Next is the owner's call: the Polish-4 and Job-1 decisions above (shop rate, labour times, tax base), the
+- Stage 3, Polish-1, Kitchen-2, Kitchen-3, Kitchen-3c, Polish-2, Polish-3, Job-1, Polish-4 and Library-1 are
+  complete. Next is the owner's call: the Library-1, Polish-4 and Job-1 decisions above (shop rate, labour times, tax base), the
   Polish-3 and Kitchen-3c decisions, diagonal corners, the shop facts in "Stage 3 exit", Phase 0 in
   `ROADMAP.md`, or any limit recorded above.
 
@@ -4257,3 +4341,8 @@ filler's two parts), `06a-quote-unit-prices-rounded` (labour 52.00, 17.33, 8.67,
 - **Run 28 (Polish-4)**: 6 items from recording the Advanced examples: label notes in full, one rule for a
   filler's board, the U-kitchen corner hint, the TANDEM runner by Blum's inside depth, the Patel change
   order's warnings explained, unit prices rounded; tests, screenshots, this file. See `git log`.
+- **Run 29 (Library-1)**: 3 bugs and 6 features from building a library room: lengths typed as fractions in
+  either unit, a width change keeping the back on its wall (and a focused field no longer applied to the next
+  cabinet picked), copies beside the original, typed position and room undo, doors/windows/openings, quote
+  lines typed by hand and hardware per job, custom parts in the room, 1-1/2" thick stock, the shelf-front band
+  checked; tests, screenshots, this file. See `git log`.

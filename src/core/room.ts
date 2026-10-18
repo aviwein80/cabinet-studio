@@ -1,6 +1,7 @@
 import { pieFootprint } from './construction/pieCut'
 import type { CabinetInstance, CabinetPlacement, CarcassParams, Job, Library, Room, UnitSystem, Vec3 } from './types'
-import { MM_PER_IN } from './units'
+import { blockedSpans, openingRoomSpan, type OpeningWall } from './openings'
+import { MM_PER_IN, sizeText } from './units'
 
 /** 12 ft × 10 ft × 8 ft. Wall cabinets sit 54 in off the floor. */
 export const DEFAULT_ROOM: Room = { width: 3657.6, depth: 3048, height: 2438.4 }
@@ -173,7 +174,10 @@ function clearBackward(end: number, len: number, blocked: Span[]) {
   return e
 }
 
-/** The old layout: floor cabinets left to right along the back wall, the overflow returned on the left wall. */
+/**
+ * The old layout: floor cabinets left to right along the back wall, the overflow returned on the left wall.
+ * Library-1: a door, window or opening in the way (at the cabinet's height) is skipped, as a tall's span is.
+ */
 function arrangeLegacyFloor(floor: Item[], room: Room, out: Record<string, CabinetPlacement>) {
   let x = 0
   let backDepth = 0
@@ -182,21 +186,26 @@ function arrangeLegacyFloor(floor: Item[], room: Room, out: Record<string, Cabin
   for (const c of floor) {
     const w = c.params.width
     const d = c.params.depth
-    if (!wrapped && x + w <= room.width + 0.5) {
-      out[c.id] = { x, y: room.depth - d, rotation: 0, z: 0 }
+    const xs = wrapped ? x : clearForward(x, w, blockedSpans(room, 'back', 0, c.params.height))
+    if (!wrapped && xs + w <= room.width + 0.5) {
+      out[c.id] = { x: xs, y: room.depth - d, rotation: 0, z: 0 }
       backDepth = Math.max(backDepth, d)
-      x += w
+      x = xs + w
     } else {
       // the return on the left wall faces into the room (270), butted against the side of the back
       // run, one after another towards the front wall (Kitchen-2: it used to face the wall, and every
       // returned cabinet was put in the same place)
       if (!wrapped) returnTop = room.depth - Math.max(backDepth, d)
       wrapped = true
-      out[c.id] = { x: 0, y: returnTop - w, rotation: 270, z: 0 }
-      returnTop -= w
+      const top = clearBackward(returnTop, w, blockedSpans(room, 'left', 0, c.params.height))
+      out[c.id] = { x: 0, y: top - w, rotation: 270, z: 0 }
+      returnTop = top - w
     }
   }
 }
+
+/** Library-1: what a cabinet standing from `z` must keep out of on a wall: the talls' spans and the openings at its height. */
+const keepOut = (blocked: Span[], room: Room, wall: Segment, z: number, h: number): Span[] => [...blocked, ...blockedSpans(room, wall, z, z + h)]
 
 function spansOn(segment: Segment, items: Item[], out: Record<string, CabinetPlacement>, room: Room): Span[] {
   const spans: Span[] = []
@@ -266,7 +275,7 @@ function arrangeCornerRun(run: Item[], room: Room, z: number, lib: Library | und
   if (iL >= 0 || iR < 0) {
     let x = backStart
     for (const c of backItems) {
-      x = clearForward(x, c.params.width, blocked.back)
+      x = clearForward(x, c.params.width, keepOut(blocked.back, room, 'back', z, c.params.height))
       out[c.id] = back(c, x)
       x += c.params.width
     }
@@ -274,20 +283,20 @@ function arrangeCornerRun(run: Item[], room: Room, z: number, lib: Library | und
     // only a right corner: the back run is held against it and grows to the left
     let x = backEnd
     for (const c of [...backItems].reverse()) {
-      x = clearBackward(x, c.params.width, blocked.back)
+      x = clearBackward(x, c.params.width, keepOut(blocked.back, room, 'back', z, c.params.height))
       out[c.id] = back(c, x - c.params.width)
       x -= c.params.width
     }
   }
   let y = leftTop
   for (const c of [...leftItems].reverse()) {
-    y = clearBackward(y, c.params.width, blocked.left)
+    y = clearBackward(y, c.params.width, keepOut(blocked.left, room, 'left', z, c.params.height))
     out[c.id] = { x: 0, y: y - c.params.width, rotation: 270, z }
     y -= c.params.width
   }
   y = rightTop
   for (const c of rightItems) {
-    y = clearBackward(y, c.params.width, blocked.right)
+    y = clearBackward(y, c.params.width, keepOut(blocked.right, room, 'right', z, c.params.height))
     out[c.id] = { x: room.width - c.params.depth, y: y - c.params.width, rotation: 90, z }
     y -= c.params.width
   }
@@ -366,7 +375,7 @@ export function arrangeCabinets(cabinets: Item[], room: Room, lib?: Library): Re
   let wx = 0
   for (const c of walls) {
     const w = c.params.width
-    wx = clearForward(wx, w, blocked.back)
+    wx = clearForward(wx, w, keepOut(blocked.back, room, 'back', WALL_ELEVATION, c.params.height))
     if (wx + w > room.width + 0.5) continue
     out[c.id] = { x: wx, y: room.depth - c.params.depth, rotation: 0, z: WALL_ELEVATION }
     wx += w
@@ -383,6 +392,37 @@ export function turned(rotation: CabinetPlacement['rotation']) {
 }
 
 export const nextRotation = (r: CabinetPlacement['rotation']): CabinetPlacement['rotation'] => ((r + 90) % 360) as CabinetPlacement['rotation']
+
+/** Library-1: the wall a cabinet's back is towards at each turn: 0 the back wall, 90 the right, 180 the front, 270 the left. */
+export const wallBehind = (r: CabinetPlacement['rotation']): OpeningWall => (r === 0 ? 'back' : r === 90 ? 'right' : r === 180 ? 'front' : 'left')
+
+/**
+ * Library-1: "Snap back to the wall": the cabinet slides straight back until its back touches the
+ * wall it faces away from (its turn decides which); its position along the wall and its height stay.
+ */
+export function snapBackToWall(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement, room: Pick<Room, 'width' | 'depth'>): CabinetPlacement {
+  const fp = footprint(c.params.width, c.params.depth, pl)
+  const r3 = (v: number) => Math.round(v * 1000) / 1000
+  switch (pl.rotation) {
+    case 0:
+      return { ...pl, y: r3(room.depth - fp.d) }
+    case 90:
+      return { ...pl, x: r3(room.width - fp.w) }
+    case 180:
+      return { ...pl, y: 0 }
+    case 270:
+      return { ...pl, x: 0 }
+  }
+}
+
+/** Library-1: the cabinet turned to `rotation` about the middle of its footprint (as Rotate turns it). */
+export function turnedTo(c: Pick<CabinetInstance, 'params'>, pl: CabinetPlacement, rotation: CabinetPlacement['rotation']): CabinetPlacement {
+  const fp = footprint(c.params.width, c.params.depth, pl)
+  const nowTurned = rotation === 90 || rotation === 270
+  const w = nowTurned ? c.params.depth : c.params.width
+  const d = nowTurned ? c.params.width : c.params.depth
+  return { ...pl, rotation, x: fp.x + fp.w / 2 - w / 2, y: fp.y + fp.d / 2 - d / 2 }
+}
 
 export type { CarcassParams }
 
@@ -457,6 +497,118 @@ function chainPush(cands: Placed[], along: 'x' | 'y', dir: 1 | -1, oldEdge: numb
 function cornersAt(placed: Placed[], room: Room, box: Box) {
   const at = (side: 'left' | 'right') => placed.find((o) => cornerSide(o.c.params) === side && inCorner(o.c, o.pl, room) && zOverlap(o.b, box))
   return { left: at('left'), right: at('right') }
+}
+
+/**
+ * Library-1: +1 when a cabinet's own left-to-right (seen from its front) runs the same way as the room
+ * axis along its wall (X at 0, Y at 270), -1 when against it (Y at 90, X at 180). It is also the
+ * direction of the viewer's right in the elevation of the wall the cabinet faces from.
+ */
+export const rightward = (rotation: CabinetPlacement['rotation']): 1 | -1 => (rotation === 0 || rotation === 270 ? 1 : -1)
+
+/**
+ * Library-1: which ends of the run `me` stands in are closed: the chain of cabinets butted against it
+ * along its wall reaches a wall at that end, or a cabinet that is not part of the run (one standing
+ * on the adjoining wall, in the corner). `low` is the end towards the room's origin.
+ */
+function heldEnds(me: Box, run: Placed[], others: Placed[], along: 'x' | 'y', room: Room) {
+  const across = along === 'x' ? 'y' : 'x'
+  const len = (b: Box) => (along === 'x' ? b.w : b.d)
+  const span = (b: Box) => (across === 'x' ? b.w : b.d)
+  const crosses = (b: Box) => Math.min(b[across] + span(b), me[across] + span(me)) - Math.max(b[across], me[across]) > TOUCH && zOverlap(b, me)
+  let lo = me[along]
+  let hi = me[along] + len(me)
+  for (let guard = 0; guard < 64; guard++) {
+    const next = run.find((o) => Math.abs(o.b[along] - hi) <= TOUCH)
+    if (!next) break
+    hi = next.b[along] + len(next.b)
+  }
+  for (let guard = 0; guard < 64; guard++) {
+    const next = run.find((o) => Math.abs(o.b[along] + len(o.b) - lo) <= TOUCH)
+    if (!next) break
+    lo = next.b[along]
+  }
+  const ids = new Set(run.map((o) => o.c.id))
+  const outside = others.filter((o) => !ids.has(o.c.id) && crosses(o.b))
+  const roomLen = along === 'x' ? room.width : room.depth
+  return {
+    low: lo <= TOUCH || outside.some((o) => Math.abs(o.b[along] + len(o.b) - lo) <= TOUCH),
+    high: hi >= roomLen - TOUCH || outside.some((o) => Math.abs(o.b[along] - hi) <= TOUCH),
+  }
+}
+
+/**
+ * Library-1: which way a cabinet that changed width grows along its wall (+1: its low end, towards
+ * the room's origin, stays put; -1: its high end stays). Its back always stays on its wall.
+ * 1. A run held by a corner cabinet grows away from it (Kitchen-2, Kitchen-3, as before).
+ * 2. Else a run closed at one end only (against a wall, or a cabinet standing in the corner on the
+ *    adjoining wall) grows away from that end; a side-wall run closed at both keeps its back-corner end.
+ * 3. Else the cabinet keeps its own left end (seen from its front) and grows to its right, the run
+ *    beside it moving along: the same on every wall and in every turn. Before, a cabinet turned to
+ *    90 or 180 kept its right end and grew to its left (into the corner on the right wall).
+ */
+function growDirection(me: Box, rotation: CabinetPlacement['rotation'], seg: Segment | null, run: Placed[], others: Placed[], room: Room): 1 | -1 {
+  const along = turned(rotation) ? 'y' : 'x'
+  const corners = cornersAt(others, room, me)
+  // the corner cabinets' ends, in room terms: the back-left corner is the low end of the back wall's
+  // run and the high (back) end of the left wall's; the back-right corner the back wall's high end and
+  // the right wall's high (back) end
+  const cornerLow = seg === 'back' && !!corners.left
+  const cornerHigh = (seg === 'back' && !!corners.right) || (seg === 'left' && !!corners.left) || (seg === 'right' && !!corners.right)
+  const left: 1 | -1 = rightward(rotation)
+  if (cornerLow !== cornerHigh) return cornerLow ? 1 : -1
+  if (cornerLow) return left
+  const h = heldEnds(me, run, others, along, room)
+  if (h.low !== h.high) return h.low ? 1 : -1
+  if (h.low && (seg === 'left' || seg === 'right')) return -1
+  return left
+}
+
+/**
+ * Library-1: what a change of width moved, in words, for the Room tab's notice and the cabinet
+ * editor: the cabinet itself (which way it grew) and each cabinet moved along the run, grouped by how
+ * far and which way ("B4 and B5 moved 3-1/8" to the right along the back wall"). `before`: the
+ * placements before the change (each cabinet's own, or where Arrange had it).
+ */
+export function describeResize(before: Record<string, CabinetPlacement>, cabinets: CabinetInstance[], id: string, oldWidth: number, room: Room, units: UnitSystem, numberOf: (id: string) => string = (x) => cabinets.find((c) => c.id === x)?.number ?? x): string {
+  const cab = cabinets.find((c) => c.id === id)
+  if (!cab) return ''
+  const dW = cab.params.width - oldWidth
+  if (Math.abs(dW) < 1e-6) return ''
+  const L = (mm: number) => sizeText(Math.abs(mm), units)
+  const wallWord = (pl: CabinetPlacement, c: Item = cab) => {
+    const seg = segmentOf(c, pl, room) ?? (pl.rotation === 180 && Math.abs(pl.y) <= ON_WALL ? 'front' : null)
+    return seg ? ` along the ${seg} wall` : ''
+  }
+  // which way a move along the cabinet's wall is, as someone facing that wall sees it
+  const way = (pl: CabinetPlacement, d: number) => (d * rightward(pl.rotation) > 0 ? 'to the right' : 'to the left')
+  const now = cab.placement
+  const was = before[id]
+  const parts: string[] = []
+  if (now && was) {
+    const keptLeft = Math.abs(toRoomEnd(was, oldWidth, cab.params.depth, 'left') - toRoomEnd(now, cab.params.width, cab.params.depth, 'left')) < TOUCH
+    parts.push(`${numberOf(id)} is ${L(dW)} ${dW > 0 ? 'wider' : 'narrower'}; its ${keptLeft ? 'left' : 'right'} end stayed where it was${wallWord(now)}.`)
+  }
+  const groups = new Map<string, string[]>()
+  for (const c of cabinets) {
+    if (c.id === id || !c.placement || !before[c.id]) continue
+    const a = before[c.id]
+    const b = c.placement
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    if (Math.abs(dx) < TOUCH && Math.abs(dy) < TOUCH && a.rotation === b.rotation) continue
+    const d = turned(b.rotation) ? dy : dx
+    const key = a.rotation !== b.rotation || (Math.abs(dx) >= TOUCH && Math.abs(dy) >= TOUCH) ? `moved round the corner${wallWord(b, c)}` : `moved ${L(Math.abs(d))} ${way(b, d)}${wallWord(b, c)}`
+    groups.set(key, [...(groups.get(key) ?? []), numberOf(c.id)])
+  }
+  for (const [what, ids] of groups) parts.push(`${ids.length === 1 ? ids[0] : `${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]}`} ${what}, so the run stays closed.`)
+  return parts.join(' ')
+}
+
+/** The room coordinate (along its wall) of a cabinet's own left or right end. */
+function toRoomEnd(pl: CabinetPlacement, width: number, depth: number, end: 'left' | 'right') {
+  const p = toRoom(end === 'left' ? 0 : width, 0, 0, pl, width, depth)
+  return turned(pl.rotation) ? p[1] : p[0]
 }
 
 /**
@@ -591,10 +743,8 @@ function pushRun(cabinets: CabinetInstance[], id: string, old: number | { width?
     const crossOverlap = Math.min(b[across] + span(b), me[across] + span(me)) - Math.max(b[across], me[across]) > TOUCH
     return crossOverlap && zOverlap(b, me)
   })
-  // which way the run grows: away from a corner cabinet that holds it
-  const corners = cornersAt(others, room, me)
-  const seg = segmentOf(was, pl, room)
-  const dir: 1 | -1 = seg === 'back' ? (corners.left ? 1 : corners.right ? -1 : 1) : seg === 'left' ? (corners.left ? -1 : 1) : seg === 'right' ? (corners.right ? -1 : 1) : 1
+  // Library-1: which end stays put (the back always stays on its wall: only the axis along it moves)
+  const dir: 1 | -1 = growDirection(me, pl.rotation, segmentOf(was, pl, room), run, others, room)
   if (dir > 0) {
     moved.push(...chainPush(run.filter(({ b }) => b[along] > me[along] + TOUCH), along, 1, me[along] + len(me), me[along] + len(me) + dW))
   } else {
@@ -853,6 +1003,17 @@ export interface RunGap {
   anchor: 'start' | 'end'
   startIsWall: boolean
   endIsWall: boolean
+  /** Library-1: the run ends at a door, window or opening there (its id), not at a wall or a corner. */
+  startOpening?: string
+  endOpening?: string
+}
+
+/** Library-1: the opening whose span on `wall` is [a, b] (as `blockedSpans` gives it). */
+function openingAt(room: Room, wall: Segment, a: number, b: number) {
+  return (room.openings ?? []).find((o) => {
+    const [lo, hi] = openingRoomSpan(o, room)
+    return o.wall === wall && Math.abs(lo - a) < 1e-6 && Math.abs(hi - b) < 1e-6
+  })?.id
 }
 
 /**
@@ -901,19 +1062,147 @@ export function runGaps(cabinets: CabinetInstance[], room: Room, place: (c: Cabi
         endIsWall = false
         anchor = 'end'
       }
-      const sorted = [...items].sort((a, b) => a.b[along] - b.b[along])
-      const start = sorted[0].b[along]
-      const last = sorted[sorted.length - 1]
-      const end = last.b[along] + len(last.b)
-      const startGap = start - startBound
-      const endGap = endBound - end
-      if (startGap < -TOUCH || endGap < -TOUCH) continue
-      const total = Math.max(0, startGap) + Math.max(0, endGap)
-      if (total <= 1 || total > FILL_GAP_MAX) continue
-      gaps.push({ wall, level, ids: sorted.map((o) => o.c.id), startBound, endBound, startGap, endGap, total, anchor, startIsWall, endIsWall })
+      // Library-1: a door, window or opening at the run's height ends the run there, as a wall does:
+      // the wall is cut into pieces between them, each piece's cabinets a run of their own (a cabinet
+      // standing in an opening is in none: the room warns about it)
+      const z0 = Math.min(...items.map((o) => o.b.z0))
+      const z1 = Math.max(...items.map((o) => o.b.z1))
+      const cuts = blockedSpans(room, wall, z0, z1).filter(([a, b]) => b > startBound + TOUCH && a < endBound - TOUCH)
+      const pieces: { lo: number; hi: number; loWall: boolean; hiWall: boolean; loOpening?: string; hiOpening?: string }[] = []
+      let lo = startBound
+      let loWall = startIsWall
+      let loOpening: string | undefined
+      for (const [a, b] of cuts) {
+        pieces.push({ lo, hi: Math.max(lo, a), loWall, hiWall: false, loOpening, hiOpening: openingAt(room, wall, a, b) })
+        lo = Math.max(lo, b)
+        loWall = false
+        loOpening = openingAt(room, wall, a, b)
+      }
+      pieces.push({ lo, hi: endBound, loWall, hiWall: endIsWall, loOpening })
+      // each cabinet in the piece its middle is in (none when its middle is in an opening); without
+      // openings every cabinet is in the one piece, as before
+      const pieceOf = (o: (typeof items)[number]) => {
+        const mid = o.b[along] + len(o.b) / 2
+        if (cuts.some(([a, b]) => mid > a && mid < b)) return -1
+        return cuts.filter(([, b]) => b <= mid).length
+      }
+      for (const [k, piece] of pieces.entries()) {
+        const mine = items.filter((o) => pieceOf(o) === k)
+        if (!mine.length) continue
+        const sorted = [...mine].sort((a, b) => a.b[along] - b.b[along])
+        const start = sorted[0].b[along]
+        const last = sorted[sorted.length - 1]
+        const end = last.b[along] + len(last.b)
+        const startGap = start - piece.lo
+        const endGap = piece.hi - end
+        if (startGap < -TOUCH || endGap < -TOUCH) continue
+        const total = Math.max(0, startGap) + Math.max(0, endGap)
+        if (total <= 1 || total > FILL_GAP_MAX) continue
+        // a piece that ends at an opening is held at its other end (a wall or a corner), as a corner holds a run
+        const held: 'start' | 'end' = piece.loOpening && !piece.hiOpening ? 'end' : piece.hiOpening && !piece.loOpening ? 'start' : anchor
+        gaps.push({
+          wall,
+          level,
+          ids: sorted.map((o) => o.c.id),
+          startBound: piece.lo,
+          endBound: piece.hi,
+          startGap,
+          endGap,
+          total,
+          anchor: held,
+          startIsWall: piece.loWall,
+          endIsWall: piece.hiWall,
+          ...(piece.loOpening ? { startOpening: piece.loOpening } : {}),
+          ...(piece.hiOpening ? { endOpening: piece.hiOpening } : {}),
+        })
+      }
     }
   }
   return gaps
+}
+
+/** Library-1: the wall a placed box's back stands on, the back, side or (turned 180) front wall, as an opening's wall. */
+function wallOfPlaced(c: Item, pl: CabinetPlacement, room: Room): OpeningWall | null {
+  const seg = segmentOf(c, pl, room)
+  if (seg) return seg
+  return pl.rotation === 180 && Math.abs(pl.y) <= ON_WALL ? 'front' : null
+}
+
+export interface CopySpot {
+  placement: CabinetPlacement
+  /** 'beside': in free space next to the original on its wall (or along its run); 'offset': nowhere free, set in front of it, overlapping, to be moved. */
+  how: 'beside' | 'offset'
+}
+
+/**
+ * Library-1: where a copy of cabinet `id` goes in a room laid out by hand: beside the original on the
+ * same wall, in the first free space (its right first, as seen from its front, then its left, then
+ * the nearest gap along the wall the copy fits in), clear of every cabinet and of the wall's doors,
+ * windows and openings at its height. When there is no such space it is set in front of the original
+ * (`offset`, overlapping it), so the overlap shows and the copy can be moved. Null when no cabinet has
+ * a placement of its own: Arrange lays the copy out next to the original by itself (it follows it in
+ * the job). A copy used to land exactly on the original (or where Arrange would put it, often on
+ * another cabinet).
+ */
+export function placeCopy(cabinets: CabinetInstance[], id: string, room: Room, lib?: Library): CopySpot | null {
+  const src = cabinets.find((c) => c.id === id)
+  if (!src || !cabinets.some((c) => c.placement)) return null
+  const laid = arrangeCabinets(cabinets, room, lib)
+  const place = (c: CabinetInstance) => placementOf(c, laid)
+  const pl = place(src)
+  const along = turned(pl.rotation) ? 'y' : 'x'
+  const me = boxOf(src, pl)
+  const len = along === 'x' ? me.w : me.d
+  const roomLen = along === 'x' ? room.width : room.depth
+  const others = cabinets.map((c) => ({ c, boxes: planBoxes(c, place(c)) }))
+  const wall = wallOfPlaced(src, pl, room)
+  const blocked = wall ? blockedSpans(room, wall, me.z0, me.z1) : []
+  const at = (p: number): CabinetPlacement => ({ ...pl, [along]: Math.round(p * 1000) / 1000 })
+  const free = (p: number) => {
+    if (p < -TOUCH || p + len > roomLen + TOUCH) return false
+    if (blocked.some(([a, b]) => p < b - TOUCH && p + len > a + TOUCH)) return false
+    const mine = planBoxes(src, at(p))
+    return !others.some((o) => o.boxes.some((b) => mine.some((m) => overlap3(m, b))))
+  }
+  const sgn = rightward(pl.rotation)
+  const start = me[along]
+  const right = sgn > 0 ? start + len : start - len
+  const left = sgn > 0 ? start - len : start + len
+  // the ends of everything in the copy's lane along the wall, and the wall's ends and openings
+  const across = along === 'x' ? 'y' : 'x'
+  const lane = others.flatMap((o) => o.boxes).filter((b) => Math.min(b[across] + (across === 'x' ? b.w : b.d), me[across] + (across === 'x' ? me.w : me.d)) - Math.max(b[across], me[across]) > TOUCH && zOverlap(b, me))
+  const cands = [0, roomLen - len, ...lane.flatMap((b) => [b[along] + (along === 'x' ? b.w : b.d), b[along] - len]), ...blocked.flatMap(([a, b]) => [b, a - len])]
+  const order = [right, left, ...cands.sort((a, b) => Math.abs(a - start) - Math.abs(b - start) || (b - a) * sgn)]
+  for (const p of order) if (free(p)) return { placement: at(p), how: 'beside' }
+  // nowhere free: in front of the original by 4 in and 4 in to its right, overlapping it
+  const out = 101.6
+  const front = toRoom(0, -1, 0, pl, src.params.width, src.params.depth)
+  const back = toRoom(0, 0, 0, pl, src.params.width, src.params.depth)
+  const into = { x: front[0] - back[0], y: front[1] - back[1] }
+  const side = { x: along === 'x' ? sgn : 0, y: along === 'y' ? sgn : 0 }
+  return { placement: { ...pl, x: Math.round((pl.x + into.x * out + side.x * out) * 1000) / 1000, y: Math.round((pl.y + into.y * out + side.y * out) * 1000) / 1000 }, how: 'offset' }
+}
+
+/**
+ * Library-1: copy a cabinet in the job (in place): the copy follows the original in the job's list
+ * with the next free number and, in a room laid out by hand, its own placement from `placeCopy`
+ * (every cabinet is given its own placement first, so nothing else moves). Returns the copy's id
+ * and where it went ('arranged': no placements yet, Arrange puts it next to the original).
+ */
+export function copyCabinet(job: Job, id: string, room: Room, lib: Library | undefined, makeId: () => string): { id: string; how: CopySpot['how'] | 'arranged' } | null {
+  const src = job.cabinets.find((c) => c.id === id)
+  if (!src) return null
+  const spot = placeCopy(job.cabinets, id, room, lib)
+  if (spot) {
+    const laid = arrangeCabinets(job.cabinets, room, lib)
+    for (const c of job.cabinets) c.placement = placementOf(c, laid)
+  }
+  const copy: CabinetInstance = JSON.parse(JSON.stringify(src))
+  copy.id = makeId()
+  copy.number = nextCabinetNumber(job, src.params)
+  if (spot) copy.placement = spot.placement
+  job.cabinets.splice(job.cabinets.indexOf(src) + 1, 0, copy)
+  return { id: copy.id, how: spot?.how ?? 'arranged' }
 }
 
 /** Next free cabinet number: B (base), W (wall), T (tall), F (filler), E (end panel). */

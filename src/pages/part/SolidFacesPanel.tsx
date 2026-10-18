@@ -21,6 +21,7 @@ import { TaskProgress } from './ModelImportDialog'
 import { addSurfaceModel, loadModelMesh, MODEL_LAYER, saveModelMesh } from './modelData'
 import { loadModelSolid, saveSolid } from './solidData'
 import { enterApplies } from '@/components/enterApplies'
+import { parseLength } from '@/core/units'
 
 const TYPES: { value: FaceType; label: string }[] = [
   { value: 'flat', label: 'Flat faces' },
@@ -318,7 +319,11 @@ export function SolidFacesPanel({ part, model, onChange }: { part: CamPart; mode
             <Button size="xs" variant="secondary" disabled={picked.length !== 2} onClick={() => void fromFaces({ k: 'fillet', a: picked[0], b: picked[1], r: fillet, tol: 0.01 }, `Fillet R${fillet}`)} title="Round the edge between two flat faces">
               Fillet
             </Button>
-            <Input aria-label="Fillet radius" className="h-6 w-12 px-1 text-[11px]" defaultValue={fillet} onKeyDown={enterApplies} onBlur={(e) => Number(e.target.value) > 0 && setFillet(Number(e.target.value))} />
+            <Input aria-label="Fillet radius" className="h-6 w-12 px-1 text-[11px]" defaultValue={fillet} onKeyDown={enterApplies} onBlur={(e) => {
+                // Library-1: millimetres as the solid is, but fractions, mixed numbers and '1/4"' read too
+                const r = parseLength(e.target.value, 'mm')
+                if (r !== null && r > 0) setFillet(r)
+              }} />
           </div>
         </>
       )}

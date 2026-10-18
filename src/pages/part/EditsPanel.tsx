@@ -16,6 +16,7 @@ import { useOpCfg } from './opConfigure'
 import { cutDefaultsOf } from '@/core/confirm'
 import { useStore } from '@/app/store'
 import { enterApplies } from '@/components/enterApplies'
+import { parseLength } from '@/core/units'
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -94,7 +95,11 @@ export function ManualFields({ op, part, sel, onChange, pathPick, setPathPick }:
                   <td className="px-1.5">{s.k === 'arc' ? (s.ccw ? 'Arc ↺' : 'Arc ↻') : s.k === 'feed' ? 'Feed' : 'Rapid'}</td>
                   {(['x', 'y', 'z'] as const).map((k) => (
                     <td key={k} className="px-1">
-                      <input className="w-16 rounded bg-white/5 px-1 py-0.5 tabular-nums outline-none focus:bg-white/10" defaultValue={num(s[k])} onKeyDown={enterApplies} onBlur={(e) => Number.isFinite(Number(e.target.value)) && Number(e.target.value) !== s[k] && setStep(i, { [k]: Number(e.target.value) })} />
+                      <input className="w-16 rounded bg-white/5 px-1 py-0.5 tabular-nums outline-none focus:bg-white/10" defaultValue={num(s[k])} onKeyDown={enterApplies} onBlur={(e) => {
+                          // Library-1: millimetres (machining values), but fractions, mixed numbers and '1/2"' read too
+                          const v = parseLength(e.target.value, 'mm')
+                          if (v !== null && v !== s[k]) setStep(i, { [k]: v })
+                        }} />
                     </td>
                   ))}
                   <td>

@@ -175,7 +175,7 @@ export function JobPage({ jobId, tab }: { jobId: string; tab: JobTab }) {
 }
 
 function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (fn: (j: Job) => void) => void }) {
-  const { go, addCabinet, duplicateCabinet, removeCabinet, materialUndo, undoMaterials } = useStore()
+  const { go, addCabinet, duplicateCabinet, removeCabinet, materialUndo, undoMaterials, focusRoom } = useStore()
   const [adding, setAdding] = useState(false)
   const [changing, setChanging] = useState(false)
   const matName = (id: string) => data.library.materials.find((m) => m.id === id)?.code ?? '—'
@@ -284,7 +284,17 @@ function CabinetsTab({ job, data, setJob }: { job: Job; data: AppData; setJob: (
                   <Button variant="ghost" size="icon-sm" aria-label="Edit" onClick={() => go({ page: 'cabinet', jobId: job.id, cabinetId: c.id })}>
                     <Pencil />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" aria-label="Duplicate" onClick={() => duplicateCabinet(job.id, c.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Duplicate"
+                    onClick={() => {
+                      // Library-1: the copy goes beside the original in the room; when there is no free space it is set in front of it
+                      const r = duplicateCabinet(job.id, c.id)
+                      if (r?.how === 'offset') toast.warning(`No free space beside ${c.number} on its wall`, { description: 'The copy is set in front of it, overlapping it, and selected in the room: move it where it goes.', action: { label: 'Show in the room', onClick: () => { focusRoom(job.id, r.id); go({ page: 'job', jobId: job.id, tab: 'room' }) } } })
+                      else if (r?.how === 'beside') toast.success(`Copied ${c.number}: beside it in the room`, { action: { label: 'Show in the room', onClick: () => { focusRoom(job.id, r.id); go({ page: 'job', jobId: job.id, tab: 'room' }) } } })
+                    }}
+                  >
                     <Copy />
                   </Button>
                   <Button variant="ghost" size="icon-sm" aria-label="Remove" onClick={() => removeCabinet(job.id, c.id)}>

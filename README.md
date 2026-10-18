@@ -94,9 +94,26 @@ tool table, are paused.
    room on the left or right wall, its blind end in the back corner, with the back run butting
    against its blind panel. A cabinet against the back or right wall that gets deeper keeps its back on the wall,
    and in the plan wall cabinets are drawn see-through over the bases.
+   Library-1: a cabinet that gets wider or narrower keeps its back on its wall at every turn and
+   grows along it: away from the corner its run is closed against (a corner cabinet, or the
+   cabinets standing in the corner), else to its right as seen from its front, the run beside it
+   moving along; a notice says what moved and how far, outlined in the plan and elevations. The
+   inspector has **X, Y and Turn** fields and **Snap back to the wall**, a **Copy** that lands
+   beside the original on its wall in the first free space (set in front of it, overlapping, when
+   there is none), and a **sliding-door unit** switch. **Doors, windows and openings** go on any
+   wall (where along it, width, height, sill), drawn in the plan, the elevations and 3D; a cabinet
+   standing in one is flagged (a sliding-door unit covers one on purpose: a note), and Arrange,
+   Fill gap, copies and snapping treat an opening like the end of the wall. A new opening's sizes
+   are placeholders with a Configure badge until typed. **Custom parts** can be placed in the room
+   too (flat, on edge or on end, turned, grouped, e.g. a table's top, legs and aprons) and show as
+   solids from their outline and thickness: display only, no machining changes. **Undo/Redo**
+   (Ctrl+Z, Ctrl+Shift+Z) covers every change made on the Room tab, a drag being one step.
 4. **Millimetres or inches.** The sidebar switches the whole shop. Lengths are stored in
    millimetres. Inches display as fractions to the nearest 1/16 in (for example `23-1/4"`), and
-   you can type a decimal or a fraction. Showing the same value again does not change the stored
+   you can type a decimal or a fraction. Library-1: every length field, in either unit, takes a
+   decimal, a fraction or a mixed number (`1/2`, `1-1/2`, `1 1/2`, `12.5`) and an explicit unit wins
+   (`38 mm` in an inch shop, `1-1/2"` in a millimetre shop); a bare value is in the shop's unit
+   (files keep refusing a bare fraction in millimetres, as before). Showing the same value again does not change the stored
    millimetres. In an inch shop, sizes and positions in the export check and the nesting header
    are in inches too; machining values (depths, thicknesses, tolerances, small clearances) stay
    exact in millimetres, and tool and drill sizes read exactly (a 6 mm drill is `6 mm`, a 12.7 mm
@@ -121,7 +138,12 @@ tool table, are paused.
    badges; the shop rate starts not set). Anything without a price says **"price not set"** with
    a Configure badge, is left out of the sums, and the total says it is incomplete; it is never
    $0. The quote is added below the BOM and the Areas and costs CSV, and as a printable Quote PDF
-   (job number, name and customer field only).
+   (job number, name and customer field only). Library-1: **Other lines** typed by hand
+   (description, quantity, unit price, taxable or not) are saved with the job and go after the
+   markup, priced as typed; a line without a price is "price not set" with a Configure badge.
+   **Hardware added to this job** puts a library hardware row (a sliding-door track kit) into the
+   BOM and the quote's hardware line, so many per job. The library also has **1-1/2" (38 mm) MDF
+   and plywood** as placeholders with Configure badges, editable like any material.
 6. **Nesting** (built in): MaxRects with 16 heuristic and order combinations, keeping the result
    with the fewest sheets. It respects grain, rotation rules, edge trim and part spacing (the
    cut-out tool diameter plus extra). The cut order puts small parts first.

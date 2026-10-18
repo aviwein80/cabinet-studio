@@ -22,6 +22,16 @@ export const DEFAULT_MATERIALS: Material[] = [
   { id: 'mat-hdf6-white', code: 'HDF6-WHT', name: 'HDF 6 white back', thickness: 6, sheetLength: 3658, sheetWidth: 1524, grain: false, color: '#e9e7e2' },
 ]
 
+/**
+ * Library-1: 1-1/2" (38 mm) sheet stock for tops, legs and thick shelves, as PLACEHOLDERS: the
+ * thickness, the 8 ft x 4 ft sheet and the names are invented starting values (a Configure badge until
+ * the shop confirms them or enters its own). Editable like any other material.
+ */
+export const THICK_STOCK_PLACEHOLDERS: Material[] = [
+  { id: 'mat-mdf38', code: 'MDF38', name: 'MDF 38 (1-1/2") raw (placeholder)', thickness: 38, sheetLength: 2438.4, sheetWidth: 1219.2, grain: false, color: '#b9a48a', placeholderStock: true },
+  { id: 'mat-ply38', code: 'PLY38', name: 'Plywood 38 (1-1/2") (placeholder)', thickness: 38, sheetLength: 2438.4, sheetWidth: 1219.2, grain: true, color: '#d8b98c', placeholderStock: true },
+]
+
 /** Polish-2: the drawer-box board drawer boxes use unless the cabinet chooses another (Blum TANDEM takes 16 mm sides). */
 export const DRAWER_BOARD_ID = 'mat-pb16-white'
 
@@ -381,11 +391,12 @@ export const DEFAULT_SHEET = { length: 3658, width: 1524 }
 
 export function defaultLibrary(): Library {
   return {
-    materials: clone(DEFAULT_MATERIALS),
+    materials: clone([...DEFAULT_MATERIALS, ...THICK_STOCK_PLACEHOLDERS]),
     edgebands: clone(DEFAULT_EDGEBANDS),
     hardware: clone(DEFAULT_HARDWARE),
     templates: clone(BUILTIN_TEMPLATES),
     seeded: KITCHEN_PRESETS.map((t) => t.id),
+    seededMaterials: THICK_STOCK_PLACEHOLDERS.map((m) => m.id),
   }
 }
 

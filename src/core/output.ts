@@ -22,13 +22,15 @@ export function bomCsv(out: JobOutput, data: AppData, job?: Pick<Job, 'cabinets'
   const sheetsByMat = new Map<string, number>()
   for (const p of out.programs) sheetsByMat.set(p.materialCode, (sheetsByMat.get(p.materialCode) ?? 0) + 1)
   const inches = (mm: number) => formatInches(mm).replace('"', '')
+  // Library-1: a name with an inch mark in it (a 96" track kit) keeps its quote doubled, as CSV wants
+  const quoted = (t: string) => `"${t.replace(/"/g, '""')}"`
   for (const [code, n] of sheetsByMat) {
     const m = data.library.materials.find((mm) => mm.code === code)
     const size = inch && m ? `${inches(m.sheetLength)} x ${inches(m.sheetWidth)} in` : `${m?.sheetLength}x${m?.sheetWidth}`
-    lines.push(['Sheet', code, `"${m?.name ?? code} ${size}"`, n, 'sheets'].join(','))
+    lines.push(['Sheet', code, quoted(`${m?.name ?? code} ${size}`), n, 'sheets'].join(','))
   }
-  for (const e of out.edgebands) lines.push(['Edgeband', e.code, `"${e.name}"`, ...(inch ? [runLength(e.length, 'in').replace(' ft', ''), 'ft'] : [e.metres, 'm'])].join(','))
-  for (const h of out.hardware) lines.push(['Hardware', h.code, `"${h.name}"`, h.qty, 'pcs'].join(','))
+  for (const e of out.edgebands) lines.push(['Edgeband', e.code, quoted(e.name), ...(inch ? [runLength(e.length, 'in').replace(' ft', ''), 'ft'] : [e.metres, 'm'])].join(','))
+  for (const h of out.hardware) lines.push(['Hardware', h.code, quoted(h.name), h.qty, 'pcs'].join(','))
   return lines.join('\r\n') + '\r\n' + (job ? quoteCsv(jobQuote(job, out, data)) : '')
 }
 

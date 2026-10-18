@@ -21,7 +21,8 @@ import { PatternsTab } from './library/PatternsTab'
 import { RulesTab } from './library/RulesTab'
 import { useConfigureTarget } from '@/components/configureFocus'
 import { formatDims } from '@/core/units'
-import { ConfigureBadge } from '@/components/Configure'
+import { ConfigureBadge, ValueBadges } from '@/components/Configure'
+import { materialPlaceholder } from '@/core/confirm'
 import { PriceInput } from '@/components/PriceField'
 import { bandPriceShown, bandPriceStored } from '@/core/quote'
 
@@ -80,7 +81,13 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
     (id: string, key: PropertyKey, value: unknown) =>
       updateLibrary((l) => {
         const row = (l[kind] as { id: string }[]).find((r) => r.id === id) as Record<PropertyKey, unknown> | undefined
-        if (row) row[key] = value
+        if (!row) return
+        // Library-1: a placeholder board given the shop's own code or name is the shop's board (as Edit saves it)
+        if (kind === 'materials' && (key === 'code' || key === 'name') && row[key] !== value) {
+          delete row.placeholder
+          delete row.placeholderStock
+        }
+        row[key] = value
       })
   const remove = (kind: 'materials' | 'edgebands' | 'hardware') => (row: { id: string }) =>
     updateLibrary((l) => {
@@ -225,6 +232,22 @@ export function LibraryPage({ tab }: { tab: LibraryTab }) {
             onDelete={remove('materials')}
             canDelete={(m) => (materialInUse(data, m.id) ? 'Used by a template or job cabinet' : null)}
             empty="No sheet materials. Add one or import a CSV."
+            // Library-1: a placeholder board (the drawer-box board, the 1-1/2" thick stock) shows its badge here too
+            extraColumns={[
+              {
+                key: 'status',
+                label: 'Placeholder',
+                width: '220px',
+                render: (m) => {
+                  const item = materialPlaceholder(m, data.machine)
+                  return item ? (
+                    <span className="flex items-center" data-cfg={`material:${m.id}:board`}>
+                      <ValueBadges item={item} />
+                    </span>
+                  ) : null
+                },
+              },
+            ]}
           />
           <p className="mt-2 text-[11px] text-muted-foreground">Thickness, sheet size and grain drive parts and nesting. Change them with Edit. Code, name and colour are labels. Existing jobs are asked before a size change; new cabinets use the new value.</p>
         </TabsContent>

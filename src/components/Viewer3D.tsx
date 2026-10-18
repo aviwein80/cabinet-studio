@@ -189,6 +189,7 @@ export function Viewer3D({
   explode = 0,
   showOps = true,
   hideDoors = false,
+  boxes = [],
 }: {
   parts: Part[]
   library: Library
@@ -202,6 +203,8 @@ export function Viewer3D({
   explode?: number
   showOps?: boolean
   hideDoors?: boolean
+  /** Library-1: plain boxes drawn see-through, in cabinet millimetres (a room's doors, windows and openings); clicking one selects its key. */
+  boxes?: { key: string; min: Vec3; max: Vec3; color: string; opacity?: number }[]
 }) {
   const fw = frame?.width ?? width
   const fd = frame?.depth ?? depth
@@ -233,6 +236,25 @@ export function Viewer3D({
             />
           )
         })}
+      {boxes.map((b) => {
+        const a = T(b.min)
+        const c = T(b.max)
+        const on = selected === b.key
+        return (
+          <mesh
+            key={b.key}
+            position={[(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2]}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect?.(b.key)
+            }}
+          >
+            <boxGeometry args={[Math.abs(c[0] - a[0]), Math.abs(c[1] - a[1]), Math.abs(c[2] - a[2])]} />
+            <meshStandardMaterial color={on ? '#f59e0b' : b.color} transparent opacity={b.opacity ?? 0.45} depthWrite={false} />
+            <Edges color={on ? '#92400e' : b.color} threshold={15} />
+          </mesh>
+        )
+      })}
       <OrbitControls target={target} makeDefault enableDamping={false} />
       <Refit target={target} size={size} />
     </Canvas>

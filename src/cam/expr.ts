@@ -142,10 +142,9 @@ export function evaluate(src: string, vars: Record<string, number> = {}, toMm: (
  */
 export function evalLength(src: string, units: UnitSystem, vars: Record<string, number> = {}): number {
   const s = src.trim()
-  if (units === 'in') {
-    const direct = /^-?\d+([\s-]+\d+\s*\/\s*\d+|\s*\/\s*\d+)"?$/.test(s) ? parseLength(s, 'in') : null
-    if (direct !== null) return direct
-  }
+  // Library-1: a mixed number or fraction is a length in either unit (1-1/2 mm is 1.5 mm, not 1 minus 1/2)
+  const direct = /^-?\d+([\s-]+\d+\s*\/\s*\d+|\s*\/\s*\d+)\s*("|in|mm)?$/i.test(s) ? parseLength(s, units) : null
+  if (direct !== null) return direct
   const k = units === 'in' ? 25.4 : 1
   const conv = (n: number, unit?: string) => (unit === 'mm' ? n : unit === 'cm' ? n * 10 : unit === 'in' || unit === '"' ? n * 25.4 : n * k) / k
   const scaled = k === 1 ? vars : Object.fromEntries(Object.entries(vars).map(([n, v]) => [n, v / k]))

@@ -1,5 +1,5 @@
 import { migratePart } from '@/cam/doc'
-import { defaultAppData, DRAWER_BOARD_PLACEHOLDER, drawerBoard, fillHardwareSpecs, KITCHEN_PRESETS, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE } from './defaults'
+import { defaultAppData, DRAWER_BOARD_PLACEHOLDER, drawerBoard, fillHardwareSpecs, KITCHEN_PRESETS, PLACEHOLDER_DRILL_6, PLACEHOLDER_MACHINE, THICK_STOCK_PLACEHOLDERS } from './defaults'
 import { DEFAULT_FEATURES } from './features'
 import { DEFAULT_ROOM } from './room'
 import type { AppData, CarcassParams, MachineProfile } from './types'
@@ -47,6 +47,14 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
     seeded.add(t.id)
   }
   library.seeded = [...seeded]
+  // Library-1: the 1-1/2" thick-stock placeholders reach a shop file saved before them, once (deleted later stays deleted)
+  const seededMats = new Set(raw.library?.seededMaterials ?? [])
+  for (const m of THICK_STOCK_PLACEHOLDERS) {
+    if (seededMats.has(m.id)) continue
+    if (!(library.materials ?? []).some((x) => x.id === m.id)) library.materials = [...(library.materials ?? []), JSON.parse(JSON.stringify(m))]
+    seededMats.add(m.id)
+  }
+  library.seededMaterials = [...seededMats]
   // Polish-2: drawer boxes default to a 16 mm board; a library without one gets a placeholder (Configure badge)
   if (!drawerBoard(library)) library.materials = [...(library.materials ?? []), { ...DRAWER_BOARD_PLACEHOLDER }]
   if (library.partLibrary) library.partLibrary = library.partLibrary.map(migratePart)

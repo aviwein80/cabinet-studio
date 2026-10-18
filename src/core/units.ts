@@ -41,41 +41,73 @@ export function lengthSuffix(units: UnitSystem) {
 }
 
 /**
- * Parse a length typed by the user back to millimetres.
- * Inches accept 23.25, 23-1/4, 23 1/4 and 1/2, with an optional trailing quote.
- * An explicit unit wins over the shop's units in either mode: "6 mm", "6mm", '1/2"', "1/2 in".
+ * Library-1: a number typed as a decimal (12.5, .5, 12,5), a fraction (1/2) or a mixed number (1-1/2,
+ * 1 1/2), in whatever unit it is in; null when it is none of these.
  */
-export function parseLength(text: string, units: UnitSystem): number | null {
-  let s = text.trim().replace(',', '.')
-  const suffix = s.match(/^(.*?)\s*(mm|in|inch|inches|["″])$/i)
-  if (suffix) {
-    s = suffix[1].trim()
-    units = suffix[2].toLowerCase() === 'mm' ? 'mm' : 'in'
-  }
-  s = s.replace(/["″]/g, '')
+export function parseNumberText(text: string): number | null {
+  const s = text.trim().replace(',', '.')
   if (!s) return null
-  if (units === 'mm') {
-    const n = Number(s)
-    return Number.isFinite(n) ? n : null
-  }
-  const mixed = s.match(/^(-?)(\d+)[\s-]+(\d+)\s*\/\s*(\d+)$/)
+  const mixed = s.match(/^([-+]?)(\d+)(?:\s*-\s*|\s+)(\d+)\s*\/\s*(\d+)$/)
   if (mixed) {
-    const whole = Number(mixed[2])
-    const num = Number(mixed[3])
     const den = Number(mixed[4])
     if (den === 0) return null
-    const mag = whole + num / den
-    return toMm(mixed[1] === '-' ? -mag : mag)
+    const mag = Number(mixed[2]) + Number(mixed[3]) / den
+    return mixed[1] === '-' ? -mag : mag
   }
-  const frac = s.match(/^(-?)(\d+)\s*\/\s*(\d+)$/)
+  const frac = s.match(/^([-+]?)(\d+)\s*\/\s*(\d+)$/)
   if (frac) {
     const den = Number(frac[3])
     if (den === 0) return null
     const mag = Number(frac[2]) / den
-    return toMm(frac[1] === '-' ? -mag : mag)
+    return frac[1] === '-' ? -mag : mag
   }
+  // a plain decimal only (Number('') is 0, and Number accepts hex and exponents the shop never types)
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return null
   const n = Number(s)
-  return Number.isFinite(n) ? toMm(n) : null
+  return Number.isFinite(n) ? n : null
+}
+
+/**
+ * Parse a length typed by the user back to millimetres.
+ * Library-1: in either unit a value may be a decimal (23.25), a fraction (1/2) or a mixed number
+ * (23-1/4, 23 1/4), with an optional unit: an explicit unit wins over the shop's units in either
+ * mode ("6 mm", "6mm", '1/2"', "1/2 in", "1-1/2 in", "38 mm"). A bare value is in the shop's unit
+ * (in a millimetre shop "1-1/2" is 1.5 mm; 1-1/2 inches is typed '1-1/2"' or "1-1/2 in").
+ * `file`: a value read from a file (a CSV or spreadsheet import, a batch or door list): there a bare
+ * fraction in millimetres is refused rather than read as millimetres, as before (Polish-1: "3/4" in a
+ * millimetre file is most likely a file written in inches).
+ */
+export function parseLength(text: string, units: UnitSystem, opts: { file?: boolean } = {}): number | null {
+  let s = text.trim()
+  let explicit = false
+  const suffix = s.match(/^(.*?)\s*(mm|in|inch|inches|["″])$/i)
+  if (suffix) {
+    s = suffix[1].trim()
+    units = suffix[2].toLowerCase() === 'mm' ? 'mm' : 'in'
+    explicit = true
+  }
+  s = s.replace(/["″]/g, '')
+  if (opts.file && units === 'mm' && !explicit && s.includes('/')) return null
+  const n = parseNumberText(s)
+  if (n === null) return null
+  return units === 'mm' ? n : toMm(n)
+}
+
+/**
+ * Library-1: what a length field does with its text when Enter, Tab or leaving it commits it, one rule
+ * for every length field (`NumField`, `LenInput`, table cells): the value in millimetres to apply, or
+ * null to put the field back to the value it shows (empty, not a length, or outside `min`/`max`).
+ * `same`: the value typed is the one already set (nothing to apply).
+ */
+export function commitLengthText(text: string, units: UnitSystem, current: number, opts: { min?: number; max?: number } = {}): { value: number | null; same: boolean } {
+  return commitFieldText(text, current, (t) => parseLength(t, units), opts)
+}
+
+/** `commitLengthText` with any reader (a plain number field reads with `parseNumberText`). */
+export function commitFieldText(text: string, current: number, read: (t: string) => number | null, opts: { min?: number; max?: number } = {}): { value: number | null; same: boolean } {
+  const v = read(text)
+  if (v === null || !Number.isFinite(v) || (opts.min !== undefined && v < opts.min) || (opts.max !== undefined && v > opts.max)) return { value: null, same: false }
+  return { value: v, same: Math.abs(v - current) < 1e-9 }
 }
 
 /**

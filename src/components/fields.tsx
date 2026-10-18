@@ -1,10 +1,10 @@
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useStore } from '@/app/store'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { fineLength, formatLength, parseLength, toolSize } from '@/core/units'
+import { commitFieldText, fineLength, formatLength, parseLength, parseNumberText, toolSize } from '@/core/units'
 import type { UnitSystem } from '@/core/types'
 import { cn } from '@/lib/utils'
 
@@ -60,15 +60,28 @@ export function NumField({
   const shown = length ? show(value) : String(value)
   const inchSteps = units === 'in' && !tool && !fine
   const [text, setText] = useState(shown)
+  // Library-1: the text follows a new value at once, during the render, not after it: a field still
+  // focused when the page shows it another value (another cabinet picked in the room) must not commit
+  // the old text to the new one when it loses focus. After a commit the field shows the value really
+  // set (a value the page changes or refuses, e.g. snapped, no longer stays on screen as typed).
+  const [last, setLast] = useState(shown)
+  const [resync, setResync] = useState(false)
+  if (shown !== last || resync) {
+    setLast(shown)
+    setText(shown)
+    setResync(false)
+  }
   const id = useId()
-  useEffect(() => setText(shown), [shown])
-  const parsed = length ? parseLength(text, units) : Number(text.replace(',', '.'))
+  // Library-1: every length field takes decimals, fractions and mixed numbers, in inches or mm (`parseLength`)
+  const read = (t: string) => (length ? parseLength(t, units) : parseNumberText(t))
+  const parsed = read(text)
   const inUnit = parsed !== null && Number.isFinite(parsed) ? parsed : NaN
   const invalid = text.trim() === '' || !Number.isFinite(inUnit) || (min !== undefined && inUnit < min) || (max !== undefined && inUnit > max)
   const commit = () => {
     if (text.trim() === shown) return
-    if (!invalid && inUnit !== value) onChange(inUnit)
-    else if (invalid) setText(shown)
+    const r = commitFieldText(text, value, read, { min, max })
+    if (r.value !== null && !r.same) onChange(r.value)
+    setResync(true)
   }
   const unitLabel = length && units === 'in' ? 'in' : suffix
   return (

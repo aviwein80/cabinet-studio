@@ -303,7 +303,7 @@ export function parseDoorCsv(text: string, ctx: { units: UnitSystem; styles: Doo
     cols.forEach((c, k) => (row[c] = cells[k] ?? ''))
     const rowNo = i + 1
     const len = (s: string, what: string) => {
-      const n = parseLength(s, ctx.units)
+      const n = parseLength(s, ctx.units, { file: true })
       if (n === null || !(n > 0)) {
         errors.push({ row: rowNo, message: `${what} "${s}" is not a length.` })
         return null
@@ -330,13 +330,13 @@ export function parseDoorCsv(text: string, ctx: { units: UnitSystem; styles: Doo
     const values: Record<string, number> = {}
     for (const c of cols)
       if (c.startsWith('var:') && row[c]) {
-        const n = parseLength(row[c], ctx.units)
+        const n = parseLength(row[c], ctx.units, { file: true })
         if (n === null) errors.push({ row: rowNo, message: `${c.slice(4)} "${row[c]}" is not a length.` })
         else values[c.slice(4)] = r6(n)
       }
     const qty = row.qty ? Math.round(Number(row.qty)) : 1
     if (!(qty >= 1)) errors.push({ row: rowNo, message: `Quantity "${row.qty}" is not a whole number; using 1.` })
-    const thickness = row.thickness ? (parseLength(row.thickness, ctx.units) ?? mat?.thickness ?? 19) : (mat?.thickness ?? 19)
+    const thickness = row.thickness ? (parseLength(row.thickness, ctx.units, { file: true }) ?? mat?.thickness ?? 19) : (mat?.thickness ?? 19)
     specs.push({
       name: row.name || `Door ${specs.length + 1}`,
       styleId: style.id,

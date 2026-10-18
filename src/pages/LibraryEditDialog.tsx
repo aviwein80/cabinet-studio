@@ -12,7 +12,7 @@ import { featuresOf } from '@/core/features'
 import { MaterialCostFields } from './library/MaterialCostFields'
 import { enterApplies } from '@/components/enterApplies'
 import { ValueBadges } from '@/components/Configure'
-import { placeholderBoard } from '@/core/confirm'
+import { placeholderBoard, placeholderStock } from '@/core/confirm'
 
 type Row = Hardware | Material | EdgeBand
 
@@ -62,8 +62,9 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
 
   const save = (choice: 'ask' | 'keep' | 'update') => {
     // Polish-2: a placeholder board saved with the shop's own code, name or sizes is the shop's board
-    const own = kind === 'material' && (draft as Material).placeholder && (['code', 'name', 'thickness', 'sheetLength', 'sheetWidth'] as const).some((k) => (draft as Material)[k] !== (item as Material)[k])
-    const row: Row = own ? { ...(draft as Material), placeholder: undefined } : draft
+    // (Library-1: and so is the 1-1/2" thick stock the app added)
+    const own = kind === 'material' && ((draft as Material).placeholder || (draft as Material).placeholderStock) && (['code', 'name', 'thickness', 'sheetLength', 'sheetWidth'] as const).some((k) => (draft as Material)[k] !== (item as Material)[k])
+    const row: Row = own ? { ...(draft as Material), placeholder: undefined, placeholderStock: undefined } : draft
     const keys = drivingKeys(row, kind)
     const changed = geometryChanged(item, row, keys)
     const consumers = changed ? listConsumers(data.jobs, kind, row) : []
@@ -130,6 +131,11 @@ export function LibraryEditDialog({ item, kind, onClose }: { item: Row | null; k
                 {(draft as Material).placeholder && (
                   <Field label="Placeholder board" cfg={`material:${draft.id}:board`} badge={<ValueBadges item={placeholderBoard(draft as Material, data.machine) ?? undefined} />}>
                     <p className="text-[11px] leading-snug text-muted-foreground">Added by the app: drawer boxes use a 16 mm board (Blum TANDEM) and the library had none. Enter the shop's board (code, name, sheet size) and save, or mark it as confirmed.</p>
+                  </Field>
+                )}
+                {(draft as Material).placeholderStock && (
+                  <Field label="Placeholder thick stock" cfg={`material:${draft.id}:board`} badge={<ValueBadges item={placeholderStock(draft as Material, data.machine) ?? undefined} />}>
+                    <p className="text-[11px] leading-snug text-muted-foreground">Added by the app: 1-1/2" (38 mm) stock for tops, legs and thick shelves. The thickness and the 8 ft x 4 ft sheet are invented. Enter the stock you buy (code, name, exact thickness, sheet size) and save, or mark it as confirmed.</p>
                   </Field>
                 )}
                 <NumField label="Thickness" hint="Drives geometry. Part thickness and the nesting sheet both follow this." value={(draft as Material).thickness} min={1} max={50} onChange={(v) => set((r) => ((r as Material).thickness = v))} />
